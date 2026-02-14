@@ -2,8 +2,10 @@ services:
   - type: web
     name: credito-repasse
     runtime: python
+    plan: free
     buildCommand: pip install -r backend/requirements.txt
-    startCommand: bash backend/render_start.sh
+    startCommand: gunicorn -k uvicorn.workers.UvicornWorker backend.app.main:app --bind 0.0.0.0:$PORT --workers 2
+    healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
         sync: false
