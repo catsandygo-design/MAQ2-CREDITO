@@ -1,13 +1,9 @@
 services:
   - type: web
-    name: credito-repasse
-    runtime: python
-    plan: free
+    name: sistema-credito
+    env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn -k uvicorn.workers.UvicornWorker backend.app.main:app --bind 0.0.0.0:$PORT --workers 2
-    healthCheckPath: /api/health
+    startCommand: gunicorn -k uvicorn.workers.UvicornWorker backend.app.main:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.11
-      - key: DATABASE_URL
-        sync: false
