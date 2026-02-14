@@ -3,7 +3,7 @@ services:
     name: sistema-credito
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn -k uvicorn.workers.UvicornWorker backend.app.main:app
+    startCommand: cd backend && gunicorn -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:$PORT
     healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION
