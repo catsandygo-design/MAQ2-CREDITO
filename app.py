@@ -42,6 +42,7 @@ def _looks_like_placeholder_url(raw_url: str) -> bool:
 
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+DB_URL_HAS_PLACEHOLDERS = bool(DATABASE_URL and _looks_like_placeholder_url(DATABASE_URL))
 engine = None
 SessionLocal = None
 
@@ -200,6 +201,12 @@ class DocumentoOut(BaseModel):
 
 
 def get_db():
+    if DB_URL_HAS_PLACEHOLDERS:
+        raise HTTPException(
+            status_code=503,
+            detail="DATABASE_URL ainda contem placeholders. Configure a URL real do Supabase no Render.",
+        )
+
     if SessionLocal is None:
         if DATABASE_URL:
             detail = "DATABASE_URL invalido. Revise usuario/senha/host e URL do pooler Supabase."
@@ -221,7 +228,7 @@ def get_db():
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    if DATABASE_URL and _looks_like_placeholder_url(DATABASE_URL):
+    if DB_URL_HAS_PLACEHOLDERS:
         logger.warning("DATABASE_URL parece conter placeholders (<PASSWORD>, YOUR-PASSWORD, etc.).")
 
     if DATABASE_URL and _is_supabase_direct_host(DATABASE_URL):
@@ -251,7 +258,12 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"ok": True, "db_configured": bool(DATABASE_URL), "db_url_valid": SessionLocal is not None}
+    return {
+        "ok": True,
+        "db_configured": bool(DATABASE_URL),
+        "db_url_valid": SessionLocal is not None,
+        "db_url_has_placeholders": DB_URL_HAS_PLACEHOLDERS,
+    }
 
 
 @app.get("/health/db")
