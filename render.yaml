@@ -1,10 +1,18 @@
 services:
   - type: web
-    name: sistema-credito
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: cd backend && gunicorn -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:$PORT
-    healthCheckPath: /api/health
+    name: sistema-credito-api
+    runtime: python
+    plan: free
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: gunicorn -k uvicorn.workers.UvicornWorker app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    healthCheckPath: /health
+    autoDeploy: true
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.11
+      - key: DATABASE_URL
+        sync: false
+      - key: AUTO_CREATE_TABLES
+        value: "true"
+      - key: DB_POOL_SIZE
+        value: "5"
+      - key: DB_MAX_OVERFLOW
+        value: "10"
