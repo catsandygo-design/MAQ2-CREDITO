@@ -26,16 +26,21 @@ def _normalize_database_url(raw_url: str) -> str:
 
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL nao definido. Configure a conexao do Supabase no Render.")
+engine = None
+SessionLocal = None
 
-engine = create_engine(
-    _normalize_database_url(DATABASE_URL),
-    pool_pre_ping=True,
-    pool_size=int(os.getenv("DB_POOL_SIZE", "5")),
-    max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "10")),
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+if DATABASE_URL:
+    engine = create_engine(
+        _normalize_database_url(DATABASE_URL),
+        pool_pre_ping=True,
+        pool_use_lifo=True,
+        pool_size=int(os.getenv("DB_POOL_SIZE", "3")),
+        max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "2")),
+        pool_timeout=int(os.getenv("DB_POOL_TIMEOUT", "30")),
+        pool_recycle=int(os.getenv("DB_POOL_RECYCLE", "1800")),
+        connect_args={"connect_timeout": int(os.getenv("DB_CONNECT_TIMEOUT", "10"))},
+    )
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 class Base(DeclarativeBase):
@@ -164,16 +169,24 @@ class DocumentoOut(BaseModel):
 
 
 def get_db():
+    if SessionLocal is None:
+        raise HTTPException(
+            status_code=503,
+            detail="DATABASE_URL nao configurado. Defina a conexao do Supabase no Render.",
+        )
     db = SessionLocal()
     try:
         yield db
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    if os.getenv("AUTO_CREATE_TABLES", "true").lower() in {"1", "true", "yes"}:
+    if engine is not None and os.getenv("AUTO_CREATE_TABLES", "true").lower() in {"1", "true", "yes"}:
         Base.metadata.create_all(bind=engine)
     yield
 
@@ -188,7 +201,7 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"ok": True}
+    return {"ok": True, "db_configured": engine is not None}
 
 
 @app.get("/health/db")
