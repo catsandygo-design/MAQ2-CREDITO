@@ -30,28 +30,48 @@ def _normalize_database_url(raw_url: str) -> str:
     return url
 
 
+def _looks_like_placeholder_url(raw_url: str) -> bool:
+    text = raw_url.upper()
+    markers = (
+        "YOUR-PASSWORD",
+        "<PASSWORD>",
+        "<PROJECT-REF>",
+        "<REGION>",
+    )
+    return any(marker in text for marker in markers)
+
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 engine = None
 SessionLocal = None
 
 if DATABASE_URL:
-    engine = create_engine(
-        _normalize_database_url(DATABASE_URL),
-        pool_pre_ping=True,
-        pool_use_lifo=True,
-        pool_size=int(os.getenv("DB_POOL_SIZE", "3")),
-        max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "2")),
-        pool_timeout=int(os.getenv("DB_POOL_TIMEOUT", "30")),
-        pool_recycle=int(os.getenv("DB_POOL_RECYCLE", "1800")),
-        connect_args={"connect_timeout": int(os.getenv("DB_CONNECT_TIMEOUT", "10"))},
-    )
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    try:
+        engine = create_engine(
+            _normalize_database_url(DATABASE_URL),
+            pool_pre_ping=True,
+            pool_use_lifo=True,
+            pool_size=int(os.getenv("DB_POOL_SIZE", "3")),
+            max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "2")),
+            pool_timeout=int(os.getenv("DB_POOL_TIMEOUT", "30")),
+            pool_recycle=int(os.getenv("DB_POOL_RECYCLE", "1800")),
+            connect_args={"connect_timeout": int(os.getenv("DB_CONNECT_TIMEOUT", "10"))},
+        )
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    except Exception:
+        engine = None
+        SessionLocal = None
+        logger.exception("DATABASE_URL invalido: falha ao inicializar engine.")
 
 
 def _is_supabase_direct_host(raw_url: str) -> bool:
-    parsed = urlparse(_normalize_database_url(raw_url))
-    host = (parsed.hostname or "").lower()
-    return host.startswith("db.") and host.endswith(".supabase.co")
+    try:
+        parsed = urlparse(_normalize_database_url(raw_url))
+        host = (parsed.hostname or "").lower()
+        return host.startswith("db.") and host.endswith(".supabase.co")
+    except Exception:
+        logger.warning("DATABASE_URL com formato invalido; nao foi possivel validar host Supabase.")
+        return False
 
 
 class Base(DeclarativeBase):
@@ -181,9 +201,13 @@ class DocumentoOut(BaseModel):
 
 def get_db():
     if SessionLocal is None:
+        if DATABASE_URL:
+            detail = "DATABASE_URL invalido. Revise usuario/senha/host e URL do pooler Supabase."
+        else:
+            detail = "DATABASE_URL nao configurado. Defina a conexao do Supabase no Render."
         raise HTTPException(
             status_code=503,
-            detail="DATABASE_URL nao configurado. Defina a conexao do Supabase no Render.",
+            detail=detail,
         )
     db = SessionLocal()
     try:
@@ -197,6 +221,9 @@ def get_db():
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    if DATABASE_URL and _looks_like_placeholder_url(DATABASE_URL):
+        logger.warning("DATABASE_URL parece conter placeholders (<PASSWORD>, YOUR-PASSWORD, etc.).")
+
     if DATABASE_URL and _is_supabase_direct_host(DATABASE_URL):
         logger.warning(
             "DATABASE_URL aponta para conexao direta Supabase (db.<project-ref>.supabase.co), "
@@ -224,7 +251,7 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"ok": True, "db_configured": engine is not None}
+    return {"ok": True, "db_configured": bool(DATABASE_URL), "db_url_valid": SessionLocal is not None}
 
 
 @app.get("/health/db")
