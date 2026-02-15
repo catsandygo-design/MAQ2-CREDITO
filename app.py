@@ -1,15 +1,20 @@
 import os
 import uuid
+import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
+from urllib.parse import urlparse
 
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, create_engine, text
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
 from sqlalchemy.sql import func
+
+logger = logging.getLogger("sistema_credito")
 
 
 def _normalize_database_url(raw_url: str) -> str:
@@ -41,6 +46,12 @@ if DATABASE_URL:
         connect_args={"connect_timeout": int(os.getenv("DB_CONNECT_TIMEOUT", "10"))},
     )
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def _is_supabase_direct_host(raw_url: str) -> bool:
+    parsed = urlparse(_normalize_database_url(raw_url))
+    host = (parsed.hostname or "").lower()
+    return host.startswith("db.") and host.endswith(".supabase.co")
 
 
 class Base(DeclarativeBase):
@@ -186,8 +197,20 @@ def get_db():
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    if engine is not None and os.getenv("AUTO_CREATE_TABLES", "true").lower() in {"1", "true", "yes"}:
-        Base.metadata.create_all(bind=engine)
+    if DATABASE_URL and _is_supabase_direct_host(DATABASE_URL):
+        logger.warning(
+            "DATABASE_URL aponta para conexao direta Supabase (db.<project-ref>.supabase.co), "
+            "que normalmente exige IPv6. Em Render, use a URL do Supavisor session mode "
+            "(aws-0-<region>.pooler.supabase.com:5432)."
+        )
+
+    if engine is not None and os.getenv("AUTO_CREATE_TABLES", "false").lower() in {"1", "true", "yes"}:
+        try:
+            Base.metadata.create_all(bind=engine)
+        except SQLAlchemyError:
+            logger.exception("Falha ao executar create_all no startup.")
+            if os.getenv("STARTUP_DB_STRICT", "false").lower() in {"1", "true", "yes"}:
+                raise
     yield
 
 
