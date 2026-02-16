@@ -75,6 +75,33 @@ def _is_supabase_direct_host(raw_url: str) -> bool:
         return False
 
 
+def _db_error_hint(exc: SQLAlchemyError) -> str:
+    text = str(getattr(exc, "orig", exc)).lower()
+
+    if "password authentication failed" in text:
+        return (
+            "Autenticacao no banco falhou. Confirme usuario/senha do DATABASE_URL "
+            "(incluindo URL encode da senha)."
+        )
+
+    if "could not translate host name" in text or "name or service not known" in text:
+        return "Host do banco invalido no DATABASE_URL. Revise host/porta do Supabase pooler."
+
+    if "timed out" in text or "timeout" in text:
+        return "Timeout ao conectar no banco. Verifique rede e host do Supabase pooler."
+
+    if "connection refused" in text or "could not connect" in text:
+        return "Conexao recusada pelo banco. Verifique host, porta e credenciais no DATABASE_URL."
+
+    if DATABASE_URL and _is_supabase_direct_host(DATABASE_URL):
+        return (
+            "DATABASE_URL parece usar conexao direta Supabase. Em Render, use a URL do "
+            "Supavisor transaction mode (porta 6543)."
+        )
+
+    return "Falha de conexao com banco. Revise o DATABASE_URL e a conectividade com o Supabase."
+
+
 class Base(DeclarativeBase):
     pass
 
@@ -234,8 +261,8 @@ async def lifespan(_: FastAPI):
     if DATABASE_URL and _is_supabase_direct_host(DATABASE_URL):
         logger.warning(
             "DATABASE_URL aponta para conexao direta Supabase (db.<project-ref>.supabase.co), "
-            "que normalmente exige IPv6. Em Render, use a URL do Supavisor session mode "
-            "(aws-0-<region>.pooler.supabase.com:5432)."
+            "que normalmente exige IPv6. Em Render, use a URL do Supavisor transaction mode "
+            "(aws-0-<region>.pooler.supabase.com:6543)."
         )
 
     if engine is not None and os.getenv("AUTO_CREATE_TABLES", "false").lower() in {"1", "true", "yes"}:
@@ -263,13 +290,24 @@ def health():
         "db_configured": bool(DATABASE_URL),
         "db_url_valid": SessionLocal is not None,
         "db_url_has_placeholders": DB_URL_HAS_PLACEHOLDERS,
+        "db_uses_direct_supabase_host": bool(DATABASE_URL and _is_supabase_direct_host(DATABASE_URL)),
     }
 
 
 @app.get("/health/db")
 def health_db(db: Session = Depends(get_db)):
-    db.execute(text("SELECT 1"))
-    return {"ok": True}
+    try:
+        db.execute(text("SELECT 1"))
+        return {"ok": True}
+    except SQLAlchemyError as exc:
+        logger.warning("Falha no health check de banco: %s", exc.__class__.__name__)
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "message": _db_error_hint(exc),
+                "error_type": exc.__class__.__name__,
+            },
+        ) from exc
 
 
 @app.get("/api/health")
