@@ -301,6 +301,7 @@
           <span class="pill" id="total-pill">Total: 0</span>
           <span class="pill" id="pendencias-pill">Pendências: 0</span>
           <button class="btn" type="button" id="btn-export">Exportar CSV</button>
+          <button class="btn" type="button" id="btn-logout">Sair</button>
         </div>
       </header>
 
@@ -621,7 +622,13 @@
       }
     }
 
+    async function logout() {
+      await fetch("/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => null);
+      window.location.href = "/login";
+    }
+
     document.getElementById("btn-export").addEventListener("click", exportCsv);
+    document.getElementById("btn-logout").addEventListener("click", logout);
     [q, obraSel, pendSel, ordemSel].forEach((el) => el.addEventListener("input", aplicarFiltros));
     [obraSel, pendSel, ordemSel].forEach((el) => el.addEventListener("change", aplicarFiltros));
 
@@ -629,5 +636,4 @@
   </script>
 </body>
 </html>
-
 

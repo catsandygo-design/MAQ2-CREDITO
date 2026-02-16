@@ -152,7 +152,7 @@ def _home_for_role(role: Optional[str]) -> str:
         return "/app/analista"
     if role_key == ROLE_CCA:
         return "/app/cca"
-    return "/app/checklist"
+    return "/app/corretor"
 
 
 def _new_session(username: str, role: str) -> str:
@@ -548,6 +548,16 @@ def app_checklist_page(request: Request):
     return FileResponse(WEB_DIR / "checklist.html")
 
 
+@app.get("/app/corretor")
+def app_corretor_page(request: Request):
+    role = _read_session_role(request)
+    if not role:
+        return RedirectResponse(url="/login", status_code=302)
+    if role != ROLE_CORRETOR:
+        return RedirectResponse(url=_home_for_role(role), status_code=302)
+    return FileResponse(WEB_DIR / "corretor_painel.html")
+
+
 @app.get("/app/analista")
 def app_analista_page(request: Request):
     role = _read_session_role(request)
@@ -735,7 +745,7 @@ def patch_documento(documento_id: uuid.UUID, payload: DocumentoUpdate, db: Sessi
 
 @app.get("/app/api/processos", response_model=list[ProcessoOverviewOut])
 def app_list_processos(
-    _: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA)),
+    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA)),
     db: Session = Depends(get_db),
 ):
     rows = (

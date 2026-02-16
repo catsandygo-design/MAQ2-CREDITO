@@ -1278,6 +1278,8 @@ DIVORCIADO: Certidão de casamento averbada.`;
     const API_BASE = "/app/api";
     const url = new URL(window.location.href);
     let processoId = url.searchParams.get("processo_id");
+    const autoBack = url.searchParams.get("auto_back") === "1";
+    const returnTo = url.searchParams.get("return_to") || "/app/corretor";
     let processoAtual = null;
     let saving = false;
     const saveBtn = document.getElementById("btnSalvarChecklist");
@@ -1609,6 +1611,12 @@ DIVORCIADO: Certidão de casamento averbada.`;
           body: JSON.stringify({ documentos }),
         });
         setFeedback("Documentos salvos com sucesso.");
+        if (autoBack) {
+          const backUrl = new URL(returnTo, window.location.origin);
+          backUrl.searchParams.set("saved", "1");
+          window.location.href = backUrl.pathname + backUrl.search;
+          return;
+        }
       } finally {
         saving = false;
         if (saveBtn) saveBtn.disabled = false;
@@ -1632,4 +1640,3 @@ DIVORCIADO: Certidão de casamento averbada.`;
 </script>
 </body>
 </html>
-
