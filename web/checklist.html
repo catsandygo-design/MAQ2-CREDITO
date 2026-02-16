@@ -1296,6 +1296,123 @@ DIVORCIADO: Certidão de casamento averbada.`;
         .toLowerCase();
     }
 
+    const CANONICAL_DOC_NAMES = {
+      "proponente:idcpf": "Identidade e CPF",
+      "proponente:estadocivil": "Comp. de estado civil",
+      "proponente:residencia": "Comprovante de residência",
+      "proponente:irpf": "IRPF + recibo de entrega",
+      "proponente:fgts": "Extrato FGTS (atualizado)",
+      "proponente:ctps": "Carteira de Trabalho (CTPS)",
+      "depmenor:certidao-menor": "Certidão de nascimento",
+      "depmaior:idcpf-dep": "Identidade e CPF",
+      "depmaior:estadocivil-dep": "Comp. de estado civil",
+      "depmaior:parentesco": "Declaração de parentesco",
+      "rendaclt:holerite": "Holerites / contracheques",
+      "rendaclt:variavel": "Comprovante de renda variável",
+      "rendaclt:carta": "Carta do empregador (quando aplicável)",
+      "rendainf:extrato": "Extrato bancário",
+      "apos:beneficio": "Extrato de pagamento do benefício",
+      "dom:esocial": "eSocial",
+      "caixa:damp": "DAMP",
+      "caixa:ficha": "Ficha de cadastro Caixa",
+      "caixa:abertura": "Ficha de abertura de conta",
+      "caixa:mo": "MO",
+      "caixa:chequeazul": "Formulário Cheque Azul",
+      "caixa:formcartao": "Formulário Cartão de Crédito",
+      "caixa:propcartao": "Proposta de Cartão de Crédito",
+      "agehab:decl-end": "Declaração de endereço",
+      "agehab:decl-renda": "Declaração de renda informal",
+      "agehab:decl-naorenda": "Declaração de não renda",
+      "agehab:vinculo": "Vínculo ≥ 3 anos (cheque moradia)",
+      "agehab:check": "Checklist Agehab",
+      "agehab:ficha": "Ficha Agehab",
+    };
+
+    function inferDocId(categoria, nome) {
+      const cat = norm(categoria);
+      const n = normalizeName(nome);
+
+      if (cat === "proponente") {
+        if (n.includes("identidade")) return "idcpf";
+        if (n.includes("estado civil")) return "estadocivil";
+        if (n.includes("residencia")) return "residencia";
+        if (n.includes("irpf")) return "irpf";
+        if (n.includes("fgts")) return "fgts";
+        if (n.includes("ctps") || n.includes("carteira")) return "ctps";
+      }
+      if (cat === "depmenor") return "certidao-menor";
+      if (cat === "depmaior") {
+        if (n.includes("identidade")) return "idcpf-dep";
+        if (n.includes("estado civil")) return "estadocivil-dep";
+        if (n.includes("parentesco")) return "parentesco";
+      }
+      if (cat === "rendaclt") {
+        if (n.includes("holerite") || n.includes("contracheque")) return "holerite";
+        if (n.includes("variavel")) return "variavel";
+        if (n.includes("carta")) return "carta";
+      }
+      if (cat === "rendainf") return "extrato";
+      if (cat === "apos") return "beneficio";
+      if (cat === "dom") return "esocial";
+      if (cat === "caixa") {
+        if (n.includes("damp")) return "damp";
+        if (n.includes("ficha de cadastro")) return "ficha";
+        if (n.includes("abertura")) return "abertura";
+        if (n === "mo" || n.startsWith("mo ")) return "mo";
+        if (n.includes("cheque azul")) return "chequeazul";
+        if (n.includes("formulario cartao")) return "formcartao";
+        if (n.includes("proposta")) return "propcartao";
+      }
+      if (cat === "agehab") {
+        if (n.includes("endereco")) return "decl-end";
+        if (n.includes("renda informal")) return "decl-renda";
+        if (n.includes("nao renda")) return "decl-naorenda";
+        if (n.includes("vinculo")) return "vinculo";
+        if (n.includes("checklist")) return "check";
+        if (n.includes("ficha")) return "ficha";
+      }
+      return null;
+    }
+
+    function canonicalDocName(categoria, nome, docId) {
+      const cat = norm(categoria);
+      const id = docId || inferDocId(cat, nome);
+      if (!id) return String(nome || "").replace(/\s+/g, " ").trim();
+      return CANONICAL_DOC_NAMES[`${cat}:${id}`] || String(nome || "").replace(/\s+/g, " ").trim();
+    }
+
+    function docLookupKey(categoria, nome, docId) {
+      const cat = norm(categoria);
+      const id = docId || inferDocId(cat, nome);
+      return `${cat}|${id || normalizeName(nome)}`;
+    }
+
+    function buildDocMap(documentos) {
+      const map = new Map();
+      (documentos || []).forEach((doc) => {
+        const key = docLookupKey(doc.categoria, doc.nome);
+        const current = map.get(key);
+        if (!current) {
+          map.set(key, doc);
+          return;
+        }
+
+        const currentCredito = String(current.status_credito || "").toUpperCase();
+        const nextCredito = String(doc.status_credito || "").toUpperCase();
+        if (currentCredito === "ANALISE" && nextCredito !== "ANALISE") {
+          map.set(key, doc);
+          return;
+        }
+
+        const currentDoc = String(current.status_doc || "").toUpperCase();
+        const nextDoc = String(doc.status_doc || "").toUpperCase();
+        if (currentDoc !== "ENVIADO" && nextDoc === "ENVIADO") {
+          map.set(key, doc);
+        }
+      });
+      return map;
+    }
+
     function setFeedback(message, isError = false) {
       if (!saveFeedback) return;
       saveFeedback.textContent = message || "";
@@ -1343,10 +1460,15 @@ DIVORCIADO: Certidão de casamento averbada.`;
         const creditoSelect = row.querySelector('select[data-role="credito"]');
         const section = row.closest("section.section-block");
         if (!nameCell || !docSelect || !section?.id) return null;
+        const categoria = sectionToCategory(section.id);
+        const nomeRaw = String(nameCell.textContent || "").replace(/\s+/g, " ").trim();
+        const docId = inferDocId(categoria, nomeRaw);
         return {
           row,
-          nome: String(nameCell.textContent || "").replace(/\s+/g, " ").trim(),
-          categoria: sectionToCategory(section.id),
+          nome: canonicalDocName(categoria, nomeRaw, docId),
+          nomeRaw,
+          docId,
+          categoria,
           docSelect,
           creditoSelect,
         };
@@ -1434,12 +1556,7 @@ DIVORCIADO: Certidão de casamento averbada.`;
       const cliente = data.cliente;
       const documentos = data.documentos || [];
 
-      const mapDocs = new Map(
-        documentos.map((doc) => [
-          `${normalizeName(doc.categoria)}|${normalizeName(doc.nome)}`,
-          doc,
-        ])
-      );
+      const mapDocs = buildDocMap(documentos);
 
       const nomeEl = document.getElementById("nome-cliente");
       const corretorEl = document.getElementById("corretor");
@@ -1452,7 +1569,7 @@ DIVORCIADO: Certidão de casamento averbada.`;
       if (reservaEl && !reservaEl.value) reservaEl.value = cliente.reserva || "";
 
       getRows().forEach((item) => {
-        const key = `${normalizeName(item.categoria)}|${normalizeName(item.nome)}`;
+        const key = docLookupKey(item.categoria, item.nome, item.docId);
         const found = mapDocs.get(key);
 
         item.docSelect.value = backendDocToUi(found?.status_doc);
@@ -1515,5 +1632,4 @@ DIVORCIADO: Certidão de casamento averbada.`;
 </script>
 </body>
 </html>
-
 
