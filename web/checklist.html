@@ -144,6 +144,12 @@
         linear-gradient(45deg,#bbf7d0 0,#22c55e 50%,transparent 50%,transparent 100%);
       transform:translateY(-1px);
     }
+    .readonly-field{
+      cursor:default;
+      background:linear-gradient(135deg,#1f2937,#020617) !important;
+      border-color:rgba(148,163,184,.45) !important;
+      color:#d1d5db !important;
+    }
 
     .section-title{
       margin-top:16px;margin-bottom:6px;
@@ -334,7 +340,9 @@
         </div>
         <div class="form-group">
           <label for="obra">Obra / Empreendimento</label>
-          <input id="obra" type="text" placeholder="Ex.: AGL30, AGL32, FSA10" autocomplete="off">
+          <select id="obra">
+            <option value="">Selecione o empreendimento</option>
+          </select>
         </div>
         <div class="form-group">
           <label for="imobiliaria">Imobiliária</label>
@@ -1290,7 +1298,7 @@ DIVORCIADO: Certidão de casamento averbada.`;
   chkCcaGerou.addEventListener('change', atualizarCcaFormularios);
 
   nomeClienteInput.addEventListener('input', atualizarAssuntosEmail);
-  obraInput.addEventListener('input', atualizarAssuntosEmail);
+  obraInput.addEventListener('change', atualizarAssuntosEmail);
 
   /* init */
   atualizarDependente();
@@ -1312,6 +1320,7 @@ DIVORCIADO: Certidão de casamento averbada.`;
     const autoBack = url.searchParams.get("auto_back") === "1";
     const returnTo = url.searchParams.get("return_to") || "/app/corretor";
     let processoAtual = null;
+    let currentUser = null;
     let saving = false;
     const saveBtn = document.getElementById("btnSalvarChecklist");
     const backBtn = document.getElementById("btnVoltarAcompanhamento");
@@ -1482,6 +1491,70 @@ DIVORCIADO: Certidão de casamento averbada.`;
       return data;
     }
 
+    async function loadCurrentUser() {
+      const response = await fetch("/auth/me", { credentials: "same-origin" });
+      if (response.status === 401) {
+        window.location.href = "/login";
+        throw new Error("Nao autenticado");
+      }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.detail || "Falha ao carregar sessao");
+      }
+      currentUser = data;
+      const corretorEl = document.getElementById("corretor");
+      if (corretorEl && data.role === "corretor") {
+        corretorEl.value = data.username || "";
+        corretorEl.readOnly = true;
+        corretorEl.classList.add("readonly-field");
+        corretorEl.title = "Corretor preenchido automaticamente pelo login.";
+      }
+    }
+
+    async function loadEmpreendimentos(selectedValue = undefined) {
+      const obraEl = document.getElementById("obra");
+      if (!obraEl) return;
+
+      const selected = selectedValue !== undefined
+        ? String(selectedValue || "").trim()
+        : String(obraEl.value || "").trim();
+
+      let rows = [];
+      try {
+        rows = await api("/empreendimentos");
+      } catch (error) {
+        if (currentUser && currentUser.role === "corretor") {
+          setFeedback(`Erro ao carregar empreendimentos: ${error.message}`, true);
+        }
+      }
+
+      const names = Array.from(
+        new Set(
+          (rows || [])
+            .map((item) => String(item?.nome || "").trim())
+            .filter(Boolean)
+        )
+      );
+
+      obraEl.innerHTML = `<option value="">Selecione o empreendimento</option>`;
+      names.forEach((name) => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        obraEl.appendChild(opt);
+      });
+
+      if (selected && !names.includes(selected)) {
+        const opt = document.createElement("option");
+        opt.value = selected;
+        opt.textContent = selected;
+        obraEl.appendChild(opt);
+      }
+
+      obraEl.value = selected || "";
+      if (typeof atualizarAssuntosEmail === "function") atualizarAssuntosEmail();
+    }
+
     function sectionToCategory(sectionId) {
       const map = {
         "sec-proponente": "proponente",
@@ -1558,7 +1631,9 @@ DIVORCIADO: Certidão de casamento averbada.`;
 
       const payload = {
         nome,
-        corretor: (document.getElementById("corretor")?.value || "").trim() || null,
+        corretor: currentUser && currentUser.role === "corretor"
+          ? (currentUser.username || "").trim() || null
+          : (document.getElementById("corretor")?.value || "").trim() || null,
         obra: (document.getElementById("obra")?.value || "").trim() || null,
         reserva: (document.getElementById("reserva")?.value || "").trim() || null,
       };
@@ -1624,12 +1699,13 @@ DIVORCIADO: Certidão de casamento averbada.`;
 
       const nomeEl = document.getElementById("nome-cliente");
       const corretorEl = document.getElementById("corretor");
-      const obraEl = document.getElementById("obra");
       const reservaEl = document.getElementById("reserva");
 
       if (nomeEl && !nomeEl.value) nomeEl.value = cliente.nome || "";
-      if (corretorEl && !corretorEl.value) corretorEl.value = cliente.corretor || "";
-      if (obraEl && !obraEl.value) obraEl.value = cliente.obra || "";
+      if (corretorEl && currentUser && currentUser.role !== "corretor" && !corretorEl.value) {
+        corretorEl.value = cliente.corretor || "";
+      }
+      await loadEmpreendimentos(cliente.obra || "");
       if (reservaEl && !reservaEl.value) reservaEl.value = cliente.reserva || "";
       aplicarDocumentosNaTela(documentos);
     }
@@ -1695,9 +1771,15 @@ DIVORCIADO: Certidão de casamento averbada.`;
 
     applyVisuals();
 
-    carregarProcesso().catch((error) => {
-      setFeedback(`Erro ao carregar processo: ${error.message}`, true);
-    });
+    (async () => {
+      try {
+        await loadCurrentUser();
+        await loadEmpreendimentos();
+        await carregarProcesso();
+      } catch (error) {
+        setFeedback(`Erro ao carregar processo: ${error.message}`, true);
+      }
+    })();
   })();
 </script>
 </body>

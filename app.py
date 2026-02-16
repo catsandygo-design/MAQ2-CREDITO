@@ -492,6 +492,20 @@ class AppUser(Base):
     )
 
 
+class Empreendimento(Base):
+    __tablename__ = "empreendimentos"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    nome: Mapped[str] = mapped_column(String(200), unique=True, nullable=False, index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
 class ClienteCreate(BaseModel):
     nome: str
     corretor: Optional[str] = None
@@ -592,6 +606,19 @@ class AppUserOut(BaseModel):
     updated_at: datetime
 
 
+class EmpreendimentoCreate(BaseModel):
+    nome: str
+
+
+class EmpreendimentoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    nome: str
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
 class ProcessoIntakeCreate(BaseModel):
     nome: str
     corretor: Optional[str] = None
@@ -651,23 +678,50 @@ def _ensure_seed_users(db: Session) -> None:
     seeds = []
     for username, account in APP_USERS.items():
         seeds.append((username, account["password"], _normalize_role(account["role"])))
+    admin_seed_username = _normalize_username(APP_ADMIN_USER)
 
     created = 0
+    changed = 0
     for username, password, role in seeds:
-        if _get_user_by_username(db, username):
+        existing = _get_user_by_username(db, username)
+        if existing:
+            # Usuarios seed entram com troca opcional para facilitar acesso inicial.
+            is_admin_seed = _normalize_username(existing.username) == admin_seed_username
+            if existing.must_change_password and (existing.last_login_at is None or is_admin_seed):
+                existing.must_change_password = False
+                changed += 1
             continue
         user = AppUser(
             username=_normalize_username(username),
             role=role,
             is_active=True,
-            must_change_password=True,
+            must_change_password=False,
         )
-        _set_user_password(user, password, must_change_password=True)
+        _set_user_password(user, password, must_change_password=False)
         db.add(user)
         created += 1
 
-    if created:
+    if created or changed:
         db.commit()
+
+
+def _normalize_empreendimento_nome(value: Optional[str]) -> str:
+    return " ".join((value or "").strip().split())
+
+
+def _resolve_empreendimento_nome(db: Session, value: Optional[str]) -> Optional[str]:
+    nome = _normalize_empreendimento_nome(value)
+    if not nome:
+        return None
+
+    empreendimento = (
+        db.query(Empreendimento)
+        .filter(func.lower(Empreendimento.nome) == nome.lower(), Empreendimento.is_active.is_(True))
+        .first()
+    )
+    if empreendimento:
+        return empreendimento.nome
+    return None
 
 
 def get_db():
@@ -718,7 +772,7 @@ async def lifespan(_: FastAPI):
 
     if engine is not None:
         try:
-            Base.metadata.create_all(bind=engine, tables=[AppUser.__table__])
+            Base.metadata.create_all(bind=engine, tables=[AppUser.__table__, Empreendimento.__table__])
             if SessionLocal is not None:
                 db = SessionLocal()
                 try:
@@ -838,6 +892,19 @@ def app_admin_page(request: Request):
     if role != ROLE_ADMIN:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
     return FileResponse(WEB_DIR / "admin.html")
+
+
+@app.get("/admin")
+def admin_shortcut(request: Request):
+    session = _read_session(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=302)
+    return RedirectResponse(url=_home_for_session(session), status_code=302)
+
+
+@app.get("/manutencao")
+def maintenance_shortcut(request: Request):
+    return admin_shortcut(request)
 
 
 @app.get("/app/trocar-senha")
@@ -1062,6 +1129,68 @@ def admin_reset_password(
     return user
 
 
+@app.get("/app/api/empreendimentos", response_model=list[EmpreendimentoOut])
+def app_list_empreendimentos(
+    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    rows = (
+        db.query(Empreendimento)
+        .filter(Empreendimento.is_active.is_(True))
+        .order_by(func.lower(Empreendimento.nome).asc())
+        .all()
+    )
+    return rows
+
+
+@app.get("/app/api/admin/empreendimentos", response_model=list[EmpreendimentoOut])
+def admin_list_empreendimentos(
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    rows = db.query(Empreendimento).order_by(func.lower(Empreendimento.nome).asc()).all()
+    return rows
+
+
+@app.post("/app/api/admin/empreendimentos", response_model=EmpreendimentoOut)
+def admin_create_empreendimento(
+    payload: EmpreendimentoCreate,
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    nome = _normalize_empreendimento_nome(payload.nome)
+    if not nome:
+        raise HTTPException(status_code=422, detail="Nome do empreendimento obrigatorio")
+
+    existing = db.query(Empreendimento).filter(func.lower(Empreendimento.nome) == nome.lower()).first()
+    if existing:
+        if not existing.is_active:
+            existing.is_active = True
+            db.commit()
+            db.refresh(existing)
+        return existing
+
+    empreendimento = Empreendimento(nome=nome, is_active=True)
+    db.add(empreendimento)
+    db.commit()
+    db.refresh(empreendimento)
+    return empreendimento
+
+
+@app.delete("/app/api/admin/empreendimentos/{empreendimento_id}")
+def admin_delete_empreendimento(
+    empreendimento_id: uuid.UUID,
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    empreendimento = db.get(Empreendimento, empreendimento_id)
+    if not empreendimento:
+        raise HTTPException(status_code=404, detail="Empreendimento nao encontrado")
+    empreendimento.is_active = False
+    db.commit()
+    return {"ok": True}
+
+
 @app.get("/health")
 def health():
     return {
@@ -1212,13 +1341,21 @@ def app_list_processos(
 @app.post("/app/api/processos/intake")
 def app_create_intake(
     payload: ProcessoIntakeCreate,
-    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA)),
     db: Session = Depends(get_db),
 ):
+    role = _normalize_role(str(session.get("role", "")))
+    username = _normalize_username(str(session.get("username", "")))
+    obra_nome = _resolve_empreendimento_nome(db, payload.obra)
+    if role == ROLE_CORRETOR and not obra_nome:
+        raise HTTPException(status_code=422, detail="Selecione um empreendimento cadastrado.")
+    if payload.obra and not obra_nome:
+        raise HTTPException(status_code=422, detail="Empreendimento invalido. Selecione um empreendimento cadastrado.")
+
     cliente = Cliente(
         nome=payload.nome.strip(),
-        corretor=payload.corretor.strip() if payload.corretor else None,
-        obra=payload.obra.strip() if payload.obra else None,
+        corretor=username if role == ROLE_CORRETOR else (payload.corretor.strip() if payload.corretor else None),
+        obra=obra_nome,
         reserva=payload.reserva.strip() if payload.reserva else None,
     )
     db.add(cliente)

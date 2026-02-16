@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Painel Admin | Sistema de Credito</title>
+  <title>Painel de Manutencao | Sistema de Credito</title>
   <style>
     :root{
       --bg:#020617;
@@ -111,6 +111,13 @@
     .row-actions .btn{padding:7px 9px;font-size:11px}
     .role-select{min-width:120px}
     .status-toggle{transform:scale(1.1)}
+    .grid-emp{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:8px;
+      align-items:end;
+    }
+    @media (max-width:900px){.grid-emp{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -118,8 +125,8 @@
     <section class="card">
       <div class="top">
         <div class="title">
-          <h1>Painel Admin</h1>
-          <p>Cadastro de funcionarios, reset de senha e bloqueio de acesso.</p>
+          <h1>Painel de Manutencao (Admin)</h1>
+          <p>Cadastro de funcionarios, reset de senha, bloqueio de acesso e empreendimentos.</p>
         </div>
         <div class="actions">
           <button class="btn" id="btnRefresh">Atualizar</button>
@@ -159,6 +166,36 @@
     </section>
 
     <section class="card">
+      <div class="body">
+        <form id="empForm" class="grid-emp">
+          <div class="field">
+            <label for="empNome">Empreendimento (combobox do cadastro)</label>
+            <input id="empNome" required placeholder="Ex.: AGL30" />
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn primary" type="submit">Cadastrar empreendimento</button>
+          </div>
+        </form>
+        <div id="feedbackEmp" class="feedback" aria-live="polite"></div>
+      </div>
+      <div class="body" style="padding:0;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:65%">Empreendimento</th>
+              <th style="width:15%">Ativo</th>
+              <th style="width:20%">Acoes</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyEmp">
+            <tr><td colspan="3" class="tiny">Carregando empreendimentos...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
       <div class="body" style="padding:0;">
         <table>
           <thead>
@@ -181,10 +218,14 @@
 
   <script>
     const feedback = document.getElementById("feedback");
+    const feedbackEmp = document.getElementById("feedbackEmp");
     const tbody = document.getElementById("tbodyUsers");
+    const tbodyEmp = document.getElementById("tbodyEmp");
     const createForm = document.getElementById("createForm");
+    const empForm = document.getElementById("empForm");
     let currentUser = null;
     let users = [];
+    let empreendimentos = [];
 
     function setFeedback(message, isError = false) {
       feedback.textContent = message || "";
@@ -196,6 +237,20 @@
       const d = new Date(value);
       if (Number.isNaN(d.getTime())) return "-";
       return d.toLocaleString("pt-BR");
+    }
+
+    function setFeedbackEmp(message, isError = false) {
+      feedbackEmp.textContent = message || "";
+      feedbackEmp.classList.toggle("error", Boolean(isError));
+    }
+
+    function esc(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
     }
 
     async function api(path, options = {}) {
@@ -232,7 +287,7 @@
         const isSelf = currentUser && currentUser.username === u.username;
         return `
           <tr data-id="${u.id}">
-            <td><b>${u.username}</b></td>
+            <td><b>${esc(u.username)}</b></td>
             <td>
               <select class="role-select">${roleOptions(u.role)}</select>
             </td>
@@ -299,9 +354,45 @@
       });
     }
 
+    function renderEmpreendimentos() {
+      if (!empreendimentos.length) {
+        tbodyEmp.innerHTML = `<tr><td colspan="3" class="tiny">Nenhum empreendimento cadastrado.</td></tr>`;
+        return;
+      }
+
+      tbodyEmp.innerHTML = empreendimentos.map((item) => `
+        <tr data-id="${item.id}">
+          <td><b>${esc(item.nome)}</b></td>
+          <td><span class="pill ${item.is_active ? "ok" : "bad"}">${item.is_active ? "Sim" : "Nao"}</span></td>
+          <td><button class="btn danger btn-del-emp" type="button">Remover</button></td>
+        </tr>
+      `).join("");
+
+      tbodyEmp.querySelectorAll(".btn-del-emp").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const row = btn.closest("tr[data-id]");
+          const empId = row?.getAttribute("data-id");
+          if (!empId) return;
+          if (!confirm("Remover empreendimento da combobox?")) return;
+          try {
+            await api(`/app/api/admin/empreendimentos/${encodeURIComponent(empId)}`, { method: "DELETE" });
+            setFeedbackEmp("Empreendimento removido.");
+            await loadEmpreendimentos();
+          } catch (error) {
+            setFeedbackEmp(error.message, true);
+          }
+        });
+      });
+    }
+
     async function loadUsers() {
       users = await api("/app/api/admin/users");
       renderUsers();
+    }
+
+    async function loadEmpreendimentos() {
+      empreendimentos = await api("/app/api/admin/empreendimentos");
+      renderEmpreendimentos();
     }
 
     async function loadMe() {
@@ -340,8 +431,34 @@
       }
     });
 
-    document.getElementById("btnRefresh").addEventListener("click", () => {
-      loadUsers().catch((error) => setFeedback(error.message, true));
+    empForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setFeedbackEmp("");
+      const nome = empForm.empNome.value.trim();
+      if (nome.length < 2) {
+        setFeedbackEmp("Nome do empreendimento deve ter ao menos 2 caracteres.", true);
+        return;
+      }
+      try {
+        await api("/app/api/admin/empreendimentos", {
+          method: "POST",
+          body: JSON.stringify({ nome }),
+        });
+        empForm.reset();
+        setFeedbackEmp("Empreendimento cadastrado com sucesso.");
+        await loadEmpreendimentos();
+      } catch (error) {
+        setFeedbackEmp(error.message, true);
+      }
+    });
+
+    document.getElementById("btnRefresh").addEventListener("click", async () => {
+      try {
+        await loadUsers();
+        await loadEmpreendimentos();
+      } catch (error) {
+        setFeedback(error.message, true);
+      }
     });
 
     document.getElementById("btnTrocarSenha").addEventListener("click", () => {
@@ -357,6 +474,7 @@
       try {
         await loadMe();
         await loadUsers();
+        await loadEmpreendimentos();
       } catch (error) {
         setFeedback(error.message, true);
       }

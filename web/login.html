@@ -84,6 +84,28 @@
       border-top: 1px dashed var(--line);
       padding-top: 10px;
     }
+    .admin-box{
+      margin-top: 10px;
+      border:1px dashed var(--line);
+      border-radius:12px;
+      padding:10px;
+      font-size:.8rem;
+      color:var(--muted);
+      background:rgba(10,18,32,.65);
+    }
+    .admin-box b{color:var(--text)}
+    .admin-box .row{
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      margin-top:4px;
+    }
+    .admin-box button{
+      width:auto;
+      margin:8px 0 0;
+      padding:8px 10px;
+      font-size:.78rem;
+    }
   </style>
 </head>
 <body>
@@ -105,7 +127,13 @@
     </form>
 
     <div class="hint">
-      Primeiro acesso exige troca de senha. Perfis: corretor, cca, analista e admin.
+      Acesso de manutencao: faca login com perfil admin e abra /admin (ou /manutencao).
+    </div>
+    <div class="admin-box">
+      <div><b>Acesso inicial admin</b></div>
+      <div class="row"><span>Usuario:</span><b>douglasadm</b></div>
+      <div class="row"><span>Senha:</span><b>12345</b></div>
+      <button id="fillAdminBtn" type="button">Preencher admin</button>
     </div>
   </main>
 
@@ -113,6 +141,7 @@
     const form = document.getElementById("loginForm");
     const errorBox = document.getElementById("errorBox");
     const submitBtn = document.getElementById("submitBtn");
+    const fillAdminBtn = document.getElementById("fillAdminBtn");
 
     async function checkSession() {
       try {
@@ -163,8 +192,13 @@
       }
     });
 
+    fillAdminBtn.addEventListener("click", () => {
+      form.username.value = "douglasadm";
+      form.password.value = "12345";
+      form.username.focus();
+    });
+
     checkSession();
   </script>
 </body>
 </html>
-
