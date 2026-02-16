@@ -922,7 +922,8 @@ def app_bulk_upsert_documentos(
 
         if documento:
             if status_doc is not None:
-                documento.status_doc = status_doc
+                if not (role == ROLE_CORRETOR and documento.status_doc == "ENVIADO"):
+                    documento.status_doc = status_doc
             if status_credito is not None:
                 documento.status_credito = status_credito
         else:

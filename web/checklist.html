@@ -209,6 +209,23 @@
     }
     .save-feedback{font-size:.74rem;color:#a7f3d0;}
     .save-feedback.error{color:#fca5a5;}
+    .back-btn{
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,0.55);
+      background:rgba(15,23,42,0.92);
+      color:#e5e7eb;
+      font-size:.72rem;
+      font-weight:700;
+      padding:8px 14px;
+      cursor:pointer;
+      transition:transform .08s ease, border-color .12s ease, box-shadow .12s ease;
+    }
+    .back-btn:hover{
+      transform:translateY(-1px);
+      border-color:rgba(34,197,94,0.65);
+      box-shadow:0 0 0 1px rgba(15,23,42,0.95),0 0 10px rgba(34,197,94,0.35);
+    }
+    .back-btn:active{transform:translateY(0);}
 
     .checkbox-row{
       display:flex;align-items:center;gap:8px;
@@ -1014,6 +1031,7 @@ ou, em casos pontuais, a próprio punho.</td>
       <footer>
         <div class="actions-row">
           <button type="button" class="copy-btn save-btn" id="btnSalvarChecklist">Salvar documentos</button>
+          <button type="button" class="back-btn" id="btnVoltarAcompanhamento">Voltar para acompanhamento</button>
           <span id="save-feedback" class="save-feedback" aria-live="polite"></span>
         </div>
         <p class="note">
@@ -1187,6 +1205,15 @@ DIVORCIADO: Certidão de casamento averbada.`;
     if (val === 'enviado')  select.classList.add('status-enviado');
   }
 
+  function aplicarRegraEdicaoStatusDoc(select) {
+    const val = (select.value || '').toLowerCase();
+    const bloqueado = val === 'enviado';
+    select.disabled = bloqueado;
+    select.title = bloqueado
+      ? 'Documento ja enviado. Nao e possivel voltar para Pendente.'
+      : 'Selecione Enviado quando o documento for anexado.';
+  }
+
   function inicializarStatusDoc() {
     const selects = document.querySelectorAll('select[aria-label^="Status "]:not([data-role="credito"])');
     selects.forEach(sel => {
@@ -1194,7 +1221,11 @@ DIVORCIADO: Certidão de casamento averbada.`;
       if ([...sel.options].some(o => (o.textContent || '').toLowerCase() === 'pendente')) {
         sel.classList.add('status-pill');
         atualizarVisualStatusDoc(sel);
-        sel.addEventListener('change', () => atualizarVisualStatusDoc(sel));
+        aplicarRegraEdicaoStatusDoc(sel);
+        sel.addEventListener('change', () => {
+          atualizarVisualStatusDoc(sel);
+          aplicarRegraEdicaoStatusDoc(sel);
+        });
       }
     });
   }
@@ -1283,6 +1314,7 @@ DIVORCIADO: Certidão de casamento averbada.`;
     let processoAtual = null;
     let saving = false;
     const saveBtn = document.getElementById("btnSalvarChecklist");
+    const backBtn = document.getElementById("btnVoltarAcompanhamento");
     const saveFeedback = document.getElementById("save-feedback");
 
     function norm(value) {
@@ -1421,6 +1453,16 @@ DIVORCIADO: Certidão de casamento averbada.`;
       saveFeedback.classList.toggle("error", Boolean(isError));
     }
 
+    function getReturnPath() {
+      try {
+        const target = new URL(returnTo, window.location.origin);
+        if (target.origin !== window.location.origin) return "/app/corretor";
+        return `${target.pathname}${target.search}`;
+      } catch (_) {
+        return "/app/corretor";
+      }
+    }
+
     async function api(path, options = {}) {
       const response = await fetch(`${API_BASE}${path}`, {
         credentials: "same-origin",
@@ -1543,6 +1585,7 @@ DIVORCIADO: Certidão de casamento averbada.`;
 
       getRows().forEach((item) => {
         if (typeof atualizarVisualStatusDoc === "function") atualizarVisualStatusDoc(item.docSelect);
+        if (typeof aplicarRegraEdicaoStatusDoc === "function") aplicarRegraEdicaoStatusDoc(item.docSelect);
         if (item.creditoSelect && typeof atualizarVisualStatusCredito === "function") {
           item.creditoSelect.disabled = true;
           atualizarVisualStatusCredito(item.creditoSelect);
@@ -1550,25 +1593,8 @@ DIVORCIADO: Certidão de casamento averbada.`;
       });
     }
 
-    async function carregarProcesso() {
-      if (!processoId) return;
-
-      const data = await api(`/processos/${processoId}/full`);
-      processoAtual = data.processo;
-      const cliente = data.cliente;
-      const documentos = data.documentos || [];
-
-      const mapDocs = buildDocMap(documentos);
-
-      const nomeEl = document.getElementById("nome-cliente");
-      const corretorEl = document.getElementById("corretor");
-      const obraEl = document.getElementById("obra");
-      const reservaEl = document.getElementById("reserva");
-
-      if (nomeEl && !nomeEl.value) nomeEl.value = cliente.nome || "";
-      if (corretorEl && !corretorEl.value) corretorEl.value = cliente.corretor || "";
-      if (obraEl && !obraEl.value) obraEl.value = cliente.obra || "";
-      if (reservaEl && !reservaEl.value) reservaEl.value = cliente.reserva || "";
+    function aplicarDocumentosNaTela(documentos) {
+      const mapDocs = buildDocMap(documentos || []);
 
       getRows().forEach((item) => {
         const key = docLookupKey(item.categoria, item.nome, item.docId);
@@ -1586,6 +1612,26 @@ DIVORCIADO: Certidão de casamento averbada.`;
       });
 
       applyVisuals();
+    }
+
+    async function carregarProcesso() {
+      if (!processoId) return;
+
+      const data = await api(`/processos/${processoId}/full`);
+      processoAtual = data.processo;
+      const cliente = data.cliente;
+      const documentos = data.documentos || [];
+
+      const nomeEl = document.getElementById("nome-cliente");
+      const corretorEl = document.getElementById("corretor");
+      const obraEl = document.getElementById("obra");
+      const reservaEl = document.getElementById("reserva");
+
+      if (nomeEl && !nomeEl.value) nomeEl.value = cliente.nome || "";
+      if (corretorEl && !corretorEl.value) corretorEl.value = cliente.corretor || "";
+      if (obraEl && !obraEl.value) obraEl.value = cliente.obra || "";
+      if (reservaEl && !reservaEl.value) reservaEl.value = cliente.reserva || "";
+      aplicarDocumentosNaTela(documentos);
     }
 
     async function salvarChecklist() {
@@ -1606,13 +1652,23 @@ DIVORCIADO: Certidão de casamento averbada.`;
       saving = true;
       if (saveBtn) saveBtn.disabled = true;
       try {
-        await api(`/processos/${processoId}/documentos`, {
+        const savedDocs = await api(`/processos/${processoId}/documentos`, {
           method: "PUT",
           body: JSON.stringify({ documentos }),
         });
-        setFeedback("Documentos salvos com sucesso.");
+        if (Array.isArray(savedDocs)) {
+          aplicarDocumentosNaTela(savedDocs);
+          const enviados = savedDocs.filter((doc) => String(doc.status_doc || "").toUpperCase() === "ENVIADO").length;
+          if (enviados > 0) {
+            setFeedback(`${enviados} documento(s) enviado(s) e salvo(s).`);
+          } else {
+            setFeedback("Checklist salvo. Nenhum documento marcado como enviado.");
+          }
+        } else {
+          setFeedback("Documentos salvos com sucesso.");
+        }
         if (autoBack) {
-          const backUrl = new URL(returnTo, window.location.origin);
+          const backUrl = new URL(getReturnPath(), window.location.origin);
           backUrl.searchParams.set("saved", "1");
           window.location.href = backUrl.pathname + backUrl.search;
           return;
@@ -1628,6 +1684,12 @@ DIVORCIADO: Certidão de casamento averbada.`;
         salvarChecklist().catch((error) => {
           setFeedback(`Erro ao salvar: ${error.message}`, true);
         });
+      });
+    }
+
+    if (backBtn) {
+      backBtn.addEventListener("click", () => {
+        window.location.href = getReturnPath();
       });
     }
 
