@@ -432,7 +432,10 @@ app = FastAPI(title="Sistema Credito API", lifespan=lifespan)
 
 
 @app.get("/")
-def root():
+def root(request: Request):
+    accept = (request.headers.get("accept") or "").lower()
+    if "text/html" in accept:
+        return RedirectResponse(url="/app", status_code=302)
     return {"service": "sistema-credito-api", "status": "ok"}
 
 
