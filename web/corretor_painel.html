@@ -248,6 +248,10 @@
     border:1px solid rgba(148,163,184,.16);
     background: rgba(255,255,255,.02);
     white-space:nowrap;
+    max-width:100%;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
   .ok{border-color: rgba(34,197,94,.55); color: var(--accent)}
   .warn{border-color: rgba(245,158,11,.55); color: var(--warn)}
@@ -268,6 +272,7 @@
   .sla.ok{border-color: rgba(34,197,94,.55); color: var(--accent)}
   .sla.warn{border-color: rgba(245,158,11,.55); color: var(--warn)}
   .sla.bad{border-color: rgba(239,68,68,.55); color: var(--danger)}
+  td.statusTd{overflow:hidden}
 </style>
 </head>
 <body>
@@ -349,13 +354,13 @@
       <div class="scroll">
         <table>
           <colgroup>
-            <col style="width:32%">
+            <col style="width:28%">
             <col style="width:14%">
-            <col style="width:10%">
-            <col style="width:10%">
-            <col style="width:10%">
-            <col style="width:12%">
-            <col style="width:12%">
+            <col style="width:14%">
+            <col style="width:14%">
+            <col style="width:14%">
+            <col style="width:8%">
+            <col style="width:8%">
           </colgroup>
           <thead>
             <tr>
@@ -413,6 +418,7 @@
     let DATA = [];
     let loading = false;
     let countdown = REFRESH_SECONDS;
+    let currentUsername = "";
 
     const $ = (id) => document.getElementById(id);
     const norm = (s) => String(s || "").trim().toLowerCase();
@@ -496,9 +502,28 @@
       return data;
     }
 
+    async function loadSessionProfile(){
+      const response = await fetch("/auth/me", { credentials: "same-origin" });
+      if (response.status === 401){
+        window.location.href = "/login";
+        throw new Error("Nao autenticado");
+      }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok){
+        throw new Error(data.detail || "Falha ao carregar sessao");
+      }
+      currentUsername = norm(data.username);
+      if (norm(data.role) !== "corretor"){
+        window.location.href = "/app";
+        throw new Error("Perfil invalido");
+      }
+    }
+
     async function loadData(){
       const rows = await api("/processos");
-      DATA = rows.map(fromBackend);
+      DATA = rows
+        .map(fromBackend)
+        .filter((row) => !currentUsername || norm(row.corretor) === currentUsername);
     }
 
     function renderInsights(rows){
@@ -543,9 +568,9 @@
               <div class="empreendimento">${esc(r.emp)}</div>
             </td>
             <td style="font-weight:800">${esc(r.corretor)}</td>
-            <td><span class="pill ${gCls}">${gTxt}</span></td>
-            <td><span class="pill ${cCls}">${cTxt}</span></td>
-            <td><span class="pill ${aCls}">${aTxt}</span></td>
+            <td class="statusTd"><span class="pill ${gCls}">${gTxt}</span></td>
+            <td class="statusTd"><span class="pill ${cCls}">${cTxt}</span></td>
+            <td class="statusTd"><span class="pill ${aCls}">${aTxt}</span></td>
             <td style="text-align:center"><span class="sla ${slaClass(r.slaCor)}">${Number(r.slaCor || 0)}h</span></td>
             <td style="text-align:center"><span class="sla ${slaClass(r.slaCred)}">${Number(r.slaCred || 0)}h</span></td>
           </tr>
@@ -589,6 +614,9 @@
       if (loading) return;
       loading = true;
       try{
+        if (!currentUsername){
+          await loadSessionProfile();
+        }
         await loadData();
         applyFilters();
       }catch(error){

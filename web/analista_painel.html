@@ -271,6 +271,14 @@
     border:1px solid rgba(148,163,184,.16);
     white-space:nowrap;
     background: rgba(255,255,255,.02);
+    max-width:100%;
+    min-width:0;
+  }
+  .pill .pillText{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    min-width:0;
   }
   .ok{border-color: rgba(34,197,94,.55); color: var(--accent);}
   .warn{border-color: rgba(245,158,11,.55); color: var(--warn);}
@@ -372,6 +380,7 @@
   @keyframes cheerBody{0%,100%{transform:translateY(0)}50%{transform:translateY(-1px)}}
 
   .hintRow{font-size:11px;color: var(--muted)}
+  td.statusTd{overflow:hidden}
 </style>
 </head>
 
@@ -472,14 +481,14 @@
       <div class="scroll">
         <table>
           <colgroup>
-            <col style="width:34%">
+            <col style="width:28%">
             <col style="width:12%">
-            <col style="width:10%">
-            <col style="width:10%">
-            <col style="width:10%">
-            <col style="width:10%">
-            <col style="width:7%">
-            <col style="width:7%">
+            <col style="width:8%">
+            <col style="width:12%">
+            <col style="width:14%">
+            <col style="width:14%">
+            <col style="width:6%">
+            <col style="width:6%">
           </colgroup>
           <thead>
             <tr>
@@ -682,7 +691,7 @@
 
   function pill(text, cls, moving, celebrating){
     const stateClass = celebrating ? "celebrate" : (moving ? "walk" : "still");
-    return `<span class="pill ${cls} ${stateClass}">${text}${walkerSVG()}</span>`;
+    return `<span class="pill ${cls} ${stateClass}"><span class="pillText">${text}</span>${walkerSVG()}</span>`;
   }
 
   function statusText(area, value){
@@ -850,9 +859,9 @@
           </td>
           <td style="font-weight:800">${esc(r.corretor)}</td>
           <td>${esc(r.cca)}</td>
-          <td>${pill(gTxt, gCls, moving, celebrating)}</td>
-          <td>${pill(cTxt, cCls, moving, celebrating)}</td>
-          <td>${pill(aTxt, aCls, moving, celebrating)}</td>
+          <td class="statusTd">${pill(gTxt, gCls, moving, celebrating)}</td>
+          <td class="statusTd">${pill(cTxt, cCls, moving, celebrating)}</td>
+          <td class="statusTd">${pill(aTxt, aCls, moving, celebrating)}</td>
           <td style="text-align:center">${slaBadge(r.slaCor)}</td>
           <td style="text-align:center">${slaBadge(r.slaCred)}</td>
         </tr>
