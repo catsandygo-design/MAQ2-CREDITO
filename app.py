@@ -350,10 +350,90 @@ def require_roles(*roles: str):
     return _dependency
 
 
-def _process_status(value: Optional[str], fallback: str = "EM_ANALISE") -> str:
-    raw = (value or "").strip().upper()
-    allowed = {"EM_ANALISE", "PENDENTE", "APROVADO", "REPROVADO"}
-    return raw if raw in allowed else fallback
+PROCESS_CREDITO_STATUSES = {"EM_ANALISE", "PENDENCIADO", "APROVADO", "REPROVADO"}
+PROCESS_GERAL_STATUSES = {"NOVO", "EM_ANDAMENTO", "PENDENCIADO", "APROVADO", "REPROVADO", "DISTRATO", "CANCELADO"}
+PROCESS_CAIXA_STATUSES = {
+    "ANALISE_CREDITO",
+    "PENDENTE_CREDITO",
+    "ANALISE_CCA",
+    "PENDENTE_CCA",
+    "AGUARDANDO_CONFORMIDADE",
+    "CONFORME",
+    "TRATANDO_PRODUTO",
+    "AGENDADO",
+    "ASSINATURA_CAIXA",
+}
+PROCESS_AGEHAB_STATUSES = {"ANALISE_CREDITO", "PENDENTE_CREDITO", "ENVIO_AGEHAB", "PENDENTE_AGEHAB", "VALIDADO_AGEHAB"}
+PROCESS_SINAL_STATUSES = {"NAO_TEM", "PENDENTE", "PAGO"}
+PROCESS_FIADOR_STATUSES = {"NAO_TEM", "PENDENTE", "FINALIZADO"}
+
+
+def _status_token(value: Optional[str]) -> str:
+    return (value or "").strip().upper()
+
+
+def _process_credit_status(value: Optional[str], fallback: str = "EM_ANALISE") -> str:
+    raw = _status_token(value)
+    aliases = {
+        "ANALISE": "EM_ANALISE",
+        "EM ANALISE": "EM_ANALISE",
+        "PENDENTE": "PENDENCIADO",
+    }
+    raw = aliases.get(raw, raw)
+    return raw if raw in PROCESS_CREDITO_STATUSES else fallback
+
+
+def _process_geral_status(value: Optional[str], fallback: str = "NOVO") -> str:
+    raw = _status_token(value)
+    aliases = {
+        "EM_ANALISE": "EM_ANDAMENTO",
+        "EM ANALISE": "EM_ANDAMENTO",
+        "EMANDAMENTO": "EM_ANDAMENTO",
+        "PENDENTE": "PENDENCIADO",
+    }
+    raw = aliases.get(raw, raw)
+    return raw if raw in PROCESS_GERAL_STATUSES else fallback
+
+
+def _process_caixa_status(value: Optional[str], fallback: str = "ANALISE_CREDITO") -> str:
+    raw = _status_token(value)
+    aliases = {
+        "EM_ANALISE": "ANALISE_CREDITO",
+        "EM ANALISE": "ANALISE_CREDITO",
+        "PENDENTE": "PENDENTE_CREDITO",
+        "APROVADO": "CONFORME",
+        "REPROVADO": "PENDENTE_CREDITO",
+    }
+    raw = aliases.get(raw, raw)
+    return raw if raw in PROCESS_CAIXA_STATUSES else fallback
+
+
+def _process_agehab_status(value: Optional[str], fallback: str = "ANALISE_CREDITO") -> str:
+    raw = _status_token(value)
+    aliases = {
+        "EM_ANALISE": "ANALISE_CREDITO",
+        "EM ANALISE": "ANALISE_CREDITO",
+        "PENDENTE": "PENDENTE_AGEHAB",
+        "APROVADO": "VALIDADO_AGEHAB",
+        "REPROVADO": "PENDENTE_AGEHAB",
+        "ENVIO_AGEHAG": "ENVIO_AGEHAB",
+    }
+    raw = aliases.get(raw, raw)
+    return raw if raw in PROCESS_AGEHAB_STATUSES else fallback
+
+
+def _process_sinal_status(value: Optional[str], fallback: str = "NAO_TEM") -> str:
+    raw = _status_token(value)
+    aliases = {"NAO TEM": "NAO_TEM"}
+    raw = aliases.get(raw, raw)
+    return raw if raw in PROCESS_SINAL_STATUSES else fallback
+
+
+def _process_fiador_status(value: Optional[str], fallback: str = "NAO_TEM") -> str:
+    raw = _status_token(value)
+    aliases = {"NAO TEM": "NAO_TEM"}
+    raw = aliases.get(raw, raw)
+    return raw if raw in PROCESS_FIADOR_STATUSES else fallback
 
 
 def _doc_status(value: Optional[str], fallback: str = "PENDENTE") -> str:
@@ -432,9 +512,13 @@ class Processo(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     cliente_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clientes.id", ondelete="CASCADE"))
-    status_geral: Mapped[str] = mapped_column(String, nullable=False, default="EM_ANALISE")
-    status_cca: Mapped[str] = mapped_column(String, nullable=False, default="EM_ANALISE")
-    status_agehab: Mapped[str] = mapped_column(String, nullable=False, default="EM_ANALISE")
+    status_credito: Mapped[str] = mapped_column(String, nullable=False, default="EM_ANALISE")
+    status_geral: Mapped[str] = mapped_column(String, nullable=False, default="NOVO")
+    status_cca: Mapped[str] = mapped_column(String, nullable=False, default="ANALISE_CREDITO")
+    status_agehab: Mapped[str] = mapped_column(String, nullable=False, default="ANALISE_CREDITO")
+    status_sinal: Mapped[str] = mapped_column(String, nullable=False, default="NAO_TEM")
+    status_fiador: Mapped[str] = mapped_column(String, nullable=False, default="NAO_TEM")
+    cca_responsavel: Mapped[Optional[str]] = mapped_column(String(120))
     pendente_fiador: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     pendente_sinal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     sla_credito_dias: Mapped[Optional[int]] = mapped_column(Integer)
@@ -523,9 +607,13 @@ class ProcessoCreate(BaseModel):
 
 
 class ProcessoUpdate(BaseModel):
+    status_credito: Optional[str] = None
     status_geral: Optional[str] = None
     status_cca: Optional[str] = None
     status_agehab: Optional[str] = None
+    status_sinal: Optional[str] = None
+    status_fiador: Optional[str] = None
+    cca_responsavel: Optional[str] = None
     pendente_fiador: Optional[bool] = None
     pendente_sinal: Optional[bool] = None
     sla_credito_dias: Optional[int] = None
@@ -537,9 +625,13 @@ class ProcessoOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     cliente_id: uuid.UUID
+    status_credito: str
     status_geral: str
     status_cca: str
     status_agehab: str
+    status_sinal: str
+    status_fiador: str
+    cca_responsavel: Optional[str] = None
     pendente_fiador: bool
     pendente_sinal: bool
     sla_credito_dias: Optional[int] = None
@@ -633,9 +725,13 @@ class ProcessoOverviewOut(BaseModel):
     corretor: Optional[str] = None
     obra: Optional[str] = None
     reserva: Optional[str] = None
+    status_credito: str
     status_geral: str
     status_cca: str
     status_agehab: str
+    status_sinal: str
+    status_fiador: str
+    cca_responsavel: Optional[str] = None
     pendente_fiador: bool
     pendente_sinal: bool
     sla_credito_dias: Optional[int] = None
@@ -724,6 +820,112 @@ def _resolve_empreendimento_nome(db: Session, value: Optional[str]) -> Optional[
     return None
 
 
+def _ensure_runtime_schema(db: Session) -> None:
+    processos_table = db.execute(text("SELECT to_regclass('public.processos')")).scalar()
+    if not processos_table:
+        return
+
+    statements = [
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_credito VARCHAR(30) DEFAULT 'EM_ANALISE'",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_sinal VARCHAR(30) DEFAULT 'NAO_TEM'",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_fiador VARCHAR(30) DEFAULT 'NAO_TEM'",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS cca_responsavel VARCHAR(120)",
+    ]
+    for stmt in statements:
+        db.execute(text(stmt))
+
+    db.execute(
+        text(
+            """
+            UPDATE processos
+            SET status_credito = CASE
+                WHEN UPPER(COALESCE(status_credito, '')) IN ('EM_ANALISE', 'PENDENCIADO', 'APROVADO', 'REPROVADO') THEN UPPER(status_credito)
+                WHEN UPPER(COALESCE(status_credito, '')) IN ('ANALISE', 'EM ANALISE', 'EMANALISE') THEN 'EM_ANALISE'
+                WHEN UPPER(COALESCE(status_credito, '')) IN ('PENDENTE') THEN 'PENDENCIADO'
+                ELSE 'EM_ANALISE'
+            END
+            """
+        )
+    )
+
+    db.execute(
+        text(
+            """
+            UPDATE processos
+            SET status_geral = CASE
+                WHEN UPPER(COALESCE(status_geral, '')) IN ('NOVO', 'EM_ANDAMENTO', 'PENDENCIADO', 'APROVADO', 'REPROVADO', 'DISTRATO', 'CANCELADO') THEN UPPER(status_geral)
+                WHEN UPPER(COALESCE(status_geral, '')) IN ('EM_ANALISE', 'EM ANALISE', 'EMANALISE') THEN 'EM_ANDAMENTO'
+                WHEN UPPER(COALESCE(status_geral, '')) IN ('PENDENTE') THEN 'PENDENCIADO'
+                ELSE 'NOVO'
+            END
+            """
+        )
+    )
+
+    db.execute(
+        text(
+            """
+            UPDATE processos
+            SET status_cca = CASE
+                WHEN UPPER(COALESCE(status_cca, '')) IN (
+                    'ANALISE_CREDITO', 'PENDENTE_CREDITO', 'ANALISE_CCA', 'PENDENTE_CCA',
+                    'AGUARDANDO_CONFORMIDADE', 'CONFORME', 'TRATANDO_PRODUTO', 'AGENDADO', 'ASSINATURA_CAIXA'
+                ) THEN UPPER(status_cca)
+                WHEN UPPER(COALESCE(status_cca, '')) IN ('EM_ANALISE', 'EM ANALISE', 'EMANALISE', 'ANALISE') THEN 'ANALISE_CREDITO'
+                WHEN UPPER(COALESCE(status_cca, '')) IN ('PENDENTE', 'PENDENCIADO') THEN 'PENDENTE_CREDITO'
+                WHEN UPPER(COALESCE(status_cca, '')) IN ('APROVADO') THEN 'CONFORME'
+                WHEN UPPER(COALESCE(status_cca, '')) IN ('REPROVADO') THEN 'PENDENTE_CREDITO'
+                ELSE 'ANALISE_CREDITO'
+            END
+            """
+        )
+    )
+
+    db.execute(
+        text(
+            """
+            UPDATE processos
+            SET status_agehab = CASE
+                WHEN UPPER(COALESCE(status_agehab, '')) IN ('ANALISE_CREDITO', 'PENDENTE_CREDITO', 'ENVIO_AGEHAB', 'PENDENTE_AGEHAB', 'VALIDADO_AGEHAB') THEN UPPER(status_agehab)
+                WHEN UPPER(COALESCE(status_agehab, '')) IN ('EM_ANALISE', 'EM ANALISE', 'EMANALISE', 'ANALISE') THEN 'ANALISE_CREDITO'
+                WHEN UPPER(COALESCE(status_agehab, '')) IN ('PENDENTE', 'PENDENCIADO') THEN 'PENDENTE_AGEHAB'
+                WHEN UPPER(COALESCE(status_agehab, '')) IN ('APROVADO') THEN 'VALIDADO_AGEHAB'
+                WHEN UPPER(COALESCE(status_agehab, '')) IN ('REPROVADO') THEN 'PENDENTE_AGEHAB'
+                WHEN UPPER(COALESCE(status_agehab, '')) IN ('ENVIO_AGEHAG') THEN 'ENVIO_AGEHAB'
+                ELSE 'ANALISE_CREDITO'
+            END
+            """
+        )
+    )
+
+    db.execute(
+        text(
+            """
+            UPDATE processos
+            SET status_sinal = CASE
+                WHEN UPPER(COALESCE(status_sinal, '')) IN ('NAO_TEM', 'PENDENTE', 'PAGO') THEN UPPER(status_sinal)
+                WHEN pendente_sinal IS TRUE THEN 'PENDENTE'
+                ELSE 'NAO_TEM'
+            END
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            UPDATE processos
+            SET status_fiador = CASE
+                WHEN UPPER(COALESCE(status_fiador, '')) IN ('NAO_TEM', 'PENDENTE', 'FINALIZADO') THEN UPPER(status_fiador)
+                WHEN pendente_fiador IS TRUE THEN 'PENDENTE'
+                ELSE 'NAO_TEM'
+            END
+            """
+        )
+    )
+
+    db.commit()
+
+
 def get_db():
     if DB_URL_HAS_PLACEHOLDERS:
         raise HTTPException(
@@ -777,6 +979,7 @@ async def lifespan(_: FastAPI):
                 db = SessionLocal()
                 try:
                     _ensure_seed_users(db)
+                    _ensure_runtime_schema(db)
                 finally:
                     db.close()
         except SQLAlchemyError:
@@ -1129,6 +1332,20 @@ def admin_reset_password(
     return user
 
 
+@app.get("/app/api/ccas", response_model=list[str])
+def app_list_ccas(
+    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    rows = (
+        db.query(AppUser.username)
+        .filter(AppUser.is_active.is_(True), func.lower(AppUser.role) == ROLE_CCA)
+        .order_by(func.lower(AppUser.username).asc())
+        .all()
+    )
+    return [row[0] for row in rows]
+
+
 @app.get("/app/api/empreendimentos", response_model=list[EmpreendimentoOut])
 def app_list_empreendimentos(
     _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
@@ -1307,15 +1524,17 @@ def patch_documento(documento_id: uuid.UUID, payload: DocumentoUpdate, db: Sessi
 
 @app.get("/app/api/processos", response_model=list[ProcessoOverviewOut])
 def app_list_processos(
-    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
-    rows = (
-        db.query(Processo, Cliente)
-        .join(Cliente, Processo.cliente_id == Cliente.id)
-        .order_by(Processo.created_at.desc())
-        .all()
-    )
+    role = _normalize_role(str(session.get("role", "")))
+    username = _normalize_username(str(session.get("username", "")))
+
+    query = db.query(Processo, Cliente).join(Cliente, Processo.cliente_id == Cliente.id)
+    if role == ROLE_CORRETOR:
+        query = query.filter(func.lower(Cliente.corretor) == username)
+
+    rows = query.order_by(Processo.created_at.desc()).all()
 
     return [
         ProcessoOverviewOut(
@@ -1325,9 +1544,13 @@ def app_list_processos(
             corretor=cliente.corretor,
             obra=cliente.obra,
             reserva=cliente.reserva,
+            status_credito=processo.status_credito,
             status_geral=processo.status_geral,
             status_cca=processo.status_cca,
             status_agehab=processo.status_agehab,
+            status_sinal=processo.status_sinal,
+            status_fiador=processo.status_fiador,
+            cca_responsavel=processo.cca_responsavel,
             pendente_fiador=processo.pendente_fiador,
             pendente_sinal=processo.pendente_sinal,
             sla_credito_dias=processo.sla_credito_dias,
@@ -1374,7 +1597,7 @@ def app_create_intake(
 @app.get("/app/api/processos/{processo_id}/full", response_model=ProcessoFullOut)
 def app_get_processo_full(
     processo_id: uuid.UUID,
-    _: str = Depends(require_app_user),
+    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     processo = db.get(Processo, processo_id)
@@ -1384,6 +1607,11 @@ def app_get_processo_full(
     cliente = db.get(Cliente, processo.cliente_id)
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente nao encontrado")
+
+    role = _normalize_role(str(session.get("role", "")))
+    username = _normalize_username(str(session.get("username", "")))
+    if role == ROLE_CORRETOR and _normalize_username(cliente.corretor) != username:
+        raise HTTPException(status_code=403, detail="Sem permissao para acessar este processo")
 
     _ensure_default_documentos(db, processo.id)
     documentos = (
@@ -1413,12 +1641,31 @@ def app_patch_processo(
 
     changes = payload.model_dump(exclude_unset=True)
     for field, value in changes.items():
-        if field == "status_geral":
-            setattr(processo, field, _process_status(value))
+        if field == "status_credito":
+            processo.status_credito = _process_credit_status(value)
+        elif field == "status_geral":
+            processo.status_geral = _process_geral_status(value)
         elif field == "status_cca":
-            setattr(processo, field, _process_status(value))
+            processo.status_cca = _process_caixa_status(value)
         elif field == "status_agehab":
-            setattr(processo, field, _process_status(value))
+            processo.status_agehab = _process_agehab_status(value)
+        elif field == "status_sinal":
+            status_sinal = _process_sinal_status(value)
+            processo.status_sinal = status_sinal
+            processo.pendente_sinal = status_sinal == "PENDENTE"
+        elif field == "status_fiador":
+            status_fiador = _process_fiador_status(value)
+            processo.status_fiador = status_fiador
+            processo.pendente_fiador = status_fiador == "PENDENTE"
+        elif field == "cca_responsavel":
+            username = _normalize_username(value)
+            if not username:
+                processo.cca_responsavel = None
+            else:
+                cca_user = _get_user_by_username(db, username)
+                if not cca_user or _normalize_role(cca_user.role) != ROLE_CCA or not cca_user.is_active:
+                    raise HTTPException(status_code=422, detail="CCA invalido")
+                processo.cca_responsavel = cca_user.username
         else:
             setattr(processo, field, value)
 
@@ -1431,12 +1678,21 @@ def app_patch_processo(
 def app_bulk_upsert_documentos(
     processo_id: uuid.UUID,
     payload: DocumentoBulkUpsert,
-    session: dict[str, Any] = Depends(require_app_session),
+    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     processo = db.get(Processo, processo_id)
     if not processo:
         raise HTTPException(status_code=404, detail="Processo nao encontrado")
+
+    role = _normalize_role(str(session.get("role", "")))
+    username = _normalize_username(str(session.get("username", "")))
+    if role == ROLE_CORRETOR:
+        cliente = db.get(Cliente, processo.cliente_id)
+        if not cliente:
+            raise HTTPException(status_code=404, detail="Cliente nao encontrado")
+        if _normalize_username(cliente.corretor) != username:
+            raise HTTPException(status_code=403, detail="Sem permissao para atualizar este processo")
 
     if not payload.documentos:
         raise HTTPException(status_code=422, detail="Lista de documentos vazia")
@@ -1452,7 +1708,6 @@ def app_bulk_upsert_documentos(
     if not dedup_map:
         raise HTTPException(status_code=422, detail="Nenhum documento valido para salvar")
 
-    role = str(session.get("role", "")).strip().lower()
     can_update_credit = role == ROLE_ANALISTA
 
     for categoria, nome in dedup_map:

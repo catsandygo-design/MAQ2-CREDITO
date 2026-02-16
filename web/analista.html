@@ -1042,55 +1042,89 @@ DIVORCIADO: Certidão averbada.</td>
         <div class="alertRow" id="slaAlert">
           <div class="left" style="gap:10px">
             <span class="pill neutral">Status</span>
-            <span class="pill" id="pillGeral">Novo</span>
-            <span class="pill" id="pillCaixa">Caixa Novo</span>
-            <span class="pill" id="pillAgehab">Agehab Novo</span>
+            <span class="pill" id="pillCredito">Credito: Em analise</span>
+            <span class="pill" id="pillGeral">Geral: Novo</span>
+            <span class="pill" id="pillCaixa">Caixa: Analise Credito</span>
+            <span class="pill" id="pillAgehab">Agehab: Analise Credito</span>
           </div>
           <div class="right">
             <span class="sla ok" id="slaCor">SLA Corretor: 0h</span>
-            <span class="sla ok" id="slaCred">SLA Crédito: 0h</span>
+            <span class="sla ok" id="slaCred">SLA Credito: 0h</span>
           </div>
         </div>
 
         <div class="form-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
           <div class="fg">
-            <label for="status-geral">Status geral</label>
-            <select id="status-geral">
-              <option value="novo">Novo</option>
-              <option value="em_analise">Em análise</option>
-              <option value="pendente">Pendente</option>
+            <label for="status-credito">Status credito</label>
+            <select id="status-credito">
+              <option value="em_analise">Em analise</option>
+              <option value="pendenciado">Pendenciado</option>
               <option value="aprovado">Aprovado</option>
               <option value="reprovado">Reprovado</option>
             </select>
           </div>
 
           <div class="fg">
-            <label for="prioridade">Prioridade</label>
-            <select id="prioridade">
-              <option value="normal">Normal</option>
-              <option value="alta">Alta</option>
+            <label for="status-geral">Status geral</label>
+            <select id="status-geral">
+              <option value="novo">Novo</option>
+              <option value="em_andamento">Em andamento</option>
+              <option value="pendenciado">Pendenciado</option>
+              <option value="aprovado">Aprovado</option>
+              <option value="reprovado">Reprovado</option>
+              <option value="distrato">Distrato</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+
+          <div class="fg">
+            <label for="cca-responsavel">CCA</label>
+            <select id="cca-responsavel">
+              <option value="">Nao atribuido</option>
             </select>
           </div>
 
           <div class="fg">
             <label for="status-caixa">Status Caixa</label>
             <select id="status-caixa">
-              <option value="novo">Caixa Novo</option>
-              <option value="em_analise">Caixa Análise</option>
-              <option value="pendente">Caixa Pendente</option>
-              <option value="aprovado">Caixa OK</option>
-              <option value="reprovado">Caixa Reprov.</option>
+              <option value="analise_credito">Analise Credito</option>
+              <option value="pendente_credito">Pendente Credito</option>
+              <option value="analise_cca">Analise CCA</option>
+              <option value="pendente_cca">Pendente CCA</option>
+              <option value="aguardando_conformidade">Aguardando Conformidade</option>
+              <option value="conforme">Conforme</option>
+              <option value="tratando_produto">Tratando Produto</option>
+              <option value="agendado">Agendado</option>
+              <option value="assinatura_caixa">Assinatura Caixa</option>
             </select>
           </div>
 
           <div class="fg">
             <label for="status-agehab">Status Agehab</label>
             <select id="status-agehab">
-              <option value="novo">Agehab Novo</option>
-              <option value="em_analise">Agehab Análise</option>
-              <option value="pendente">Agehab Pendente</option>
-              <option value="aprovado">Agehab OK</option>
-              <option value="reprovado">Agehab Reprov.</option>
+              <option value="analise_credito">Analise Credito</option>
+              <option value="pendente_credito">Pendente Credito</option>
+              <option value="envio_agehab">Envio Agehab</option>
+              <option value="pendente_agehab">Pendente Agehab</option>
+              <option value="validado_agehab">Validado Agehab</option>
+            </select>
+          </div>
+
+          <div class="fg">
+            <label for="status-sinal">Status sinal</label>
+            <select id="status-sinal">
+              <option value="nao_tem">Nao tem</option>
+              <option value="pendente">Pendente</option>
+              <option value="pago">Pago</option>
+            </select>
+          </div>
+
+          <div class="fg">
+            <label for="status-fiador">Status fiador</label>
+            <select id="status-fiador">
+              <option value="nao_tem">Nao tem</option>
+              <option value="pendente">Pendente</option>
+              <option value="finalizado">Finalizado</option>
             </select>
           </div>
 
@@ -1100,7 +1134,7 @@ DIVORCIADO: Certidão averbada.</td>
           </div>
 
           <div class="fg">
-            <label for="sla-credito">SLA crédito (h)</label>
+            <label for="sla-credito">SLA credito (h)</label>
             <input id="sla-credito" type="number" min="0" step="1" value="0" />
           </div>
         </div>
@@ -1127,7 +1161,7 @@ DIVORCIADO: Certidão averbada.</td>
         <div class="divider"></div>
 
         <div class="inline" style="justify-content:space-between;">
-          <div class="tiny" id="prioHint">"Prioridade alta" automática: geral = pendente e SLA crédito ≥ 48h.</div>
+          <div class="tiny" id="prioHint">"Prioridade alta" automatica: geral = pendenciado e SLA credito >= 48h.</div>
           <div class="inline">
             <button class="btn" id="btnLimparObs">Limpar obs.</button>
             <button class="btn primary" id="btnSalvarTudo">Salvar tudo</button>
@@ -1157,50 +1191,70 @@ DIVORCIADO: Certidão averbada.</td>
   // =========================
   // Visual pills (right panel)
   // =========================
+  const STATUS_LABELS = {
+    credito: {
+      em_analise: "Em analise",
+      pendenciado: "Pendenciado",
+      aprovado: "Aprovado",
+      reprovado: "Reprovado",
+    },
+    geral: {
+      novo: "Novo",
+      em_andamento: "Em andamento",
+      pendenciado: "Pendenciado",
+      aprovado: "Aprovado",
+      reprovado: "Reprovado",
+      distrato: "Distrato",
+      cancelado: "Cancelado",
+    },
+    caixa: {
+      analise_credito: "Analise Credito",
+      pendente_credito: "Pendente Credito",
+      analise_cca: "Analise CCA",
+      pendente_cca: "Pendente CCA",
+      aguardando_conformidade: "Aguardando Conformidade",
+      conforme: "Conforme",
+      tratando_produto: "Tratando Produto",
+      agendado: "Agendado",
+      assinatura_caixa: "Assinatura Caixa",
+    },
+    agehab: {
+      analise_credito: "Analise Credito",
+      pendente_credito: "Pendente Credito",
+      envio_agehab: "Envio Agehab",
+      pendente_agehab: "Pendente Agehab",
+      validado_agehab: "Validado Agehab",
+    },
+  };
+
   function pillClassFromStatus(v){
-    if(v==="aprovado") return "ok";
-    if(v==="pendente" || v==="reprovado") return "bad";
-    if(v==="em_analise") return "warn";
-    return "neutral";
-  }
-
-  function setRightPills(){
-    const g = $("status-geral").value;
-    const c = $("status-caixa").value;
-    const a = $("status-agehab").value;
-
-    $("pillGeral").className = `pill ${pillClassFromStatus(g)}`;
-    $("pillCaixa").className = `pill ${pillClassFromStatus(c)}`;
-    $("pillAgehab").className = `pill ${pillClassFromStatus(a)}`;
-
-    $("pillGeral").textContent = mapLabel("geral", g);
-    $("pillCaixa").textContent = mapLabel("caixa", c);
-    $("pillAgehab").textContent = mapLabel("agehab", a);
+    const status = toLower(v);
+    if (["aprovado", "conforme", "validado_agehab", "pago", "finalizado"].includes(status)) return "ok";
+    if (["pendenciado", "reprovado", "cancelado", "distrato", "pendente_credito", "pendente_cca", "pendente_agehab", "pendente"].includes(status)) return "bad";
+    if (["novo", "nao_tem"].includes(status)) return "neutral";
+    return "warn";
   }
 
   function mapLabel(area, v){
-    if(area==="geral"){
-      if(v==="aprovado") return "Aprovado";
-      if(v==="pendente") return "Pendente";
-      if(v==="em_analise") return "Em análise";
-      if(v==="reprovado") return "Reprovado";
-      return "Novo";
-    }
-    if(area==="caixa"){
-      if(v==="aprovado") return "Caixa OK";
-      if(v==="pendente") return "Caixa Pendente";
-      if(v==="em_analise") return "Caixa Análise";
-      if(v==="reprovado") return "Caixa Reprov.";
-      return "Caixa Novo";
-    }
-    if(area==="agehab"){
-      if(v==="aprovado") return "Agehab OK";
-      if(v==="pendente") return "Agehab Pendente";
-      if(v==="em_analise") return "Agehab Análise";
-      if(v==="reprovado") return "Agehab Reprov.";
-      return "Agehab Novo";
-    }
-    return v;
+    const status = toLower(v);
+    return STATUS_LABELS[area]?.[status] || v;
+  }
+
+  function setRightPills(){
+    const credito = $("status-credito").value;
+    const geral = $("status-geral").value;
+    const caixa = $("status-caixa").value;
+    const agehab = $("status-agehab").value;
+
+    $("pillCredito").className = `pill ${pillClassFromStatus(credito)}`;
+    $("pillGeral").className = `pill ${pillClassFromStatus(geral)}`;
+    $("pillCaixa").className = `pill ${pillClassFromStatus(caixa)}`;
+    $("pillAgehab").className = `pill ${pillClassFromStatus(agehab)}`;
+
+    $("pillCredito").textContent = `Credito: ${mapLabel("credito", credito)}`;
+    $("pillGeral").textContent = `Geral: ${mapLabel("geral", geral)}`;
+    $("pillCaixa").textContent = `Caixa: ${mapLabel("caixa", caixa)}`;
+    $("pillAgehab").textContent = `Agehab: ${mapLabel("agehab", agehab)}`;
   }
 
   function slaClass(hours){
@@ -1217,16 +1271,13 @@ DIVORCIADO: Certidão averbada.</td>
     $("slaCred").className = `sla ${slaClass(cred)}`;
 
     $("slaCor").textContent = `SLA Corretor: ${cor}h`;
-    $("slaCred").textContent = `SLA Crédito: ${cred}h`;
+    $("slaCred").textContent = `SLA Credito: ${cred}h`;
 
-    // prioridade alta automática (mesma regra do painel)
-    const high = ($("status-geral").value==="pendente" && cred >= SLA_BAD);
-
+    const high = ($("status-geral").value==="pendenciado" && cred >= SLA_BAD);
     if(high){
-      $("prioridade").value = "alta";
-      $("prioHint").innerHTML = `<span class="prio"><span class="dot"></span>PRIORIDADE ALTA</span> geral = pendente + SLA crédito ≥ ${SLA_BAD}h`;
+      $("prioHint").innerHTML = `<span class="prio"><span class="dot"></span>PRIORIDADE ALTA</span> geral = pendenciado + SLA credito >= ${SLA_BAD}h`;
     }else{
-      $("prioHint").textContent = `"Prioridade alta" automática: geral = pendente e SLA crédito ≥ ${SLA_BAD}h.`;
+      $("prioHint").textContent = `"Prioridade alta" automatica: geral = pendenciado e SLA credito >= ${SLA_BAD}h.`;
     }
   }
 
@@ -1480,7 +1531,7 @@ DIVORCIADO: Certidão averbada.</td>
   $("btnSair").addEventListener("click", ()=> alert("Front-end: sair (mock)."));
 
   // ===== Right panel listeners =====
-  ["status-geral","status-caixa","status-agehab"].forEach(id=>{
+  ["status-credito","status-geral","status-caixa","status-agehab","status-sinal","status-fiador"].forEach(id=>{
     $(id).addEventListener("change", ()=>{
       setRightPills();
       setSlaBadges();
@@ -1660,7 +1711,7 @@ DIVORCIADO: Certidão averbada.</td>
 
         const currentCredito = String(current.status_credito || "").toUpperCase();
         const nextCredito = String(doc.status_credito || "").toUpperCase();
-        if (currentCredito === "ANALISE" && nextCredito !== "ANALISE") {
+        if ((currentCredito === "ANALISE" || currentCredito === "EM_ANALISE") && nextCredito !== "ANALISE" && nextCredito !== "EM_ANALISE") {
           map.set(key, doc);
           return;
         }
@@ -1674,20 +1725,108 @@ DIVORCIADO: Certidão averbada.</td>
       return map;
     }
 
-    function backendFromUiStatus(value) {
+    function backendFromUiCredito(value) {
       const v = norm(value);
+      if (v === "pendenciado") return "PENDENCIADO";
       if (v === "aprovado") return "APROVADO";
-      if (v === "pendente") return "PENDENTE";
       if (v === "reprovado") return "REPROVADO";
       return "EM_ANALISE";
     }
 
-    function creditoFromArea(areaStatus) {
-      const v = norm(areaStatus);
+    function backendFromUiGeral(value) {
+      const v = norm(value);
+      if (v === "em_andamento") return "EM_ANDAMENTO";
+      if (v === "pendenciado") return "PENDENCIADO";
       if (v === "aprovado") return "APROVADO";
       if (v === "reprovado") return "REPROVADO";
-      if (v === "pendente") return "PENDENCIADO";
+      if (v === "distrato") return "DISTRATO";
+      if (v === "cancelado") return "CANCELADO";
+      return "NOVO";
+    }
+
+    function backendFromUiCaixa(value) {
+      const v = norm(value);
+      if (v === "pendente_credito") return "PENDENTE_CREDITO";
+      if (v === "analise_cca") return "ANALISE_CCA";
+      if (v === "pendente_cca") return "PENDENTE_CCA";
+      if (v === "aguardando_conformidade") return "AGUARDANDO_CONFORMIDADE";
+      if (v === "conforme") return "CONFORME";
+      if (v === "tratando_produto") return "TRATANDO_PRODUTO";
+      if (v === "agendado") return "AGENDADO";
+      if (v === "assinatura_caixa") return "ASSINATURA_CAIXA";
+      return "ANALISE_CREDITO";
+    }
+
+    function backendFromUiAgehab(value) {
+      const v = norm(value);
+      if (v === "pendente_credito") return "PENDENTE_CREDITO";
+      if (v === "envio_agehab") return "ENVIO_AGEHAB";
+      if (v === "pendente_agehab") return "PENDENTE_AGEHAB";
+      if (v === "validado_agehab") return "VALIDADO_AGEHAB";
+      return "ANALISE_CREDITO";
+    }
+
+    function backendFromUiSinal(value) {
+      const v = norm(value);
+      if (v === "pendente") return "PENDENTE";
+      if (v === "pago") return "PAGO";
+      return "NAO_TEM";
+    }
+
+    function backendFromUiFiador(value) {
+      const v = norm(value);
+      if (v === "pendente") return "PENDENTE";
+      if (v === "finalizado") return "FINALIZADO";
+      return "NAO_TEM";
+    }
+
+    function docCreditoFromUi(value) {
+      const v = norm(value);
+      if (v === "pendenciado") return "PENDENCIADO";
+      if (v === "aprovado") return "APROVADO";
+      if (v === "reprovado") return "REPROVADO";
       return "ANALISE";
+    }
+
+    function uiFromBackendCredito(value) {
+      const v = norm(value);
+      if (v === "pendenciado" || v === "pendente") return "pendenciado";
+      if (v === "aprovado") return "aprovado";
+      if (v === "reprovado") return "reprovado";
+      return "em_analise";
+    }
+
+    function uiFromBackendGeral(value) {
+      const v = norm(value);
+      if (v === "em_andamento" || v === "em_analise") return "em_andamento";
+      if (v === "pendenciado" || v === "pendente") return "pendenciado";
+      if (v === "aprovado") return "aprovado";
+      if (v === "reprovado") return "reprovado";
+      if (v === "distrato") return "distrato";
+      if (v === "cancelado") return "cancelado";
+      return "novo";
+    }
+
+    function uiFromBackendCaixa(value) {
+      const v = norm(value);
+      if (v === "pendente_credito" || v === "pendente") return "pendente_credito";
+      if (v === "analise_cca") return "analise_cca";
+      if (v === "pendente_cca") return "pendente_cca";
+      if (v === "aguardando_conformidade") return "aguardando_conformidade";
+      if (v === "conforme" || v === "aprovado") return "conforme";
+      if (v === "tratando_produto") return "tratando_produto";
+      if (v === "agendado") return "agendado";
+      if (v === "assinatura_caixa") return "assinatura_caixa";
+      return "analise_credito";
+    }
+
+    function uiFromBackendAgehab(value) {
+      const v = norm(value);
+      if (v === "pendente_credito") return "pendente_credito";
+      if (v === "envio_agehab" || v === "envio_agehag") return "envio_agehab";
+      if (v === "pendente_agehab" || v === "pendente") return "pendente_agehab";
+      if (v === "validado_agehab" || v === "aprovado") return "validado_agehab";
+      return "analise_credito";
     }
 
     function toUiDocStatus(value) {
@@ -1720,19 +1859,32 @@ DIVORCIADO: Certidão averbada.</td>
       });
     }
 
-    function areaStatusForCategoria(categoria) {
-      const cat = norm(categoria);
-      if (cat === "caixa") return byId("status-caixa")?.value || "em_analise";
-      if (cat === "agehab") return byId("status-agehab")?.value || "em_analise";
-      return byId("status-geral")?.value || "em_analise";
-    }
-
     function rebindButton(id, handler) {
       const oldBtn = byId(id);
       if (!oldBtn || !oldBtn.parentNode) return;
       const fresh = oldBtn.cloneNode(true);
       oldBtn.parentNode.replaceChild(fresh, oldBtn);
       fresh.addEventListener("click", handler);
+    }
+
+    async function loadCcaOptions(selectedValue = "") {
+      const select = byId("cca-responsavel");
+      if (!select) return;
+
+      const selected = String(selectedValue || select.value || "").trim().toLowerCase();
+      const names = await api("/ccas").catch(() => []);
+
+      select.innerHTML = '<option value="">Nao atribuido</option>';
+      names.forEach((name) => {
+        const opt = document.createElement("option");
+        opt.value = String(name || "").trim().toLowerCase();
+        opt.textContent = name;
+        select.appendChild(opt);
+      });
+
+      if (selected && Array.from(select.options).some((opt) => opt.value === selected)) {
+        select.value = selected;
+      }
     }
 
     async function loadProcesso() {
@@ -1754,13 +1906,15 @@ DIVORCIADO: Certidão averbada.</td>
       if (byId("reserva")) byId("reserva").value = cliente.reserva || "";
       if (byId("obra")) byId("obra").value = cliente.obra || "";
 
-      const statusGeral = norm(processo.status_geral).replace("_", "");
-      const statusCca = norm(processo.status_cca).replace("_", "");
-      const statusAgehab = norm(processo.status_agehab).replace("_", "");
+      await loadCcaOptions(processo.cca_responsavel || "");
 
-      if (byId("status-geral")) byId("status-geral").value = statusGeral === "emanalise" ? "em_analise" : statusGeral;
-      if (byId("status-caixa")) byId("status-caixa").value = statusCca === "emanalise" ? "em_analise" : statusCca;
-      if (byId("status-agehab")) byId("status-agehab").value = statusAgehab === "emanalise" ? "em_analise" : statusAgehab;
+      if (byId("status-credito")) byId("status-credito").value = uiFromBackendCredito(processo.status_credito);
+      if (byId("status-geral")) byId("status-geral").value = uiFromBackendGeral(processo.status_geral);
+      if (byId("status-caixa")) byId("status-caixa").value = uiFromBackendCaixa(processo.status_cca);
+      if (byId("status-agehab")) byId("status-agehab").value = uiFromBackendAgehab(processo.status_agehab);
+      if (byId("status-sinal")) byId("status-sinal").value = norm(processo.status_sinal) || "nao_tem";
+      if (byId("status-fiador")) byId("status-fiador").value = norm(processo.status_fiador) || "nao_tem";
+      if (byId("cca-responsavel")) byId("cca-responsavel").value = norm(processo.cca_responsavel);
 
       if (byId("sla-corretor")) byId("sla-corretor").value = toHoursFromDays(processo.sla_corretor_dias);
       if (byId("sla-credito")) byId("sla-credito").value = toHoursFromDays(processo.sla_credito_dias);
@@ -1792,27 +1946,34 @@ DIVORCIADO: Certidão averbada.</td>
         return;
       }
 
-      const statusGeral = byId("status-geral")?.value || "em_analise";
-      const statusCaixa = byId("status-caixa")?.value || "em_analise";
-      const statusAgehab = byId("status-agehab")?.value || "em_analise";
+      const statusCredito = byId("status-credito")?.value || "em_analise";
+      const statusGeral = byId("status-geral")?.value || "novo";
+      const statusCaixa = byId("status-caixa")?.value || "analise_credito";
+      const statusAgehab = byId("status-agehab")?.value || "analise_credito";
+      const statusSinal = byId("status-sinal")?.value || "nao_tem";
+      const statusFiador = byId("status-fiador")?.value || "nao_tem";
+      const ccaResponsavel = (byId("cca-responsavel")?.value || "").trim().toLowerCase() || null;
 
       const payloadProcesso = {
-        status_geral: backendFromUiStatus(statusGeral),
-        status_cca: backendFromUiStatus(statusCaixa),
-        status_agehab: backendFromUiStatus(statusAgehab),
+        status_credito: backendFromUiCredito(statusCredito),
+        status_geral: backendFromUiGeral(statusGeral),
+        status_cca: backendFromUiCaixa(statusCaixa),
+        status_agehab: backendFromUiAgehab(statusAgehab),
+        status_sinal: backendFromUiSinal(statusSinal),
+        status_fiador: backendFromUiFiador(statusFiador),
+        cca_responsavel: ccaResponsavel,
         sla_corretor_dias: toDaysFromHours(byId("sla-corretor")?.value || 0),
         sla_credito_dias: toDaysFromHours(byId("sla-credito")?.value || 0),
         observacao: (byId("observacao")?.value || "").trim() || null,
       };
 
       const documentos = getDocRows().map((row) => {
-        const areaStatus = areaStatusForCategoria(row.categoria);
         const statusDoc = norm(row.select.value) === "enviado" ? "ENVIADO" : "PENDENTE";
         return {
           categoria: row.categoria,
           nome: row.nome,
           status_doc: statusDoc,
-          status_credito: creditoFromArea(areaStatus),
+          status_credito: docCreditoFromUi(statusCredito),
         };
       });
 

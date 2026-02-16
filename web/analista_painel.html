@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
@@ -21,7 +21,6 @@
     --fs-pill:10px;
 
     --radius:14px;
-
     --sla-warn: 24;
     --sla-bad: 48;
     --refresh-sec: 30;
@@ -89,7 +88,7 @@
 
   .filters{
     display:grid;
-    grid-template-columns: 1.25fr .9fr .9fr .9fr .9fr .8fr;
+    grid-template-columns: 1.2fr .9fr .9fr .9fr .9fr .9fr .8fr;
     gap:10px;
     align-items:end;
   }
@@ -367,13 +366,13 @@
       <div class="badgeA">A</div>
       <div>
         <h1>Painel do Analista</h1>
-        <p>Fila • Filtros • Insights • Status • SLA</p>
+        <p>Fila | Filtros | Insights | Status | SLA</p>
       </div>
     </div>
 
     <div class="rightTop">
       <span class="chip"><span class="pulseDot"></span>Auto refresh: <strong id="refreshLabel">30s</strong></span>
-      <span class="chip">SLA alerta: <strong id="slaRuleLabel">≥48h</strong></span>
+      <span class="chip">SLA alerta: <strong id="slaRuleLabel">>=48h</strong></span>
     </div>
   </div>
 
@@ -394,14 +393,23 @@
     </div>
 
     <div class="field">
+      <label>CCA</label>
+      <select id="ccaFilter">
+        <option value="">Todos</option>
+      </select>
+    </div>
+
+    <div class="field">
       <label>Status geral</label>
       <select id="stG">
         <option value="">Todos</option>
         <option value="novo">Novo</option>
-        <option value="em_analise">Em análise</option>
-        <option value="pendente">Pendente</option>
+        <option value="em_andamento">Em andamento</option>
+        <option value="pendenciado">Pendenciado</option>
         <option value="aprovado">Aprovado</option>
         <option value="reprovado">Reprovado</option>
+        <option value="distrato">Distrato</option>
+        <option value="cancelado">Cancelado</option>
       </select>
     </div>
 
@@ -409,11 +417,15 @@
       <label>Status Caixa</label>
       <select id="stC">
         <option value="">Todos</option>
-        <option value="novo">Novo</option>
-        <option value="em_analise">Em análise</option>
-        <option value="pendente">Pendente</option>
-        <option value="aprovado">Aprovado</option>
-        <option value="reprovado">Reprovado</option>
+        <option value="analise_credito">Analise Credito</option>
+        <option value="pendente_credito">Pendente Credito</option>
+        <option value="analise_cca">Analise CCA</option>
+        <option value="pendente_cca">Pendente CCA</option>
+        <option value="aguardando_conformidade">Aguardando Conformidade</option>
+        <option value="conforme">Conforme</option>
+        <option value="tratando_produto">Tratando Produto</option>
+        <option value="agendado">Agendado</option>
+        <option value="assinatura_caixa">Assinatura Caixa</option>
       </select>
     </div>
 
@@ -430,8 +442,8 @@
       <div class="left">
         <h2>Fila de Processos</h2>
         <div class="sub">
-          "Prioridade alta" quando <b>geral = pendente</b> e <b>SLA crédito ≥ 48h</b>.
-          <span class="hintRow">Clique no nome do cliente para abrir a página de atualização.</span>
+          "Prioridade alta" quando <b>geral = pendenciado</b> e <b>SLA credito >= 48h</b>.
+          <span class="hintRow">Clique no nome do cliente para abrir a pagina de atualizacao.</span>
         </div>
       </div>
       <div class="right">
@@ -445,12 +457,13 @@
         <thead>
           <tr>
             <th style="width:34%">Cliente</th>
-            <th style="width:14%">Corretor</th>
-            <th style="width:12%">Geral</th>
-            <th style="width:12%">Caixa</th>
-            <th style="width:12%">Agehab</th>
-            <th style="width:8%">SLA Corretor</th>
-            <th style="width:8%">SLA Crédito</th>
+            <th style="width:12%">Corretor</th>
+            <th style="width:10%">CCA</th>
+            <th style="width:10%">Geral</th>
+            <th style="width:10%">Caixa</th>
+            <th style="width:10%">Agehab</th>
+            <th style="width:7%">SLA Corretor</th>
+            <th style="width:7%">SLA Credito</th>
           </tr>
         </thead>
       </table>
@@ -467,20 +480,51 @@
 <script>
   const API_BASE = "/app/api";
   const SLA_WARN = 24;
-  const SLA_BAD  = 48;
+  const SLA_BAD = 48;
   const REFRESH_SECONDS = 30;
 
-  const UPDATE_PAGE_URL = (row) =>
-    `/app/analise?processo_id=${encodeURIComponent(row.processo_id)}`;
+  const UPDATE_PAGE_URL = (row) => `/app/analise?processo_id=${encodeURIComponent(row.processo_id)}`;
+
+  const LABELS = {
+    geral: {
+      novo: "Novo",
+      em_andamento: "Em andamento",
+      pendenciado: "Pendenciado",
+      aprovado: "Aprovado",
+      reprovado: "Reprovado",
+      distrato: "Distrato",
+      cancelado: "Cancelado",
+    },
+    caixa: {
+      analise_credito: "Analise Credito",
+      pendente_credito: "Pendente Credito",
+      analise_cca: "Analise CCA",
+      pendente_cca: "Pendente CCA",
+      aguardando_conformidade: "Aguardando Conformidade",
+      conforme: "Conforme",
+      tratando_produto: "Tratando Produto",
+      agendado: "Agendado",
+      assinatura_caixa: "Assinatura Caixa",
+    },
+    agehab: {
+      analise_credito: "Analise Credito",
+      pendente_credito: "Pendente Credito",
+      envio_agehab: "Envio Agehab",
+      pendente_agehab: "Pendente Agehab",
+      validado_agehab: "Validado Agehab",
+    },
+  };
 
   let DATA = [];
   let loading = false;
+  let history = [];
+  let ccasLoaded = false;
 
-  const $ = (id)=>document.getElementById(id);
-  const norm = (s)=> (s||"").toString().trim().toLowerCase();
+  const $ = (id) => document.getElementById(id);
+  const norm = (s) => String(s || "").trim().toLowerCase();
 
   $("refreshLabel").textContent = `${REFRESH_SECONDS}s`;
-  $("slaRuleLabel").textContent = `≥${SLA_BAD}h`;
+  $("slaRuleLabel").textContent = `>=${SLA_BAD}h`;
 
   async function api(path, options = {}) {
     const response = await fetch(`${API_BASE}${path}`, {
@@ -511,12 +555,21 @@
   }
 
   function statusFromBackend(raw){
-    const v = norm(raw).replace(/\s+/g, "_");
-    if (v === "em_analise") return "em_analise";
-    if (v === "pendente") return "pendente";
-    if (v === "aprovado") return "aprovado";
-    if (v === "reprovado") return "reprovado";
-    return "novo";
+    return norm(raw).replace(/\s+/g, "_");
+  }
+
+  function labelFor(area, value){
+    const k = statusFromBackend(value);
+    const map = LABELS[area] || {};
+    return map[k] || String(value || "-");
+  }
+
+  function classForStatus(value){
+    const v = statusFromBackend(value);
+    if (["aprovado", "conforme", "validado_agehab", "pago", "finalizado"].includes(v)) return "ok";
+    if (["pendenciado", "reprovado", "cancelado", "distrato", "pendente_credito", "pendente_cca", "pendente_agehab", "pendente"].includes(v)) return "bad";
+    if (["novo", "nao_tem"].includes(v)) return "neutral";
+    return "warn";
   }
 
   function toHours(days, createdAt){
@@ -538,9 +591,13 @@
       cliente: item.cliente_nome || "-",
       emp: item.obra || "-",
       corretor: item.corretor || "-",
+      cca: item.cca_responsavel || "-",
+      credito: statusFromBackend(item.status_credito),
       geral: statusFromBackend(item.status_geral),
       caixa: statusFromBackend(item.status_cca),
       agehab: statusFromBackend(item.status_agehab),
+      sinal: statusFromBackend(item.status_sinal),
+      fiador: statusFromBackend(item.status_fiador),
       slaCor: toHours(item.sla_corretor_dias, item.created_at),
       slaCred: toHours(item.sla_credito_dias, item.created_at),
     };
@@ -549,6 +606,23 @@
   async function loadData(){
     const processos = await api("/processos");
     DATA = processos.map(fromBackend);
+  }
+
+  async function loadCcaFilter(){
+    const current = $("ccaFilter").value;
+    const ccas = await api("/ccas");
+    const select = $("ccaFilter");
+    select.innerHTML = '<option value="">Todos</option>';
+    ccas.forEach((name) => {
+      const opt = document.createElement("option");
+      opt.value = norm(name);
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
+    if (current && Array.from(select.options).some((opt) => opt.value === current)) {
+      select.value = current;
+    }
+    ccasLoaded = true;
   }
 
   function walkerSVG(){
@@ -581,34 +655,18 @@
     return `<span class="pill ${cls} ${stateClass}">${text}${walkerSVG()}</span>`;
   }
 
-  function statusText(area, v){
-    if(area === "geral"){
-      if(v==="aprovado") return ["Aprovado","ok"];
-      if(v==="pendente") return ["Pendente","bad"];
-      if(v==="em_analise") return ["Em análise","warn"];
-      if(v==="reprovado") return ["Reprovado","bad"];
-      return ["Novo","neutral"];
-    }
-    if(area === "caixa"){
-      if(v==="aprovado") return ["Caixa OK","ok"];
-      if(v==="pendente") return ["Caixa Pendente","bad"];
-      if(v==="em_analise") return ["Caixa Análise","warn"];
-      if(v==="reprovado") return ["Caixa Reprov.","bad"];
-      return ["Caixa Novo","neutral"];
-    }
-    if(area === "agehab"){
-      if(v==="aprovado") return ["Agehab OK","ok"];
-      if(v==="pendente") return ["Agehab Pendente","bad"];
-      if(v==="em_analise") return ["Agehab Análise","warn"];
-      if(v==="reprovado") return ["Agehab Reprov.","bad"];
-      return ["Agehab Novo","neutral"];
-    }
-    return ["Novo","neutral"];
+  function statusText(area, value){
+    return [labelFor(area, value), classForStatus(value)];
   }
 
   function isWalking(row){
-    const anyAnalise = (row.geral==="em_analise" || row.caixa==="em_analise" || row.agehab==="em_analise");
-    const concluido = (row.geral==="aprovado" || row.geral==="reprovado");
+    const anyAnalise =
+      row.credito === "em_analise" ||
+      row.geral === "em_andamento" ||
+      row.caixa.includes("analise") ||
+      row.agehab.includes("analise");
+
+    const concluido = ["aprovado", "reprovado", "cancelado", "distrato"].includes(row.geral);
     return anyAnalise && !concluido;
   }
 
@@ -624,7 +682,7 @@
   }
 
   function isHighPriority(row){
-    return row.geral==="pendente" && Number(row.slaCred||0) >= SLA_BAD;
+    return row.geral === "pendenciado" && Number(row.slaCred || 0) >= SLA_BAD;
   }
   function prioBadge(){
     return `<span class="prio"><span class="dot"></span>PRIORIDADE ALTA</span>`;
@@ -642,15 +700,14 @@
     return [...rows].sort((a,b)=> severityScore(b) - severityScore(a));
   }
 
-  let history = [];
   const HISTORY_MAX = 30;
 
   function trackHistory(rows){
     const count = (pred)=> rows.reduce((acc,r)=> acc + (pred(r)?1:0), 0);
     const total = rows.length;
-    const pend = count(r=> r.geral==="pendente");
-    const anal = count(r=> r.geral==="em_analise" || r.caixa==="em_analise" || r.agehab==="em_analise");
-    history.push({ t: Date.now(), total, pend, anal });
+    const pend = count(r=> r.geral === "pendenciado");
+    const andamento = count(r=> r.geral === "em_andamento");
+    history.push({ t: Date.now(), total, pend, andamento });
     if(history.length > HISTORY_MAX) history.shift();
   }
 
@@ -658,9 +715,9 @@
     const total = rows.length || 0;
     const count = (pred)=> rows.reduce((acc,r)=> acc + (pred(r)?1:0), 0);
 
-    const aprov = count(r=> r.geral==="aprovado");
-    const pend = count(r=> r.geral==="pendente");
-    const anal = count(r=> r.geral==="em_analise" || r.caixa==="em_analise" || r.agehab==="em_analise");
+    const aprov = count(r=> r.geral === "aprovado");
+    const pend = count(r=> r.geral === "pendenciado");
+    const and = count(r=> r.geral === "em_andamento");
     const prios = count(r=> isHighPriority(r));
 
     const avg = (arr)=> arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length) : 0;
@@ -670,16 +727,16 @@
     const clsSla = (h)=> h < SLA_WARN ? "good" : (h < SLA_BAD ? "warn" : "bad");
 
     $("insights").innerHTML = `
-      <div class="kpi"><div class="k">Total na fila</div><div class="v">${total}</div><div class="s">após filtros</div></div>
+      <div class="kpi"><div class="k">Total na fila</div><div class="v">${total}</div><div class="s">apos filtros</div></div>
       <div class="kpi good"><div class="k">Aprovados</div><div class="v">${aprov}</div><div class="s">status geral</div></div>
-      <div class="kpi bad"><div class="k">Pendentes</div><div class="v">${pend}</div><div class="s">status geral</div></div>
-      <div class="kpi warn"><div class="k">Em análise</div><div class="v">${anal}</div><div class="s">geral/caixa/agehab</div></div>
-      <div class="kpi bad"><div class="k">Prioridade alta</div><div class="v">${prios}</div><div class="s">pendente + SLA≥${SLA_BAD}h</div></div>
-      <div class="kpi ${clsSla(avgSlaCor)}"><div class="k">SLA médio corretor</div><div class="v">${avgSlaCor}h</div><div class="s">média do filtro</div></div>
+      <div class="kpi bad"><div class="k">Pendenciados</div><div class="v">${pend}</div><div class="s">status geral</div></div>
+      <div class="kpi warn"><div class="k">Em andamento</div><div class="v">${and}</div><div class="s">status geral</div></div>
+      <div class="kpi bad"><div class="k">Prioridade alta</div><div class="v">${prios}</div><div class="s">pendenciado + SLA>=${SLA_BAD}h</div></div>
+      <div class="kpi ${clsSla(avgSlaCor)}"><div class="k">SLA medio corretor</div><div class="v">${avgSlaCor}h</div><div class="s">media do filtro</div></div>
       <div class="kpi ${clsSla(avgSlaCred)}">
-        <div class="k">SLA médio crédito</div>
+        <div class="k">SLA medio credito</div>
         <div class="v">${avgSlaCred}h</div>
-        <div class="s">média do filtro</div>
+        <div class="s">media do filtro</div>
         <div class="sparkWrap"><canvas id="spark" width="320" height="26"></canvas></div>
       </div>
     `;
@@ -733,7 +790,7 @@
     $("countInfo").textContent = `${rows.length} processo(s)`;
 
     if(!rows.length){
-      tb.innerHTML = `<tr><td colspan="7" class="muted" style="padding:14px 12px;">Nenhum resultado com esses filtros.</td></tr>`;
+      tb.innerHTML = `<tr><td colspan="8" class="muted" style="padding:14px 12px;">Nenhum resultado com esses filtros.</td></tr>`;
       return;
     }
 
@@ -751,12 +808,13 @@
         <tr>
           <td>
             <div class="cliente">
-              <a href="${url}" title="Abrir atualização">${esc(r.cliente)}</a>
+              <a href="${url}" title="Abrir atualizacao">${esc(r.cliente)}</a>
               ${prio}
             </div>
             <div class="empreendimento">${esc(r.emp)}</div>
           </td>
           <td style="font-weight:800">${esc(r.corretor)}</td>
+          <td>${esc(r.cca)}</td>
           <td>${pill(gTxt, gCls, moving)}</td>
           <td>${pill(cTxt, cCls, moving)}</td>
           <td>${pill(aTxt, aCls, moving)}</td>
@@ -769,23 +827,25 @@
 
   function showError(message){
     $("countInfo").textContent = "0 processo(s)";
-    $("tbody").innerHTML = `<tr><td colspan="7" class="muted" style="padding:14px 12px;color:#fca5a5;">${esc(message)}</td></tr>`;
+    $("tbody").innerHTML = `<tr><td colspan="8" class="muted" style="padding:14px 12px;color:#fca5a5;">${esc(message)}</td></tr>`;
   }
 
   function applyFilters(){
     const q = norm($("q").value);
     const emp = norm($("emp").value);
     const cor = norm($("cor").value);
+    const cca = norm($("ccaFilter").value);
     const stG = $("stG").value;
     const stC = $("stC").value;
 
     let out = DATA.filter(r=>{
-      const hitQ = !q || [r.cliente,r.emp,r.corretor].some(v=> norm(v).includes(q));
+      const hitQ = !q || [r.cliente,r.emp,r.corretor,r.cca].some(v=> norm(v).includes(q));
       const hitEmp = !emp || norm(r.emp).includes(emp);
       const hitCor = !cor || norm(r.corretor).includes(cor);
+      const hitCca = !cca || norm(r.cca) === cca;
       const hitG = !stG || r.geral===stG;
       const hitC = !stC || r.caixa===stC;
-      return hitQ && hitEmp && hitCor && hitG && hitC;
+      return hitQ && hitEmp && hitCor && hitCca && hitG && hitC;
     });
 
     out = sortCriticalFirst(out);
@@ -800,6 +860,9 @@
     if (loading) return;
     loading = true;
     try {
+      if (!ccasLoaded) {
+        await loadCcaFilter();
+      }
       await loadData();
       applyFilters();
     } catch (error) {
@@ -824,6 +887,7 @@
     $("q").value = "";
     $("emp").value = "";
     $("cor").value = "";
+    $("ccaFilter").value = "";
     $("stG").value = "";
     $("stC").value = "";
     applyFilters();
@@ -832,7 +896,7 @@
   ["q","emp","cor"].forEach(id=>{
     $(id).addEventListener("keydown", (e)=>{ if(e.key==="Enter") applyFilters(); });
   });
-  ["stG","stC"].forEach(id=>{
+  ["ccaFilter","stG","stC"].forEach(id=>{
     $(id).addEventListener("change", applyFilters);
   });
 
