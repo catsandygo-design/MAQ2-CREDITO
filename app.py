@@ -23,9 +23,38 @@ WEB_DIR = Path(__file__).resolve().parent / "web"
 SESSION_COOKIE_NAME = "sc_session"
 SESSION_TTL_SECONDS = int(os.getenv("SESSION_TTL_SECONDS", "43200"))
 SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() in {"1", "true", "yes"}
-APP_LOGIN_USER = os.getenv("APP_LOGIN_USER", "admin")
-APP_LOGIN_PASSWORD = os.getenv("APP_LOGIN_PASSWORD", "admin123")
+ROLE_CORRETOR = "corretor"
+ROLE_CCA = "cca"
+ROLE_ANALISTA = "analista"
+
+APP_CCA_USER = os.getenv("APP_CCA_USER", os.getenv("APP_LOGIN_USER", "cca"))
+APP_CCA_PASSWORD = os.getenv("APP_CCA_PASSWORD", os.getenv("APP_LOGIN_PASSWORD", "cca123"))
+APP_ANALISTA_USER = os.getenv("APP_ANALISTA_USER", "analista")
+APP_ANALISTA_PASSWORD = os.getenv("APP_ANALISTA_PASSWORD", "analista123")
+APP_CORRETOR_USER = os.getenv("APP_CORRETOR_USER", "corretor")
+APP_CORRETOR_PASSWORD = os.getenv("APP_CORRETOR_PASSWORD", "corretor123")
 ACTIVE_SESSIONS: dict[str, dict[str, Any]] = {}
+
+
+def _build_app_users() -> dict[str, dict[str, str]]:
+    users: dict[str, dict[str, str]] = {}
+    configs = [
+        (APP_CORRETOR_USER, APP_CORRETOR_PASSWORD, ROLE_CORRETOR),
+        (APP_CCA_USER, APP_CCA_PASSWORD, ROLE_CCA),
+        (APP_ANALISTA_USER, APP_ANALISTA_PASSWORD, ROLE_ANALISTA),
+    ]
+
+    for username_raw, password, role in configs:
+        username = (username_raw or "").strip()
+        if not username or not password:
+            continue
+        if username in users:
+            logger.warning("Usuario duplicado nas credenciais da aplicacao: %s", username)
+        users[username] = {"password": password, "role": role}
+    return users
+
+
+APP_USERS = _build_app_users()
 
 
 def _normalize_database_url(raw_url: str) -> str:
@@ -117,16 +146,26 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _new_session(username: str) -> str:
+def _home_for_role(role: Optional[str]) -> str:
+    role_key = (role or "").strip().lower()
+    if role_key == ROLE_ANALISTA:
+        return "/app/cca"
+    if role_key == ROLE_CCA:
+        return "/app/cca"
+    return "/app/checklist"
+
+
+def _new_session(username: str, role: str) -> str:
     token = uuid.uuid4().hex
     ACTIVE_SESSIONS[token] = {
         "username": username,
+        "role": role,
         "expires_at": _utcnow() + timedelta(seconds=SESSION_TTL_SECONDS),
     }
     return token
 
 
-def _read_session_user(request: Request) -> Optional[str]:
+def _read_session(request: Request) -> Optional[dict[str, Any]]:
     token = request.cookies.get(SESSION_COOKIE_NAME)
     if not token:
         return None
@@ -140,14 +179,49 @@ def _read_session_user(request: Request) -> Optional[str]:
         ACTIVE_SESSIONS.pop(token, None)
         return None
 
+    return session
+
+
+def _read_session_user(request: Request) -> Optional[str]:
+    session = _read_session(request)
+    if not session:
+        return None
     return str(session.get("username", ""))
 
 
+def _read_session_role(request: Request) -> Optional[str]:
+    session = _read_session(request)
+    if not session:
+        return None
+    return str(session.get("role", ""))
+
+
+def require_app_session(request: Request) -> dict[str, Any]:
+    session = _read_session(request)
+    if not session:
+        raise HTTPException(status_code=401, detail="Nao autenticado")
+    return session
+
+
 def require_app_user(request: Request) -> str:
-    username = _read_session_user(request)
+    session = require_app_session(request)
+    username = str(session.get("username", ""))
     if not username:
         raise HTTPException(status_code=401, detail="Nao autenticado")
     return username
+
+
+def require_roles(*roles: str):
+    allowed_roles = {role.strip().lower() for role in roles if role}
+
+    def _dependency(request: Request) -> dict[str, Any]:
+        session = require_app_session(request)
+        role = str(session.get("role", "")).strip().lower()
+        if allowed_roles and role not in allowed_roles:
+            raise HTTPException(status_code=403, detail="Sem permissao para este perfil")
+        return session
+
+    return _dependency
 
 
 def _process_status(value: Optional[str], fallback: str = "EM_ANALISE") -> str:
@@ -372,8 +446,8 @@ class ProcessoFullOut(BaseModel):
 class DocumentoBulkItem(BaseModel):
     categoria: str
     nome: str
-    status_doc: Optional[str] = "PENDENTE"
-    status_credito: Optional[str] = "ANALISE"
+    status_doc: Optional[str] = None
+    status_credito: Optional[str] = None
 
 
 class DocumentoBulkUpsert(BaseModel):
@@ -441,47 +515,61 @@ def root(request: Request):
 
 @app.get("/login")
 def login_page(request: Request):
-    if _read_session_user(request):
-        return RedirectResponse(url="/app/checklist", status_code=302)
+    role = _read_session_role(request)
+    if role:
+        return RedirectResponse(url=_home_for_role(role), status_code=302)
     return FileResponse(WEB_DIR / "login.html")
 
 
 @app.get("/app")
 def app_root(request: Request):
-    if not _read_session_user(request):
+    role = _read_session_role(request)
+    if not role:
         return RedirectResponse(url="/login", status_code=302)
-    return RedirectResponse(url="/app/checklist", status_code=302)
+    return RedirectResponse(url=_home_for_role(role), status_code=302)
 
 
 @app.get("/app/cca")
 def app_cca_page(request: Request):
-    if not _read_session_user(request):
+    role = _read_session_role(request)
+    if not role:
         return RedirectResponse(url="/login", status_code=302)
+    if role not in {ROLE_CCA, ROLE_ANALISTA}:
+        return RedirectResponse(url=_home_for_role(role), status_code=302)
     return FileResponse(WEB_DIR / "cca.html")
 
 
 @app.get("/app/checklist")
 def app_checklist_page(request: Request):
-    if not _read_session_user(request):
+    role = _read_session_role(request)
+    if not role:
         return RedirectResponse(url="/login", status_code=302)
     return FileResponse(WEB_DIR / "checklist.html")
 
 
 @app.get("/app/analista")
 def app_analista_page(request: Request):
-    if not _read_session_user(request):
+    role = _read_session_role(request)
+    if not role:
         return RedirectResponse(url="/login", status_code=302)
+    if role != ROLE_ANALISTA:
+        return RedirectResponse(url=_home_for_role(role), status_code=302)
     return FileResponse(WEB_DIR / "analista.html")
 
 
 @app.post("/auth/login")
 def auth_login(payload: LoginPayload):
     username = payload.username.strip()
-    if username != APP_LOGIN_USER or payload.password != APP_LOGIN_PASSWORD:
+    if not APP_USERS:
+        raise HTTPException(status_code=500, detail="Nenhuma credencial configurada no ambiente")
+
+    account = APP_USERS.get(username)
+    if not account or payload.password != account["password"]:
         raise HTTPException(status_code=401, detail="Credenciais invalidas")
 
-    token = _new_session(username)
-    response = JSONResponse({"ok": True, "username": username})
+    role = account["role"]
+    token = _new_session(username, role)
+    response = JSONResponse({"ok": True, "username": username, "role": role, "home": _home_for_role(role)})
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=token,
@@ -506,10 +594,12 @@ def auth_logout(request: Request):
 
 @app.get("/auth/me")
 def auth_me(request: Request):
-    username = _read_session_user(request)
-    if not username:
+    session = _read_session(request)
+    if not session:
         raise HTTPException(status_code=401, detail="Nao autenticado")
-    return {"ok": True, "username": username}
+    username = str(session.get("username", ""))
+    role = str(session.get("role", ""))
+    return {"ok": True, "username": username, "role": role, "home": _home_for_role(role)}
 
 
 @app.get("/health")
@@ -628,7 +718,7 @@ def patch_documento(documento_id: uuid.UUID, payload: DocumentoUpdate, db: Sessi
 
 @app.get("/app/api/processos", response_model=list[ProcessoOverviewOut])
 def app_list_processos(
-    _: str = Depends(require_app_user),
+    _: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA)),
     db: Session = Depends(get_db),
 ):
     rows = (
@@ -661,7 +751,7 @@ def app_list_processos(
 @app.post("/app/api/processos/intake")
 def app_create_intake(
     payload: ProcessoIntakeCreate,
-    _: str = Depends(require_app_user),
+    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA)),
     db: Session = Depends(get_db),
 ):
     cliente = Cliente(
@@ -716,7 +806,7 @@ def app_get_processo_full(
 def app_patch_processo(
     processo_id: uuid.UUID,
     payload: ProcessoUpdate,
-    _: str = Depends(require_app_user),
+    _: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA)),
     db: Session = Depends(get_db),
 ):
     processo = db.get(Processo, processo_id)
@@ -743,7 +833,7 @@ def app_patch_processo(
 def app_bulk_upsert_documentos(
     processo_id: uuid.UUID,
     payload: DocumentoBulkUpsert,
-    _: str = Depends(require_app_user),
+    session: dict[str, Any] = Depends(require_app_session),
     db: Session = Depends(get_db),
 ):
     processo = db.get(Processo, processo_id)
@@ -764,6 +854,9 @@ def app_bulk_upsert_documentos(
     if not dedup_map:
         raise HTTPException(status_code=422, detail="Nenhum documento valido para salvar")
 
+    role = str(session.get("role", "")).strip().lower()
+    can_update_credit = role == ROLE_ANALISTA
+
     for categoria, nome in dedup_map:
         item = dedup_map[(categoria, nome)]
         documento = (
@@ -776,20 +869,26 @@ def app_bulk_upsert_documentos(
             .first()
         )
 
-        status_doc = _doc_status(item.status_doc)
-        status_credito = _credit_status(item.status_credito)
+        status_doc = _doc_status(item.status_doc) if item.status_doc is not None else None
+        status_credito = (
+            _credit_status(item.status_credito)
+            if can_update_credit and item.status_credito is not None
+            else None
+        )
 
         if documento:
-            documento.status_doc = status_doc
-            documento.status_credito = status_credito
+            if status_doc is not None:
+                documento.status_doc = status_doc
+            if status_credito is not None:
+                documento.status_credito = status_credito
         else:
             db.add(
                 Documento(
                     processo_id=processo_id,
                     categoria=categoria,
                     nome=nome,
-                    status_doc=status_doc,
-                    status_credito=status_credito,
+                    status_doc=status_doc or "PENDENTE",
+                    status_credito=status_credito or "ANALISE",
                 )
             )
 

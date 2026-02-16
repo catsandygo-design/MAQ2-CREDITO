@@ -89,7 +89,7 @@
 <body>
   <main class="card">
     <h1>Sistema de Crédito</h1>
-    <p>Faça login para acessar as telas de CCA, checklist e analista.</p>
+    <p>Faça login para acessar o painel do seu perfil.</p>
 
     <form id="loginForm">
       <div class="field">
@@ -105,7 +105,7 @@
     </form>
 
     <div class="hint">
-      Credenciais são controladas por variáveis de ambiente (`APP_LOGIN_USER` e `APP_LOGIN_PASSWORD`).
+      Credenciais por ambiente: `APP_CORRETOR_USER/PASSWORD`, `APP_CCA_USER/PASSWORD`, `APP_ANALISTA_USER/PASSWORD`.
     </div>
   </main>
 
@@ -118,7 +118,8 @@
       try {
         const res = await fetch("/auth/me", { credentials: "same-origin" });
         if (res.ok) {
-          window.location.href = "/app/checklist";
+          const data = await res.json().catch(() => ({}));
+          window.location.href = data.home || "/app/checklist";
         }
       } catch (_) {
       }
@@ -153,7 +154,8 @@
           return;
         }
 
-        window.location.href = "/app/checklist";
+        const data = await res.json().catch(() => ({}));
+        window.location.href = data.home || "/app/checklist";
       } catch (_) {
         errorBox.textContent = "Falha ao conectar com o servidor.";
       } finally {

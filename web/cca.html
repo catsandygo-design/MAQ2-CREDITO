@@ -370,6 +370,7 @@
 
     let dados = [];
     let listaAtual = [];
+    let currentRole = "cca";
 
     function norm(value) {
       return String(value || "").trim().toLowerCase();
@@ -392,6 +393,16 @@
         throw new Error(data.detail || "Falha ao carregar dados");
       }
       return data;
+    }
+
+    async function loadSessionProfile() {
+      try {
+        const response = await fetch("/auth/me", { credentials: "same-origin" });
+        if (!response.ok) return;
+        const data = await response.json().catch(() => ({}));
+        currentRole = norm(data.role) || currentRole;
+      } catch (_) {
+      }
     }
 
     function toStageLabel(raw) {
@@ -534,7 +545,8 @@
 
     function detalhes(processoIdEncoded) {
       const processoId = decodeURIComponent(processoIdEncoded);
-      window.location.href = `/app/checklist?processo_id=${encodeURIComponent(processoId)}`;
+      const target = currentRole === "analista" ? "/app/analista" : "/app/checklist";
+      window.location.href = `${target}?processo_id=${encodeURIComponent(processoId)}`;
     }
     window.detalhes = detalhes;
 
@@ -579,6 +591,7 @@
 
     async function carregarDados() {
       try {
+        await loadSessionProfile();
         const processos = await api("/processos");
         dados = processos.map(fromBackend);
         aplicarFiltros();

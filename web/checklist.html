@@ -193,6 +193,22 @@
     th.status-doc-col, th.status-cred-col{white-space:nowrap;}
 
     .note{font-size:.75rem;color:var(--text-soft);margin-top:4px;}
+    .actions-row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-bottom:8px;
+    }
+    .save-btn{padding:8px 14px;font-size:.72rem;}
+    .save-btn:disabled{
+      opacity:.7;
+      cursor:not-allowed;
+      filter:grayscale(.15);
+      transform:none;
+    }
+    .save-feedback{font-size:.74rem;color:#a7f3d0;}
+    .save-feedback.error{color:#fca5a5;}
 
     .checkbox-row{
       display:flex;align-items:center;gap:8px;
@@ -996,9 +1012,12 @@ ou, em casos pontuais, a prÃ³prio punho.</td>
       </section>
 
       <footer>
+        <div class="actions-row">
+          <button type="button" class="copy-btn save-btn" id="btnSalvarChecklist">Salvar documentos</button>
+          <span id="save-feedback" class="save-feedback" aria-live="polite"></span>
+        </div>
         <p class="note">
-          *Este checklist Ã© apenas front-end. Em produÃ§Ã£o, esses campos alimentariam as tabelas de repasse
-          (proponente, dependentes, vÃ­nculos e checklist de documentos) com data/hora e usuÃ¡rio.
+          *Status Doc. eh salvo pelo corretor. Status Credito vem do analista.
         </p>
       </footer>
     </form>
@@ -1261,6 +1280,8 @@ DIVORCIADO: CertidÃ£o de casamento averbada.`;
     let processoId = url.searchParams.get("processo_id");
     let processoAtual = null;
     let saving = false;
+    const saveBtn = document.getElementById("btnSalvarChecklist");
+    const saveFeedback = document.getElementById("save-feedback");
 
     function norm(value) {
       return String(value || "").trim().toLowerCase();
@@ -1273,6 +1294,12 @@ DIVORCIADO: CertidÃ£o de casamento averbada.`;
         .replace(/\s+/g, " ")
         .trim()
         .toLowerCase();
+    }
+
+    function setFeedback(message, isError = false) {
+      if (!saveFeedback) return;
+      saveFeedback.textContent = message || "";
+      saveFeedback.classList.toggle("error", Boolean(isError));
     }
 
     async function api(path, options = {}) {
@@ -1350,14 +1377,6 @@ DIVORCIADO: CertidÃ£o de casamento averbada.`;
       return "analise";
     }
 
-    function uiCreditoToBackend(value) {
-      const s = norm(value);
-      if (s === "aprovado") return "APROVADO";
-      if (s === "reprovado") return "REPROVADO";
-      if (s === "pendenciado") return "PENDENCIADO";
-      return "ANALISE";
-    }
-
     function creditoByCategoria(categoria, processo) {
       if (!processo) return "analise";
       if (categoria === "caixa") return processStatusToCredito(processo.status_cca);
@@ -1401,6 +1420,7 @@ DIVORCIADO: CertidÃ£o de casamento averbada.`;
       getRows().forEach((item) => {
         if (typeof atualizarVisualStatusDoc === "function") atualizarVisualStatusDoc(item.docSelect);
         if (item.creditoSelect && typeof atualizarVisualStatusCredito === "function") {
+          item.creditoSelect.disabled = true;
           atualizarVisualStatusCredito(item.creditoSelect);
         }
       });
@@ -1452,61 +1472,45 @@ DIVORCIADO: CertidÃ£o de casamento averbada.`;
     async function salvarChecklist() {
       if (saving) return;
       const ok = await ensureProcesso();
-      if (!ok || !processoId) return;
+      if (!ok || !processoId) {
+        setFeedback("Preencha ao menos o nome do cliente antes de salvar.", true);
+        return;
+      }
 
       const rows = getRows();
       const documentos = rows.map((item) => ({
         categoria: item.categoria,
         nome: item.nome,
         status_doc: uiDocToBackend(item.docSelect.value),
-        status_credito: uiCreditoToBackend(item.creditoSelect?.value || creditoByCategoria(item.categoria, processoAtual)),
       }));
 
       saving = true;
+      if (saveBtn) saveBtn.disabled = true;
       try {
         await api(`/processos/${processoId}/documentos`, {
           method: "PUT",
           body: JSON.stringify({ documentos }),
         });
+        setFeedback("Documentos salvos com sucesso.");
       } finally {
         saving = false;
+        if (saveBtn) saveBtn.disabled = false;
       }
     }
 
-    function debounce(fn, ms) {
-      let timer = null;
-      return (...args) => {
-        clearTimeout(timer);
-        timer = setTimeout(() => fn(...args), ms);
-      };
+    if (saveBtn) {
+      saveBtn.addEventListener("click", () => {
+        salvarChecklist().catch((error) => {
+          setFeedback(`Erro ao salvar: ${error.message}`, true);
+        });
+      });
     }
 
-    const saveDebounced = debounce(() => {
-      salvarChecklist().catch(() => null);
-    }, 700);
+    applyVisuals();
 
-    getRows().forEach((item) => {
-      item.docSelect.addEventListener("change", saveDebounced);
+    carregarProcesso().catch((error) => {
+      setFeedback(`Erro ao carregar processo: ${error.message}`, true);
     });
-
-    ["nome-cliente", "corretor", "obra", "reserva"].forEach((id) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.addEventListener("blur", async () => {
-        try {
-          const created = await ensureProcesso();
-          if (created) saveDebounced();
-        } catch (_) {
-        }
-      });
-    });
-
-    carregarProcesso().catch(() => null);
-
-    setInterval(() => {
-      if (!processoId) return;
-      carregarProcesso().catch(() => null);
-    }, 30000);
   })();
 </script>
 </body>
