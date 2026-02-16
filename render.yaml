@@ -15,9 +15,9 @@ services:
       - key: STARTUP_DB_STRICT
         value: "false"
       - key: DB_POOL_SIZE
-        value: "3"
+        value: "15"
       - key: DB_MAX_OVERFLOW
-        value: "2"
+        value: "5"
       - key: DB_POOL_TIMEOUT
         value: "30"
       - key: DB_POOL_RECYCLE
@@ -30,5 +30,7 @@ services:
         sync: false
       - key: SESSION_TTL_SECONDS
         value: "43200"
+      - key: SESSION_IDLE_TIMEOUT_SECONDS
+        value: "600"
       - key: SESSION_COOKIE_SECURE
         value: "true"

@@ -26,6 +26,9 @@ WEB_DIR = Path(__file__).resolve().parent / "web"
 SESSION_COOKIE_NAME = "sc_session"
 SESSION_TTL_SECONDS = int(os.getenv("SESSION_TTL_SECONDS", "43200"))
 SESSION_IDLE_TIMEOUT_SECONDS = int(os.getenv("SESSION_IDLE_TIMEOUT_SECONDS", "1800"))
+SESSION_IDLE_PASSIVE_PATHS = {
+    "/app/api/processos",
+}
 SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() in {"1", "true", "yes"}
 ROLE_CORRETOR = "corretor"
 ROLE_CCA = "cca"
@@ -267,6 +270,15 @@ def _drop_sessions_for_user(user_id: uuid.UUID) -> None:
         ACTIVE_SESSIONS.pop(token, None)
 
 
+def _should_touch_session(request: Request) -> bool:
+    method = (request.method or "").upper()
+    if method != "GET":
+        return True
+
+    path = (request.url.path or "").rstrip("/") or "/"
+    return path not in SESSION_IDLE_PASSIVE_PATHS
+
+
 def _read_session(request: Request) -> Optional[dict[str, Any]]:
     token = request.cookies.get(SESSION_COOKIE_NAME)
     if not token:
@@ -296,8 +308,9 @@ def _read_session(request: Request) -> Optional[dict[str, Any]]:
             ACTIVE_SESSIONS.pop(token, None)
             return None
 
-    # Sliding idle timeout: any authenticated request renova atividade.
-    session["last_seen_at"] = now
+    # Sliding idle timeout: requisicoes passivas (polling) nao renovam atividade.
+    if _should_touch_session(request):
+        session["last_seen_at"] = now
     return session
 
 
