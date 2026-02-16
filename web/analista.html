@@ -254,6 +254,25 @@
       box-shadow: 0 0 0 4px rgba(34,197,94,.08);
     }
 
+    input[data-info-only="1"],
+    select[data-info-only="1"]{
+      background: rgba(2,6,23,.45);
+      border-color: rgba(148,163,184,.24);
+      color: #d1d5db;
+    }
+    input[data-info-only="1"]{
+      cursor: default;
+    }
+    select[data-info-only="1"]{
+      cursor: not-allowed;
+      opacity: .95;
+    }
+    input[data-info-only="1"]:focus,
+    select[data-info-only="1"]:focus{
+      border-color: rgba(148,163,184,.24);
+      box-shadow: 0 0 0 1px rgba(15,23,42,.65);
+    }
+
     textarea{
       min-height: 92px;
       resize: vertical;
@@ -547,24 +566,24 @@
         <div class="form-grid" aria-label="Dados do processo e regras">
           <div class="fg">
             <label for="nome-cliente">Cliente</label>
-            <input id="nome-cliente" type="text" placeholder="Nome do cliente">
+            <input id="nome-cliente" type="text" placeholder="Nome do cliente" readonly data-info-only="1">
           </div>
           <div class="fg">
             <label for="corretor">Corretor</label>
-            <input id="corretor" type="text" placeholder="Nome do corretor">
+            <input id="corretor" type="text" placeholder="Nome do corretor" readonly data-info-only="1">
           </div>
           <div class="fg">
             <label for="reserva">Reserva</label>
-            <input id="reserva" type="text" inputmode="numeric" placeholder="Código da reserva">
+            <input id="reserva" type="text" inputmode="numeric" placeholder="Código da reserva" readonly data-info-only="1">
           </div>
           <div class="fg">
             <label for="obra">Empreendimento</label>
-            <input id="obra" type="text" placeholder="AGL30, AGL32, FSA10...">
+            <input id="obra" type="text" placeholder="AGL30, AGL32, FSA10..." readonly data-info-only="1">
           </div>
 
           <div class="fg">
             <label for="perfil-renda">Perfil de renda</label>
-            <select id="perfil-renda">
+            <select id="perfil-renda" disabled data-info-only="1">
               <option value="clt">CLT / Formal</option>
               <option value="informal">Informal / Autônomo</option>
               <option value="aposentado">Aposentado / Pensionista</option>
@@ -574,7 +593,7 @@
 
           <div class="fg">
             <label for="estado-civil-proponente">Estado civil (proponente)</label>
-            <select id="estado-civil-proponente">
+            <select id="estado-civil-proponente" disabled data-info-only="1">
               <option value="solteiro">Solteiro(a)</option>
               <option value="casado">Casado(a)</option>
               <option value="divorciado">Divorciado(a)</option>
@@ -585,7 +604,7 @@
 
           <div class="fg">
             <label for="tipo-dependente">Tipo de dependente</label>
-            <select id="tipo-dependente">
+            <select id="tipo-dependente" disabled data-info-only="1">
               <option value="filho-menor">Filho menor</option>
               <option value="filho-maior">Filho maior</option>
               <option value="tio-tia">Tio/Tia</option>
@@ -599,14 +618,14 @@
 
           <div class="fg">
             <label for="imobiliaria">Imobiliária</label>
-            <input id="imobiliaria" type="text" placeholder="Nome da imobiliária">
+            <input id="imobiliaria" type="text" placeholder="Nome da imobiliária" readonly data-info-only="1">
           </div>
         </div>
 
         <div class="form-grid" aria-label="Regras em checkboxes">
           <div class="fg">
             <label>FGTS / CTPS</label>
-            <select id="cotista-3-anos">
+            <select id="cotista-3-anos" disabled data-info-only="1">
               <option value="nao">Cliente com +3 anos (não)</option>
               <option value="sim">Cliente com +3 anos (sim)</option>
             </select>
@@ -614,7 +633,7 @@
 
           <div class="fg" id="irpf-informal-group" style="display:none">
             <label>IRPF para renda informal</label>
-            <select id="irpf-informal">
+            <select id="irpf-informal" disabled data-info-only="1">
               <option value="nao">Não vai usar IRPF</option>
               <option value="sim">Vai usar IRPF + recibo</option>
             </select>
@@ -622,7 +641,7 @@
 
           <div class="fg" id="conjuge-renda-group" style="display:none">
             <label>Renda do cônjuge</label>
-            <select id="conjuge-tem-renda">
+            <select id="conjuge-tem-renda" disabled data-info-only="1">
               <option value="nao">Cônjuge sem renda</option>
               <option value="sim">Cônjuge com renda</option>
             </select>
@@ -630,7 +649,7 @@
 
           <div class="fg">
             <label>CCA (Caixa)</label>
-            <select id="cca-gerou">
+            <select id="cca-gerou" disabled data-info-only="1">
               <option value="nao">CCA não gerou formulários</option>
               <option value="sim">CCA gerou formulários</option>
             </select>
