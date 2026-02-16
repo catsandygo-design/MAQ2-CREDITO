@@ -22,6 +22,7 @@ WEB_DIR = Path(__file__).resolve().parent / "web"
 
 SESSION_COOKIE_NAME = "sc_session"
 SESSION_TTL_SECONDS = int(os.getenv("SESSION_TTL_SECONDS", "43200"))
+SESSION_IDLE_TIMEOUT_SECONDS = int(os.getenv("SESSION_IDLE_TIMEOUT_SECONDS", "1800"))
 SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() in {"1", "true", "yes"}
 ROLE_CORRETOR = "corretor"
 ROLE_CCA = "cca"
@@ -157,10 +158,13 @@ def _home_for_role(role: Optional[str]) -> str:
 
 def _new_session(username: str, role: str) -> str:
     token = uuid.uuid4().hex
+    now = _utcnow()
     ACTIVE_SESSIONS[token] = {
         "username": username,
         "role": role,
-        "expires_at": _utcnow() + timedelta(seconds=SESSION_TTL_SECONDS),
+        "created_at": now,
+        "last_seen_at": now,
+        "expires_at": now + timedelta(seconds=SESSION_TTL_SECONDS),
     }
     return token
 
@@ -174,11 +178,23 @@ def _read_session(request: Request) -> Optional[dict[str, Any]]:
     if not session:
         return None
 
+    now = _utcnow()
     expires_at = session.get("expires_at")
-    if not isinstance(expires_at, datetime) or expires_at <= _utcnow():
+    if not isinstance(expires_at, datetime) or expires_at <= now:
         ACTIVE_SESSIONS.pop(token, None)
         return None
 
+    if SESSION_IDLE_TIMEOUT_SECONDS > 0:
+        last_seen = session.get("last_seen_at") or session.get("created_at")
+        if not isinstance(last_seen, datetime):
+            ACTIVE_SESSIONS.pop(token, None)
+            return None
+        if last_seen + timedelta(seconds=SESSION_IDLE_TIMEOUT_SECONDS) <= now:
+            ACTIVE_SESSIONS.pop(token, None)
+            return None
+
+    # Sliding idle timeout: any authenticated request renova atividade.
+    session["last_seen_at"] = now
     return session
 
 
