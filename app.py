@@ -1533,6 +1533,8 @@ def app_list_processos(
     query = db.query(Processo, Cliente).join(Cliente, Processo.cliente_id == Cliente.id)
     if role == ROLE_CORRETOR:
         query = query.filter(func.lower(Cliente.corretor) == username)
+    elif role == ROLE_CCA:
+        query = query.filter(func.lower(Processo.cca_responsavel) == username)
 
     rows = query.order_by(Processo.created_at.desc()).all()
 
@@ -1611,6 +1613,8 @@ def app_get_processo_full(
     role = _normalize_role(str(session.get("role", "")))
     username = _normalize_username(str(session.get("username", "")))
     if role == ROLE_CORRETOR and _normalize_username(cliente.corretor) != username:
+        raise HTTPException(status_code=403, detail="Sem permissao para acessar este processo")
+    if role == ROLE_CCA and _normalize_username(processo.cca_responsavel) != username:
         raise HTTPException(status_code=403, detail="Sem permissao para acessar este processo")
 
     _ensure_default_documentos(db, processo.id)
@@ -1693,6 +1697,8 @@ def app_bulk_upsert_documentos(
             raise HTTPException(status_code=404, detail="Cliente nao encontrado")
         if _normalize_username(cliente.corretor) != username:
             raise HTTPException(status_code=403, detail="Sem permissao para atualizar este processo")
+    if role == ROLE_CCA and _normalize_username(processo.cca_responsavel) != username:
+        raise HTTPException(status_code=403, detail="Sem permissao para atualizar este processo")
 
     if not payload.documentos:
         raise HTTPException(status_code=422, detail="Lista de documentos vazia")

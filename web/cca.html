@@ -3,307 +3,491 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tela CCA – Painel de Estágios</title>
+  <title>Painel CCA - Estagios do Cliente</title>
   <style>
-    :root{
-      --bg:#020617;
-      --bg-soft:#020617;
-      --card:#0b1220;
-      --line:rgba(148,163,184,.22);
-      --text:#e5e7eb;
-      --muted:#9ca3af;
-
-      --ok:#22c55e;
-      --warn:#facc15;
-      --bad:#fb7185;
-      --info:#38bdf8;
-
-      --shadow:0 22px 40px rgba(15,23,42,0.95);
+    :root {
+      --bg: #020617;
+      --bg-soft: #061027;
+      --line: rgba(148, 163, 184, 0.22);
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --ok: #22c55e;
+      --warn: #facc15;
+      --bad: #fb7185;
+      --info: #38bdf8;
+      --shadow: 0 22px 40px rgba(15, 23, 42, 0.95);
     }
 
-    *{box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
-    body{
-      margin:0;
-      background:radial-gradient(circle at top,#1f2937 0,#020617 45%,#020617 100%);
-      color:var(--text);
-      padding:18px 12px 40px;
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
-    .wrapper{max-width:1250px;margin:0 auto;}
-    .card{
+
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top, #1f2937 0, #020617 45%, #020617 100%);
+      color: var(--text);
+      padding: 18px 12px 40px;
+    }
+
+    .wrapper {
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+
+    .card {
       background:
-        radial-gradient(circle at top left, rgba(56,189,248,0.10), transparent 55%),
-        radial-gradient(circle at bottom right, rgba(34,197,94,0.10), transparent 60%),
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.10), transparent 55%),
+        radial-gradient(circle at bottom right, rgba(34, 197, 94, 0.10), transparent 60%),
         var(--bg-soft);
-      border:1px solid rgba(148,163,184,0.30);
-      border-radius:16px;
-      padding:16px 16px 14px;
-      box-shadow:var(--shadow);
-      position:relative;
-      overflow:hidden;
+      border: 1px solid rgba(148, 163, 184, 0.30);
+      border-radius: 18px;
+      padding: 16px 16px 14px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
     }
 
-    header{
-      display:flex;
-      align-items:flex-end;
-      justify-content:space-between;
-      gap:12px;
-      margin-bottom:10px;
-    }
-    .title h1{
-      margin:0;
-      font-size:1.15rem;
-      letter-spacing:.2px;
-    }
-    .title p{
-      margin:4px 0 0;
-      color:var(--muted);
-      font-size:.78rem;
-      line-height:1.3;
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
     }
 
-    /* Top actions */
-    .actions{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      align-items:center;
-      justify-content:flex-end;
+    .title h1 {
+      margin: 0;
+      font-size: 2rem;
+      letter-spacing: .2px;
     }
 
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      gap:6px;
-      padding:7px 10px;
-      border-radius:999px;
-      font-size:.74rem;
-      font-weight:750;
-      letter-spacing:.02em;
-      border:1px solid rgba(148,163,184,.25);
-      background:rgba(15,23,42,.82);
-      color:var(--text);
-      white-space:nowrap;
+    .title p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 1.2rem;
+      line-height: 1.3;
     }
 
-    .btn{
-      cursor:pointer;
-      border-radius:999px;
-      padding:8px 11px;
-      font-size:.74rem;
-      font-weight:800;
-      letter-spacing:.05em;
-      text-transform:uppercase;
-      border:1px solid rgba(34,197,94,.75);
-      background:radial-gradient(circle at top left, #22c55e, #16a34a);
-      color:#04110b;
-      box-shadow:0 0 0 1px rgba(15,23,42,0.9), 0 0 12px rgba(34,197,94,0.55);
-      transition:transform .08s ease, filter .12s ease, box-shadow .12s ease;
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
     }
-    .btn:hover{transform:translateY(-1px);filter:brightness(1.05);box-shadow:0 0 0 1px rgba(15,23,42,1), 0 0 16px rgba(74,222,128,0.75);}
-    .btn:active{transform:translateY(0);box-shadow:0 0 0 1px rgba(15,23,42,1), 0 0 8px rgba(74,222,128,0.55);}
 
-    /* Filters */
-    .filters{
-      display:grid;
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 1rem;
+      font-weight: 750;
+      letter-spacing: .02em;
+      border: 1px solid rgba(148, 163, 184, .25);
+      background: rgba(15, 23, 42, .82);
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .btn {
+      cursor: pointer;
+      border-radius: 999px;
+      padding: 8px 13px;
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      border: 1px solid rgba(34, 197, 94, .75);
+      background: radial-gradient(circle at top left, #22c55e, #16a34a);
+      color: #04110b;
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, .9), 0 0 12px rgba(34, 197, 94, .55);
+      transition: transform .08s ease, filter .12s ease, box-shadow .12s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, 1), 0 0 16px rgba(74, 222, 128, .75);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, 1), 0 0 8px rgba(74, 222, 128, .55);
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 12px;
+      margin: 12px 0;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px dashed rgba(148, 163, 184, .30);
+      background: rgba(15, 23, 42, .62);
+    }
+
+    .summary-card {
+      border: 1px solid rgba(56, 189, 248, .30);
+      border-radius: 16px;
+      padding: 14px 12px;
+      background: linear-gradient(160deg, rgba(3, 19, 40, .95), rgba(2, 6, 23, .9));
+      text-align: center;
+    }
+
+    .summary-card.warn { border-color: rgba(250, 204, 21, .65); }
+    .summary-card.bad { border-color: rgba(251, 113, 133, .65); }
+    .summary-card.ok { border-color: rgba(74, 222, 128, .65); }
+    .summary-card.info { border-color: rgba(56, 189, 248, .65); }
+
+    .summary-card .label {
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: #93c5fd;
+      font-weight: 800;
+      font-size: .95rem;
+      min-height: 2.1em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .summary-card .count {
+      margin-top: 6px;
+      font-size: 2.7rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .summary-card .sub {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .summary-card.warn .count { color: var(--warn); }
+    .summary-card.bad .count { color: var(--bad); }
+    .summary-card.ok .count { color: var(--ok); }
+    .summary-card.info .count { color: var(--info); }
+
+    .filters {
+      display: grid;
       grid-template-columns: 1.2fr 1fr 1fr 1fr;
-      gap:10px;
-      margin:10px 0 12px;
-      padding:10px;
-      border-radius:14px;
-      border:1px dashed rgba(148,163,184,0.30);
-      background:rgba(15,23,42,0.62);
+      gap: 10px;
+      margin: 10px 0 12px;
+      padding: 10px;
+      border-radius: 14px;
+      border: 1px dashed rgba(148, 163, 184, 0.30);
+      background: rgba(15, 23, 42, 0.62);
     }
-    @media (max-width: 980px){
-      .filters{grid-template-columns:1fr 1fr; }
+
+    .fg {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
     }
-    @media (max-width: 560px){
-      .filters{grid-template-columns:1fr;}
-      header{flex-direction:column;align-items:flex-start;}
-      .actions{justify-content:flex-start;}
+
+    .fg label {
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 650;
     }
-    .fg{display:flex;flex-direction:column;gap:5px;}
-    .fg label{color:var(--muted);font-size:.72rem;font-weight:650;}
-    input,select{
-      color-scheme:dark;
-      border-radius:999px;
-      border:1px solid rgba(56,189,248,.30);
-      background:linear-gradient(135deg, rgba(2,44,34,.55), rgba(2,6,23,.95));
-      color:var(--text);
-      font-size:.78rem;
-      padding:8px 11px;
-      outline:none;
-      box-shadow:0 0 0 1px rgba(15,23,42,.65);
-      transition:border-color .2s ease, box-shadow .2s ease, transform .08s ease;
-      appearance:none;
+
+    input,
+    select {
+      color-scheme: dark;
+      border-radius: 999px;
+      border: 1px solid rgba(56, 189, 248, 0.30);
+      background: linear-gradient(135deg, rgba(2, 44, 34, 0.55), rgba(2, 6, 23, 0.95));
+      color: var(--text);
+      font-size: 1rem;
+      padding: 8px 11px;
+      outline: none;
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, .65);
+      transition: border-color .2s ease, box-shadow .2s ease, transform .08s ease;
+      appearance: none;
       background-image:
-        linear-gradient(135deg, rgba(2,44,34,.55), rgba(2,6,23,.95)),
+        linear-gradient(135deg, rgba(2, 44, 34, 0.55), rgba(2, 6, 23, 0.95)),
         linear-gradient(45deg, #22c55e 0, #22c55e 50%, transparent 50%, transparent 100%);
-      background-repeat:no-repeat;
-      background-position:0 0, right 10px center;
-      background-size:100% 100%, 9px 6px;
-    }
-    input{background-image:linear-gradient(135deg, rgba(2,44,34,.55), rgba(2,6,23,.95));}
-    input::placeholder{color:rgba(148,163,184,.75);}
-    input:focus-visible,select:focus-visible{
-      border-color:rgba(187,247,208,.85);
-      box-shadow:0 0 0 1px rgba(15,23,42,.9), 0 0 0 3px rgba(34,197,94,.35);
-      transform:translateY(-1px);
+      background-repeat: no-repeat;
+      background-position: 0 0, right 10px center;
+      background-size: 100% 100%, 9px 6px;
     }
 
-    /* Table */
-    .table-wrap{
-      border-radius:14px;
-      border:1px solid rgba(31,41,55,0.95);
-      overflow:hidden;
-      background:rgba(15,23,42,0.82);
-    }
-    table{
-      width:100%;
-      border-collapse:collapse;
-      font-size:.78rem;
-    }
-    thead{background:rgba(2,6,23,0.95);}
-    th,td{
-      padding:8px 9px;
-      border-bottom:1px solid rgba(31,41,55,0.75);
-      text-align:left;
-      vertical-align:middle;
-    }
-    th{
-      color:var(--muted);
-      font-size:.72rem;
-      font-weight:800;
-      letter-spacing:.06em;
-      text-transform:uppercase;
-      white-space:nowrap;
-    }
-    tbody tr:nth-child(even){background:rgba(15,23,42,0.55);}
-    tbody tr:hover{
-      background:rgba(15,23,42,0.92);
-      box-shadow:inset 2px 0 0 rgba(34,197,94,0.85);
+    input {
+      background-image: linear-gradient(135deg, rgba(2, 44, 34, 0.55), rgba(2, 6, 23, 0.95));
     }
 
-    .col-cliente{width:22%;font-weight:750;}
-    .client-link{
-      background:none;
-      border:none;
-      padding:0;
-      color:var(--text);
-      font-weight:800;
-      text-decoration:none;
-      border-bottom:1px dashed transparent;
-      cursor:pointer;
-    }
-    .client-link:hover{
-      color:#86efac;
-      border-bottom-color:rgba(134,239,172,0.65);
-    }
-    .col-corretor{width:16%;}
-    .col-obra{width:8%; font-weight:750;}
-    .col-stage{width:9%;}
-
-    /* Stage badges */
-    .badge{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      padding:7px 10px;
-      border-radius:999px;
-      font-weight:850;
-      font-size:.72rem;
-      border:1px solid rgba(148,163,184,.18);
-      background:rgba(2,6,23,.55);
-      color:var(--text);
-      white-space:nowrap;
-      min-width:110px;
-    }
-    .b-analise{
-      border-color:rgba(56,189,248,.9);
-      box-shadow:0 0 0 1px rgba(15,23,42,.9), 0 0 12px rgba(56,189,248,.30);
-      background:linear-gradient(135deg, rgba(12,74,110,.95), rgba(2,6,23,.85));
-    }
-    .b-pendente{
-      border-color:rgba(251,113,133,.95);
-      box-shadow:0 0 0 1px rgba(15,23,42,.9), 0 0 12px rgba(251,113,133,.28);
-      background:linear-gradient(135deg, rgba(69,10,10,.95), rgba(2,6,23,.88));
-    }
-    .b-pendenciado{
-      border-color:rgba(250,204,21,.95);
-      box-shadow:0 0 0 1px rgba(15,23,42,.9), 0 0 12px rgba(250,204,21,.22);
-      background:linear-gradient(135deg, rgba(120,53,15,.95), rgba(2,6,23,.88));
-    }
-    .b-ok{
-      border-color:rgba(74,222,128,.95);
-      box-shadow:0 0 0 1px rgba(15,23,42,.9), 0 0 12px rgba(74,222,128,.25);
-      background:linear-gradient(135deg, rgba(6,95,70,.95), rgba(2,6,23,.88));
-    }
-    .b-na{
-      border-color:rgba(148,163,184,.35);
-      box-shadow:none;
-      background:linear-gradient(135deg, rgba(30,41,59,.80), rgba(2,6,23,.88));
-      color:rgba(226,232,240,.85);
+    input::placeholder {
+      color: rgba(148, 163, 184, 0.75);
     }
 
-    /* Small counter line */
-    .meta{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
-      justify-content:space-between;
-      margin-top:10px;
-      color:var(--muted);
-      font-size:.72rem;
+    input:focus-visible,
+    select:focus-visible {
+      border-color: rgba(187, 247, 208, 0.85);
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, .9), 0 0 0 3px rgba(34, 197, 94, .35);
+      transform: translateY(-1px);
     }
-    .meta b{color:var(--text);}
 
-    /* Inline "edit" (simulado) */
-    .row-actions{
-      display:flex;
-      gap:6px;
-      justify-content:flex-end;
-      align-items:center;
+    .table-wrap {
+      border-radius: 14px;
+      border: 1px solid rgba(31, 41, 55, 0.95);
+      overflow: hidden;
+      background: rgba(15, 23, 42, 0.82);
     }
-    .mini{
-      border-radius:999px;
-      padding:7px 10px;
-      font-size:.72rem;
-      font-weight:850;
-      border:1px solid rgba(148,163,184,.22);
-      background:rgba(2,6,23,.55);
-      color:var(--text);
-      cursor:pointer;
-      transition:transform .08s ease, filter .12s ease;
-      white-space:nowrap;
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 1rem;
     }
-    .mini:hover{transform:translateY(-1px);filter:brightness(1.05);}
-    .mini:active{transform:translateY(0);}
-    .mini.primary{
-      border-color:rgba(56,189,248,.55);
-      box-shadow:0 0 0 1px rgba(15,23,42,.85), 0 0 10px rgba(56,189,248,.18);
+
+    thead {
+      background: rgba(2, 6, 23, 0.95);
     }
-    .col-actions{width:7%; text-align:right;}
-    td.col-actions{padding-right:10px;}
+
+    th,
+    td {
+      padding: 8px 9px;
+      border-bottom: 1px solid rgba(31, 41, 55, 0.75);
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: .95rem;
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    tbody tr:nth-child(even) {
+      background: rgba(15, 23, 42, 0.55);
+    }
+
+    tbody tr:hover {
+      background: rgba(15, 23, 42, 0.92);
+      box-shadow: inset 2px 0 0 rgba(34, 197, 94, 0.85);
+    }
+
+    .col-cliente {
+      width: 22%;
+      font-weight: 750;
+    }
+
+    .client-link {
+      background: none;
+      border: none;
+      padding: 0;
+      color: var(--text);
+      font-weight: 800;
+      text-decoration: none;
+      border-bottom: 1px dashed transparent;
+      cursor: pointer;
+    }
+
+    .client-link:hover {
+      color: #86efac;
+      border-bottom-color: rgba(134, 239, 172, 0.65);
+    }
+
+    .col-corretor {
+      width: 14%;
+    }
+
+    .col-obra {
+      width: 8%;
+      font-weight: 750;
+    }
+
+    .col-stage {
+      width: 10%;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-weight: 850;
+      font-size: .95rem;
+      border: 1px solid rgba(148, 163, 184, .18);
+      background: rgba(2, 6, 23, .55);
+      color: var(--text);
+      white-space: nowrap;
+      min-width: 130px;
+    }
+
+    .b-analise {
+      border-color: rgba(56, 189, 248, .9);
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, .9), 0 0 12px rgba(56, 189, 248, .30);
+      background: linear-gradient(135deg, rgba(12, 74, 110, .95), rgba(2, 6, 23, .85));
+    }
+
+    .b-pendente {
+      border-color: rgba(251, 113, 133, .95);
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, .9), 0 0 12px rgba(251, 113, 133, .28);
+      background: linear-gradient(135deg, rgba(69, 10, 10, .95), rgba(2, 6, 23, .88));
+    }
+
+    .b-pendenciado {
+      border-color: rgba(250, 204, 21, .95);
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, .9), 0 0 12px rgba(250, 204, 21, .22);
+      background: linear-gradient(135deg, rgba(120, 53, 15, .95), rgba(2, 6, 23, .88));
+    }
+
+    .b-ok {
+      border-color: rgba(74, 222, 128, .95);
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, .9), 0 0 12px rgba(74, 222, 128, .25);
+      background: linear-gradient(135deg, rgba(6, 95, 70, .95), rgba(2, 6, 23, .88));
+    }
+
+    .b-na {
+      border-color: rgba(148, 163, 184, .35);
+      box-shadow: none;
+      background: linear-gradient(135deg, rgba(30, 41, 59, .80), rgba(2, 6, 23, .88));
+      color: rgba(226, 232, 240, .85);
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .mini {
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: .95rem;
+      font-weight: 850;
+      border: 1px solid rgba(56, 189, 248, .55);
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, .85), 0 0 10px rgba(56, 189, 248, .18);
+      background: rgba(2, 6, 23, .55);
+      color: var(--text);
+      cursor: pointer;
+      transition: transform .08s ease, filter .12s ease;
+      white-space: nowrap;
+    }
+
+    .mini:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+    }
+
+    .mini:active {
+      transform: translateY(0);
+    }
+
+    .col-actions {
+      width: 7%;
+      text-align: right;
+    }
+
+    td.col-actions {
+      padding-right: 10px;
+    }
+
+    .meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .meta b {
+      color: var(--text);
+    }
+
+    @media (max-width: 1280px) {
+      .summary-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .filters {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 780px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .actions {
+        justify-content: flex-start;
+      }
+      .summary-grid,
+      .filters {
+        grid-template-columns: 1fr;
+      }
+      .table-wrap {
+        overflow-x: auto;
+      }
+      table {
+        min-width: 1080px;
+      }
+    }
   </style>
 </head>
-
 <body>
   <main class="wrapper">
     <section class="card" aria-label="Painel do CCA">
       <header>
         <div class="title">
-          <h1>Painel CCA – Estágios do Cliente</h1>
-          <p>Visão operacional rápida: Cliente, Corretor, Obra e andamento por etapa (CAD, CCA, AGEHAB, Fiador, Sinal).</p>
+          <h1>Painel CCA - Estagios do Cliente</h1>
+          <p>Visao operacional rapida: Cliente, Corretor, Obra e andamento por etapa (CAD, CCA, AGEHAB, Fiador, Sinal).</p>
         </div>
 
         <div class="actions">
-          <span class="pill" id="total-pill">Total: 0</span>
-          <span class="pill" id="pendencias-pill">Pendências: 0</span>
+          <span class="pill" id="total-pill">Total: 0/0</span>
+          <span class="pill" id="pendencias-pill">Pendencias: 0/0</span>
           <button class="btn" type="button" id="btn-export">Exportar CSV</button>
           <button class="btn" type="button" id="btn-logout">Sair</button>
         </div>
       </header>
+
+      <section class="summary-grid" aria-label="Resumo por estagio">
+        <article class="summary-card info">
+          <div class="label">Aguardando Envio</div>
+          <div class="count" id="count-aguardando-envio">0</div>
+          <div class="sub">clientes</div>
+        </article>
+        <article class="summary-card warn">
+          <div class="label">Aguardando Conformidade</div>
+          <div class="count" id="count-aguardando-conformidade">0</div>
+          <div class="sub">clientes</div>
+        </article>
+        <article class="summary-card bad">
+          <div class="label">Conformes com Pendencia</div>
+          <div class="count" id="count-conformes-com-pendencia">0</div>
+          <div class="sub">clientes</div>
+        </article>
+        <article class="summary-card ok">
+          <div class="label">Conformes para Assinatura</div>
+          <div class="count" id="count-conformes-para-assinatura">0</div>
+          <div class="sub">clientes</div>
+        </article>
+        <article class="summary-card warn">
+          <div class="label">Agendados</div>
+          <div class="count" id="count-agendados">0</div>
+          <div class="sub">clientes</div>
+        </article>
+        <article class="summary-card ok">
+          <div class="label">Finalizados</div>
+          <div class="count" id="count-finalizados">0</div>
+          <div class="sub">clientes</div>
+        </article>
+      </section>
 
       <section class="filters" aria-label="Filtros">
         <div class="fg">
@@ -315,28 +499,25 @@
           <label for="obra">Obra</label>
           <select id="obra">
             <option value="">Todas</option>
-            <option>AGL30</option>
-            <option>AGL32</option>
-            <option>FSA10</option>
-            <option>FSA11</option>
           </select>
         </div>
 
         <div class="fg">
-          <label for="pendencias">Pendências</label>
+          <label for="pendencias">Pendencias</label>
           <select id="pendencias">
             <option value="">Todas</option>
-            <option value="com">Com pendência</option>
-            <option value="sem">Sem pendência</option>
+            <option value="com">Com pendencia</option>
+            <option value="sem">Sem pendencia</option>
           </select>
         </div>
 
         <div class="fg">
           <label for="ordem">Ordenar</label>
           <select id="ordem">
-            <option value="cliente">Cliente (A–Z)</option>
-            <option value="obra">Obra</option>
-            <option value="pendencia">Pendências (maior → menor)</option>
+            <option value="cliente_az">Cliente (A-Z)</option>
+            <option value="cliente_za">Cliente (Z-A)</option>
+            <option value="obra_az">Obra (A-Z)</option>
+            <option value="pendencia_desc">Pendencias (maior-menor)</option>
           </select>
         </div>
       </section>
@@ -348,23 +529,21 @@
               <th class="col-cliente">Cliente</th>
               <th class="col-corretor">Corretor</th>
               <th class="col-obra">Obra</th>
-              <th class="col-stage">Estágio CAD</th>
-              <th class="col-stage">Estágio CCA</th>
-              <th class="col-stage">Estágio AGEHAB</th>
+              <th class="col-stage">Estagio CAD</th>
+              <th class="col-stage">Estagio CCA</th>
+              <th class="col-stage">Estagio Agehab</th>
               <th class="col-stage">Pendente Fiador</th>
               <th class="col-stage">Pendente Sinal</th>
-              <th class="col-actions">Ações</th>
+              <th class="col-actions">Acoes</th>
             </tr>
           </thead>
-          <tbody id="tbody">
-            <!-- preenchido via JS -->
-          </tbody>
+          <tbody id="tbody"></tbody>
         </table>
       </div>
 
       <div class="meta">
         <div>Mostrando <b id="shown">0</b> de <b id="total">0</b></div>
-        <div>Dica: clique no <b>nome do cliente</b> ou em <b>Detalhes</b> para abrir o dossie.</div>
+        <div>Dica: clique em <b>Detalhes</b> para abrir o dossie.</div>
       </div>
     </section>
   </main>
@@ -383,13 +562,48 @@
     const totalPill = document.getElementById("total-pill");
     const pendPill = document.getElementById("pendencias-pill");
 
+    const summaryEls = {
+      aguardandoEnvio: document.getElementById("count-aguardando-envio"),
+      aguardandoConformidade: document.getElementById("count-aguardando-conformidade"),
+      conformesComPendencia: document.getElementById("count-conformes-com-pendencia"),
+      conformesParaAssinatura: document.getElementById("count-conformes-para-assinatura"),
+      agendados: document.getElementById("count-agendados"),
+      finalizados: document.getElementById("count-finalizados"),
+    };
+
+    const LABELS = {
+      geral: {
+        novo: "Novo",
+        em_andamento: "Em Analise",
+        pendenciado: "Pendenciado",
+        aprovado: "Aprovado",
+        reprovado: "Reprovado",
+        distrato: "Distrato",
+        cancelado: "Cancelado",
+      },
+      cca: {
+        analise_credito: "Em Analise",
+        pendente_credito: "Pendente",
+        analise_cca: "Em Analise",
+        pendente_cca: "Pendenciado",
+        aguardando_conformidade: "Aguardando Conformidade",
+        conforme: "Aprovado",
+        tratando_produto: "Tratando Produto",
+        agendado: "Agendado",
+        assinatura_caixa: "Finalizado",
+      },
+      agehab: {
+        analise_credito: "Em Analise",
+        pendente_credito: "Pendente",
+        envio_agehab: "Envio Agehab",
+        pendente_agehab: "Pendente",
+        validado_agehab: "Aprovado",
+      },
+    };
+
     let dados = [];
     let listaAtual = [];
     let currentRole = "cca";
-    const currentPath = String(window.location.pathname || "");
-    if (currentPath === "/app/analista") {
-      currentRole = "analista";
-    }
 
     function norm(value) {
       return String(value || "").trim().toLowerCase();
@@ -424,68 +638,116 @@
       }
     }
 
-    function toStageLabel(raw) {
-      const v = norm(raw).replace(/\s+/g, "_");
-      if (v === "em_analise") return "Em Análise";
-      if (v === "pendente") return "Pendente";
-      if (v === "aprovado") return "Aprovado";
-      if (v === "reprovado") return "Reprovado";
-      return raw || "Em Análise";
+    function stageKey(value) {
+      return norm(value).replace(/\s+/g, "_");
     }
 
-    function clsStage(v) {
-      const t = norm(v);
-      if (t.includes("aprov")) return "b-ok";
-      if (t.includes("reprov")) return "b-pendente";
-      if (t.includes("pendenc")) return "b-pendenciado";
-      if (t.includes("anális") || t.includes("analise")) return "b-analise";
-      if (t.includes("pend")) return "b-pendente";
+    function stageLabel(area, value) {
+      const key = stageKey(value);
+      return LABELS[area]?.[key] || String(value || "-");
+    }
+
+    function statusBadgeClass(value) {
+      const txt = norm(value);
+      if (txt.includes("aprov") || txt.includes("valid") || txt.includes("finaliz")) return "b-ok";
+      if (txt.includes("pendenc")) return "b-pendenciado";
+      if (txt.includes("pendente") || txt.includes("reprov") || txt.includes("cancel")) return "b-pendente";
+      if (txt.includes("analise") || txt.includes("aguard") || txt.includes("agend") || txt.includes("envio") || txt.includes("tratando")) return "b-analise";
       return "b-na";
     }
 
-    function clsPend(v) {
-      const t = norm(v);
-      if (t === "sim") return "b-pendente";
-      if (t === "não" || t === "nao") return "b-ok";
-      return "b-na";
+    function badge(text, cls) {
+      return `<span class="badge ${cls}">${text}</span>`;
     }
 
-    function badge(texto, classe) {
-      return `<span class="badge ${classe}">${texto}</span>`;
+    function boolFromStatus(statusValue, fallbackBool) {
+      const s = stageKey(statusValue);
+      if (s === "pendente") return true;
+      if (s === "finalizado" || s === "pago" || s === "nao_tem") return false;
+      return Boolean(fallbackBool);
     }
 
-    function contarPendencias(item) {
+    function fromBackend(item) {
+      const fiadorPendente = boolFromStatus(item.status_fiador, item.pendente_fiador);
+      const sinalPendente = boolFromStatus(item.status_sinal, item.pendente_sinal);
+      return {
+        processo_id: item.processo_id,
+        cliente: item.cliente_nome || "-",
+        corretor: item.corretor || "-",
+        obra: item.obra || "-",
+        estagioCadKey: stageKey(item.status_geral),
+        estagioCad: stageLabel("geral", item.status_geral),
+        estagioCcaKey: stageKey(item.status_cca),
+        estagioCca: stageLabel("cca", item.status_cca),
+        estagioAgehabKey: stageKey(item.status_agehab),
+        estagioAgehab: stageLabel("agehab", item.status_agehab),
+        fiadorPendente,
+        sinalPendente,
+      };
+    }
+
+    function countPendencias(item) {
       let p = 0;
-      if (norm(item.fiador) === "sim") p += 1;
-      if (norm(item.sinal) === "sim") p += 1;
-      ["cad", "cca", "agehab"].forEach((k) => {
-        const v = norm(item[k]);
-        if (v.includes("pendente") || v.includes("pendenciado")) p += 1;
+      if (item.fiadorPendente) p += 1;
+      if (item.sinalPendente) p += 1;
+      [item.estagioCadKey, item.estagioCcaKey, item.estagioAgehabKey].forEach((k) => {
+        if (k.includes("pendenc") || k.includes("pendente")) p += 1;
       });
       return p;
     }
 
-    function fromBackend(item) {
-      return {
-        processo_id: item.processo_id,
-        cliente: item.cliente_nome,
-        corretor: item.corretor || "-",
-        obra: item.obra || "-",
-        cad: toStageLabel(item.status_geral),
-        cca: toStageLabel(item.status_cca),
-        agehab: toStageLabel(item.status_agehab),
-        fiador: item.pendente_fiador ? "Sim" : "Não",
-        sinal: item.pendente_sinal ? "Sim" : "Não",
+    function classifySummary(item) {
+      const hasPend = countPendencias(item) > 0;
+      const cca = item.estagioCcaKey;
+
+      if (cca === "assinatura_caixa") return "finalizados";
+      if (cca === "agendado") return "agendados";
+      if (cca === "conforme") return hasPend ? "conformesComPendencia" : "conformesParaAssinatura";
+      if (cca === "aguardando_conformidade") return "aguardandoConformidade";
+      return "aguardandoEnvio";
+    }
+
+    function updateSummary(lista) {
+      const counters = {
+        aguardandoEnvio: 0,
+        aguardandoConformidade: 0,
+        conformesComPendencia: 0,
+        conformesParaAssinatura: 0,
+        agendados: 0,
+        finalizados: 0,
       };
+
+      lista.forEach((item) => {
+        counters[classifySummary(item)] += 1;
+      });
+
+      Object.keys(summaryEls).forEach((key) => {
+        summaryEls[key].textContent = String(counters[key] || 0);
+      });
+    }
+
+    function refreshObraOptions(list) {
+      const current = obraSel.value;
+      const obras = Array.from(new Set(list.map((it) => String(it.obra || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+      obraSel.innerHTML = '<option value="">Todas</option>';
+      obras.forEach((obra) => {
+        const opt = document.createElement("option");
+        opt.value = obra;
+        opt.textContent = obra;
+        obraSel.appendChild(opt);
+      });
+      if (current && obras.includes(current)) {
+        obraSel.value = current;
+      }
     }
 
     function getFilteredData() {
       const termo = norm(q.value);
       const obra = norm(obraSel.value);
       const pend = norm(pendSel.value);
-      const ordem = norm(ordemSel.value || "cliente");
+      const ordem = norm(ordemSel.value || "cliente_az");
 
-      let lista = dados.map((d) => ({ ...d, _pend: contarPendencias(d) }));
+      let lista = dados.map((d) => ({ ...d, _pend: countPendencias(d) }));
 
       if (termo) {
         lista = lista.filter((it) => {
@@ -509,11 +771,13 @@
         lista = lista.filter((it) => it._pend === 0);
       }
 
-      if (ordem === "cliente") {
+      if (ordem === "cliente_az") {
         lista.sort((a, b) => (a.cliente || "").localeCompare(b.cliente || ""));
-      } else if (ordem === "obra") {
+      } else if (ordem === "cliente_za") {
+        lista.sort((a, b) => (b.cliente || "").localeCompare(a.cliente || ""));
+      } else if (ordem === "obra_az") {
         lista.sort((a, b) => (a.obra || "").localeCompare(b.obra || ""));
-      } else if (ordem === "pendencia") {
+      } else if (ordem === "pendencia_desc") {
         lista.sort((a, b) => (b._pend || 0) - (a._pend || 0));
       }
 
@@ -521,8 +785,9 @@
     }
 
     function render(lista) {
-      const isAnalystView = currentPath === "/app/analista" || currentRole === "analista";
-      const actionLabel = isAnalystView ? "Analisar" : "Detalhes";
+      const actionLabel = currentRole === "analista" ? "Analisar" : "Detalhes";
+      const detailsTarget = currentRole === "analista" ? "/app/analise" : "/app/checklist";
+
       if (!lista.length) {
         tbody.innerHTML = '<tr><td colspan="9" style="padding:14px;text-align:center;color:#9ca3af;">Nenhum processo encontrado.</td></tr>';
       } else {
@@ -530,17 +795,17 @@
           .map(
             (it) => `
         <tr>
-          <td class="col-cliente"><button class="client-link" type="button" onclick="detalhes('${encodeURIComponent(it.processo_id)}')">${it.cliente}</button></td>
+          <td class="col-cliente"><button class="client-link" type="button" onclick="openDetalhes('${encodeURIComponent(it.processo_id)}')">${it.cliente}</button></td>
           <td class="col-corretor">${it.corretor}</td>
           <td class="col-obra">${it.obra}</td>
-          <td class="col-stage">${badge(it.cad, clsStage(it.cad))}</td>
-          <td class="col-stage">${badge(it.cca, clsStage(it.cca))}</td>
-          <td class="col-stage">${badge(it.agehab, clsStage(it.agehab))}</td>
-          <td class="col-stage">${badge(it.fiador, clsPend(it.fiador))}</td>
-          <td class="col-stage">${badge(it.sinal, clsPend(it.sinal))}</td>
+          <td class="col-stage">${badge(it.estagioCad, statusBadgeClass(it.estagioCad))}</td>
+          <td class="col-stage">${badge(it.estagioCca, statusBadgeClass(it.estagioCca))}</td>
+          <td class="col-stage">${badge(it.estagioAgehab, statusBadgeClass(it.estagioAgehab))}</td>
+          <td class="col-stage">${badge(it.fiadorPendente ? "Sim" : "Nao", it.fiadorPendente ? "b-pendente" : "b-ok")}</td>
+          <td class="col-stage">${badge(it.sinalPendente ? "Sim" : "Nao", it.sinalPendente ? "b-pendente" : "b-ok")}</td>
           <td class="col-actions">
             <div class="row-actions">
-              <button class="mini primary" type="button" onclick="detalhes('${encodeURIComponent(it.processo_id)}')">${actionLabel}</button>
+              <button class="mini" type="button" onclick="openDetalhes('${encodeURIComponent(it.processo_id)}')">${actionLabel}</button>
             </div>
           </td>
         </tr>`
@@ -550,27 +815,26 @@
 
       const total = dados.length;
       const shown = lista.length;
-      const pendenciasTotal = dados.reduce((acc, it) => acc + (contarPendencias(it) > 0 ? 1 : 0), 0);
+      const pendenciasTotal = dados.reduce((acc, it) => acc + (countPendencias(it) > 0 ? 1 : 0), 0);
       const pendenciasShown = lista.reduce((acc, it) => acc + (it._pend > 0 ? 1 : 0), 0);
 
       totalEl.textContent = String(total);
       shownEl.textContent = String(shown);
       totalPill.textContent = `Total: ${shown}/${total}`;
-      pendPill.textContent = `Pendências: ${pendenciasShown}/${pendenciasTotal}`;
+      pendPill.textContent = `Pendencias: ${pendenciasShown}/${pendenciasTotal}`;
+
+      updateSummary(lista);
+
+      window.openDetalhes = (encodedId) => {
+        const processoId = decodeURIComponent(encodedId);
+        window.location.href = `${detailsTarget}?processo_id=${encodeURIComponent(processoId)}&return_to=%2Fapp%2Fcca`;
+      };
     }
 
     function aplicarFiltros() {
       listaAtual = getFilteredData();
       render(listaAtual);
     }
-
-    function detalhes(processoIdEncoded) {
-      const processoId = decodeURIComponent(processoIdEncoded);
-      const openedFromAnalystPanel = currentPath === "/app/analista";
-      const target = openedFromAnalystPanel || currentRole === "analista" ? "/app/analise" : "/app/checklist";
-      window.location.href = `${target}?processo_id=${encodeURIComponent(processoId)}`;
-    }
-    window.detalhes = detalhes;
 
     function exportCsv() {
       const lista = listaAtual;
@@ -589,11 +853,11 @@
         it.cliente,
         it.corretor,
         it.obra,
-        it.cad,
-        it.cca,
-        it.agehab,
-        it.fiador,
-        it.sinal,
+        it.estagioCad,
+        it.estagioCca,
+        it.estagioAgehab,
+        it.fiadorPendente ? "Sim" : "Nao",
+        it.sinalPendente ? "Sim" : "Nao",
       ]);
 
       const csv = [header, ...rows]
@@ -616,6 +880,7 @@
         await loadSessionProfile();
         const processos = await api("/processos");
         dados = processos.map(fromBackend);
+        refreshObraOptions(dados);
         aplicarFiltros();
       } catch (error) {
         tbody.innerHTML = `<tr><td colspan="9" style="padding:14px;text-align:center;color:#fb7185;">${error.message}</td></tr>`;
@@ -636,4 +901,3 @@
   </script>
 </body>
 </html>
-
