@@ -1599,7 +1599,7 @@ DIVORCIADO: CertidÃ£o averbada.</td>
     async function loadProcesso() {
       if (!processoId) {
         const hint = byId("prioHint");
-        if (hint) hint.textContent = "Abra a tela pelo CCA com ?processo_id=...";
+        if (hint) hint.textContent = "Abra esta tela clicando no cliente do painel do analista.";
         return;
       }
 
@@ -1710,7 +1710,7 @@ DIVORCIADO: CertidÃ£o averbada.</td>
     rebindButton("btnSalvarTudo", saveAll);
     rebindButton("btnSair", logout);
     rebindButton("btnVoltar", () => {
-      window.location.href = "/app/cca";
+      window.location.href = "/app/analista";
     });
 
     loadProcesso().catch((error) => {

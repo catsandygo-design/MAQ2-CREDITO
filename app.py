@@ -149,7 +149,7 @@ def _utcnow() -> datetime:
 def _home_for_role(role: Optional[str]) -> str:
     role_key = (role or "").strip().lower()
     if role_key == ROLE_ANALISTA:
-        return "/app/cca"
+        return "/app/analista"
     if role_key == ROLE_CCA:
         return "/app/cca"
     return "/app/checklist"
@@ -549,6 +549,22 @@ def app_checklist_page(request: Request):
 
 @app.get("/app/analista")
 def app_analista_page(request: Request):
+    role = _read_session_role(request)
+    if not role:
+        return RedirectResponse(url="/login", status_code=302)
+    if role != ROLE_ANALISTA:
+        return RedirectResponse(url=_home_for_role(role), status_code=302)
+
+    processo_id = (request.query_params.get("processo_id") or "").strip()
+    if processo_id:
+        target = f"/app/analise?processo_id={processo_id}"
+        return RedirectResponse(url=target, status_code=302)
+
+    return FileResponse(WEB_DIR / "cca.html")
+
+
+@app.get("/app/analise")
+def app_analise_page(request: Request):
     role = _read_session_role(request)
     if not role:
         return RedirectResponse(url="/login", status_code=302)

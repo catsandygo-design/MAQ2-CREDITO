@@ -185,6 +185,20 @@
     }
 
     .col-cliente{width:22%;font-weight:750;}
+    .client-link{
+      background:none;
+      border:none;
+      padding:0;
+      color:var(--text);
+      font-weight:800;
+      text-decoration:none;
+      border-bottom:1px dashed transparent;
+      cursor:pointer;
+    }
+    .client-link:hover{
+      color:#86efac;
+      border-bottom-color:rgba(134,239,172,0.65);
+    }
     .col-corretor{width:16%;}
     .col-obra{width:8%; font-weight:750;}
     .col-stage{width:9%;}
@@ -349,7 +363,7 @@
 
       <div class="meta">
         <div>Mostrando <b id="shown">0</b> de <b id="total">0</b></div>
-        <div>Dica: clique em <b>Detalhes</b> para abrir o dossiÃª (no seu sistema real, aqui chamaria a tela do cliente).</div>
+        <div>Dica: clique no <b>nome do cliente</b> ou em <b>Detalhes</b> para abrir o dossie.</div>
       </div>
     </section>
   </main>
@@ -371,6 +385,10 @@
     let dados = [];
     let listaAtual = [];
     let currentRole = "cca";
+    const currentPath = String(window.location.pathname || "");
+    if (currentPath === "/app/analista") {
+      currentRole = "analista";
+    }
 
     function norm(value) {
       return String(value || "").trim().toLowerCase();
@@ -502,6 +520,8 @@
     }
 
     function render(lista) {
+      const isAnalystView = currentPath === "/app/analista" || currentRole === "analista";
+      const actionLabel = isAnalystView ? "Analisar" : "Detalhes";
       if (!lista.length) {
         tbody.innerHTML = '<tr><td colspan="9" style="padding:14px;text-align:center;color:#9ca3af;">Nenhum processo encontrado.</td></tr>';
       } else {
@@ -509,7 +529,7 @@
           .map(
             (it) => `
         <tr>
-          <td class="col-cliente">${it.cliente}</td>
+          <td class="col-cliente"><button class="client-link" type="button" onclick="detalhes('${encodeURIComponent(it.processo_id)}')">${it.cliente}</button></td>
           <td class="col-corretor">${it.corretor}</td>
           <td class="col-obra">${it.obra}</td>
           <td class="col-stage">${badge(it.cad, clsStage(it.cad))}</td>
@@ -519,7 +539,7 @@
           <td class="col-stage">${badge(it.sinal, clsPend(it.sinal))}</td>
           <td class="col-actions">
             <div class="row-actions">
-              <button class="mini primary" type="button" onclick="detalhes('${encodeURIComponent(it.processo_id)}')">Detalhes</button>
+              <button class="mini primary" type="button" onclick="detalhes('${encodeURIComponent(it.processo_id)}')">${actionLabel}</button>
             </div>
           </td>
         </tr>`
@@ -545,7 +565,8 @@
 
     function detalhes(processoIdEncoded) {
       const processoId = decodeURIComponent(processoIdEncoded);
-      const target = currentRole === "analista" ? "/app/analista" : "/app/checklist";
+      const openedFromAnalystPanel = currentPath === "/app/analista";
+      const target = openedFromAnalystPanel || currentRole === "analista" ? "/app/analise" : "/app/checklist";
       window.location.href = `${target}?processo_id=${encodeURIComponent(processoId)}`;
     }
     window.detalhes = detalhes;
