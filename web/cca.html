@@ -140,12 +140,35 @@
       padding: 14px 12px;
       background: linear-gradient(160deg, rgba(3, 19, 40, .95), rgba(2, 6, 23, .9));
       text-align: center;
+      transition: transform .14s ease, box-shadow .2s ease, border-color .2s ease, filter .2s ease;
     }
 
     .summary-card.warn { border-color: rgba(250, 204, 21, .65); }
     .summary-card.bad { border-color: rgba(251, 113, 133, .65); }
     .summary-card.ok { border-color: rgba(74, 222, 128, .65); }
     .summary-card.info { border-color: rgba(56, 189, 248, .65); }
+
+    .summary-card:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.03);
+      box-shadow: 0 0 0 1px rgba(148, 163, 184, .22), 0 12px 28px rgba(2, 6, 23, .85);
+    }
+
+    .summary-card.info:hover {
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, .65), 0 0 20px rgba(56, 189, 248, .42), 0 14px 30px rgba(2, 6, 23, .85);
+    }
+
+    .summary-card.warn:hover {
+      box-shadow: 0 0 0 1px rgba(250, 204, 21, .65), 0 0 20px rgba(250, 204, 21, .36), 0 14px 30px rgba(2, 6, 23, .85);
+    }
+
+    .summary-card.bad:hover {
+      box-shadow: 0 0 0 1px rgba(251, 113, 133, .7), 0 0 20px rgba(251, 113, 133, .4), 0 14px 30px rgba(2, 6, 23, .85);
+    }
+
+    .summary-card.ok:hover {
+      box-shadow: 0 0 0 1px rgba(74, 222, 128, .7), 0 0 20px rgba(74, 222, 128, .35), 0 14px 30px rgba(2, 6, 23, .85);
+    }
 
     .summary-card .label {
       text-transform: uppercase;
@@ -383,6 +406,7 @@
     .mini:hover {
       transform: translateY(-1px);
       filter: brightness(1.05);
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, .95), 0 0 16px rgba(56, 189, 248, .45);
     }
 
     .mini:active {
@@ -884,7 +908,14 @@
 
       window.openDetalhes = (encodedId) => {
         const processoId = decodeURIComponent(encodedId);
-        window.location.href = `${detailsTarget}?processo_id=${encodeURIComponent(processoId)}&return_to=%2Fapp%2Fcca`;
+        const params = new URLSearchParams({
+          processo_id: processoId,
+          return_to: "/app/cca",
+        });
+        if (currentRole !== "analista") {
+          params.set("readonly", "1");
+        }
+        window.location.href = `${detailsTarget}?${params.toString()}`;
       };
     }
 

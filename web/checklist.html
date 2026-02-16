@@ -1092,6 +1092,7 @@ ou, em casos pontuais, a próprio punho.</td>
   const assuntoCaixaInput = document.getElementById('assunto-caixa');
   const assuntoAgehabInput = document.getElementById('assunto-agehab');
   const copyFeedback = document.getElementById('copy-feedback');
+  window.CHECKLIST_CAN_EDIT_DOC = true;
 
   function montarAssunto(prefixo) {
     const nome = (nomeClienteInput.value || '').trim().toUpperCase();
@@ -1215,10 +1216,12 @@ DIVORCIADO: Certidão de casamento averbada.`;
 
   function aplicarRegraEdicaoStatusDoc(select) {
     const val = (select.value || '').toLowerCase();
-    const bloqueado = val === 'enviado';
+    const bloqueado = val === 'enviado' || !window.CHECKLIST_CAN_EDIT_DOC;
     select.disabled = bloqueado;
     select.title = bloqueado
-      ? 'Documento ja enviado. Nao e possivel voltar para Pendente.'
+      ? (window.CHECKLIST_CAN_EDIT_DOC
+        ? 'Documento ja enviado. Nao e possivel voltar para Pendente.'
+        : 'Tela em modo consulta.')
       : 'Selecione Enviado quando o documento for anexado.';
   }
 
@@ -1319,8 +1322,11 @@ DIVORCIADO: Certidão de casamento averbada.`;
     let processoId = url.searchParams.get("processo_id");
     const autoBack = url.searchParams.get("auto_back") === "1";
     const returnTo = url.searchParams.get("return_to") || "/app/corretor";
+    const readOnlyRequested = url.searchParams.get("readonly") === "1";
     let processoAtual = null;
     let currentUser = null;
+    let readOnlyMode = readOnlyRequested;
+    let canEditChecklist = false;
     let saving = false;
     const saveBtn = document.getElementById("btnSalvarChecklist");
     const backBtn = document.getElementById("btnVoltarAcompanhamento");
@@ -1462,6 +1468,53 @@ DIVORCIADO: Certidão de casamento averbada.`;
       saveFeedback.classList.toggle("error", Boolean(isError));
     }
 
+    function lockEditableFields() {
+      window.CHECKLIST_CAN_EDIT_DOC = false;
+      document.querySelectorAll("select[aria-label^='Status ']:not([data-role='credito'])").forEach((select) => {
+        select.disabled = true;
+        select.title = "Tela em modo consulta.";
+      });
+
+      const editableSelectors = [
+        "#nome-cliente",
+        "#reserva",
+        "#obra",
+        "#corretor",
+        "#perfil-renda",
+        "#estado-civil-proponente",
+        "#tipo-dependente",
+        "#estado-civil-dependente",
+        "#cotista-3-anos",
+        "#irpf-informal",
+        "#cca-gerou",
+      ];
+      editableSelectors.forEach((selector) => {
+        const field = document.querySelector(selector);
+        if (!field) return;
+        field.disabled = true;
+        if (field.tagName === "INPUT") {
+          field.readOnly = true;
+        }
+        field.classList.add("readonly-field");
+      });
+
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.style.display = "none";
+      }
+      setFeedback("Modo consulta: CCA apenas visualiza os dados deste cliente.");
+    }
+
+    function applyAccessMode() {
+      canEditChecklist = Boolean(currentUser && currentUser.role === "corretor" && !readOnlyMode);
+      window.CHECKLIST_CAN_EDIT_DOC = canEditChecklist;
+
+      if (!canEditChecklist) {
+        readOnlyMode = true;
+        lockEditableFields();
+      }
+    }
+
     function getReturnPath() {
       try {
         const target = new URL(returnTo, window.location.origin);
@@ -1502,6 +1555,9 @@ DIVORCIADO: Certidão de casamento averbada.`;
         throw new Error(data.detail || "Falha ao carregar sessao");
       }
       currentUser = data;
+      if (norm(data.role) === "cca") {
+        readOnlyMode = true;
+      }
       const corretorEl = document.getElementById("corretor");
       if (corretorEl && data.role === "corretor") {
         corretorEl.value = data.username || "";
@@ -1711,6 +1767,10 @@ DIVORCIADO: Certidão de casamento averbada.`;
     }
 
     async function salvarChecklist() {
+      if (!canEditChecklist) {
+        setFeedback("Perfil sem permissao de edicao nesta tela.", true);
+        return;
+      }
       if (saving) return;
       const ok = await ensureProcesso();
       if (!ok || !processoId) {
@@ -1774,8 +1834,10 @@ DIVORCIADO: Certidão de casamento averbada.`;
     (async () => {
       try {
         await loadCurrentUser();
+        applyAccessMode();
         await loadEmpreendimentos();
         await carregarProcesso();
+        applyAccessMode();
       } catch (error) {
         setFeedback(`Erro ao carregar processo: ${error.message}`, true);
       }

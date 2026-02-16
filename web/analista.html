@@ -1838,10 +1838,26 @@ DIVORCIADO: Certidão averbada.</td>
       return Number(days) * 24;
     }
 
+    function toHoursFromBackend(hours, daysFallback) {
+      const h = Number(hours);
+      if (Number.isFinite(h) && h >= 0) return Math.round(h);
+      return toHoursFromDays(daysFallback);
+    }
+
     function toDaysFromHours(hours) {
       const n = Number(hours || 0);
       if (!Number.isFinite(n) || n <= 0) return 0;
       return Math.ceil(n / 24);
+    }
+
+    function lockSlaInputs() {
+      ["sla-corretor", "sla-credito"].forEach((id) => {
+        const field = byId(id);
+        if (!field) return;
+        field.readOnly = true;
+        field.disabled = true;
+        field.title = "SLA calculado automaticamente pelo backend.";
+      });
     }
 
     function getDocRows() {
@@ -1916,8 +1932,8 @@ DIVORCIADO: Certidão averbada.</td>
       if (byId("status-fiador")) byId("status-fiador").value = norm(processo.status_fiador) || "nao_tem";
       if (byId("cca-responsavel")) byId("cca-responsavel").value = norm(processo.cca_responsavel);
 
-      if (byId("sla-corretor")) byId("sla-corretor").value = toHoursFromDays(processo.sla_corretor_dias);
-      if (byId("sla-credito")) byId("sla-credito").value = toHoursFromDays(processo.sla_credito_dias);
+      if (byId("sla-corretor")) byId("sla-corretor").value = toHoursFromBackend(processo.sla_corretor_horas, processo.sla_corretor_dias);
+      if (byId("sla-credito")) byId("sla-credito").value = toHoursFromBackend(processo.sla_analista_horas, processo.sla_credito_dias);
       if (byId("observacao")) byId("observacao").value = processo.observacao || "";
 
       getDocRows().forEach((row) => {
@@ -1962,8 +1978,6 @@ DIVORCIADO: Certidão averbada.</td>
         status_sinal: backendFromUiSinal(statusSinal),
         status_fiador: backendFromUiFiador(statusFiador),
         cca_responsavel: ccaResponsavel,
-        sla_corretor_dias: toDaysFromHours(byId("sla-corretor")?.value || 0),
-        sla_credito_dias: toDaysFromHours(byId("sla-credito")?.value || 0),
         observacao: (byId("observacao")?.value || "").trim() || null,
       };
 
@@ -2007,6 +2021,8 @@ DIVORCIADO: Certidão averbada.</td>
     rebindButton("btnVoltar", () => {
       window.location.href = "/app/analista";
     });
+
+    lockSlaInputs();
 
     loadProcesso().catch((error) => {
       const hint = byId("prioHint");

@@ -343,6 +343,17 @@
   .walk .walker svg .arm2{animation: arm2 .6s infinite ease-in-out}
   .walk .walker svg .body{animation: bob .6s infinite ease-in-out}
 
+  .celebrate .walker{
+    animation: celebrateJump .72s infinite ease-in-out;
+    color: #86efac;
+    filter: drop-shadow(0 0 6px rgba(74,222,128,.55));
+  }
+  .celebrate .walker svg .arm1{animation: cheerArm1 .48s infinite ease-in-out}
+  .celebrate .walker svg .arm2{animation: cheerArm2 .48s infinite ease-in-out}
+  .celebrate .walker svg .leg1{animation: cheerLeg .48s infinite ease-in-out}
+  .celebrate .walker svg .leg2{animation: cheerLeg .48s infinite ease-in-out reverse}
+  .celebrate .walker svg .body{animation: cheerBody .48s infinite ease-in-out}
+
   .still .walker svg .leg1,
   .still .walker svg .leg2,
   .still .walker svg .arm1,
@@ -354,6 +365,11 @@
   @keyframes arm1{0%,100%{transform:rotate(-16deg)}50%{transform:rotate(16deg)}}
   @keyframes arm2{0%,100%{transform:rotate(16deg)}50%{transform:rotate(-16deg)}}
   @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(1px)}}
+  @keyframes celebrateJump{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  @keyframes cheerArm1{0%,100%{transform:rotate(-30deg)}50%{transform:rotate(30deg)}}
+  @keyframes cheerArm2{0%,100%{transform:rotate(30deg)}50%{transform:rotate(-30deg)}}
+  @keyframes cheerLeg{0%,100%{transform:rotate(10deg)}50%{transform:rotate(-10deg)}}
+  @keyframes cheerBody{0%,100%{transform:translateY(0)}50%{transform:translateY(-1px)}}
 
   .hintRow{font-size:11px;color: var(--muted)}
 </style>
@@ -585,6 +601,12 @@
     return 0;
   }
 
+  function readSlaHours(item, hoursField, daysField){
+    const direct = Number(item?.[hoursField]);
+    if (Number.isFinite(direct) && direct >= 0) return Math.round(direct);
+    return toHours(item?.[daysField], item?.created_at);
+  }
+
   function fromBackend(item){
     return {
       processo_id: item.processo_id,
@@ -598,8 +620,9 @@
       agehab: statusFromBackend(item.status_agehab),
       sinal: statusFromBackend(item.status_sinal),
       fiador: statusFromBackend(item.status_fiador),
-      slaCor: toHours(item.sla_corretor_dias, item.created_at),
-      slaCred: toHours(item.sla_credito_dias, item.created_at),
+      slaCor: readSlaHours(item, "sla_corretor_horas", "sla_corretor_dias"),
+      slaCred: readSlaHours(item, "sla_analista_horas", "sla_credito_dias"),
+      slaCca: readSlaHours(item, "sla_cca_horas", "sla_cca_dias"),
     };
   }
 
@@ -650,8 +673,8 @@
     `;
   }
 
-  function pill(text, cls, moving){
-    const stateClass = moving ? "walk" : "still";
+  function pill(text, cls, moving, celebrating){
+    const stateClass = celebrating ? "celebrate" : (moving ? "walk" : "still");
     return `<span class="pill ${cls} ${stateClass}">${text}${walkerSVG()}</span>`;
   }
 
@@ -668,6 +691,10 @@
 
     const concluido = ["aprovado", "reprovado", "cancelado", "distrato"].includes(row.geral);
     return anyAnalise && !concluido;
+  }
+
+  function isCelebrating(row){
+    return ["aprovado", "reprovado", "cancelado", "distrato"].includes(row.geral) || row.caixa === "assinatura_caixa";
   }
 
   function slaClass(hours){
@@ -796,6 +823,7 @@
 
     tb.innerHTML = rows.map(r=>{
       const moving = isWalking(r);
+      const celebrating = isCelebrating(r);
 
       const [gTxt,gCls] = statusText("geral", r.geral);
       const [cTxt,cCls] = statusText("caixa", r.caixa);
@@ -815,9 +843,9 @@
           </td>
           <td style="font-weight:800">${esc(r.corretor)}</td>
           <td>${esc(r.cca)}</td>
-          <td>${pill(gTxt, gCls, moving)}</td>
-          <td>${pill(cTxt, cCls, moving)}</td>
-          <td>${pill(aTxt, aCls, moving)}</td>
+          <td>${pill(gTxt, gCls, moving, celebrating)}</td>
+          <td>${pill(cTxt, cCls, moving, celebrating)}</td>
+          <td>${pill(aTxt, aCls, moving, celebrating)}</td>
           <td style="text-align:center">${slaBadge(r.slaCor)}</td>
           <td style="text-align:center">${slaBadge(r.slaCred)}</td>
         </tr>

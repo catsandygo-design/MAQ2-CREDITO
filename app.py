@@ -366,10 +366,185 @@ PROCESS_CAIXA_STATUSES = {
 PROCESS_AGEHAB_STATUSES = {"ANALISE_CREDITO", "PENDENTE_CREDITO", "ENVIO_AGEHAB", "PENDENTE_AGEHAB", "VALIDADO_AGEHAB"}
 PROCESS_SINAL_STATUSES = {"NAO_TEM", "PENDENTE", "PAGO"}
 PROCESS_FIADOR_STATUSES = {"NAO_TEM", "PENDENTE", "FINALIZADO"}
+PROCESS_GERAL_FINAL_STATUSES = {"APROVADO", "REPROVADO", "DISTRATO", "CANCELADO"}
+PROCESS_CCA_FINAL_STATUSES = {"ASSINATURA_CAIXA", "FINALIZADO"}
+
+SLA_OWNER_NONE = "NONE"
+SLA_OWNER_CORRETOR = "CORRETOR"
+SLA_OWNER_ANALISTA = "ANALISTA"
+SLA_OWNER_CCA = "CCA"
+SLA_OWNER_VALUES = {SLA_OWNER_NONE, SLA_OWNER_CORRETOR, SLA_OWNER_ANALISTA, SLA_OWNER_CCA}
 
 
 def _status_token(value: Optional[str]) -> str:
     return (value or "").strip().upper()
+
+
+def _normalize_sla_owner(value: Optional[str], fallback: str = SLA_OWNER_NONE) -> str:
+    raw = _status_token(value)
+    return raw if raw in SLA_OWNER_VALUES else fallback
+
+
+def _as_utc(value: Optional[datetime]) -> Optional[datetime]:
+    if not isinstance(value, datetime):
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _seconds_from_value(value: Any) -> int:
+    try:
+        parsed = int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, parsed)
+
+
+def _is_cca_sla_start_condition(processo: "Processo") -> bool:
+    return _status_token(processo.status_cca) == "ANALISE_CCA" and _status_token(processo.status_agehab) == "ENVIO_AGEHAB"
+
+
+def _is_cca_sla_end_condition(processo: "Processo") -> bool:
+    return _status_token(processo.status_cca) in PROCESS_CCA_FINAL_STATUSES
+
+
+def _is_processo_finalizado(processo: "Processo") -> bool:
+    return _status_token(processo.status_geral) in PROCESS_GERAL_FINAL_STATUSES
+
+
+def _get_sla_seconds(processo: "Processo", owner: str) -> int:
+    owner_norm = _normalize_sla_owner(owner)
+    if owner_norm == SLA_OWNER_CORRETOR:
+        return _seconds_from_value(getattr(processo, "sla_corretor_seconds", 0))
+    if owner_norm == SLA_OWNER_ANALISTA:
+        return _seconds_from_value(getattr(processo, "sla_analista_seconds", 0))
+    if owner_norm == SLA_OWNER_CCA:
+        return _seconds_from_value(getattr(processo, "sla_cca_seconds", 0))
+    return 0
+
+
+def _set_sla_seconds(processo: "Processo", owner: str, seconds: int) -> None:
+    owner_norm = _normalize_sla_owner(owner)
+    value = max(0, int(seconds))
+    if owner_norm == SLA_OWNER_CORRETOR:
+        processo.sla_corretor_seconds = value
+    elif owner_norm == SLA_OWNER_ANALISTA:
+        processo.sla_analista_seconds = value
+    elif owner_norm == SLA_OWNER_CCA:
+        processo.sla_cca_seconds = value
+
+
+def _compute_sla_hours(processo: "Processo", owner: str, now: Optional[datetime] = None) -> int:
+    owner_norm = _normalize_sla_owner(owner)
+    total_seconds = _get_sla_seconds(processo, owner_norm)
+    active_owner = _normalize_sla_owner(getattr(processo, "sla_owner", SLA_OWNER_NONE))
+    if owner_norm != SLA_OWNER_NONE and owner_norm == active_owner:
+        started_at = _as_utc(getattr(processo, "sla_active_since", None))
+        now_utc = _as_utc(now) or _utcnow()
+        if started_at and now_utc > started_at:
+            total_seconds += int((now_utc - started_at).total_seconds())
+    return max(0, total_seconds // 3600)
+
+
+def _refresh_sla_snapshots(processo: "Processo", now: Optional[datetime] = None) -> None:
+    now_utc = _as_utc(now) or _utcnow()
+    sla_corretor_horas = _compute_sla_hours(processo, SLA_OWNER_CORRETOR, now_utc)
+    sla_analista_horas = _compute_sla_hours(processo, SLA_OWNER_ANALISTA, now_utc)
+    sla_cca_horas = _compute_sla_hours(processo, SLA_OWNER_CCA, now_utc)
+    processo.sla_corretor_dias = sla_corretor_horas // 24
+    processo.sla_credito_dias = sla_analista_horas // 24
+    processo.sla_cca_dias = sla_cca_horas // 24
+
+
+def _accrue_current_sla(processo: "Processo", now: Optional[datetime] = None) -> None:
+    now_utc = _as_utc(now) or _utcnow()
+    owner = _normalize_sla_owner(getattr(processo, "sla_owner", SLA_OWNER_NONE))
+    if owner == SLA_OWNER_NONE:
+        processo.sla_active_since = None
+        return
+
+    started_at = _as_utc(getattr(processo, "sla_active_since", None))
+    if started_at is None:
+        processo.sla_active_since = now_utc
+        return
+
+    if now_utc <= started_at:
+        return
+
+    elapsed = int((now_utc - started_at).total_seconds())
+    if elapsed <= 0:
+        return
+
+    current = _get_sla_seconds(processo, owner)
+    _set_sla_seconds(processo, owner, current + elapsed)
+    processo.sla_active_since = now_utc
+
+
+def _switch_sla_owner(processo: "Processo", owner: str, now: Optional[datetime] = None) -> None:
+    now_utc = _as_utc(now) or _utcnow()
+    target_owner = _normalize_sla_owner(owner)
+    current_owner = _normalize_sla_owner(getattr(processo, "sla_owner", SLA_OWNER_NONE))
+
+    if target_owner == current_owner:
+        if target_owner == SLA_OWNER_NONE:
+            processo.sla_active_since = None
+        elif _as_utc(getattr(processo, "sla_active_since", None)) is None:
+            processo.sla_active_since = now_utc
+        _refresh_sla_snapshots(processo, now_utc)
+        return
+
+    _accrue_current_sla(processo, now_utc)
+    processo.sla_owner = target_owner
+    processo.sla_active_since = None if target_owner == SLA_OWNER_NONE else now_utc
+    _refresh_sla_snapshots(processo, now_utc)
+
+
+def _process_has_enviado_docs(db: Session, processo_id: uuid.UUID) -> bool:
+    row = (
+        db.query(Documento.id)
+        .filter(Documento.processo_id == processo_id, Documento.status_doc == "ENVIADO")
+        .first()
+    )
+    return row is not None
+
+
+def _apply_sla_rules(
+    processo: "Processo",
+    *,
+    trigger: Optional[str] = None,
+    has_enviado_docs: bool = False,
+    now: Optional[datetime] = None,
+) -> None:
+    now_utc = _as_utc(now) or _utcnow()
+    trigger_key = (trigger or "").strip().lower()
+    current_owner = _normalize_sla_owner(getattr(processo, "sla_owner", SLA_OWNER_NONE))
+
+    if _is_processo_finalizado(processo) or _is_cca_sla_end_condition(processo):
+        _switch_sla_owner(processo, SLA_OWNER_NONE, now_utc)
+        return
+
+    if current_owner == SLA_OWNER_CCA:
+        _switch_sla_owner(processo, SLA_OWNER_CCA, now_utc)
+        return
+
+    if _is_cca_sla_start_condition(processo):
+        _switch_sla_owner(processo, SLA_OWNER_CCA, now_utc)
+        return
+
+    if trigger_key == "analista_pendenciou":
+        _switch_sla_owner(processo, SLA_OWNER_CORRETOR, now_utc)
+        return
+
+    if trigger_key == "corretor_enviou" and has_enviado_docs:
+        _switch_sla_owner(processo, SLA_OWNER_ANALISTA, now_utc)
+        return
+
+    if current_owner == SLA_OWNER_NONE and has_enviado_docs:
+        _switch_sla_owner(processo, SLA_OWNER_ANALISTA, now_utc)
+        return
+
+    _switch_sla_owner(processo, current_owner, now_utc)
 
 
 def _process_credit_status(value: Optional[str], fallback: str = "EM_ANALISE") -> str:
@@ -523,6 +698,12 @@ class Processo(Base):
     pendente_sinal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     sla_credito_dias: Mapped[Optional[int]] = mapped_column(Integer)
     sla_corretor_dias: Mapped[Optional[int]] = mapped_column(Integer)
+    sla_cca_dias: Mapped[Optional[int]] = mapped_column(Integer)
+    sla_owner: Mapped[str] = mapped_column(String(20), nullable=False, default=SLA_OWNER_NONE)
+    sla_active_since: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    sla_analista_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    sla_corretor_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    sla_cca_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     observacao: Mapped[Optional[str]] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -618,6 +799,7 @@ class ProcessoUpdate(BaseModel):
     pendente_sinal: Optional[bool] = None
     sla_credito_dias: Optional[int] = None
     sla_corretor_dias: Optional[int] = None
+    sla_cca_dias: Optional[int] = None
     observacao: Optional[str] = None
 
 
@@ -636,6 +818,11 @@ class ProcessoOut(BaseModel):
     pendente_sinal: bool
     sla_credito_dias: Optional[int] = None
     sla_corretor_dias: Optional[int] = None
+    sla_cca_dias: Optional[int] = None
+    sla_analista_horas: Optional[int] = None
+    sla_corretor_horas: Optional[int] = None
+    sla_cca_horas: Optional[int] = None
+    sla_owner: Optional[str] = None
     observacao: Optional[str] = None
 
 
@@ -736,6 +923,11 @@ class ProcessoOverviewOut(BaseModel):
     pendente_sinal: bool
     sla_credito_dias: Optional[int] = None
     sla_corretor_dias: Optional[int] = None
+    sla_cca_dias: Optional[int] = None
+    sla_analista_horas: Optional[int] = None
+    sla_corretor_horas: Optional[int] = None
+    sla_cca_horas: Optional[int] = None
+    sla_owner: Optional[str] = None
     created_at: Optional[datetime] = None
 
 
@@ -830,6 +1022,12 @@ def _ensure_runtime_schema(db: Session) -> None:
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_sinal VARCHAR(30) DEFAULT 'NAO_TEM'",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_fiador VARCHAR(30) DEFAULT 'NAO_TEM'",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS cca_responsavel VARCHAR(120)",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_cca_dias INTEGER",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_owner VARCHAR(20) DEFAULT 'NONE'",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_active_since TIMESTAMPTZ",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_analista_seconds INTEGER DEFAULT 0",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_corretor_seconds INTEGER DEFAULT 0",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_cca_seconds INTEGER DEFAULT 0",
     ]
     for stmt in statements:
         db.execute(text(stmt))
@@ -919,6 +1117,50 @@ def _ensure_runtime_schema(db: Session) -> None:
                 WHEN pendente_fiador IS TRUE THEN 'PENDENTE'
                 ELSE 'NAO_TEM'
             END
+            """
+        )
+    )
+
+    db.execute(
+        text(
+            """
+            UPDATE processos
+            SET sla_owner = CASE
+                WHEN UPPER(COALESCE(sla_owner, '')) IN ('NONE', 'CORRETOR', 'ANALISTA', 'CCA') THEN UPPER(sla_owner)
+                ELSE 'NONE'
+            END
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            UPDATE processos
+            SET sla_corretor_seconds = GREATEST(COALESCE(sla_corretor_seconds, 0), COALESCE(sla_corretor_dias, 0) * 86400)
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            UPDATE processos
+            SET sla_analista_seconds = GREATEST(COALESCE(sla_analista_seconds, 0), COALESCE(sla_credito_dias, 0) * 86400)
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            UPDATE processos
+            SET sla_cca_seconds = COALESCE(sla_cca_seconds, 0)
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            UPDATE processos
+            SET sla_cca_dias = COALESCE(sla_cca_dias, FLOOR(COALESCE(sla_cca_seconds, 0) / 86400.0)::INTEGER)
             """
         )
     )
@@ -1537,6 +1779,7 @@ def app_list_processos(
         query = query.filter(func.lower(Processo.cca_responsavel) == username)
 
     rows = query.order_by(Processo.created_at.desc()).all()
+    now = _utcnow()
 
     return [
         ProcessoOverviewOut(
@@ -1555,8 +1798,13 @@ def app_list_processos(
             cca_responsavel=processo.cca_responsavel,
             pendente_fiador=processo.pendente_fiador,
             pendente_sinal=processo.pendente_sinal,
-            sla_credito_dias=processo.sla_credito_dias,
-            sla_corretor_dias=processo.sla_corretor_dias,
+            sla_credito_dias=_compute_sla_hours(processo, SLA_OWNER_ANALISTA, now) // 24,
+            sla_corretor_dias=_compute_sla_hours(processo, SLA_OWNER_CORRETOR, now) // 24,
+            sla_cca_dias=_compute_sla_hours(processo, SLA_OWNER_CCA, now) // 24,
+            sla_analista_horas=_compute_sla_hours(processo, SLA_OWNER_ANALISTA, now),
+            sla_corretor_horas=_compute_sla_hours(processo, SLA_OWNER_CORRETOR, now),
+            sla_cca_horas=_compute_sla_hours(processo, SLA_OWNER_CCA, now),
+            sla_owner=_normalize_sla_owner(processo.sla_owner),
             created_at=processo.created_at,
         )
         for processo, cliente in rows
@@ -1625,8 +1873,18 @@ def app_get_processo_full(
         .all()
     )
 
+    now = _utcnow()
+    processo_out = ProcessoOut.model_validate(processo)
+    processo_out.sla_corretor_horas = _compute_sla_hours(processo, SLA_OWNER_CORRETOR, now)
+    processo_out.sla_analista_horas = _compute_sla_hours(processo, SLA_OWNER_ANALISTA, now)
+    processo_out.sla_cca_horas = _compute_sla_hours(processo, SLA_OWNER_CCA, now)
+    processo_out.sla_corretor_dias = processo_out.sla_corretor_horas // 24
+    processo_out.sla_credito_dias = processo_out.sla_analista_horas // 24
+    processo_out.sla_cca_dias = processo_out.sla_cca_horas // 24
+    processo_out.sla_owner = _normalize_sla_owner(processo.sla_owner)
+
     return ProcessoFullOut(
-        processo=ProcessoOut.model_validate(processo),
+        processo=processo_out,
         cliente=ClienteOut.model_validate(cliente),
         documentos=[DocumentoOut.model_validate(doc) for doc in documentos],
     )
@@ -1644,11 +1902,18 @@ def app_patch_processo(
         raise HTTPException(status_code=404, detail="Processo nao encontrado")
 
     changes = payload.model_dump(exclude_unset=True)
+    sla_trigger: Optional[str] = None
     for field, value in changes.items():
         if field == "status_credito":
-            processo.status_credito = _process_credit_status(value)
+            status_credito = _process_credit_status(value)
+            processo.status_credito = status_credito
+            if status_credito == "PENDENCIADO":
+                sla_trigger = "analista_pendenciou"
         elif field == "status_geral":
-            processo.status_geral = _process_geral_status(value)
+            status_geral = _process_geral_status(value)
+            processo.status_geral = status_geral
+            if status_geral == "PENDENCIADO":
+                sla_trigger = "analista_pendenciou"
         elif field == "status_cca":
             processo.status_cca = _process_caixa_status(value)
         elif field == "status_agehab":
@@ -1670,12 +1935,31 @@ def app_patch_processo(
                 if not cca_user or _normalize_role(cca_user.role) != ROLE_CCA or not cca_user.is_active:
                     raise HTTPException(status_code=422, detail="CCA invalido")
                 processo.cca_responsavel = cca_user.username
+        elif field in {"sla_credito_dias", "sla_corretor_dias", "sla_cca_dias"}:
+            # SLA passa a ser calculado automaticamente pelo backend.
+            continue
         else:
             setattr(processo, field, value)
 
+    _apply_sla_rules(
+        processo,
+        trigger=sla_trigger,
+        has_enviado_docs=_process_has_enviado_docs(db, processo.id),
+    )
+
     db.commit()
     db.refresh(processo)
-    return processo
+
+    now = _utcnow()
+    processo_out = ProcessoOut.model_validate(processo)
+    processo_out.sla_corretor_horas = _compute_sla_hours(processo, SLA_OWNER_CORRETOR, now)
+    processo_out.sla_analista_horas = _compute_sla_hours(processo, SLA_OWNER_ANALISTA, now)
+    processo_out.sla_cca_horas = _compute_sla_hours(processo, SLA_OWNER_CCA, now)
+    processo_out.sla_corretor_dias = processo_out.sla_corretor_horas // 24
+    processo_out.sla_credito_dias = processo_out.sla_analista_horas // 24
+    processo_out.sla_cca_dias = processo_out.sla_cca_horas // 24
+    processo_out.sla_owner = _normalize_sla_owner(processo.sla_owner)
+    return processo_out
 
 
 @app.put("/app/api/processos/{processo_id}/documentos", response_model=list[DocumentoOut])
@@ -1697,8 +1981,10 @@ def app_bulk_upsert_documentos(
             raise HTTPException(status_code=404, detail="Cliente nao encontrado")
         if _normalize_username(cliente.corretor) != username:
             raise HTTPException(status_code=403, detail="Sem permissao para atualizar este processo")
-    if role == ROLE_CCA and _normalize_username(processo.cca_responsavel) != username:
-        raise HTTPException(status_code=403, detail="Sem permissao para atualizar este processo")
+    if role == ROLE_CCA:
+        if _normalize_username(processo.cca_responsavel) != username:
+            raise HTTPException(status_code=403, detail="Sem permissao para atualizar este processo")
+        raise HTTPException(status_code=403, detail="Perfil CCA possui acesso somente leitura nesta tela")
 
     if not payload.documentos:
         raise HTTPException(status_code=422, detail="Lista de documentos vazia")
@@ -1752,8 +2038,27 @@ def app_bulk_upsert_documentos(
                 )
             )
 
-    db.commit()
+    db.flush()
 
+    documentos = (
+        db.query(Documento)
+        .filter(Documento.processo_id == processo_id)
+        .order_by(Documento.categoria.asc(), Documento.nome.asc())
+        .all()
+    )
+    has_enviado_docs = any(doc.status_doc == "ENVIADO" for doc in documentos)
+
+    sla_trigger: Optional[str] = None
+    if role == ROLE_CORRETOR and has_enviado_docs:
+        if _status_token(processo.status_credito) == "PENDENCIADO":
+            processo.status_credito = "EM_ANALISE"
+        if _status_token(processo.status_geral) in {"NOVO", "PENDENCIADO"}:
+            processo.status_geral = "EM_ANDAMENTO"
+        sla_trigger = "corretor_enviou"
+
+    _apply_sla_rules(processo, trigger=sla_trigger, has_enviado_docs=has_enviado_docs)
+
+    db.commit()
     documentos = (
         db.query(Documento)
         .filter(Documento.processo_id == processo_id)

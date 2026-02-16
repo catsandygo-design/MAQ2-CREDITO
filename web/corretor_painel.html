@@ -442,6 +442,12 @@
       return Math.max(0, Math.floor((Date.now() - created.getTime()) / 3600000));
     }
 
+    function readSlaHours(item, hoursField, daysField){
+      const direct = Number(item?.[hoursField]);
+      if (Number.isFinite(direct) && direct >= 0) return Math.round(direct);
+      return toHours(item?.[daysField], item?.created_at);
+    }
+
     function slaClass(hours){
       const h = Number(hours || 0);
       if (h >= SLA_BAD) return "bad";
@@ -458,8 +464,8 @@
         geral: statusFromBackend(item.status_geral),
         caixa: statusFromBackend(item.status_cca),
         agehab: statusFromBackend(item.status_agehab),
-        slaCor: toHours(item.sla_corretor_dias, item.created_at),
-        slaCred: toHours(item.sla_credito_dias, item.created_at),
+        slaCor: readSlaHours(item, "sla_corretor_horas", "sla_corretor_dias"),
+        slaCred: readSlaHours(item, "sla_analista_horas", "sla_credito_dias"),
       };
     }
 
