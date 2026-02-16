@@ -435,6 +435,7 @@ class ProcessoOverviewOut(BaseModel):
     pendente_sinal: bool
     sla_credito_dias: Optional[int] = None
     sla_corretor_dias: Optional[int] = None
+    created_at: Optional[datetime] = None
 
 
 class ProcessoFullOut(BaseModel):
@@ -560,7 +561,7 @@ def app_analista_page(request: Request):
         target = f"/app/analise?processo_id={processo_id}"
         return RedirectResponse(url=target, status_code=302)
 
-    return FileResponse(WEB_DIR / "cca.html")
+    return FileResponse(WEB_DIR / "analista_painel.html")
 
 
 @app.get("/app/analise")
@@ -759,6 +760,7 @@ def app_list_processos(
             pendente_sinal=processo.pendente_sinal,
             sla_credito_dias=processo.sla_credito_dias,
             sla_corretor_dias=processo.sla_corretor_dias,
+            created_at=processo.created_at,
         )
         for processo, cliente in rows
     ]

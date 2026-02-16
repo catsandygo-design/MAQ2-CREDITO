@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Painel do Analista â€” AnÃ¡lise de Documentos</title>
+  <title>Painel do Analista — Análise de Documentos</title>
 
   <style>
     :root{
@@ -37,7 +37,7 @@
 
     html, body{
       height:100%;
-      overflow:hidden; /* âœ… scroll sÃ³ nos painÃ©is internos */
+      overflow:hidden; /* ✅ scroll só nos painéis internos */
     }
 
     body{
@@ -200,7 +200,7 @@
 
     .panel-body{
       padding:12px;
-      overflow:auto; /* âœ… scroll interno */
+      overflow:auto; /* ✅ scroll interno */
       min-height:0;
     }
 
@@ -502,14 +502,14 @@
       <img class="brand-logo" src="./logo-100-repasses.png" alt="100 Repasses Sistema">
       <div class="brand-text">
         <div class="brand-name">Painel do Analista</div>
-        <div class="brand-tag">AnÃ¡lise de documentaÃ§Ã£o (e-mail) â€¢ AtualizaÃ§Ã£o de status â€¢ SLA</div>
+        <div class="brand-tag">Análise de documentação (e-mail) • Atualização de status • SLA</div>
       </div>
     </div>
 
     <div class="top-actions">
       <span class="chip"><span class="pulseDot" style="margin-right:8px;vertical-align:middle"></span>Auto refresh: <b id="refreshLabel">30s</b></span>
       <button class="btn" id="btnVoltar">Voltar</button>
-      <button class="btn primary" id="btnSalvarTopo">Salvar alteraÃ§Ãµes</button>
+      <button class="btn primary" id="btnSalvarTopo">Salvar alterações</button>
       <button class="btn danger" id="btnSair">Sair</button>
     </div>
   </header>
@@ -517,12 +517,12 @@
   <!-- ===== Main grid ===== -->
   <div class="grid">
 
-    <!-- LEFT: Checklist completo (organizado e ocupando espaÃ§o) -->
+    <!-- LEFT: Checklist completo (organizado e ocupando espaço) -->
     <section class="panel" aria-label="Checklist de documentos">
       <div class="panel-header">
         <div class="panel-title">
-          <h2>Checklist (ConferÃªncia de Documentos)</h2>
-          <p>Marque o status de cada item (Pendente/Enviado). Esta tela Ã© a base do retorno do analista e do status do processo.</p>
+          <h2>Checklist (Conferência de Documentos)</h2>
+          <p>Marque o status de cada item (Pendente/Enviado). Esta tela é a base do retorno do analista e do status do processo.</p>
         </div>
         <div class="inline">
           <button class="btn" id="btnMarcarTudoEnviado">Marcar tudo como Enviado</button>
@@ -536,7 +536,7 @@
         <div class="alertRow">
           <div class="left">
             <span class="pill neutral">Regra</span>
-            <span class="tiny">IRPF aparece sÃ³ se <b>perfil = informal</b> e <b>IRPF para informal</b> estiver marcado â€¢ FGTS sÃ³ para <b>CLT</b> â€¢ CTPS sÃ³ se <b>+3 anos</b> marcado â€¢ Caixa: extras sÃ³ se <b>CCA gerou</b> marcado</span>
+            <span class="tiny">IRPF aparece só se <b>perfil = informal</b> e <b>IRPF para informal</b> estiver marcado • FGTS só para <b>CLT</b> • CTPS só se <b>+3 anos</b> marcado • Caixa: extras só se <b>CCA gerou</b> marcado</span>
           </div>
           <div class="right">
             <span class="pill neutral">Modo: Front-end</span>
@@ -555,7 +555,7 @@
           </div>
           <div class="fg">
             <label for="reserva">Reserva</label>
-            <input id="reserva" type="text" inputmode="numeric" placeholder="CÃ³digo da reserva">
+            <input id="reserva" type="text" inputmode="numeric" placeholder="Código da reserva">
           </div>
           <div class="fg">
             <label for="obra">Empreendimento</label>
@@ -566,9 +566,9 @@
             <label for="perfil-renda">Perfil de renda</label>
             <select id="perfil-renda">
               <option value="clt">CLT / Formal</option>
-              <option value="informal">Informal / AutÃ´nomo</option>
+              <option value="informal">Informal / Autônomo</option>
               <option value="aposentado">Aposentado / Pensionista</option>
-              <option value="domestico">DomÃ©stico / eSocial</option>
+              <option value="domestico">Doméstico / eSocial</option>
             </select>
           </div>
 
@@ -578,8 +578,8 @@
               <option value="solteiro">Solteiro(a)</option>
               <option value="casado">Casado(a)</option>
               <option value="divorciado">Divorciado(a)</option>
-              <option value="viuvo">ViÃºvo(a)</option>
-              <option value="uniao-estavel">UniÃ£o estÃ¡vel</option>
+              <option value="viuvo">Viúvo(a)</option>
+              <option value="uniao-estavel">União estável</option>
             </select>
           </div>
 
@@ -589,17 +589,17 @@
               <option value="filho-menor">Filho menor</option>
               <option value="filho-maior">Filho maior</option>
               <option value="tio-tia">Tio/Tia</option>
-              <option value="irmao-irma">IrmÃ£o/IrmÃ£</option>
-              <option value="pai-mae">Pai/MÃ£e</option>
-              <option value="avos">AvÃ³s</option>
-              <option value="bisavos">BisavÃ³s</option>
+              <option value="irmao-irma">Irmão/Irmã</option>
+              <option value="pai-mae">Pai/Mãe</option>
+              <option value="avos">Avós</option>
+              <option value="bisavos">Bisavós</option>
               <option value="sobrinho-sobrinha">Sobrinho(a)</option>
             </select>
           </div>
 
           <div class="fg">
-            <label for="imobiliaria">ImobiliÃ¡ria</label>
-            <input id="imobiliaria" type="text" placeholder="Nome da imobiliÃ¡ria">
+            <label for="imobiliaria">Imobiliária</label>
+            <input id="imobiliaria" type="text" placeholder="Nome da imobiliária">
           </div>
         </div>
 
@@ -607,7 +607,7 @@
           <div class="fg">
             <label>FGTS / CTPS</label>
             <select id="cotista-3-anos">
-              <option value="nao">Cliente com +3 anos (nÃ£o)</option>
+              <option value="nao">Cliente com +3 anos (não)</option>
               <option value="sim">Cliente com +3 anos (sim)</option>
             </select>
           </div>
@@ -615,24 +615,24 @@
           <div class="fg" id="irpf-informal-group" style="display:none">
             <label>IRPF para renda informal</label>
             <select id="irpf-informal">
-              <option value="nao">NÃ£o vai usar IRPF</option>
+              <option value="nao">Não vai usar IRPF</option>
               <option value="sim">Vai usar IRPF + recibo</option>
             </select>
           </div>
 
           <div class="fg" id="conjuge-renda-group" style="display:none">
-            <label>Renda do cÃ´njuge</label>
+            <label>Renda do cônjuge</label>
             <select id="conjuge-tem-renda">
-              <option value="nao">CÃ´njuge sem renda</option>
-              <option value="sim">CÃ´njuge com renda</option>
+              <option value="nao">Cônjuge sem renda</option>
+              <option value="sim">Cônjuge com renda</option>
             </select>
           </div>
 
           <div class="fg">
             <label>CCA (Caixa)</label>
             <select id="cca-gerou">
-              <option value="nao">CCA nÃ£o gerou formulÃ¡rios</option>
-              <option value="sim">CCA gerou formulÃ¡rios</option>
+              <option value="nao">CCA não gerou formulários</option>
+              <option value="sim">CCA gerou formulários</option>
             </select>
           </div>
         </div>
@@ -646,7 +646,7 @@
           <div class="section-head">
             <div class="left">
               <div class="t">Documentos do Proponente</div>
-              <div class="s">Base do dossiÃª do proponente (identidade, estado civil, residÃªncia, etc.).</div>
+              <div class="s">Base do dossiê do proponente (identidade, estado civil, residência, etc.).</div>
             </div>
             <div class="right">
               <span class="pill neutral" id="pill-proponente">0/0 enviados</span>
@@ -656,7 +656,7 @@
             <thead>
               <tr>
                 <th style="width:26%">Documento</th>
-                <th style="width:54%">O que Ã© aceito</th>
+                <th style="width:54%">O que é aceito</th>
                 <th style="width:20%">Status</th>
               </tr>
             </thead>
@@ -664,7 +664,7 @@
               <tr>
                 <td class="doc-name">Identidade e CPF</td>
                 <td class="doc-desc" id="desc-identidade">
-CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fÃ© pÃºblica (dentro da validade) do proponente.</td>
+CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fé pública (dentro da validade) do proponente.</td>
                 <td>
                   <select class="status status-pill" data-doc="proponente" data-id="idcpf">
                     <option>Pendente</option><option>Enviado</option>
@@ -673,7 +673,7 @@ CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fÃ
               </tr>
               <tr>
                 <td class="doc-name">Comp. de estado civil</td>
-                <td class="doc-desc" id="desc-estado-civil">CertidÃ£o de nascimento.</td>
+                <td class="doc-desc" id="desc-estado-civil">Certidão de nascimento.</td>
                 <td>
                   <select class="status status-pill" data-doc="proponente" data-id="estadocivil">
                     <option>Pendente</option><option>Enviado</option>
@@ -681,10 +681,10 @@ CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fÃ
                 </td>
               </tr>
               <tr>
-                <td class="doc-name">Comprovante de residÃªncia</td>
+                <td class="doc-name">Comprovante de residência</td>
                 <td class="doc-desc">
-Comprovante aberto; nÃ£o precisa estar no nome do cliente.
-Ãgua, luz, telefone, internet, celular, cartÃ£o de crÃ©dito.</td>
+Comprovante aberto; não precisa estar no nome do cliente.
+Água, luz, telefone, internet, celular, cartão de crédito.</td>
                 <td>
                   <select class="status status-pill" data-doc="proponente" data-id="residencia">
                     <option>Pendente</option><option>Enviado</option>
@@ -695,8 +695,8 @@ Comprovante aberto; nÃ£o precisa estar no nome do cliente.
               <tr id="row-irpf" style="display:none;">
                 <td class="doc-name">IRPF + recibo</td>
                 <td class="doc-desc">
-DeclaraÃ§Ã£o completa do ano atual + recibo de entrega + DARF pago (se houver).
-âš ï¸ Somente se perfil = INFORMAL e IRPF para informal = SIM.</td>
+Declaração completa do ano atual + recibo de entrega + DARF pago (se houver).
+⚠️ Somente se perfil = INFORMAL e IRPF para informal = SIM.</td>
                 <td>
                   <select class="status status-pill" data-doc="proponente" data-id="irpf">
                     <option>Pendente</option><option>Enviado</option>
@@ -707,8 +707,8 @@ DeclaraÃ§Ã£o completa do ano atual + recibo de entrega + DARF pago (se houve
               <tr id="row-fgts">
                 <td class="doc-name">Extrato FGTS</td>
                 <td class="doc-desc">
-App FGTS / site Caixa / agÃªncia.
-Militar/soldado: anexar tambÃ©m 3 Ãºltimos extratos bancÃ¡rios da conta salÃ¡rio.</td>
+App FGTS / site Caixa / agência.
+Militar/soldado: anexar também 3 últimos extratos bancários da conta salário.</td>
                 <td>
                   <select class="status status-pill" data-doc="proponente" data-id="fgts">
                     <option>Pendente</option><option>Enviado</option>
@@ -719,7 +719,7 @@ Militar/soldado: anexar tambÃ©m 3 Ãºltimos extratos bancÃ¡rios da conta sa
               <tr id="row-ctps" style="display:none;">
                 <td class="doc-name">CTPS (carteira)</td>
                 <td class="doc-desc">
-Carteira Digital (todas infos) ou CTPS fÃ­sica: qualificaÃ§Ã£o, contratos e anotaÃ§Ãµes.</td>
+Carteira Digital (todas infos) ou CTPS física: qualificação, contratos e anotações.</td>
                 <td>
                   <select class="status status-pill" data-doc="proponente" data-id="ctps">
                     <option>Pendente</option><option>Enviado</option>
@@ -734,19 +734,19 @@ Carteira Digital (todas infos) ou CTPS fÃ­sica: qualificaÃ§Ã£o, contratos 
         <div class="section" id="sec-dep-menor">
           <div class="section-head">
             <div class="left">
-              <div class="t">Dependente â€” Filhos menores de 18 anos</div>
-              <div class="s">Aparece quando o tipo de dependente for â€œFilho menorâ€.</div>
+              <div class="t">Dependente — Filhos menores de 18 anos</div>
+              <div class="s">Aparece quando o tipo de dependente for "Filho menor".</div>
             </div>
             <div class="right">
               <span class="pill neutral" id="pill-dep-menor">0/0 enviados</span>
             </div>
           </div>
           <table class="doc-table">
-            <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que Ã© aceito</th><th style="width:20%">Status</th></tr></thead>
+            <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
             <tbody>
               <tr>
-                <td class="doc-name">CertidÃ£o de nascimento</td>
-                <td class="doc-desc">Guarda/adoÃ§Ã£o: anexar termos respectivos.</td>
+                <td class="doc-name">Certidão de nascimento</td>
+                <td class="doc-desc">Guarda/adoção: anexar termos respectivos.</td>
                 <td>
                   <select class="status status-pill" data-doc="depmenor" data-id="certidao-menor">
                     <option>Pendente</option><option>Enviado</option>
@@ -761,20 +761,20 @@ Carteira Digital (todas infos) ou CTPS fÃ­sica: qualificaÃ§Ã£o, contratos 
         <div class="section" id="sec-dep-maior">
           <div class="section-head">
             <div class="left">
-              <div class="t">Dependente â€” Filhos maiores / parentes atÃ© 3Âº grau</div>
-              <div class="s">Aparece quando o dependente nÃ£o for â€œFilho menorâ€.</div>
+              <div class="t">Dependente — Filhos maiores / parentes até 3º grau</div>
+              <div class="s">Aparece quando o dependente não for "Filho menor".</div>
             </div>
             <div class="right">
               <span class="pill neutral" id="pill-dep-maior">0/0 enviados</span>
             </div>
           </div>
           <table class="doc-table">
-            <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que Ã© aceito</th><th style="width:20%">Status</th></tr></thead>
+            <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
             <tbody>
               <tr>
                 <td class="doc-name">Identidade e CPF</td>
                 <td class="doc-desc" id="desc-identidade-dep">
-CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fÃ© pÃºblica (dentro da validade) do dependente.</td>
+CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fé pública (dentro da validade) do dependente.</td>
                 <td>
                   <select class="status status-pill" data-doc="depmaior" data-id="idcpf-dep">
                     <option>Pendente</option><option>Enviado</option>
@@ -784,10 +784,10 @@ CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fÃ
               <tr>
                 <td class="doc-name">Comp. de estado civil</td>
                 <td class="doc-desc" id="desc-estado-civil-dep">
-SOLTEIRO: CertidÃ£o de nascimento
-CASADO: CertidÃ£o de casamento â€“ RG/CPF do cÃ´njuge se houver renda
-VIÃšVO: CertidÃ£o de casamento e Ã³bito
-DIVORCIADO: CertidÃ£o averbada.</td>
+SOLTEIRO: Certidão de nascimento
+CASADO: Certidão de casamento – RG/CPF do cônjuge se houver renda
+VIÚVO: Certidão de casamento e óbito
+DIVORCIADO: Certidão averbada.</td>
                 <td>
                   <select class="status status-pill" data-doc="depmaior" data-id="estadocivil-dep">
                     <option>Pendente</option><option>Enviado</option>
@@ -795,8 +795,8 @@ DIVORCIADO: CertidÃ£o averbada.</td>
                 </td>
               </tr>
               <tr>
-                <td class="doc-name">DeclaraÃ§Ã£o de parentesco</td>
-                <td class="doc-desc">DeclaraÃ§Ã£o conforme regras Caixa, vinculando dependente ao proponente.</td>
+                <td class="doc-name">Declaração de parentesco</td>
+                <td class="doc-desc">Declaração conforme regras Caixa, vinculando dependente ao proponente.</td>
                 <td>
                   <select class="status status-pill" data-doc="depmaior" data-id="parentesco">
                     <option>Pendente</option><option>Enviado</option>
@@ -811,27 +811,27 @@ DIVORCIADO: CertidÃ£o averbada.</td>
         <div class="section" id="sec-renda-clt">
           <div class="section-head">
             <div class="left">
-              <div class="t">Renda formal (CLT / vÃ­nculo)</div>
+              <div class="t">Renda formal (CLT / vínculo)</div>
               <div class="s">Aparece quando perfil de renda = CLT.</div>
             </div>
             <div class="right"><span class="pill neutral" id="pill-renda-clt">0/0 enviados</span></div>
           </div>
           <table class="doc-table">
-            <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que Ã© aceito</th><th style="width:20%">Status</th></tr></thead>
+            <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
             <tbody>
               <tr>
                 <td class="doc-name">Holerites</td>
-                <td class="doc-desc">3 Ãºltimos holerites/contracheques (nome/CNPJ/cargo/admissÃ£o/bruto).</td>
+                <td class="doc-desc">3 últimos holerites/contracheques (nome/CNPJ/cargo/admissão/bruto).</td>
                 <td><select class="status status-pill" data-doc="rendaclt" data-id="holerite"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
               <tr>
-                <td class="doc-name">Renda variÃ¡vel</td>
-                <td class="doc-desc">ComissÃµes/HE/adicional: holerites suficientes para mÃ©dia conforme Caixa.</td>
+                <td class="doc-name">Renda variável</td>
+                <td class="doc-desc">Comissões/HE/adicional: holerites suficientes para média conforme Caixa.</td>
                 <td><select class="status status-pill" data-doc="rendaclt" data-id="variavel"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Carta do empregador</td>
-                <td class="doc-desc">Quando exigido: carta/declaraÃ§Ã£o informando vÃ­nculo, salÃ¡rio e funÃ§Ã£o.</td>
+                <td class="doc-desc">Quando exigido: carta/declaração informando vínculo, salário e função.</td>
                 <td><select class="status status-pill" data-doc="rendaclt" data-id="carta"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
             </tbody>
@@ -842,17 +842,17 @@ DIVORCIADO: CertidÃ£o averbada.</td>
         <div class="section" id="sec-renda-informal">
           <div class="section-head">
             <div class="left">
-              <div class="t">Renda informal (autÃ´nomo / liberal)</div>
+              <div class="t">Renda informal (autônomo / liberal)</div>
               <div class="s">Aparece quando perfil de renda = INFORMAL.</div>
             </div>
             <div class="right"><span class="pill neutral" id="pill-renda-informal">0/0 enviados</span></div>
           </div>
           <table class="doc-table">
-            <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que Ã© aceito</th><th style="width:20%">Status</th></tr></thead>
+            <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
             <tbody>
               <tr>
-                <td class="doc-name">Extrato bancÃ¡rio</td>
-                <td class="doc-desc">3 Ãºltimos meses (preferir mÃªs fechado). Aceita PDF/impresso e bancos digitais.</td>
+                <td class="doc-name">Extrato bancário</td>
+                <td class="doc-desc">3 últimos meses (preferir mês fechado). Aceita PDF/impresso e bancos digitais.</td>
                 <td><select class="status status-pill" data-doc="rendainf" data-id="extrato"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
             </tbody>
@@ -869,32 +869,32 @@ DIVORCIADO: CertidÃ£o averbada.</td>
             <div class="right"><span class="pill neutral" id="pill-aposentado">0/0 enviados</span></div>
           </div>
           <table class="doc-table">
-            <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que Ã© aceito</th><th style="width:20%">Status</th></tr></thead>
+            <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
             <tbody>
               <tr>
-                <td class="doc-name">Extrato do benefÃ­cio</td>
-                <td class="doc-desc">Ãšltimo extrato (Meu INSS / Dataprev).</td>
+                <td class="doc-name">Extrato do benefício</td>
+                <td class="doc-desc">Último extrato (Meu INSS / Dataprev).</td>
                 <td><select class="status status-pill" data-doc="apos" data-id="beneficio"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <!-- DomÃ©stico -->
+        <!-- Doméstico -->
         <div class="section" id="sec-domestico">
           <div class="section-head">
             <div class="left">
-              <div class="t">DomÃ©sticos / contrataÃ§Ã£o por CPF</div>
-              <div class="s">Aparece quando perfil de renda = DOMÃ‰STICO.</div>
+              <div class="t">Domésticos / contratação por CPF</div>
+              <div class="s">Aparece quando perfil de renda = DOMÉSTICO.</div>
             </div>
             <div class="right"><span class="pill neutral" id="pill-domestico">0/0 enviados</span></div>
           </div>
           <table class="doc-table">
-            <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que Ã© aceito</th><th style="width:20%">Status</th></tr></thead>
+            <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
             <tbody>
               <tr>
                 <td class="doc-name">eSocial</td>
-                <td class="doc-desc">3 Ãºltimos comprovantes do eSocial.</td>
+                <td class="doc-desc">3 últimos comprovantes do eSocial.</td>
                 <td><select class="status status-pill" data-doc="dom" data-id="esocial"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
             </tbody>
@@ -906,46 +906,46 @@ DIVORCIADO: CertidÃ£o averbada.</td>
           <div class="section-head">
             <div class="left">
               <div class="t">Documentos Caixa</div>
-              <div class="s">Extras (Cheque Azul/CartÃ£o) aparecem se â€œCCA gerou formulÃ¡riosâ€ = SIM.</div>
+              <div class="s">Extras (Cheque Azul/Cartão) aparecem se "CCA gerou formulários" = SIM.</div>
             </div>
             <div class="right"><span class="pill neutral" id="pill-caixa">0/0 enviados</span></div>
           </div>
           <table class="doc-table">
-            <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que Ã© aceito</th><th style="width:20%">Status</th></tr></thead>
+            <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
             <tbody>
               <tr>
                 <td class="doc-name">DAMP</td>
-                <td class="doc-desc">Preenchida e assinada digitalmente. FÃ­sico sÃ³ com aprovaÃ§Ã£o do crÃ©dito.</td>
+                <td class="doc-desc">Preenchida e assinada digitalmente. Físico só com aprovação do crédito.</td>
                 <td><select class="status status-pill" data-doc="caixa" data-id="damp"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Ficha de cadastro Caixa</td>
-                <td class="doc-desc">Preenchida (endereÃ§o igual ao cadastro). Assinada digitalmente; fÃ­sico com aprovaÃ§Ã£o.</td>
+                <td class="doc-desc">Preenchida (endereço igual ao cadastro). Assinada digitalmente; físico com aprovação.</td>
                 <td><select class="status status-pill" data-doc="caixa" data-id="ficha"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Abertura de conta</td>
-                <td class="doc-desc">Assinada digitalmente; fÃ­sico precisa aprovaÃ§Ã£o do crÃ©dito.</td>
+                <td class="doc-desc">Assinada digitalmente; físico precisa aprovação do crédito.</td>
                 <td><select class="status status-pill" data-doc="caixa" data-id="abertura"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">MO</td>
-                <td class="doc-desc">Assinatura correta (2Âª pÃ¡gina). Casal: assinatura de ambos.</td>
+                <td class="doc-desc">Assinatura correta (2ª página). Casal: assinatura de ambos.</td>
                 <td><select class="status status-pill" data-doc="caixa" data-id="mo"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
 
               <tr id="row-cheque-azul" style="display:none;">
-                <td class="doc-name">FormulÃ¡rio Cheque Azul</td>
-                <td class="doc-desc">FormulÃ¡rio de contrataÃ§Ã£o (assinatura digital). FÃ­sico somente com aprovaÃ§Ã£o.</td>
+                <td class="doc-name">Formulário Cheque Azul</td>
+                <td class="doc-desc">Formulário de contratação (assinatura digital). Físico somente com aprovação.</td>
                 <td><select class="status status-pill" data-doc="caixa" data-id="chequeazul"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
               <tr id="row-form-cartao" style="display:none;">
-                <td class="doc-name">FormulÃ¡rio CartÃ£o</td>
-                <td class="doc-desc">FormulÃ¡rio do cartÃ£o Caixa com campos obrigatÃ³rios e assinatura digital.</td>
+                <td class="doc-name">Formulário Cartão</td>
+                <td class="doc-desc">Formulário do cartão Caixa com campos obrigatórios e assinatura digital.</td>
                 <td><select class="status status-pill" data-doc="caixa" data-id="formcartao"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
               <tr id="row-prop-cartao" style="display:none;">
-                <td class="doc-name">Proposta CartÃ£o</td>
+                <td class="doc-name">Proposta Cartão</td>
                 <td class="doc-desc">Proposta comercial vinculada ao cliente e assinada digitalmente.</td>
                 <td><select class="status status-pill" data-doc="caixa" data-id="propcartao"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
@@ -958,41 +958,41 @@ DIVORCIADO: CertidÃ£o averbada.</td>
           <div class="section-head">
             <div class="left">
               <div class="t">Documentos Agehab</div>
-              <div class="s">PadrÃµes Agehab: assinaturas via GOV.BR ou Clicksign (quando aplicÃ¡vel).</div>
+              <div class="s">Padrões Agehab: assinaturas via GOV.BR ou Clicksign (quando aplicável).</div>
             </div>
             <div class="right"><span class="pill neutral" id="pill-agehab">0/0 enviados</span></div>
           </div>
           <table class="doc-table">
-            <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que Ã© aceito</th><th style="width:20%">Status</th></tr></thead>
+            <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
             <tbody>
               <tr>
-                <td class="doc-name">DeclaraÃ§Ã£o de endereÃ§o</td>
-                <td class="doc-desc">Quando necessÃ¡rio. Assinada via GOV.BR ou Clicksign.</td>
+                <td class="doc-name">Declaração de endereço</td>
+                <td class="doc-desc">Quando necessário. Assinada via GOV.BR ou Clicksign.</td>
                 <td><select class="status status-pill" data-doc="agehab" data-id="decl-end"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
               <tr>
-                <td class="doc-name">DeclaraÃ§Ã£o renda informal</td>
+                <td class="doc-name">Declaração renda informal</td>
                 <td class="doc-desc">Assinada pelo dependente via GOV.BR/Clicksign (modelo Agehab).</td>
                 <td><select class="status status-pill" data-doc="agehab" data-id="decl-renda"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
               <tr>
-                <td class="doc-name">DeclaraÃ§Ã£o de nÃ£o renda</td>
+                <td class="doc-name">Declaração de não renda</td>
                 <td class="doc-desc">Para dependentes sem renda. Assinada via GOV.BR/Clicksign.</td>
                 <td><select class="status status-pill" data-doc="agehab" data-id="decl-naorenda"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
               <tr>
-                <td class="doc-name">VÃ­nculo â‰¥ 3 anos</td>
-                <td class="doc-desc">Docs com fÃ© pÃºblica comprovando vÃ­nculo mÃ­nimo na cidade do Cheque Moradia.</td>
+                <td class="doc-name">Vínculo ≥ 3 anos</td>
+                <td class="doc-desc">Docs com fé pública comprovando vínculo mínimo na cidade do Cheque Moradia.</td>
                 <td><select class="status status-pill" data-doc="agehab" data-id="vinculo"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Checklist Agehab</td>
-                <td class="doc-desc">Preenchido e assinado GOV.BR (ou prÃ³prio punho conforme orientaÃ§Ã£o).</td>
+                <td class="doc-desc">Preenchido e assinado GOV.BR (ou próprio punho conforme orientação).</td>
                 <td><select class="status status-pill" data-doc="agehab" data-id="check"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Ficha Agehab</td>
-                <td class="doc-desc">Preenchida pelo Assistente de CrÃ©dito; assinada GOV.BR (ou prÃ³prio punho).</td>
+                <td class="doc-desc">Preenchida pelo Assistente de Crédito; assinada GOV.BR (ou próprio punho).</td>
                 <td><select class="status status-pill" data-doc="agehab" data-id="ficha"><option>Pendente</option><option>Enviado</option></select></td>
               </tr>
             </tbody>
@@ -1000,7 +1000,7 @@ DIVORCIADO: CertidÃ£o averbada.</td>
         </div>
 
         <p class="tiny" style="margin:12px 2px 0;">
-          * Front-end. Em produÃ§Ã£o, cada alteraÃ§Ã£o grava usuÃ¡rio/data/hora e recalcula SLA/status do processo.
+          * Front-end. Em produção, cada alteração grava usuário/data/hora e recalcula SLA/status do processo.
         </p>
 
       </div>
@@ -1011,7 +1011,7 @@ DIVORCIADO: CertidÃ£o averbada.</td>
       <div class="panel-header">
         <div class="panel-title">
           <h2>Retorno do Analista</h2>
-          <p>Atualize status geral / Caixa / Agehab + registre observaÃ§Ãµes. Isso alimenta o painel da fila e mantÃ©m SLA correto.</p>
+          <p>Atualize status geral / Caixa / Agehab + registre observações. Isso alimenta o painel da fila e mantém SLA correto.</p>
         </div>
         <div class="inline">
           <button class="btn" id="btnSalvarRight">Salvar</button>
@@ -1029,7 +1029,7 @@ DIVORCIADO: CertidÃ£o averbada.</td>
           </div>
           <div class="right">
             <span class="sla ok" id="slaCor">SLA Corretor: 0h</span>
-            <span class="sla ok" id="slaCred">SLA CrÃ©dito: 0h</span>
+            <span class="sla ok" id="slaCred">SLA Crédito: 0h</span>
           </div>
         </div>
 
@@ -1038,7 +1038,7 @@ DIVORCIADO: CertidÃ£o averbada.</td>
             <label for="status-geral">Status geral</label>
             <select id="status-geral">
               <option value="novo">Novo</option>
-              <option value="em_analise">Em anÃ¡lise</option>
+              <option value="em_analise">Em análise</option>
               <option value="pendente">Pendente</option>
               <option value="aprovado">Aprovado</option>
               <option value="reprovado">Reprovado</option>
@@ -1057,7 +1057,7 @@ DIVORCIADO: CertidÃ£o averbada.</td>
             <label for="status-caixa">Status Caixa</label>
             <select id="status-caixa">
               <option value="novo">Caixa Novo</option>
-              <option value="em_analise">Caixa AnÃ¡lise</option>
+              <option value="em_analise">Caixa Análise</option>
               <option value="pendente">Caixa Pendente</option>
               <option value="aprovado">Caixa OK</option>
               <option value="reprovado">Caixa Reprov.</option>
@@ -1068,7 +1068,7 @@ DIVORCIADO: CertidÃ£o averbada.</td>
             <label for="status-agehab">Status Agehab</label>
             <select id="status-agehab">
               <option value="novo">Agehab Novo</option>
-              <option value="em_analise">Agehab AnÃ¡lise</option>
+              <option value="em_analise">Agehab Análise</option>
               <option value="pendente">Agehab Pendente</option>
               <option value="aprovado">Agehab OK</option>
               <option value="reprovado">Agehab Reprov.</option>
@@ -1081,23 +1081,23 @@ DIVORCIADO: CertidÃ£o averbada.</td>
           </div>
 
           <div class="fg">
-            <label for="sla-credito">SLA crÃ©dito (h)</label>
+            <label for="sla-credito">SLA crédito (h)</label>
             <input id="sla-credito" type="number" min="0" step="1" value="0" />
           </div>
         </div>
 
         <div class="fg" style="margin-top:8px;">
-          <label for="observacao">ObservaÃ§Ã£o do analista</label>
-          <textarea id="observacao" placeholder="Ex.: falta extrato bancÃ¡rio, IRPF ilegÃ­vel, CTPS incompleta, documento do cÃ´njuge ausente, etc."></textarea>
+          <label for="observacao">Observação do analista</label>
+          <textarea id="observacao" placeholder="Ex.: falta extrato bancário, IRPF ilegível, CTPS incompleta, documento do cônjuge ausente, etc."></textarea>
           <div class="tiny" style="margin-top:6px;">
-            Dica: se marcar muitos â€œPendentesâ€, copie daqui uma lista curta do que falta e envie no retorno do e-mail.
+            Dica: se marcar muitos "Pendentes", copie daqui uma lista curta do que falta e envie no retorno do e-mail.
           </div>
         </div>
 
         <div class="divider"></div>
 
         <div class="fg">
-          <label>Resumo automÃ¡tico (o que estÃ¡ pendente)</label>
+          <label>Resumo automático (o que está pendente)</label>
           <textarea id="resumoPendencias" readonly style="min-height:120px;background: rgba(2,6,23,.45);"></textarea>
           <div class="inline" style="margin-top:8px;justify-content:space-between;">
             <span class="tiny">Gerado automaticamente com base nos status do checklist.</span>
@@ -1108,7 +1108,7 @@ DIVORCIADO: CertidÃ£o averbada.</td>
         <div class="divider"></div>
 
         <div class="inline" style="justify-content:space-between;">
-          <div class="tiny" id="prioHint">â€œPrioridade altaâ€ automÃ¡tica: geral = pendente e SLA crÃ©dito â‰¥ 48h.</div>
+          <div class="tiny" id="prioHint">"Prioridade alta" automática: geral = pendente e SLA crédito ≥ 48h.</div>
           <div class="inline">
             <button class="btn" id="btnLimparObs">Limpar obs.</button>
             <button class="btn primary" id="btnSalvarTudo">Salvar tudo</button>
@@ -1163,21 +1163,21 @@ DIVORCIADO: CertidÃ£o averbada.</td>
     if(area==="geral"){
       if(v==="aprovado") return "Aprovado";
       if(v==="pendente") return "Pendente";
-      if(v==="em_analise") return "Em anÃ¡lise";
+      if(v==="em_analise") return "Em análise";
       if(v==="reprovado") return "Reprovado";
       return "Novo";
     }
     if(area==="caixa"){
       if(v==="aprovado") return "Caixa OK";
       if(v==="pendente") return "Caixa Pendente";
-      if(v==="em_analise") return "Caixa AnÃ¡lise";
+      if(v==="em_analise") return "Caixa Análise";
       if(v==="reprovado") return "Caixa Reprov.";
       return "Caixa Novo";
     }
     if(area==="agehab"){
       if(v==="aprovado") return "Agehab OK";
       if(v==="pendente") return "Agehab Pendente";
-      if(v==="em_analise") return "Agehab AnÃ¡lise";
+      if(v==="em_analise") return "Agehab Análise";
       if(v==="reprovado") return "Agehab Reprov.";
       return "Agehab Novo";
     }
@@ -1198,16 +1198,16 @@ DIVORCIADO: CertidÃ£o averbada.</td>
     $("slaCred").className = `sla ${slaClass(cred)}`;
 
     $("slaCor").textContent = `SLA Corretor: ${cor}h`;
-    $("slaCred").textContent = `SLA CrÃ©dito: ${cred}h`;
+    $("slaCred").textContent = `SLA Crédito: ${cred}h`;
 
-    // prioridade alta automÃ¡tica (mesma regra do painel)
+    // prioridade alta automática (mesma regra do painel)
     const high = ($("status-geral").value==="pendente" && cred >= SLA_BAD);
 
     if(high){
       $("prioridade").value = "alta";
-      $("prioHint").innerHTML = `<span class="prio"><span class="dot"></span>PRIORIDADE ALTA</span> geral = pendente + SLA crÃ©dito â‰¥ ${SLA_BAD}h`;
+      $("prioHint").innerHTML = `<span class="prio"><span class="dot"></span>PRIORIDADE ALTA</span> geral = pendente + SLA crédito ≥ ${SLA_BAD}h`;
     }else{
-      $("prioHint").textContent = `â€œPrioridade altaâ€ automÃ¡tica: geral = pendente e SLA crÃ©dito â‰¥ ${SLA_BAD}h.`;
+      $("prioHint").textContent = `"Prioridade alta" automática: geral = pendente e SLA crédito ≥ ${SLA_BAD}h.`;
     }
   }
 
@@ -1286,10 +1286,10 @@ DIVORCIADO: CertidÃ£o averbada.</td>
     setDisplay(secAposentado, perfil==="aposentado", "block");
     setDisplay(secDomestico, perfil==="domestico", "block");
 
-    // FGTS sÃ³ CLT
+    // FGTS só CLT
     setDisplay(rowFgts, perfil==="clt", "table-row");
 
-    // IRPF checkbox sÃ³ informal
+    // IRPF checkbox só informal
     if(perfil==="informal"){
       setDisplay(irpfGroup, true, "block");
     }else{
@@ -1355,7 +1355,7 @@ DIVORCIADO: CertidÃ£o averbada.</td>
     setPillCount("pill-agehab", "agehab");
   }
 
-  // ====== Resumo pendÃªncias (automatic) ======
+  // ====== Resumo pendências (automatic) ======
   function buildPendenciasResumo(){
     const groups = [
       {title:"Proponente", key:"proponente"},
@@ -1364,14 +1364,14 @@ DIVORCIADO: CertidÃ£o averbada.</td>
       {title:"Renda CLT", key:"rendaclt"},
       {title:"Renda informal", key:"rendainf"},
       {title:"Aposentado", key:"apos"},
-      {title:"DomÃ©stico", key:"dom"},
+      {title:"Doméstico", key:"dom"},
       {title:"Caixa", key:"caixa"},
       {title:"Agehab", key:"agehab"},
     ];
 
     const lines = [];
     groups.forEach(g=>{
-      // pega selects visÃ­veis (seÃ§Ãµes escondidas nÃ£o entram)
+      // pega selects visíveis (seções escondidas não entram)
       const selects = Array.from(document.querySelectorAll(`select[data-doc="${g.key}"]`))
         .filter(sel=>{
           const tr = sel.closest("tr");
@@ -1379,7 +1379,7 @@ DIVORCIADO: CertidÃ£o averbada.</td>
           // se o TR estiver oculto por regra, ignora
           return tr.style.display !== "none";
         })
-        .filter(sel=> sel.offsetParent !== null); // ignora se seÃ§Ã£o inteira escondida
+        .filter(sel=> sel.offsetParent !== null); // ignora se seção inteira escondida
 
       const pend = selects
         .filter(sel=> toLower(sel.value)==="pendente")
@@ -1398,16 +1398,16 @@ DIVORCIADO: CertidÃ£o averbada.</td>
 
     $("resumoPendencias").value = lines.length
       ? lines.join("\n").trim()
-      : "Nenhuma pendÃªncia marcada. (Tudo Enviado nas seÃ§Ãµes visÃ­veis.)";
+      : "Nenhuma pendência marcada. (Tudo Enviado nas seções visíveis.)";
   }
 
   // ===== Bulk actions =====
   function marcarTudo(val){
     document.querySelectorAll(".status-pill").forEach(sel=>{
-      // nÃ£o mexe em linhas ocultas (por regras)
+      // não mexe em linhas ocultas (por regras)
       const tr = sel.closest("tr");
       if(tr && tr.style.display === "none") return;
-      // nÃ£o mexe em seÃ§Ãµes ocultas
+      // não mexe em seções ocultas
       if(sel.offsetParent === null) return;
       sel.value = val;
       applySelectColor(sel);
@@ -1431,8 +1431,8 @@ DIVORCIADO: CertidÃ£o averbada.</td>
     countdown--;
     if(countdown<=0){
       countdown = REFRESH_SECONDS;
-      // Em produÃ§Ã£o: aqui vocÃª buscaria o processo/arquivos e atualizaria a tela
-      // No front: sÃ³ reseta contagem
+      // Em produção: aqui você buscaria o processo/arquivos e atualizaria a tela
+      // No front: só reseta contagem
     }
     $("refreshLabel").textContent = `${countdown}s`;
   }
@@ -1443,14 +1443,14 @@ DIVORCIADO: CertidÃ£o averbada.</td>
 
   $("btnCopiarResumo").addEventListener("click", async ()=>{
     const ok = await copyText($("resumoPendencias").value || "");
-    if(!ok) alert("NÃ£o consegui copiar automaticamente. Selecione o texto e copie (Ctrl+C).");
+    if(!ok) alert("Não consegui copiar automaticamente. Selecione o texto e copie (Ctrl+C).");
   });
 
   $("btnLimparObs").addEventListener("click", ()=> $("observacao").value = "");
 
   function salvarFake(){
     // Aqui ficaria o POST no backend
-    alert("Front-end: alteraÃ§Ãµes 'salvas' (mock). PrÃ³ximo passo: integrar com o backend.");
+    alert("Front-end: alterações 'salvas' (mock). Próximo passo: integrar com o backend.");
   }
 
   $("btnSalvarTopo").addEventListener("click", salvarFake);

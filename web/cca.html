@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tela CCA â€“ Painel de EstÃ¡gios</title>
+  <title>Tela CCA – Painel de Estágios</title>
   <style>
     :root{
       --bg:#020617;
@@ -258,7 +258,7 @@
     }
     .meta b{color:var(--text);}
 
-    /* Inline â€œeditâ€ (simulado) */
+    /* Inline "edit" (simulado) */
     .row-actions{
       display:flex;
       gap:6px;
@@ -293,13 +293,13 @@
     <section class="card" aria-label="Painel do CCA">
       <header>
         <div class="title">
-          <h1>Painel CCA â€“ EstÃ¡gios do Cliente</h1>
-          <p>VisÃ£o operacional rÃ¡pida: Cliente, Corretor, Obra e andamento por etapa (CAD, CCA, AGEHAB, Fiador, Sinal).</p>
+          <h1>Painel CCA – Estágios do Cliente</h1>
+          <p>Visão operacional rápida: Cliente, Corretor, Obra e andamento por etapa (CAD, CCA, AGEHAB, Fiador, Sinal).</p>
         </div>
 
         <div class="actions">
           <span class="pill" id="total-pill">Total: 0</span>
-          <span class="pill" id="pendencias-pill">PendÃªncias: 0</span>
+          <span class="pill" id="pendencias-pill">Pendências: 0</span>
           <button class="btn" type="button" id="btn-export">Exportar CSV</button>
         </div>
       </header>
@@ -322,20 +322,20 @@
         </div>
 
         <div class="fg">
-          <label for="pendencias">PendÃªncias</label>
+          <label for="pendencias">Pendências</label>
           <select id="pendencias">
             <option value="">Todas</option>
-            <option value="com">Com pendÃªncia</option>
-            <option value="sem">Sem pendÃªncia</option>
+            <option value="com">Com pendência</option>
+            <option value="sem">Sem pendência</option>
           </select>
         </div>
 
         <div class="fg">
           <label for="ordem">Ordenar</label>
           <select id="ordem">
-            <option value="cliente">Cliente (Aâ€“Z)</option>
+            <option value="cliente">Cliente (A–Z)</option>
             <option value="obra">Obra</option>
-            <option value="pendencia">PendÃªncias (maior â†’ menor)</option>
+            <option value="pendencia">Pendências (maior → menor)</option>
           </select>
         </div>
       </section>
@@ -347,12 +347,12 @@
               <th class="col-cliente">Cliente</th>
               <th class="col-corretor">Corretor</th>
               <th class="col-obra">Obra</th>
-              <th class="col-stage">EstÃ¡gio CAD</th>
-              <th class="col-stage">EstÃ¡gio CCA</th>
-              <th class="col-stage">EstÃ¡gio AGEHAB</th>
+              <th class="col-stage">Estágio CAD</th>
+              <th class="col-stage">Estágio CCA</th>
+              <th class="col-stage">Estágio AGEHAB</th>
               <th class="col-stage">Pendente Fiador</th>
               <th class="col-stage">Pendente Sinal</th>
-              <th class="col-actions">AÃ§Ãµes</th>
+              <th class="col-actions">Ações</th>
             </tr>
           </thead>
           <tbody id="tbody">

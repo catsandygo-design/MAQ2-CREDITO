@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -50,7 +50,7 @@
     h1{margin:0 0 4px;font-size:1.4rem;}
     .subtitle{font-size:.8rem;color:var(--text-soft);margin:0 0 10px;}
 
-    /* Caixa de instruÃ§Ãµes / assunto do e-mail */
+    /* Caixa de instruções / assunto do e-mail */
     .email-hint{
       margin-bottom:14px;
       padding:10px 12px 12px;
@@ -185,7 +185,7 @@
     tbody tr{transition:background .15s ease, box-shadow .15s ease;}
     tbody tr:hover{background:rgba(15,23,42,0.98);box-shadow:inset 2px 0 0 var(--accent);}
 
-    /* ===== AJUSTE PRINCIPAL: colunas status mais â€œcoladasâ€ ===== */
+    /* ===== AJUSTE PRINCIPAL: colunas status mais "coladas" ===== */
     .doc-col{width:22%;font-weight:500;}
     .desc-col{width:56%;color:var(--text-soft);white-space:pre-line;}
     .status-doc-col{width:11%; padding-left:5px; padding-right:5px;}
@@ -227,7 +227,7 @@
     .visually-hidden{border:0;clip:rect(0 0 0 0);height:1px;margin:-1px;overflow:hidden;padding:0;position:absolute;width:1px;}
     .hidden{display:none;}
 
-    /* PÃ­lulas */
+    /* Pílulas */
     .status-pill{
       font-weight:800;
       color:#f9fafb;
@@ -246,7 +246,7 @@
       background-image:linear-gradient(135deg,#065f46,#020617);
     }
 
-    /* Status CrÃ©dito */
+    /* Status Crédito */
     .status-pill.status-analise{
       border-color:rgba(56,189,248,0.95);
       box-shadow:0 0 0 1px rgba(15,23,42,0.95),0 0 12px rgba(56,189,248,0.85);
@@ -275,7 +275,7 @@
     <header class="card-header">
       <h1>Checklist para Documentos do Repasse</h1>
       <p class="subtitle">
-        ConferÃªncia completa do dossiÃª: documentos do proponente, dependentes, Caixa e Agehab com regra de aceitaÃ§Ã£o por perfil.
+        Conferência completa do dossiê: documentos do proponente, dependentes, Caixa e Agehab com regra de aceitação por perfil.
       </p>
 
       <div class="email-hint">
@@ -299,9 +299,9 @@
     </header>
 
     <form novalidate>
-      <!-- CabeÃ§alho do processo -->
-      <fieldset class="header-grid" aria-label="Dados bÃ¡sicos do processo">
-        <legend class="visually-hidden">Dados bÃ¡sicos do processo</legend>
+      <!-- Cabeçalho do processo -->
+      <fieldset class="header-grid" aria-label="Dados básicos do processo">
+        <legend class="visually-hidden">Dados básicos do processo</legend>
 
         <div class="form-group">
           <label for="nome-cliente">Nome do cliente</label>
@@ -313,37 +313,37 @@
         </div>
         <div class="form-group">
           <label for="reserva">Reserva</label>
-          <input id="reserva" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="CÃ³digo da reserva" autocomplete="off">
+          <input id="reserva" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Código da reserva" autocomplete="off">
         </div>
         <div class="form-group">
           <label for="obra">Obra / Empreendimento</label>
           <input id="obra" type="text" placeholder="Ex.: AGL30, AGL32, FSA10" autocomplete="off">
         </div>
         <div class="form-group">
-          <label for="imobiliaria">ImobiliÃ¡ria</label>
-          <input id="imobiliaria" type="text" placeholder="Nome da imobiliÃ¡ria" autocomplete="organization">
+          <label for="imobiliaria">Imobiliária</label>
+          <input id="imobiliaria" type="text" placeholder="Nome da imobiliária" autocomplete="organization">
         </div>
       </fieldset>
 
-      <!-- PERFIL / VÃNCULO / DEPENDENTE -->
-      <fieldset class="header-grid" aria-label="Perfil de renda, FGTS e informaÃ§Ãµes de dependente">
-        <legend class="visually-hidden">Perfil de renda e vÃ­nculo</legend>
+      <!-- PERFIL / VÍNCULO / DEPENDENTE -->
+      <fieldset class="header-grid" aria-label="Perfil de renda, FGTS e informações de dependente">
+        <legend class="visually-hidden">Perfil de renda e vínculo</legend>
 
         <div class="form-group">
           <label for="perfil-renda">Perfil de renda do proponente</label>
           <select id="perfil-renda">
             <option value="clt">CLT / Formal</option>
-            <option value="informal">Informal / AutÃ´nomo</option>
+            <option value="informal">Informal / Autônomo</option>
             <option value="aposentado">Aposentado / Pensionista</option>
-            <option value="domestico">DomÃ©stico / contrataÃ§Ã£o por CPF (eSocial)</option>
+            <option value="domestico">Doméstico / contratação por CPF (eSocial)</option>
           </select>
         </div>
 
         <div class="form-group" id="cotista-ctps-group">
-          <label>FGTS / vÃ­nculo em carteira</label>
+          <label>FGTS / vínculo em carteira</label>
           <div class="checkbox-row">
             <input type="checkbox" id="cotista-3-anos">
-            <label for="cotista-3-anos">Cliente com +3 anos de carteira assinada para uso de FGTS / vÃ­nculo formal</label>
+            <label for="cotista-3-anos">Cliente com +3 anos de carteira assinada para uso de FGTS / vínculo formal</label>
           </div>
           <span class="muted">Se marcado, passa a exigir CTPS, independente do perfil de renda.</span>
         </div>
@@ -354,10 +354,10 @@
             <option value="filho-menor">Filho menor</option>
             <option value="filho-maior">Filho maior</option>
             <option value="tio-tia">Tio ou Tia</option>
-            <option value="irmao-irma">IrmÃ£o ou IrmÃ£</option>
-            <option value="pai-mae">Pai ou MÃ£e</option>
-            <option value="avos">AvÃ³s ou AvÃ´s</option>
-            <option value="bisavos">BisavÃ³ ou BisavÃ´</option>
+            <option value="irmao-irma">Irmão ou Irmã</option>
+            <option value="pai-mae">Pai ou Mãe</option>
+            <option value="avos">Avós ou Avôs</option>
+            <option value="bisavos">Bisavó ou Bisavô</option>
             <option value="sobrinho-sobrinha">Sobrinho ou Sobrinha</option>
           </select>
         </div>
@@ -368,8 +368,8 @@
             <option value="solteiro">Solteiro(a)</option>
             <option value="casado">Casado(a)</option>
             <option value="divorciado">Divorciado(a)</option>
-            <option value="viuvo">ViÃºvo(a)</option>
-            <option value="uniao-estavel">UniÃ£o estÃ¡vel</option>
+            <option value="viuvo">Viúvo(a)</option>
+            <option value="uniao-estavel">União estável</option>
           </select>
         </div>
 
@@ -379,17 +379,17 @@
             <option value="solteiro">Solteiro(a)</option>
             <option value="casado">Casado(a)</option>
             <option value="divorciado">Divorciado(a)</option>
-            <option value="viuvo">ViÃºvo(a)</option>
+            <option value="viuvo">Viúvo(a)</option>
           </select>
         </div>
 
         <div class="form-group hidden" id="conjuge-renda-group">
-          <label>Renda do cÃ´njuge</label>
+          <label>Renda do cônjuge</label>
           <div class="checkbox-row">
             <input type="checkbox" id="conjuge-tem-renda">
-            <label for="conjuge-tem-renda">CÃ´njuge tem renda para compor o cÃ¡lculo?</label>
+            <label for="conjuge-tem-renda">Cônjuge tem renda para compor o cálculo?</label>
           </div>
-          <span class="muted">VisÃ­vel apenas se o proponente for Casado ou UniÃ£o estÃ¡vel.</span>
+          <span class="muted">Visível apenas se o proponente for Casado ou União estável.</span>
         </div>
 
         <div class="form-group hidden" id="irpf-informal-group">
@@ -398,38 +398,38 @@
             <input type="checkbox" id="irpf-informal">
             <label for="irpf-informal">Cliente vai utilizar IRPF + recibo para formalizar a renda</label>
           </div>
-          <span class="muted">Ao marcar, passa a exigir IRPF na seÃ§Ã£o de documentos do proponente (somente perfil informal).</span>
+          <span class="muted">Ao marcar, passa a exigir IRPF na seção de documentos do proponente (somente perfil informal).</span>
         </div>
       </fieldset>
 
-      <!-- ======= FUNÃ‡ÃƒO PARA NÃƒO REPETIR CÃ“DIGO:
-           TODAS AS TABELAS ABAIXO JÃ VÃƒO COM 4 COLUNAS (Status Doc + Status CrÃ©dito) ======= -->
+      <!-- ======= FUNÇÃO PARA NÃO REPETIR CÓDIGO:
+           TODAS AS TABELAS ABAIXO JÁ VÃO COM 4 COLUNAS (Status Doc + Status Crédito) ======= -->
 
       <!-- DOCUMENTOS DO PROPONENTE -->
       <section class="section-block" id="sec-proponente" aria-labelledby="titulo-proponente">
         <h2 class="section-title" id="titulo-proponente">Documentos do Proponente</h2>
-        <div class="table-wrap" role="region" aria-label="Documentos obrigatÃ³rios do proponente">
+        <div class="table-wrap" role="region" aria-label="Documentos obrigatórios do proponente">
           <table>
             <thead>
             <tr>
               <th class="doc-col" scope="col">Documento</th>
-              <th class="desc-col" scope="col">O que Ã© aceito</th>
+              <th class="desc-col" scope="col">O que é aceito</th>
               <th class="status-doc-col" scope="col">Status Doc.</th>
-              <th class="status-cred-col" scope="col">Status CrÃ©dito</th>
+              <th class="status-cred-col" scope="col">Status Crédito</th>
             </tr>
             </thead>
             <tbody>
             <tr>
               <td class="doc-col">Identidade e CPF</td>
-              <td class="desc-col" id="desc-identidade">CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fÃ© pÃºblica (dentro da validade) do proponente.</td>
+              <td class="desc-col" id="desc-identidade">CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fé pública (dentro da validade) do proponente.</td>
               <td class="status-doc-col">
                 <select aria-label="Status identidade proponente">
                   <option>Pendente</option><option>Enviado</option>
                 </select>
               </td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito identidade" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option>
+                <select class="status-credito" aria-label="Status crédito identidade" data-role="credito">
+                  <option value="analise">Em Análise</option>
                   <option value="pendenciado">Pendenciado</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="reprovado">Reprovado</option>
@@ -439,15 +439,15 @@
 
             <tr>
               <td class="doc-col">Comp. de estado civil</td>
-              <td class="desc-col" id="desc-estado-civil">CertidÃ£o de nascimento.</td>
+              <td class="desc-col" id="desc-estado-civil">Certidão de nascimento.</td>
               <td class="status-doc-col">
                 <select aria-label="Status comp. estado civil proponente">
                   <option>Pendente</option><option>Enviado</option>
                 </select>
               </td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito estado civil" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option>
+                <select class="status-credito" aria-label="Status crédito estado civil" data-role="credito">
+                  <option value="analise">Em Análise</option>
                   <option value="pendenciado">Pendenciado</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="reprovado">Reprovado</option>
@@ -456,17 +456,17 @@
             </tr>
 
             <tr>
-              <td class="doc-col">Comprovante de residÃªncia</td>
-              <td class="desc-col">Comprovante deve estar aberto, nÃ£o precisa estar no nome do cliente.
-Pode ser: Ã¡gua, luz, telefone, fatura de internet e celular, fatura de cartÃ£o de crÃ©dito.</td>
+              <td class="doc-col">Comprovante de residência</td>
+              <td class="desc-col">Comprovante deve estar aberto, não precisa estar no nome do cliente.
+Pode ser: água, luz, telefone, fatura de internet e celular, fatura de cartão de crédito.</td>
               <td class="status-doc-col">
-                <select aria-label="Status comprovante de residÃªncia proponente">
+                <select aria-label="Status comprovante de residência proponente">
                   <option>Pendente</option><option>Enviado</option>
                 </select>
               </td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito residÃªncia" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option>
+                <select class="status-credito" aria-label="Status crédito residência" data-role="credito">
+                  <option value="analise">Em Análise</option>
                   <option value="pendenciado">Pendenciado</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="reprovado">Reprovado</option>
@@ -476,16 +476,16 @@ Pode ser: Ã¡gua, luz, telefone, fatura de internet e celular, fatura de cartÃ
 
             <tr id="row-irpf" style="display:none;">
               <td class="doc-col">IRPF + recibo de entrega</td>
-              <td class="desc-col">DeclaraÃ§Ã£o completa do ano atual + recibo de entrega + DARF pago (se for o caso).
-<span class="highlight-info" role="note">Somente solicitar IRPF se o perfil de renda for INFORMAL e o campo â€œIRPF para renda informalâ€ estiver marcado.</span></td>
+              <td class="desc-col">Declaração completa do ano atual + recibo de entrega + DARF pago (se for o caso).
+<span class="highlight-info" role="note">Somente solicitar IRPF se o perfil de renda for INFORMAL e o campo "IRPF para renda informal" estiver marcado.</span></td>
               <td class="status-doc-col">
                 <select aria-label="Status IRPF proponente">
                   <option>Pendente</option><option>Enviado</option>
                 </select>
               </td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito IRPF" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option>
+                <select class="status-credito" aria-label="Status crédito IRPF" data-role="credito">
+                  <option value="analise">Em Análise</option>
                   <option value="pendenciado">Pendenciado</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="reprovado">Reprovado</option>
@@ -495,16 +495,16 @@ Pode ser: Ã¡gua, luz, telefone, fatura de internet e celular, fatura de cartÃ
 
             <tr id="row-fgts">
               <td class="doc-col">Extrato FGTS (atualizado)</td>
-              <td class="desc-col">Retirado do app FGTS, pelo site da Caixa (senha do CartÃ£o CidadÃ£o) ou em qualquer agÃªncia da Caixa.
-Para militares/soldados, anexar tambÃ©m os 3 Ãºltimos extratos bancÃ¡rios da conta em que recebe o salÃ¡rio.</td>
+              <td class="desc-col">Retirado do app FGTS, pelo site da Caixa (senha do Cartão Cidadão) ou em qualquer agência da Caixa.
+Para militares/soldados, anexar também os 3 últimos extratos bancários da conta em que recebe o salário.</td>
               <td class="status-doc-col">
                 <select aria-label="Status extrato FGTS proponente">
                   <option>Pendente</option><option>Enviado</option>
                 </select>
               </td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito FGTS" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option>
+                <select class="status-credito" aria-label="Status crédito FGTS" data-role="credito">
+                  <option value="analise">Em Análise</option>
                   <option value="pendenciado">Pendenciado</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="reprovado">Reprovado</option>
@@ -514,17 +514,17 @@ Para militares/soldados, anexar tambÃ©m os 3 Ãºltimos extratos bancÃ¡rios 
 
             <tr id="row-ctps" style="display:none;">
               <td class="doc-col">Carteira de trabalho (CTPS)</td>
-              <td class="desc-col">Aplicativo Carteira Digital com todas as informaÃ§Ãµes
-ou fotos legÃ­veis da CTPS fÃ­sica: qualificaÃ§Ã£o, contratos de trabalho
-e anotaÃ§Ãµes de alteraÃ§Ã£o de CNPJ, se houver.</td>
+              <td class="desc-col">Aplicativo Carteira Digital com todas as informações
+ou fotos legíveis da CTPS física: qualificação, contratos de trabalho
+e anotações de alteração de CNPJ, se houver.</td>
               <td class="status-doc-col">
                 <select aria-label="Status CTPS proponente">
                   <option>Pendente</option><option>Enviado</option>
                 </select>
               </td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito CTPS" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option>
+                <select class="status-credito" aria-label="Status crédito CTPS" data-role="credito">
+                  <option value="analise">Em Análise</option>
                   <option value="pendenciado">Pendenciado</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="reprovado">Reprovado</option>
@@ -539,29 +539,29 @@ e anotaÃ§Ãµes de alteraÃ§Ã£o de CNPJ, se houver.</td>
 
       <!-- DEPENDENTE MENOR -->
       <section class="section-block" id="sec-dep-menor" aria-labelledby="titulo-dep-menor">
-        <h2 class="section-title" id="titulo-dep-menor">Documentos do Dependente â€“ Filhos menores de 18 anos</h2>
+        <h2 class="section-title" id="titulo-dep-menor">Documentos do Dependente – Filhos menores de 18 anos</h2>
         <div class="table-wrap" role="region" aria-label="Documentos para dependente menor de idade">
           <table>
             <thead>
             <tr>
               <th class="doc-col" scope="col">Documento</th>
-              <th class="desc-col" scope="col">O que Ã© aceito</th>
+              <th class="desc-col" scope="col">O que é aceito</th>
               <th class="status-doc-col" scope="col">Status Doc.</th>
-              <th class="status-cred-col" scope="col">Status CrÃ©dito</th>
+              <th class="status-cred-col" scope="col">Status Crédito</th>
             </tr>
             </thead>
             <tbody>
             <tr>
-              <td class="doc-col">CertidÃ£o de nascimento</td>
-              <td class="desc-col">No caso de guarda ou adoÃ§Ã£o, anexar tambÃ©m os termos respectivos.</td>
+              <td class="doc-col">Certidão de nascimento</td>
+              <td class="desc-col">No caso de guarda ou adoção, anexar também os termos respectivos.</td>
               <td class="status-doc-col">
-                <select aria-label="Status certidÃ£o dependente menor">
+                <select aria-label="Status certidão dependente menor">
                   <option>Pendente</option><option>Enviado</option>
                 </select>
               </td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito dependente menor" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option>
+                <select class="status-credito" aria-label="Status crédito dependente menor" data-role="credito">
+                  <option value="analise">Em Análise</option>
                   <option value="pendenciado">Pendenciado</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="reprovado">Reprovado</option>
@@ -575,29 +575,29 @@ e anotaÃ§Ãµes de alteraÃ§Ã£o de CNPJ, se houver.</td>
 
       <!-- DEPENDENTE MAIOR -->
       <section class="section-block" id="sec-dep-maior" aria-labelledby="titulo-dep-maior">
-        <h2 class="section-title" id="titulo-dep-maior">Documentos do Dependente â€“ Filhos maiores / parentes atÃ© 3Âº grau</h2>
-        <div class="table-wrap" role="region" aria-label="Documentos para dependente maior ou parentes atÃ© 3Âº grau">
+        <h2 class="section-title" id="titulo-dep-maior">Documentos do Dependente – Filhos maiores / parentes até 3º grau</h2>
+        <div class="table-wrap" role="region" aria-label="Documentos para dependente maior ou parentes até 3º grau">
           <table>
             <thead>
             <tr>
               <th class="doc-col" scope="col">Documento</th>
-              <th class="desc-col" scope="col">O que Ã© aceito</th>
+              <th class="desc-col" scope="col">O que é aceito</th>
               <th class="status-doc-col" scope="col">Status Doc.</th>
-              <th class="status-cred-col" scope="col">Status CrÃ©dito</th>
+              <th class="status-cred-col" scope="col">Status Crédito</th>
             </tr>
             </thead>
             <tbody>
             <tr>
               <td class="doc-col">Identidade e CPF</td>
-              <td class="desc-col" id="desc-identidade-dep">CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fÃ© pÃºblica (dentro da validade) do dependente.</td>
+              <td class="desc-col" id="desc-identidade-dep">CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fé pública (dentro da validade) do dependente.</td>
               <td class="status-doc-col">
                 <select aria-label="Status identidade dependente maior">
                   <option>Pendente</option><option>Enviado</option>
                 </select>
               </td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito identidade dependente" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option>
+                <select class="status-credito" aria-label="Status crédito identidade dependente" data-role="credito">
+                  <option value="analise">Em Análise</option>
                   <option value="pendenciado">Pendenciado</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="reprovado">Reprovado</option>
@@ -607,18 +607,18 @@ e anotaÃ§Ãµes de alteraÃ§Ã£o de CNPJ, se houver.</td>
 
             <tr>
               <td class="doc-col">Comp. de estado civil</td>
-              <td class="desc-col" id="desc-estado-civil-dep">SOLTEIRO: CertidÃ£o de nascimento
-CASADO: CertidÃ£o de casamento â€“ precisa RG/CPF do cÃ´njuge se houver renda; anexar comprovante de renda
-VIÃšVO: CertidÃ£o de casamento e atestado de Ã³bito
-DIVORCIADO: CertidÃ£o de casamento averbada.</td>
+              <td class="desc-col" id="desc-estado-civil-dep">SOLTEIRO: Certidão de nascimento
+CASADO: Certidão de casamento – precisa RG/CPF do cônjuge se houver renda; anexar comprovante de renda
+VIÚVO: Certidão de casamento e atestado de óbito
+DIVORCIADO: Certidão de casamento averbada.</td>
               <td class="status-doc-col">
                 <select aria-label="Status comp. estado civil dependente maior">
                   <option>Pendente</option><option>Enviado</option>
                 </select>
               </td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito estado civil dependente" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option>
+                <select class="status-credito" aria-label="Status crédito estado civil dependente" data-role="credito">
+                  <option value="analise">Em Análise</option>
                   <option value="pendenciado">Pendenciado</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="reprovado">Reprovado</option>
@@ -627,16 +627,16 @@ DIVORCIADO: CertidÃ£o de casamento averbada.</td>
             </tr>
 
             <tr>
-              <td class="doc-col">DeclaraÃ§Ã£o de parentesco</td>
-              <td class="desc-col">DeclaraÃ§Ã£o conforme regras da Caixa, vinculando o dependente ao proponente.</td>
+              <td class="doc-col">Declaração de parentesco</td>
+              <td class="desc-col">Declaração conforme regras da Caixa, vinculando o dependente ao proponente.</td>
               <td class="status-doc-col">
-                <select aria-label="Status declaraÃ§Ã£o parentesco dependente maior">
+                <select aria-label="Status declaração parentesco dependente maior">
                   <option>Pendente</option><option>Enviado</option>
                 </select>
               </td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito parentesco" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option>
+                <select class="status-credito" aria-label="Status crédito parentesco" data-role="credito">
+                  <option value="analise">Em Análise</option>
                   <option value="pendenciado">Pendenciado</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="reprovado">Reprovado</option>
@@ -651,30 +651,30 @@ DIVORCIADO: CertidÃ£o de casamento averbada.</td>
 
       <!-- RENDA CLT -->
       <section class="section-block" id="sec-renda-clt" aria-labelledby="titulo-renda-clt">
-        <h2 class="section-title" id="titulo-renda-clt">Renda formal (CLT / vÃ­nculo empregatÃ­cio)</h2>
-        <div class="table-wrap" role="region" aria-label="Documentos para comprovaÃ§Ã£o de renda CLT / Formal">
+        <h2 class="section-title" id="titulo-renda-clt">Renda formal (CLT / vínculo empregatício)</h2>
+        <div class="table-wrap" role="region" aria-label="Documentos para comprovação de renda CLT / Formal">
           <table>
             <thead>
             <tr>
               <th class="doc-col" scope="col">Documento</th>
-              <th class="desc-col" scope="col">O que Ã© aceito</th>
+              <th class="desc-col" scope="col">O que é aceito</th>
               <th class="status-doc-col" scope="col">Status Doc.</th>
-              <th class="status-cred-col" scope="col">Status CrÃ©dito</th>
+              <th class="status-cred-col" scope="col">Status Crédito</th>
             </tr>
             </thead>
             <tbody>
             <tr>
               <td class="doc-col">Holerites / contracheques</td>
-              <td class="desc-col">3 Ãºltimos holerites/contracheques do proponente.
-Devem constar nome do empregador, CNPJ, cargo, data de admissÃ£o e remuneraÃ§Ã£o bruta.</td>
+              <td class="desc-col">3 últimos holerites/contracheques do proponente.
+Devem constar nome do empregador, CNPJ, cargo, data de admissão e remuneração bruta.</td>
               <td class="status-doc-col">
                 <select aria-label="Status holerites CLT">
                   <option>Pendente</option><option>Enviado</option>
                 </select>
               </td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito holerites" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option>
+                <select class="status-credito" aria-label="Status crédito holerites" data-role="credito">
+                  <option value="analise">Em Análise</option>
                   <option value="pendenciado">Pendenciado</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="reprovado">Reprovado</option>
@@ -683,17 +683,17 @@ Devem constar nome do empregador, CNPJ, cargo, data de admissÃ£o e remuneraÃ�
             </tr>
 
             <tr>
-              <td class="doc-col">Comprovante de renda variÃ¡vel</td>
-              <td class="desc-col">Quando houver comissÃµes, adicional noturno, horas extras ou outras verbas variÃ¡veis,
-anexar holerites suficientes para cÃ¡lculo da mÃ©dia conforme regra da Caixa.</td>
+              <td class="doc-col">Comprovante de renda variável</td>
+              <td class="desc-col">Quando houver comissões, adicional noturno, horas extras ou outras verbas variáveis,
+anexar holerites suficientes para cálculo da média conforme regra da Caixa.</td>
               <td class="status-doc-col">
-                <select aria-label="Status renda variÃ¡vel CLT">
+                <select aria-label="Status renda variável CLT">
                   <option>Pendente</option><option>Enviado</option>
                 </select>
               </td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito renda variÃ¡vel" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option>
+                <select class="status-credito" aria-label="Status crédito renda variável" data-role="credito">
+                  <option value="analise">Em Análise</option>
                   <option value="pendenciado">Pendenciado</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="reprovado">Reprovado</option>
@@ -702,17 +702,17 @@ anexar holerites suficientes para cÃ¡lculo da mÃ©dia conforme regra da Caixa
             </tr>
 
             <tr>
-              <td class="doc-col">Carta do empregador (quando aplicÃ¡vel)</td>
-              <td class="desc-col">Carta em papel timbrado ou declaraÃ§Ã£o eletrÃ´nica do empregador, informando vÃ­nculo, salÃ¡rio e funÃ§Ã£o,
-apenas quando exigido pela anÃ¡lise do crÃ©dito.</td>
+              <td class="doc-col">Carta do empregador (quando aplicável)</td>
+              <td class="desc-col">Carta em papel timbrado ou declaração eletrônica do empregador, informando vínculo, salário e função,
+apenas quando exigido pela análise do crédito.</td>
               <td class="status-doc-col">
                 <select aria-label="Status carta empregador CLT">
                   <option>Pendente</option><option>Enviado</option>
                 </select>
               </td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito carta empregador" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option>
+                <select class="status-credito" aria-label="Status crédito carta empregador" data-role="credito">
+                  <option value="analise">Em Análise</option>
                   <option value="pendenciado">Pendenciado</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="reprovado">Reprovado</option>
@@ -727,32 +727,32 @@ apenas quando exigido pela anÃ¡lise do crÃ©dito.</td>
 
       <!-- RENDA INFORMAL -->
       <section class="section-block" id="sec-renda-informal" aria-labelledby="titulo-renda-informal">
-        <h2 class="section-title" id="titulo-renda-informal">Renda informal (inclui autÃ´nomos e profissional liberal)</h2>
-        <div class="table-wrap" role="region" aria-label="Documentos para comprovaÃ§Ã£o de renda informal">
+        <h2 class="section-title" id="titulo-renda-informal">Renda informal (inclui autônomos e profissional liberal)</h2>
+        <div class="table-wrap" role="region" aria-label="Documentos para comprovação de renda informal">
           <table>
             <thead>
             <tr>
               <th class="doc-col" scope="col">Documento</th>
-              <th class="desc-col" scope="col">O que Ã© aceito</th>
+              <th class="desc-col" scope="col">O que é aceito</th>
               <th class="status-doc-col" scope="col">Status Doc.</th>
-              <th class="status-cred-col" scope="col">Status CrÃ©dito</th>
+              <th class="status-cred-col" scope="col">Status Crédito</th>
             </tr>
             </thead>
             <tbody>
             <tr>
-              <td class="doc-col">Extrato bancÃ¡rio</td>
-              <td class="desc-col">Extratos dos 3 Ãºltimos meses.
-Preferencialmente mÃªs fechado (ex.: 1 a 31 de janeiro, 1 a 28 de fevereiro).
+              <td class="doc-col">Extrato bancário</td>
+              <td class="desc-col">Extratos dos 3 últimos meses.
+Preferencialmente mês fechado (ex.: 1 a 31 de janeiro, 1 a 28 de fevereiro).
 Aceitos extratos impressos ou em PDF emitidos pelo banco.
 Aceita bancos digitais (ex.: Nubank, PicPay).</td>
               <td class="status-doc-col">
-                <select aria-label="Status extrato bancÃ¡rio renda informal">
+                <select aria-label="Status extrato bancário renda informal">
                   <option>Pendente</option><option>Enviado</option>
                 </select>
               </td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito extrato bancÃ¡rio" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option>
+                <select class="status-credito" aria-label="Status crédito extrato bancário" data-role="credito">
+                  <option value="analise">Em Análise</option>
                   <option value="pendenciado">Pendenciado</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="reprovado">Reprovado</option>
@@ -772,23 +772,23 @@ Aceita bancos digitais (ex.: Nubank, PicPay).</td>
             <thead>
             <tr>
               <th class="doc-col" scope="col">Documento</th>
-              <th class="desc-col" scope="col">O que Ã© aceito</th>
+              <th class="desc-col" scope="col">O que é aceito</th>
               <th class="status-doc-col" scope="col">Status Doc.</th>
-              <th class="status-cred-col" scope="col">Status CrÃ©dito</th>
+              <th class="status-cred-col" scope="col">Status Crédito</th>
             </tr>
             </thead>
             <tbody>
             <tr>
-              <td class="doc-col">Extrato de pagamento do benefÃ­cio</td>
-              <td class="desc-col">Ãšltimo extrato de benefÃ­cio, obtido pelo app Meu INSS ou site Dataprev.</td>
+              <td class="doc-col">Extrato de pagamento do benefício</td>
+              <td class="desc-col">Último extrato de benefício, obtido pelo app Meu INSS ou site Dataprev.</td>
               <td class="status-doc-col">
-                <select aria-label="Status extrato benefÃ­cio aposentado">
+                <select aria-label="Status extrato benefício aposentado">
                   <option>Pendente</option><option>Enviado</option>
                 </select>
               </td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito benefÃ­cio" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option>
+                <select class="status-credito" aria-label="Status crédito benefício" data-role="credito">
+                  <option value="analise">Em Análise</option>
                   <option value="pendenciado">Pendenciado</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="reprovado">Reprovado</option>
@@ -800,31 +800,31 @@ Aceita bancos digitais (ex.: Nubank, PicPay).</td>
         </div>
       </section>
 
-      <!-- DOMÃ‰STICOS -->
+      <!-- DOMÉSTICOS -->
       <section class="section-block" id="sec-domestico" aria-labelledby="titulo-domestico">
-        <h2 class="section-title" id="titulo-domestico">DomÃ©sticos ou contrataÃ§Ã£o por CPF</h2>
-        <div class="table-wrap" role="region" aria-label="Documentos para trabalhadores domÃ©sticos ou contrataÃ§Ã£o por CPF">
+        <h2 class="section-title" id="titulo-domestico">Domésticos ou contratação por CPF</h2>
+        <div class="table-wrap" role="region" aria-label="Documentos para trabalhadores domésticos ou contratação por CPF">
           <table>
             <thead>
             <tr>
               <th class="doc-col" scope="col">Documento</th>
-              <th class="desc-col" scope="col">O que Ã© aceito</th>
+              <th class="desc-col" scope="col">O que é aceito</th>
               <th class="status-doc-col" scope="col">Status Doc.</th>
-              <th class="status-cred-col" scope="col">Status CrÃ©dito</th>
+              <th class="status-cred-col" scope="col">Status Crédito</th>
             </tr>
             </thead>
             <tbody>
             <tr>
               <td class="doc-col">eSocial</td>
-              <td class="desc-col">Solicitar os 3 Ãºltimos comprovantes do eSocial do cliente.</td>
+              <td class="desc-col">Solicitar os 3 últimos comprovantes do eSocial do cliente.</td>
               <td class="status-doc-col">
-                <select aria-label="Status eSocial domÃ©stico">
+                <select aria-label="Status eSocial doméstico">
                   <option>Pendente</option><option>Enviado</option>
                 </select>
               </td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito eSocial" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option>
+                <select class="status-credito" aria-label="Status crédito eSocial" data-role="credito">
+                  <option value="analise">Em Análise</option>
                   <option value="pendenciado">Pendenciado</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="reprovado">Reprovado</option>
@@ -841,108 +841,108 @@ Aceita bancos digitais (ex.: Nubank, PicPay).</td>
         <h2 class="section-title" id="titulo-caixa">Documentos Caixa</h2>
 
         <div class="form-group" style="margin-bottom: 6px;">
-          <label for="cca-gerou">CCA gerou formulÃ¡rios de contrataÃ§Ã£o de cheque especial/cartÃ£o de crÃ©dito?</label>
+          <label for="cca-gerou">CCA gerou formulários de contratação de cheque especial/cartão de crédito?</label>
           <div class="checkbox-row">
             <input type="checkbox" id="cca-gerou">
-            <label for="cca-gerou">Sim, CCA gerou os formulÃ¡rios de contrataÃ§Ã£o</label>
+            <label for="cca-gerou">Sim, CCA gerou os formulários de contratação</label>
           </div>
           <span class="muted">
-            Se <strong>nÃ£o</strong> estiver marcado, considerar apenas DAMP, Ficha de cadastro Caixa, Ficha de abertura de conta e MO.
-            Se marcado, incluir tambÃ©m os formulÃ¡rios e propostas de cheque especial e cartÃ£o.
+            Se <strong>não</strong> estiver marcado, considerar apenas DAMP, Ficha de cadastro Caixa, Ficha de abertura de conta e MO.
+            Se marcado, incluir também os formulários e propostas de cheque especial e cartão.
           </span>
         </div>
 
-        <div class="table-wrap" role="region" aria-label="Documentos padrÃ£o Caixa">
+        <div class="table-wrap" role="region" aria-label="Documentos padrão Caixa">
           <table>
             <thead>
             <tr>
               <th class="doc-col" scope="col">Documento</th>
-              <th class="desc-col" scope="col">O que Ã© aceito</th>
+              <th class="desc-col" scope="col">O que é aceito</th>
               <th class="status-doc-col" scope="col">Status Doc.</th>
-              <th class="status-cred-col" scope="col">Status CrÃ©dito</th>
+              <th class="status-cred-col" scope="col">Status Crédito</th>
             </tr>
             </thead>
             <tbody>
             <tr>
               <td class="doc-col">DAMP</td>
               <td class="desc-col">DAMP preenchida corretamente e assinada digitalmente pelo cliente.
-No fÃ­sico, precisa de aprovaÃ§Ã£o especÃ­fica do crÃ©dito.</td>
+No físico, precisa de aprovação específica do crédito.</td>
               <td class="status-doc-col"><select aria-label="Status DAMP"><option>Pendente</option><option>Enviado</option></select></td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito DAMP" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
+                <select class="status-credito" aria-label="Status crédito DAMP" data-role="credito">
+                  <option value="analise">Em Análise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
                 </select>
               </td>
             </tr>
 
             <tr>
               <td class="doc-col">Ficha de cadastro Caixa</td>
-              <td class="desc-col">Preenchida corretamente, com endereÃ§o de residÃªncia igual ao cadastro.
-Assinada digitalmente pelo proponente. No fÃ­sico, precisa de aprovaÃ§Ã£o.</td>
+              <td class="desc-col">Preenchida corretamente, com endereço de residência igual ao cadastro.
+Assinada digitalmente pelo proponente. No físico, precisa de aprovação.</td>
               <td class="status-doc-col"><select aria-label="Status ficha de cadastro Caixa"><option>Pendente</option><option>Enviado</option></select></td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito ficha cadastro" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
+                <select class="status-credito" aria-label="Status crédito ficha cadastro" data-role="credito">
+                  <option value="analise">Em Análise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
                 </select>
               </td>
             </tr>
 
             <tr>
               <td class="doc-col">Ficha de abertura de conta</td>
-              <td class="desc-col">Assinada digitalmente; no fÃ­sico, precisa de aprovaÃ§Ã£o do crÃ©dito.</td>
+              <td class="desc-col">Assinada digitalmente; no físico, precisa de aprovação do crédito.</td>
               <td class="status-doc-col"><select aria-label="Status ficha abertura de conta"><option>Pendente</option><option>Enviado</option></select></td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito abertura de conta" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
+                <select class="status-credito" aria-label="Status crédito abertura de conta" data-role="credito">
+                  <option value="analise">Em Análise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
                 </select>
               </td>
             </tr>
 
             <tr>
               <td class="doc-col">MO</td>
-              <td class="desc-col">Assinada corretamente, sem sobrepor informaÃ§Ãµes importantes, sempre na segunda pÃ¡gina.
-Em caso de casal, o documento deve conter a assinatura de ambos os cÃ´njuges.</td>
+              <td class="desc-col">Assinada corretamente, sem sobrepor informações importantes, sempre na segunda página.
+Em caso de casal, o documento deve conter a assinatura de ambos os cônjuges.</td>
               <td class="status-doc-col"><select aria-label="Status MO"><option>Pendente</option><option>Enviado</option></select></td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito MO" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
+                <select class="status-credito" aria-label="Status crédito MO" data-role="credito">
+                  <option value="analise">Em Análise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
                 </select>
               </td>
             </tr>
 
             <tr id="row-cheque-azul" style="display:none;">
-              <td class="doc-col">FormulÃ¡rio Cheque Azul</td>
-              <td class="desc-col">FormulÃ¡rio de contrataÃ§Ã£o de Cheque Azul/cheque especial,
+              <td class="doc-col">Formulário Cheque Azul</td>
+              <td class="desc-col">Formulário de contratação de Cheque Azul/cheque especial,
 preenchido corretamente e assinado digitalmente pelo cliente.
-No fÃ­sico, somente com aprovaÃ§Ã£o do crÃ©dito.</td>
-              <td class="status-doc-col"><select aria-label="Status formulÃ¡rio Cheque Azul"><option>Pendente</option><option>Enviado</option></select></td>
+No físico, somente com aprovação do crédito.</td>
+              <td class="status-doc-col"><select aria-label="Status formulário Cheque Azul"><option>Pendente</option><option>Enviado</option></select></td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito Cheque Azul" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
+                <select class="status-credito" aria-label="Status crédito Cheque Azul" data-role="credito">
+                  <option value="analise">Em Análise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
                 </select>
               </td>
             </tr>
 
             <tr id="row-form-cartao" style="display:none;">
-              <td class="doc-col">FormulÃ¡rio CartÃ£o de CrÃ©dito</td>
-              <td class="desc-col">FormulÃ¡rio de contrataÃ§Ã£o do cartÃ£o de crÃ©dito Caixa,
-com todos os campos obrigatÃ³rios preenchidos e assinado digitalmente.</td>
-              <td class="status-doc-col"><select aria-label="Status formulÃ¡rio cartÃ£o de crÃ©dito"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="doc-col">Formulário Cartão de Crédito</td>
+              <td class="desc-col">Formulário de contratação do cartão de crédito Caixa,
+com todos os campos obrigatórios preenchidos e assinado digitalmente.</td>
+              <td class="status-doc-col"><select aria-label="Status formulário cartão de crédito"><option>Pendente</option><option>Enviado</option></select></td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito formulÃ¡rio cartÃ£o" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
+                <select class="status-credito" aria-label="Status crédito formulário cartão" data-role="credito">
+                  <option value="analise">Em Análise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
                 </select>
               </td>
             </tr>
 
             <tr id="row-prop-cartao" style="display:none;">
-              <td class="doc-col">Proposta de CartÃ£o de CrÃ©dito</td>
-              <td class="desc-col">Proposta comercial de cartÃ£o de crÃ©dito emitida pela Caixa,
+              <td class="doc-col">Proposta de Cartão de Crédito</td>
+              <td class="desc-col">Proposta comercial de cartão de crédito emitida pela Caixa,
 vinculada ao cliente do financiamento e assinada digitalmente.</td>
-              <td class="status-doc-col"><select aria-label="Status proposta cartÃ£o de crÃ©dito"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="status-doc-col"><select aria-label="Status proposta cartão de crédito"><option>Pendente</option><option>Enviado</option></select></td>
               <td class="status-cred-col">
-                <select class="status-credito" aria-label="Status crÃ©dito proposta cartÃ£o" data-role="credito">
-                  <option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
+                <select class="status-credito" aria-label="Status crédito proposta cartão" data-role="credito">
+                  <option value="analise">Em Análise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
                 </select>
               </td>
             </tr>
@@ -955,56 +955,56 @@ vinculada ao cliente do financiamento e assinada digitalmente.</td>
       <!-- DOCUMENTOS AGEHAB -->
       <section class="section-block" id="sec-agehab" aria-labelledby="titulo-agehab">
         <h2 class="section-title" id="titulo-agehab">Documentos Agehab</h2>
-        <div class="table-wrap" role="region" aria-label="Documentos obrigatÃ³rios Agehab">
+        <div class="table-wrap" role="region" aria-label="Documentos obrigatórios Agehab">
           <table>
             <thead>
             <tr>
               <th class="doc-col" scope="col">Documento</th>
-              <th class="desc-col" scope="col">O que Ã© aceito</th>
+              <th class="desc-col" scope="col">O que é aceito</th>
               <th class="status-doc-col" scope="col">Status Doc.</th>
-              <th class="status-cred-col" scope="col">Status CrÃ©dito</th>
+              <th class="status-cred-col" scope="col">Status Crédito</th>
             </tr>
             </thead>
             <tbody>
             <tr>
-              <td class="doc-col">DeclaraÃ§Ã£o de endereÃ§o</td>
-              <td class="desc-col">Utilizada quando necessÃ¡rio.
+              <td class="doc-col">Declaração de endereço</td>
+              <td class="desc-col">Utilizada quando necessário.
 Deve ser assinada pelo declarante via GOV.BR ou Clicksign.</td>
-              <td class="status-doc-col"><select aria-label="Status declaraÃ§Ã£o de endereÃ§o Agehab"><option>Pendente</option><option>Enviado</option></select></td>
-              <td class="status-cred-col"><select class="status-credito" aria-label="Status crÃ©dito declaraÃ§Ã£o endereÃ§o" data-role="credito"><option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select></td>
+              <td class="status-doc-col"><select aria-label="Status declaração de endereço Agehab"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="status-cred-col"><select class="status-credito" aria-label="Status crédito declaração endereço" data-role="credito"><option value="analise">Em Análise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select></td>
             </tr>
             <tr>
-              <td class="doc-col">DeclaraÃ§Ã£o de renda informal</td>
+              <td class="doc-col">Declaração de renda informal</td>
               <td class="desc-col">Assinada pelo dependente via GOV.BR ou Clicksign, conforme modelo Agehab.</td>
-              <td class="status-doc-col"><select aria-label="Status declaraÃ§Ã£o de renda informal Agehab"><option>Pendente</option><option>Enviado</option></select></td>
-              <td class="status-cred-col"><select class="status-credito" aria-label="Status crÃ©dito renda informal" data-role="credito"><option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select></td>
+              <td class="status-doc-col"><select aria-label="Status declaração de renda informal Agehab"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="status-cred-col"><select class="status-credito" aria-label="Status crédito renda informal" data-role="credito"><option value="analise">Em Análise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select></td>
             </tr>
             <tr>
-              <td class="doc-col">DeclaraÃ§Ã£o de nÃ£o renda</td>
+              <td class="doc-col">Declaração de não renda</td>
               <td class="desc-col">Para dependentes sem renda. Assinada pelo dependente via GOV.BR ou Clicksign.</td>
-              <td class="status-doc-col"><select aria-label="Status declaraÃ§Ã£o de nÃ£o renda Agehab"><option>Pendente</option><option>Enviado</option></select></td>
-              <td class="status-cred-col"><select class="status-credito" aria-label="Status crÃ©dito nÃ£o renda" data-role="credito"><option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select></td>
+              <td class="status-doc-col"><select aria-label="Status declaração de não renda Agehab"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="status-cred-col"><select class="status-credito" aria-label="Status crédito não renda" data-role="credito"><option value="analise">Em Análise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select></td>
             </tr>
             <tr>
-              <td class="doc-col">VÃ­nculo â‰¥ 3 anos (cheque moradia)</td>
-              <td class="desc-col">Documentos com fÃ© pÃºblica que comprovem vÃ­nculo de, no mÃ­nimo, 3 anos
+              <td class="doc-col">Vínculo ≥ 3 anos (cheque moradia)</td>
+              <td class="desc-col">Documentos com fé pública que comprovem vínculo de, no mínimo, 3 anos
 em uma das cidades participantes do Cheque Moradia.</td>
-              <td class="status-doc-col"><select aria-label="Status vÃ­nculo 3 anos Agehab"><option>Pendente</option><option>Enviado</option></select></td>
-              <td class="status-cred-col"><select class="status-credito" aria-label="Status crÃ©dito vÃ­nculo 3 anos" data-role="credito"><option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select></td>
+              <td class="status-doc-col"><select aria-label="Status vínculo 3 anos Agehab"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="status-cred-col"><select class="status-credito" aria-label="Status crédito vínculo 3 anos" data-role="credito"><option value="analise">Em Análise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select></td>
             </tr>
             <tr>
               <td class="doc-col">Checklist Agehab</td>
               <td class="desc-col">Preenchido corretamente e assinado pelo GOV.BR
-ou, em casos pontuais, a prÃ³prio punho conforme orientaÃ§Ã£o.</td>
+ou, em casos pontuais, a próprio punho conforme orientação.</td>
               <td class="status-doc-col"><select aria-label="Status checklist Agehab"><option>Pendente</option><option>Enviado</option></select></td>
-              <td class="status-cred-col"><select class="status-credito" aria-label="Status crÃ©dito checklist Agehab" data-role="credito"><option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select></td>
+              <td class="status-cred-col"><select class="status-credito" aria-label="Status crédito checklist Agehab" data-role="credito"><option value="analise">Em Análise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select></td>
             </tr>
             <tr>
               <td class="doc-col">Ficha Agehab</td>
-              <td class="desc-col">Preenchida pelo Assistente de CrÃ©dito e assinada pelo GOV.BR
-ou, em casos pontuais, a prÃ³prio punho.</td>
+              <td class="desc-col">Preenchida pelo Assistente de Crédito e assinada pelo GOV.BR
+ou, em casos pontuais, a próprio punho.</td>
               <td class="status-doc-col"><select aria-label="Status ficha Agehab"><option>Pendente</option><option>Enviado</option></select></td>
-              <td class="status-cred-col"><select class="status-credito" aria-label="Status crÃ©dito ficha Agehab" data-role="credito"><option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select></td>
+              <td class="status-cred-col"><select class="status-credito" aria-label="Status crédito ficha Agehab" data-role="credito"><option value="analise">Em Análise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select></td>
             </tr>
             </tbody>
           </table>
@@ -1104,10 +1104,10 @@ ou, em casos pontuais, a prÃ³prio punho.</td>
     if (descIdentidade) {
       let baseId, hintId = '';
       if (val === 'casado' || val === 'uniao-estavel') {
-        baseId = 'CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fÃ© pÃºblica (dentro da validade) do proponente e do cÃ´njuge.';
-        hintId = '<span class="highlight-info" role="note">Orientar o corretor: Ã© obrigatÃ³rio anexar tambÃ©m o documento de identidade do cÃ´njuge.</span>';
+        baseId = 'CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fé pública (dentro da validade) do proponente e do cônjuge.';
+        hintId = '<span class="highlight-info" role="note">Orientar o corretor: é obrigatório anexar também o documento de identidade do cônjuge.</span>';
       } else {
-        baseId = 'CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fÃ© pÃºblica (dentro da validade) do proponente.';
+        baseId = 'CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fé pública (dentro da validade) do proponente.';
         hintId = '<span class="highlight-info" role="note">Orientar o corretor: anexar somente o documento de identidade do proponente.</span>';
       }
       descIdentidade.innerHTML = baseId + '<br>' + hintId;
@@ -1116,11 +1116,11 @@ ou, em casos pontuais, a prÃ³prio punho.</td>
     if (descEstadoCivil) {
       let textoEc = '';
       switch (val) {
-        case 'solteiro': textoEc = 'CertidÃ£o de nascimento constando estado civil solteiro.'; break;
-        case 'casado': textoEc = 'CertidÃ£o de casamento.'; break;
-        case 'divorciado': textoEc = 'CertidÃ£o de casamento averbada com o divÃ³rcio.'; break;
-        case 'viuvo': textoEc = 'CertidÃ£o de casamento e atestado de Ã³bito do cÃ´njuge.'; break;
-        case 'uniao-estavel': textoEc = 'DocumentaÃ§Ã£o de uniÃ£o estÃ¡vel conforme modelo aceito pela Caixa.'; break;
+        case 'solteiro': textoEc = 'Certidão de nascimento constando estado civil solteiro.'; break;
+        case 'casado': textoEc = 'Certidão de casamento.'; break;
+        case 'divorciado': textoEc = 'Certidão de casamento averbada com o divórcio.'; break;
+        case 'viuvo': textoEc = 'Certidão de casamento e atestado de óbito do cônjuge.'; break;
+        case 'uniao-estavel': textoEc = 'Documentação de união estável conforme modelo aceito pela Caixa.'; break;
       }
       descEstadoCivil.textContent = textoEc;
     }
@@ -1132,19 +1132,19 @@ ou, em casos pontuais, a prÃ³prio punho.</td>
 
     let baseIdDep, hintDep = '';
     if (val === 'casado') {
-      baseIdDep = 'CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fÃ© pÃºblica (dentro da validade) do dependente e do cÃ´njuge.';
-      hintDep = '<span class="highlight-info" role="note">Orientar o corretor: anexar a identidade/CPF do dependente e tambÃ©m do cÃ´njuge do dependente.</span>';
+      baseIdDep = 'CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fé pública (dentro da validade) do dependente e do cônjuge.';
+      hintDep = '<span class="highlight-info" role="note">Orientar o corretor: anexar a identidade/CPF do dependente e também do cônjuge do dependente.</span>';
     } else {
-      baseIdDep = 'CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fÃ© pÃºblica (dentro da validade) somente do dependente.';
+      baseIdDep = 'CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fé pública (dentro da validade) somente do dependente.';
       hintDep = '<span class="highlight-info" role="note">Orientar o corretor: anexar apenas a identidade/CPF do dependente.</span>';
     }
     descIdentidadeDep.innerHTML = baseIdDep + '<br>' + hintDep;
 
     const textoBaseCivilDep =
-`SOLTEIRO: CertidÃ£o de nascimento
-CASADO: CertidÃ£o de casamento â€“ precisa RG/CPF do cÃ´njuge se houver renda; anexar comprovante de renda
-VIÃšVO: CertidÃ£o de casamento e atestado de Ã³bito
-DIVORCIADO: CertidÃ£o de casamento averbada.`;
+`SOLTEIRO: Certidão de nascimento
+CASADO: Certidão de casamento – precisa RG/CPF do cônjuge se houver renda; anexar comprovante de renda
+VIÚVO: Certidão de casamento e atestado de óbito
+DIVORCIADO: Certidão de casamento averbada.`;
 
     descEstadoCivilDep.textContent = textoBaseCivilDep;
   }
@@ -1190,7 +1190,7 @@ DIVORCIADO: CertidÃ£o de casamento averbada.`;
   function inicializarStatusDoc() {
     const selects = document.querySelectorAll('select[aria-label^="Status "]:not([data-role="credito"])');
     selects.forEach(sel => {
-      // sÃ³ aplica nos selects de doc que tem opÃ§Ãµes Pendente/Enviado
+      // só aplica nos selects de doc que tem opções Pendente/Enviado
       if ([...sel.options].some(o => (o.textContent || '').toLowerCase() === 'pendente')) {
         sel.classList.add('status-pill');
         atualizarVisualStatusDoc(sel);
@@ -1199,7 +1199,7 @@ DIVORCIADO: CertidÃ£o de casamento averbada.`;
     });
   }
 
-  /* ===== Status CrÃ©dito (Em AnÃ¡lise/Pendenciado/Aprovado/Reprovado) ===== */
+  /* ===== Status Crédito (Em Análise/Pendenciado/Aprovado/Reprovado) ===== */
   function atualizarVisualStatusCredito(select) {
     const v = (select.value || '').toLowerCase();
     select.classList.remove('status-analise','status-pendenciado','status-aprovado','status-reprovado');
@@ -1216,7 +1216,7 @@ DIVORCIADO: CertidÃ£o de casamento averbada.`;
       atualizarVisualStatusCredito(sel);
       sel.addEventListener('change', () => atualizarVisualStatusCredito(sel));
 
-      /* corretor sÃ³ visualiza */
+      /* corretor só visualiza */
       sel.disabled = true;
       sel.title = 'Atualizado pelo analista.';
     });
