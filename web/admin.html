@@ -6,6 +6,7 @@
   <title>Painel de Manutencao | Sistema de Credito</title>
   <style>
     :root{
+      --font-scale:1;
       --bg:#020617;
       --bg2:#01040f;
       --text:#e5e7eb;
@@ -20,11 +21,14 @@
       margin:0;
       min-height:100vh;
       color:var(--text);
+      font-size:calc(12px * var(--font-scale));
       background:
         radial-gradient(900px 650px at 20% 0%, rgba(31,41,55,.65) 0%, rgba(2,6,23,1) 60%),
         linear-gradient(180deg,var(--bg),var(--bg2));
       padding:18px 14px;
     }
+    body.compact-mode{--font-scale:.94}
+    body.compact-tight{--font-scale:.88}
     .wrap{max-width:1300px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
     .card{
       border:1px solid var(--border);
@@ -39,8 +43,8 @@
       gap:10px;
       padding:12px;
     }
-    .title h1{margin:0;font-size:17px}
-    .title p{margin:4px 0 0;color:var(--muted);font-size:12px}
+    .title h1{margin:0;font-size:calc(17px * var(--font-scale))}
+    .title p{margin:4px 0 0;color:var(--muted);font-size:calc(12px * var(--font-scale))}
     .actions{display:flex;gap:8px;flex-wrap:wrap}
     .btn{
       border:1px solid var(--border);
@@ -50,7 +54,7 @@
       border-radius:12px;
       cursor:pointer;
       font-weight:700;
-      font-size:12px;
+      font-size:calc(12px * var(--font-scale));
     }
     .btn:hover{transform:translateY(-1px)}
     .btn.primary{
@@ -70,7 +74,7 @@
     }
     @media (max-width:900px){.grid{grid-template-columns:1fr 1fr}}
     .field{display:flex;flex-direction:column;gap:5px}
-    .field label{font-size:11px;color:var(--muted)}
+    .field label{font-size:calc(11px * var(--font-scale));color:var(--muted)}
     input,select{
       border-radius:12px;
       border:1px solid var(--border);
@@ -78,11 +82,11 @@
       color:var(--text);
       padding:10px 11px;
       outline:none;
-      font-size:13px;
+      font-size:calc(13px * var(--font-scale));
     }
     .feedback{
       min-height:20px;
-      font-size:12px;
+      font-size:calc(12px * var(--font-scale));
       margin-top:8px;
       color:#86efac;
     }
@@ -91,7 +95,7 @@
     th,td{
       padding:10px 8px;
       border-top:1px solid rgba(148,163,184,.12);
-      font-size:12px;
+      font-size:calc(12px * var(--font-scale));
       text-align:left;
       vertical-align:middle;
     }
@@ -100,15 +104,15 @@
       display:inline-flex;
       padding:4px 8px;
       border-radius:999px;
-      font-size:10px;
+      font-size:calc(10px * var(--font-scale));
       border:1px solid rgba(148,163,184,.25);
       background:rgba(255,255,255,.02);
     }
     .pill.ok{color:var(--ok);border-color:rgba(34,197,94,.55)}
     .pill.bad{color:var(--danger);border-color:rgba(239,68,68,.55)}
-    .tiny{font-size:11px;color:var(--muted)}
+    .tiny{font-size:calc(11px * var(--font-scale));color:var(--muted)}
     .row-actions{display:flex;gap:6px;flex-wrap:wrap}
-    .row-actions .btn{padding:7px 9px;font-size:11px}
+    .row-actions .btn{padding:7px 9px;font-size:calc(11px * var(--font-scale))}
     .btn[disabled]{opacity:.55;cursor:not-allowed;transform:none}
     .btn.warn{
       border-color:rgba(245,158,11,.55);
@@ -123,6 +127,11 @@
       align-items:end;
     }
     @media (max-width:900px){.grid-emp{grid-template-columns:1fr}}
+    @keyframes rowEnter {
+      from { opacity: .0; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    tr.row-enter { animation: rowEnter .22s ease both; }
   </style>
 </head>
 <body>
@@ -231,6 +240,23 @@
     let currentUser = null;
     let users = [];
     let empreendimentos = [];
+
+    function applyAdaptiveTypography() {
+      const width = window.innerWidth || 0;
+      document.body.classList.remove("compact-mode", "compact-tight");
+      if (width <= 1280) {
+        document.body.classList.add("compact-tight");
+      } else if (width <= 1560) {
+        document.body.classList.add("compact-mode");
+      }
+    }
+
+    function animateRows(targetTbody) {
+      targetTbody.querySelectorAll("tr").forEach((row, index) => {
+        row.classList.add("row-enter");
+        row.style.animationDelay = `${Math.min(index * 16, 180)}ms`;
+      });
+    }
 
     function setFeedback(message, isError = false) {
       feedback.textContent = message || "";
@@ -425,6 +451,7 @@
           }
         });
       });
+      animateRows(tbody);
     }
 
     function renderEmpreendimentos() {
@@ -456,6 +483,7 @@
           }
         });
       });
+      animateRows(tbodyEmp);
     }
 
     async function loadUsers() {
@@ -543,8 +571,11 @@
       window.location.href = "/login";
     });
 
+    window.addEventListener("resize", applyAdaptiveTypography, { passive: true });
+
     (async () => {
       try {
+        applyAdaptiveTypography();
         await loadMe();
         await loadUsers();
         await loadEmpreendimentos();
