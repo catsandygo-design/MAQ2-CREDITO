@@ -24,3 +24,11 @@ services:
         value: "1800"
       - key: DB_CONNECT_TIMEOUT
         value: "10"
+      - key: APP_LOGIN_USER
+        value: "admin"
+      - key: APP_LOGIN_PASSWORD
+        sync: false
+      - key: SESSION_TTL_SECONDS
+        value: "43200"
+      - key: SESSION_COOKIE_SECURE
+        value: "true"

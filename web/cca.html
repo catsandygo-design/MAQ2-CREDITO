@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Painel CCA | Sistema de Crédito</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --card: #101a2e;
+      --line: #22314d;
+      --text: #e7eef9;
+      --muted: #9cb0d1;
+      --accent: #2fc16a;
+      --warn: #ffbf47;
+      --bad: #ff6b6b;
+      --ok: #44d07c;
+      --link: #6eb2ff;
+    }
+    * { box-sizing: border-box; font-family: "Segoe UI", Arial, sans-serif; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at 20% 0%, #1a2a45 0%, #0b1220 45%, #070c16 100%);
+      color: var(--text);
+      padding: 16px;
+    }
+    .wrap { max-width: 1200px; margin: 0 auto; }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .title h1 { margin: 0; font-size: 1.25rem; }
+    .title p { margin: 4px 0 0; color: var(--muted); font-size: .86rem; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    button, .btn-link {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #0f1a30;
+      color: var(--text);
+      padding: 9px 12px;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: .85rem;
+      font-weight: 700;
+    }
+    .primary { background: linear-gradient(180deg, #2fc16a, #24a35a); color: #05140a; border: 0; }
+    .danger { border-color: #733; color: #ffb7b7; }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .grid.new { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    @media (max-width: 900px) { .grid, .grid.new { grid-template-columns: 1fr; } }
+    .fg { display: flex; flex-direction: column; gap: 6px; }
+    .fg label { font-size: .8rem; color: var(--muted); font-weight: 600; }
+    input, select {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #0a1426;
+      color: var(--text);
+      padding: 9px 10px;
+      font-size: .9rem;
+      outline: none;
+      width: 100%;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+    th, td { border-bottom: 1px solid var(--line); padding: 9px 8px; text-align: left; }
+    th { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+    tr:last-child td { border-bottom: 0; }
+    .badge {
+      display: inline-block;
+      border: 1px solid var(--line);
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: .75rem;
+      font-weight: 700;
+    }
+    .ok { border-color: rgba(68,208,124,.5); color: var(--ok); }
+    .warn { border-color: rgba(255,191,71,.5); color: var(--warn); }
+    .bad { border-color: rgba(255,107,107,.5); color: var(--bad); }
+    .muted { color: var(--muted); }
+    .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .link-btn {
+      border: 1px solid rgba(110,178,255,.5);
+      color: var(--link);
+      background: rgba(110,178,255,.08);
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: .78rem;
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .empty { color: var(--muted); text-align: center; padding: 16px; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <div class="title">
+        <h1>Painel CCA</h1>
+        <p>Gestão de processos, filtros e navegação para checklist e analista.</p>
+      </div>
+      <div class="actions">
+        <a class="btn-link" href="/app/checklist">Checklist</a>
+        <a class="btn-link" href="/app/analista">Analista</a>
+        <button id="logoutBtn" class="danger" type="button">Sair</button>
+      </div>
+    </header>
+
+    <section class="card">
+      <div class="grid new">
+        <div class="fg">
+          <label for="nome">Nome do cliente</label>
+          <input id="nome" type="text" placeholder="Ex.: Maria da Silva" />
+        </div>
+        <div class="fg">
+          <label for="corretor">Corretor</label>
+          <input id="corretor" type="text" placeholder="Ex.: Gabriela" />
+        </div>
+        <div class="fg">
+          <label for="obra">Obra</label>
+          <input id="obra" type="text" placeholder="Ex.: AGL30" />
+        </div>
+        <div class="fg">
+          <label for="reserva">Reserva</label>
+          <input id="reserva" type="text" placeholder="Ex.: 10203" />
+        </div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button id="createBtn" class="primary" type="button">Criar Processo</button>
+        <span class="muted" id="createMsg"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="grid">
+        <div class="fg">
+          <label for="filterText">Buscar</label>
+          <input id="filterText" type="text" placeholder="Cliente, corretor, obra" />
+        </div>
+        <div class="fg">
+          <label for="filterObra">Filtrar por obra</label>
+          <input id="filterObra" type="text" placeholder="Ex.: AGL30" />
+        </div>
+        <div class="fg">
+          <label for="filterPend">Pendências</label>
+          <select id="filterPend">
+            <option value="">Todos</option>
+            <option value="com">Com pendência</option>
+            <option value="sem">Sem pendência</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Corretor</th>
+            <th>Obra</th>
+            <th>Status Geral</th>
+            <th>CCA</th>
+            <th>AGEHAB</th>
+            <th>Pendências</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="8" class="empty">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const tbody = document.getElementById("tbody");
+    const filterText = document.getElementById("filterText");
+    const filterObra = document.getElementById("filterObra");
+    const filterPend = document.getElementById("filterPend");
+    const createMsg = document.getElementById("createMsg");
+
+    let processos = [];
+
+    async function fetchJSON(url, options = {}) {
+      const res = await fetch(url, {
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options,
+      });
+
+      if (res.status === 401) {
+        window.location.href = "/login";
+        throw new Error("Nao autenticado");
+      }
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail || "Falha na requisição");
+      }
+      return data;
+    }
+
+    function statusClass(value) {
+      const txt = (value || "").toUpperCase();
+      if (txt.includes("APROV")) return "ok";
+      if (txt.includes("PEND")) return "bad";
+      if (txt.includes("ANAL")) return "warn";
+      return "warn";
+    }
+
+    function pendenciaCount(item) {
+      let total = 0;
+      if (item.pendente_fiador) total += 1;
+      if (item.pendente_sinal) total += 1;
+      if ((item.status_geral || "").toUpperCase().includes("PEND")) total += 1;
+      return total;
+    }
+
+    function render() {
+      const text = filterText.value.trim().toLowerCase();
+      const obra = filterObra.value.trim().toLowerCase();
+      const pend = filterPend.value;
+
+      const lista = processos.filter((p) => {
+        const haystack = `${p.cliente_nome} ${p.corretor || ""} ${p.obra || ""}`.toLowerCase();
+        if (text && !haystack.includes(text)) return false;
+        if (obra && !(p.obra || "").toLowerCase().includes(obra)) return false;
+
+        const hasPend = pendenciaCount(p) > 0;
+        if (pend === "com" && !hasPend) return false;
+        if (pend === "sem" && hasPend) return false;
+        return true;
+      });
+
+      if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty">Nenhum processo encontrado.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = lista.map((p) => {
+        const pend = pendenciaCount(p);
+        return `
+          <tr>
+            <td>${p.cliente_nome}</td>
+            <td>${p.corretor || "-"}</td>
+            <td>${p.obra || "-"}</td>
+            <td><span class="badge ${statusClass(p.status_geral)}">${p.status_geral}</span></td>
+            <td><span class="badge ${statusClass(p.status_cca)}">${p.status_cca}</span></td>
+            <td><span class="badge ${statusClass(p.status_agehab)}">${p.status_agehab}</span></td>
+            <td>
+              <span class="badge ${pend > 0 ? "bad" : "ok"}">
+                ${pend > 0 ? `${pend} pendência(s)` : "Sem pendência"}
+              </span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <a class="link-btn" href="/app/checklist?processo_id=${p.processo_id}">Checklist</a>
+                <a class="link-btn" href="/app/analista?processo_id=${p.processo_id}">Analista</a>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    async function loadProcessos() {
+      tbody.innerHTML = '<tr><td colspan="8" class="empty">Carregando...</td></tr>';
+      processos = await fetchJSON("/app/api/processos");
+      render();
+    }
+
+    async function createProcesso() {
+      createMsg.textContent = "";
+
+      const payload = {
+        nome: document.getElementById("nome").value.trim(),
+        corretor: document.getElementById("corretor").value.trim() || null,
+        obra: document.getElementById("obra").value.trim() || null,
+        reserva: document.getElementById("reserva").value.trim() || null,
+      };
+
+      if (!payload.nome) {
+        createMsg.textContent = "Informe o nome do cliente.";
+        return;
+      }
+
+      try {
+        const data = await fetchJSON("/app/api/processos/intake", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+
+        window.location.href = `/app/checklist?processo_id=${data.processo_id}`;
+      } catch (err) {
+        createMsg.textContent = err.message;
+      }
+    }
+
+    async function logout() {
+      await fetch("/auth/logout", { method: "POST", credentials: "same-origin" });
+      window.location.href = "/login";
+    }
+
+    document.getElementById("createBtn").addEventListener("click", createProcesso);
+    document.getElementById("logoutBtn").addEventListener("click", logout);
+    filterText.addEventListener("input", render);
+    filterObra.addEventListener("input", render);
+    filterPend.addEventListener("change", render);
+
+    loadProcessos().catch((err) => {
+      tbody.innerHTML = `<tr><td colspan="8" class="empty">${err.message}</td></tr>`;
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Analista | Sistema de Crédito</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --card: #101a2e;
+      --line: #22314d;
+      --text: #e7eef9;
+      --muted: #9cb0d1;
+      --ok: #44d07c;
+      --warn: #ffbf47;
+      --bad: #ff6b6b;
+    }
+    * { box-sizing: border-box; font-family: "Segoe UI", Arial, sans-serif; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at 20% 0%, #1a2a45 0%, #0b1220 45%, #070c16 100%);
+      color: var(--text);
+      padding: 16px;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .title h1 { margin: 0; font-size: 1.2rem; }
+    .title p { margin: 4px 0 0; color: var(--muted); font-size: .86rem; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #0f1a30;
+      color: var(--text);
+      padding: 9px 12px;
+      cursor: pointer;
+      font-size: .84rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .primary { background: linear-gradient(180deg, #2fc16a, #24a35a); color: #05140a; border: 0; }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    .fg { display: flex; flex-direction: column; gap: 6px; }
+    .fg label { font-size: .8rem; color: var(--muted); font-weight: 600; }
+    select, input, textarea {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #0a1426;
+      color: var(--text);
+      padding: 9px 10px;
+      font-size: .9rem;
+      width: 100%;
+      outline: none;
+    }
+    textarea { min-height: 120px; resize: vertical; }
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: .88rem;
+    }
+    .check input { width: auto; }
+    .meta { color: var(--muted); font-size: .86rem; display: flex; gap: 12px; flex-wrap: wrap; }
+    .meta b { color: var(--text); }
+    ul { margin: 8px 0 0; padding-left: 20px; }
+    li { margin-bottom: 4px; }
+    .ok { color: var(--ok); }
+    .bad { color: var(--bad); }
+    .msg { color: var(--muted); min-height: 20px; font-size: .84rem; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <div class="title">
+        <h1>Tela do Analista</h1>
+        <p id="subtitle">Carregando processo...</p>
+      </div>
+      <div class="actions">
+        <a class="btn" id="toCca" href="/app/cca">CCA</a>
+        <a class="btn" id="toChecklist" href="/app/checklist">Checklist</a>
+        <button class="btn primary" id="saveBtn" type="button">Salvar Status</button>
+      </div>
+    </header>
+
+    <section class="card">
+      <div class="meta" id="meta"></div>
+    </section>
+
+    <section class="card">
+      <div class="grid">
+        <div class="fg">
+          <label for="status_geral">Status Geral</label>
+          <select id="status_geral">
+            <option value="EM_ANALISE">EM_ANALISE</option>
+            <option value="PENDENTE">PENDENTE</option>
+            <option value="APROVADO">APROVADO</option>
+            <option value="REPROVADO">REPROVADO</option>
+          </select>
+        </div>
+
+        <div class="fg">
+          <label for="status_cca">Status CCA</label>
+          <select id="status_cca">
+            <option value="EM_ANALISE">EM_ANALISE</option>
+            <option value="PENDENTE">PENDENTE</option>
+            <option value="APROVADO">APROVADO</option>
+            <option value="REPROVADO">REPROVADO</option>
+          </select>
+        </div>
+
+        <div class="fg">
+          <label for="status_agehab">Status AGEHAB</label>
+          <select id="status_agehab">
+            <option value="EM_ANALISE">EM_ANALISE</option>
+            <option value="PENDENTE">PENDENTE</option>
+            <option value="APROVADO">APROVADO</option>
+            <option value="REPROVADO">REPROVADO</option>
+          </select>
+        </div>
+
+        <div class="fg">
+          <label for="sla_credito_dias">SLA Crédito (dias)</label>
+          <input id="sla_credito_dias" type="number" min="0" step="1" />
+        </div>
+
+        <div class="fg">
+          <label for="sla_corretor_dias">SLA Corretor (dias)</label>
+          <input id="sla_corretor_dias" type="number" min="0" step="1" />
+        </div>
+
+        <div class="fg">
+          <label for="observacao">Observação do Analista</label>
+          <textarea id="observacao" placeholder="Descreva pendências e orientações."></textarea>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+        <label class="check"><input id="pendente_fiador" type="checkbox" /> Pendente Fiador</label>
+        <label class="check"><input id="pendente_sinal" type="checkbox" /> Pendente Sinal</label>
+      </div>
+
+      <div class="msg" id="msg"></div>
+    </section>
+
+    <section class="card">
+      <h3 style="margin:0 0 8px;">Resumo automático de pendências</h3>
+      <div id="resumo"></div>
+    </section>
+  </main>
+
+  <script>
+    const url = new URL(window.location.href);
+    const processoId = url.searchParams.get("processo_id");
+
+    const subtitle = document.getElementById("subtitle");
+    const meta = document.getElementById("meta");
+    const resumo = document.getElementById("resumo");
+    const msg = document.getElementById("msg");
+    const toChecklist = document.getElementById("toChecklist");
+
+    let processo = null;
+    let cliente = null;
+    let documentos = [];
+
+    async function fetchJSON(url, options = {}) {
+      const res = await fetch(url, {
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options,
+      });
+
+      if (res.status === 401) {
+        window.location.href = "/login";
+        throw new Error("Nao autenticado");
+      }
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail || "Falha na requisição");
+      }
+      return data;
+    }
+
+    function setFormValues() {
+      if (!processo || !cliente) return;
+
+      subtitle.textContent = `Processo ${processo.id} - ${cliente.nome}`;
+      meta.innerHTML = `
+        <span><b>Cliente:</b> ${cliente.nome}</span>
+        <span><b>Corretor:</b> ${cliente.corretor || "-"}</span>
+        <span><b>Obra:</b> ${cliente.obra || "-"}</span>
+        <span><b>Reserva:</b> ${cliente.reserva || "-"}</span>
+      `;
+
+      document.getElementById("status_geral").value = processo.status_geral || "EM_ANALISE";
+      document.getElementById("status_cca").value = processo.status_cca || "EM_ANALISE";
+      document.getElementById("status_agehab").value = processo.status_agehab || "EM_ANALISE";
+      document.getElementById("sla_credito_dias").value = processo.sla_credito_dias ?? "";
+      document.getElementById("sla_corretor_dias").value = processo.sla_corretor_dias ?? "";
+      document.getElementById("observacao").value = processo.observacao || "";
+      document.getElementById("pendente_fiador").checked = !!processo.pendente_fiador;
+      document.getElementById("pendente_sinal").checked = !!processo.pendente_sinal;
+    }
+
+    function buildResumo() {
+      if (!documentos.length) {
+        resumo.innerHTML = '<p class="ok">Nenhum documento cadastrado.</p>';
+        return;
+      }
+
+      const pendentes = documentos.filter((d) => d.status_doc !== "ENVIADO");
+      const reprovados = documentos.filter((d) => d.status_credito === "REPROVADO");
+
+      if (!pendentes.length && !reprovados.length) {
+        resumo.innerHTML = '<p class="ok">Nenhuma pendência no checklist.</p>';
+        return;
+      }
+
+      const itens = [];
+      if (pendentes.length) {
+        itens.push("<p class=\"bad\"><b>Documentos pendentes:</b></p>");
+        itens.push("<ul>" + pendentes.map((d) => `<li>${d.categoria} - ${d.nome}</li>`).join("") + "</ul>");
+      }
+      if (reprovados.length) {
+        itens.push("<p class=\"bad\"><b>Documentos reprovados:</b></p>");
+        itens.push("<ul>" + reprovados.map((d) => `<li>${d.categoria} - ${d.nome}</li>`).join("") + "</ul>");
+      }
+
+      resumo.innerHTML = itens.join("");
+    }
+
+    async function loadProcesso() {
+      if (!processoId) {
+        subtitle.textContent = "Informe ?processo_id=... na URL.";
+        resumo.innerHTML = '<p class="bad">Processo não informado.</p>';
+        return;
+      }
+
+      toChecklist.href = `/app/checklist?processo_id=${processoId}`;
+
+      const data = await fetchJSON(`/app/api/processos/${processoId}/full`);
+      processo = data.processo;
+      cliente = data.cliente;
+      documentos = data.documentos || [];
+      setFormValues();
+      buildResumo();
+    }
+
+    async function saveProcesso() {
+      if (!processoId) return;
+      msg.textContent = "";
+
+      const payload = {
+        status_geral: document.getElementById("status_geral").value,
+        status_cca: document.getElementById("status_cca").value,
+        status_agehab: document.getElementById("status_agehab").value,
+        sla_credito_dias: toNullableInt(document.getElementById("sla_credito_dias").value),
+        sla_corretor_dias: toNullableInt(document.getElementById("sla_corretor_dias").value),
+        observacao: document.getElementById("observacao").value.trim() || null,
+        pendente_fiador: document.getElementById("pendente_fiador").checked,
+        pendente_sinal: document.getElementById("pendente_sinal").checked,
+      };
+
+      try {
+        const updated = await fetchJSON(`/app/api/processos/${processoId}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+        processo = updated;
+        setFormValues();
+        msg.textContent = "Status atualizado com sucesso.";
+      } catch (err) {
+        msg.textContent = err.message;
+      }
+    }
+
+    function toNullableInt(value) {
+      const txt = String(value || "").trim();
+      if (!txt) return null;
+      const num = Number(txt);
+      if (!Number.isFinite(num)) return null;
+      return Math.max(0, Math.trunc(num));
+    }
+
+    document.getElementById("saveBtn").addEventListener("click", saveProcesso);
+
+    loadProcesso().catch((err) => {
+      subtitle.textContent = err.message;
+      resumo.innerHTML = `<p class="bad">${err.message}</p>`;
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Checklist | Sistema de Crédito</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --card: #101a2e;
+      --line: #22314d;
+      --text: #e7eef9;
+      --muted: #9cb0d1;
+      --ok: #44d07c;
+      --warn: #ffbf47;
+      --bad: #ff6b6b;
+    }
+    * { box-sizing: border-box; font-family: "Segoe UI", Arial, sans-serif; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at 20% 0%, #1a2a45 0%, #0b1220 45%, #070c16 100%);
+      color: var(--text);
+      padding: 16px;
+    }
+    .wrap { max-width: 1200px; margin: 0 auto; }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .title h1 { margin: 0; font-size: 1.2rem; }
+    .title p { margin: 4px 0 0; color: var(--muted); font-size: .86rem; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #0f1a30;
+      color: var(--text);
+      padding: 9px 12px;
+      cursor: pointer;
+      font-size: .84rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .primary { background: linear-gradient(180deg, #2fc16a, #24a35a); color: #05140a; border: 0; }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .meta { color: var(--muted); font-size: .86rem; display: flex; gap: 12px; flex-wrap: wrap; }
+    .meta b { color: var(--text); }
+    table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+    th, td { border-bottom: 1px solid var(--line); padding: 9px 8px; text-align: left; }
+    th { color: var(--muted); font-size: .76rem; text-transform: uppercase; letter-spacing: .04em; }
+    tr:last-child td { border-bottom: 0; }
+    input, select {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #0a1426;
+      color: var(--text);
+      padding: 8px;
+      font-size: .86rem;
+      width: 100%;
+      outline: none;
+    }
+    .pill {
+      display: inline-block;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: .76rem;
+      font-weight: 700;
+    }
+    .ok { border-color: rgba(68,208,124,.5); color: var(--ok); }
+    .warn { border-color: rgba(255,191,71,.5); color: var(--warn); }
+    .bad { border-color: rgba(255,107,107,.5); color: var(--bad); }
+    .empty { color: var(--muted); text-align: center; padding: 16px; }
+    .inline {
+      display: grid;
+      grid-template-columns: 1.3fr 1.6fr 1fr 1fr auto;
+      gap: 8px;
+      align-items: end;
+    }
+    @media (max-width: 900px) { .inline { grid-template-columns: 1fr; } }
+    .msg { color: var(--muted); font-size: .84rem; min-height: 20px; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <div class="title">
+        <h1>Checklist de Documentos</h1>
+        <p id="subtitle">Carregando processo...</p>
+      </div>
+      <div class="actions">
+        <a class="btn" id="toCca" href="/app/cca">CCA</a>
+        <a class="btn" id="toAnalista" href="/app/analista">Analista</a>
+        <button class="btn primary" id="saveBtn" type="button">Salvar Checklist</button>
+      </div>
+    </header>
+
+    <section class="card">
+      <div class="meta" id="meta"></div>
+    </section>
+
+    <section class="card">
+      <div class="inline" style="margin-bottom:10px;">
+        <div>
+          <label>Categoria</label>
+          <input id="newCategoria" type="text" placeholder="Ex.: proponente" />
+        </div>
+        <div>
+          <label>Documento</label>
+          <input id="newNome" type="text" placeholder="Ex.: Certidão de nascimento" />
+        </div>
+        <div>
+          <label>Status doc</label>
+          <select id="newStatusDoc">
+            <option value="PENDENTE">PENDENTE</option>
+            <option value="ENVIADO">ENVIADO</option>
+          </select>
+        </div>
+        <div>
+          <label>Status crédito</label>
+          <select id="newStatusCredito">
+            <option value="ANALISE">ANALISE</option>
+            <option value="PENDENCIADO">PENDENCIADO</option>
+            <option value="APROVADO">APROVADO</option>
+            <option value="REPROVADO">REPROVADO</option>
+          </select>
+        </div>
+        <button class="btn" id="addRowBtn" type="button">Adicionar</button>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Categoria</th>
+            <th>Documento</th>
+            <th>Status Documento</th>
+            <th>Status Crédito</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="4" class="empty">Carregando...</td></tr>
+        </tbody>
+      </table>
+      <div class="msg" id="msg"></div>
+    </section>
+  </main>
+
+  <script>
+    const url = new URL(window.location.href);
+    const processoId = url.searchParams.get("processo_id");
+
+    const subtitle = document.getElementById("subtitle");
+    const tbody = document.getElementById("tbody");
+    const meta = document.getElementById("meta");
+    const msg = document.getElementById("msg");
+    const toAnalista = document.getElementById("toAnalista");
+
+    let processo = null;
+    let cliente = null;
+    let documentos = [];
+
+    async function fetchJSON(url, options = {}) {
+      const res = await fetch(url, {
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options,
+      });
+
+      if (res.status === 401) {
+        window.location.href = "/login";
+        throw new Error("Nao autenticado");
+      }
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail || "Falha na requisição");
+      }
+      return data;
+    }
+
+    function categoriaPill(cat) {
+      const value = (cat || "").toLowerCase();
+      if (value.includes("caixa")) return "warn";
+      if (value.includes("agehab")) return "bad";
+      return "ok";
+    }
+
+    function render() {
+      if (!documentos.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty">Sem documentos.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = documentos.map((d, idx) => `
+        <tr>
+          <td>
+            <span class="pill ${categoriaPill(d.categoria)}">${d.categoria}</span>
+          </td>
+          <td>${d.nome}</td>
+          <td>
+            <select data-idx="${idx}" data-field="status_doc">
+              <option value="PENDENTE" ${d.status_doc === "PENDENTE" ? "selected" : ""}>PENDENTE</option>
+              <option value="ENVIADO" ${d.status_doc === "ENVIADO" ? "selected" : ""}>ENVIADO</option>
+            </select>
+          </td>
+          <td>
+            <select data-idx="${idx}" data-field="status_credito">
+              <option value="ANALISE" ${d.status_credito === "ANALISE" ? "selected" : ""}>ANALISE</option>
+              <option value="PENDENCIADO" ${d.status_credito === "PENDENCIADO" ? "selected" : ""}>PENDENCIADO</option>
+              <option value="APROVADO" ${d.status_credito === "APROVADO" ? "selected" : ""}>APROVADO</option>
+              <option value="REPROVADO" ${d.status_credito === "REPROVADO" ? "selected" : ""}>REPROVADO</option>
+            </select>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    function updateMeta() {
+      if (!processo || !cliente) return;
+
+      const pendentes = documentos.filter((d) => d.status_doc !== "ENVIADO").length;
+      const reprovados = documentos.filter((d) => d.status_credito === "REPROVADO").length;
+
+      subtitle.textContent = `Processo ${processo.id} - ${cliente.nome}`;
+      meta.innerHTML = `
+        <span><b>Cliente:</b> ${cliente.nome}</span>
+        <span><b>Corretor:</b> ${cliente.corretor || "-"}</span>
+        <span><b>Obra:</b> ${cliente.obra || "-"}</span>
+        <span><b>Pendentes:</b> ${pendentes}</span>
+        <span><b>Reprovados:</b> ${reprovados}</span>
+      `;
+    }
+
+    async function loadProcesso() {
+      if (!processoId) {
+        subtitle.textContent = "Informe ?processo_id=... na URL.";
+        tbody.innerHTML = '<tr><td colspan="4" class="empty">Processo não informado.</td></tr>';
+        return;
+      }
+
+      toAnalista.href = `/app/analista?processo_id=${processoId}`;
+
+      const data = await fetchJSON(`/app/api/processos/${processoId}/full`);
+      processo = data.processo;
+      cliente = data.cliente;
+      documentos = data.documentos || [];
+      render();
+      updateMeta();
+    }
+
+    function addDocumentoRow() {
+      const categoria = document.getElementById("newCategoria").value.trim();
+      const nome = document.getElementById("newNome").value.trim();
+      const statusDoc = document.getElementById("newStatusDoc").value;
+      const statusCredito = document.getElementById("newStatusCredito").value;
+
+      msg.textContent = "";
+
+      if (!categoria || !nome) {
+        msg.textContent = "Preencha categoria e documento.";
+        return;
+      }
+
+      documentos.push({
+        categoria,
+        nome,
+        status_doc: statusDoc,
+        status_credito: statusCredito,
+      });
+
+      document.getElementById("newCategoria").value = "";
+      document.getElementById("newNome").value = "";
+      render();
+      updateMeta();
+    }
+
+    async function saveChecklist() {
+      msg.textContent = "";
+      if (!processoId) return;
+
+      try {
+        await fetchJSON(`/app/api/processos/${processoId}/documentos`, {
+          method: "PUT",
+          body: JSON.stringify({ documentos }),
+        });
+        msg.textContent = "Checklist salvo com sucesso.";
+        await loadProcesso();
+      } catch (err) {
+        msg.textContent = err.message;
+      }
+    }
+
+    tbody.addEventListener("change", (event) => {
+      const el = event.target;
+      if (!(el instanceof HTMLSelectElement)) return;
+      const idx = Number(el.dataset.idx);
+      const field = el.dataset.field;
+      if (!Number.isInteger(idx) || !field || !documentos[idx]) return;
+      documentos[idx][field] = el.value;
+      updateMeta();
+    });
+
+    document.getElementById("addRowBtn").addEventListener("click", addDocumentoRow);
+    document.getElementById("saveBtn").addEventListener("click", saveChecklist);
+
+    loadProcesso().catch((err) => {
+      subtitle.textContent = err.message;
+      tbody.innerHTML = `<tr><td colspan="4" class="empty">${err.message}</td></tr>`;
+    });
+  </script>
+</body>
+</html>
