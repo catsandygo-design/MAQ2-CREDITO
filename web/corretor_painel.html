@@ -201,7 +201,7 @@
     border: 2px solid rgba(2,6,23,.35);
   }
 
-  table{width:100%;border-collapse:collapse}
+  table{width:100%;border-collapse:collapse;table-layout:fixed}
   thead th{
     text-align:left;
     padding:10px 12px;
@@ -348,15 +348,24 @@
       </div>
       <div class="scroll">
         <table>
+          <colgroup>
+            <col style="width:32%">
+            <col style="width:14%">
+            <col style="width:10%">
+            <col style="width:10%">
+            <col style="width:10%">
+            <col style="width:12%">
+            <col style="width:12%">
+          </colgroup>
           <thead>
             <tr>
-              <th style="width:32%">Cliente</th>
-              <th style="width:14%">Corretor</th>
-              <th style="width:10%">Geral</th>
-              <th style="width:10%">Caixa</th>
-              <th style="width:10%">Agehab</th>
-              <th style="width:12%">SLA Corretor</th>
-              <th style="width:12%">SLA Credito</th>
+              <th>Cliente</th>
+              <th>Corretor</th>
+              <th>Geral</th>
+              <th>Caixa</th>
+              <th>Agehab</th>
+              <th>SLA Corretor</th>
+              <th>SLA Credito</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>

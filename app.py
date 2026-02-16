@@ -1774,9 +1774,13 @@ def app_list_processos(
 
     query = db.query(Processo, Cliente).join(Cliente, Processo.cliente_id == Cliente.id)
     if role == ROLE_CORRETOR:
-        query = query.filter(func.lower(Cliente.corretor) == username)
+        if not username:
+            return []
+        query = query.filter(func.lower(func.trim(func.coalesce(Cliente.corretor, ""))) == username)
     elif role == ROLE_CCA:
-        query = query.filter(func.lower(Processo.cca_responsavel) == username)
+        if not username:
+            return []
+        query = query.filter(func.lower(func.trim(func.coalesce(Processo.cca_responsavel, ""))) == username)
 
     rows = query.order_by(Processo.created_at.desc()).all()
     now = _utcnow()
@@ -1827,7 +1831,7 @@ def app_create_intake(
 
     cliente = Cliente(
         nome=payload.nome.strip(),
-        corretor=username if role == ROLE_CORRETOR else (payload.corretor.strip() if payload.corretor else None),
+        corretor=username if role == ROLE_CORRETOR else (_normalize_username(payload.corretor) if payload.corretor else None),
         obra=obra_nome,
         reserva=payload.reserva.strip() if payload.reserva else None,
     )

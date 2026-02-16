@@ -181,7 +181,7 @@
     min-height:0;
   }
 
-  table{width:100%;border-collapse:collapse}
+  table{width:100%;border-collapse:collapse;table-layout:fixed}
 
   thead th{
     text-align:left;
@@ -469,23 +469,30 @@
     </div>
 
     <div class="tableWrap">
-      <table>
-        <thead>
-          <tr>
-            <th style="width:34%">Cliente</th>
-            <th style="width:12%">Corretor</th>
-            <th style="width:10%">CCA</th>
-            <th style="width:10%">Geral</th>
-            <th style="width:10%">Caixa</th>
-            <th style="width:10%">Agehab</th>
-            <th style="width:7%">SLA Corretor</th>
-            <th style="width:7%">SLA Credito</th>
-          </tr>
-        </thead>
-      </table>
-
       <div class="scroll">
         <table>
+          <colgroup>
+            <col style="width:34%">
+            <col style="width:12%">
+            <col style="width:10%">
+            <col style="width:10%">
+            <col style="width:10%">
+            <col style="width:10%">
+            <col style="width:7%">
+            <col style="width:7%">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Corretor</th>
+              <th>CCA</th>
+              <th>Geral</th>
+              <th>Caixa</th>
+              <th>Agehab</th>
+              <th>SLA Corretor</th>
+              <th>SLA Credito</th>
+            </tr>
+          </thead>
           <tbody id="tbody"></tbody>
         </table>
       </div>
