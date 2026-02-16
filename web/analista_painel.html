@@ -513,7 +513,9 @@
   const API_BASE = "/app/api";
   const SLA_WARN = 24;
   const SLA_BAD = 48;
-  const REFRESH_SECONDS = 30;
+  const REFRESH_SECONDS = 60;
+  const PAGE_SIZE = 120;
+  const MAX_PAGES = 20;
 
   const UPDATE_PAGE_URL = (row) => `/app/analise?processo_id=${encodeURIComponent(row.processo_id)}`;
 
@@ -551,6 +553,7 @@
   let loading = false;
   let history = [];
   let ccasLoaded = false;
+  let lastRefreshAt = 0;
 
   const $ = (id) => document.getElementById(id);
   const norm = (s) => String(s || "").trim().toLowerCase();
@@ -642,8 +645,19 @@
     };
   }
 
+  async function fetchProcessosPaged() {
+    const rows = [];
+    for (let page = 0, offset = 0; page < MAX_PAGES; page += 1, offset += PAGE_SIZE) {
+      const chunk = await api(`/processos?limit=${PAGE_SIZE}&offset=${offset}`);
+      if (!Array.isArray(chunk) || !chunk.length) break;
+      rows.push(...chunk);
+      if (chunk.length < PAGE_SIZE) break;
+    }
+    return rows;
+  }
+
   async function loadData(){
-    const processos = await api("/processos");
+    const processos = await fetchProcessosPaged();
     DATA = processos.map(fromBackend);
   }
 
@@ -900,8 +914,9 @@
     drawSparkline();
   }
 
-  async function refreshDataAndRender(){
+  async function refreshDataAndRender(force = false){
     if (loading) return;
+    if (!force && document.hidden) return;
     loading = true;
     try {
       if (!ccasLoaded) {
@@ -909,6 +924,7 @@
       }
       await loadData();
       applyFilters();
+      lastRefreshAt = Date.now();
     } catch (error) {
       showError(`Erro ao carregar painel: ${error.message}`);
     } finally {
@@ -918,6 +934,10 @@
 
   let countdown = REFRESH_SECONDS;
   function tick(){
+    if (document.hidden) {
+      $("refreshLabel").textContent = "pausado";
+      return;
+    }
     countdown--;
     if(countdown <= 0){
       countdown = REFRESH_SECONDS;
@@ -944,7 +964,16 @@
     $(id).addEventListener("change", applyFilters);
   });
 
-  refreshDataAndRender().catch(()=>null);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
+    $("refreshLabel").textContent = `${countdown}s`;
+    if (Date.now() - lastRefreshAt >= REFRESH_SECONDS * 1000) {
+      countdown = REFRESH_SECONDS;
+      refreshDataAndRender(true).catch(() => null);
+    }
+  });
+
+  refreshDataAndRender(true).catch(()=>null);
   setInterval(tick, 1000);
 </script>
 </body>

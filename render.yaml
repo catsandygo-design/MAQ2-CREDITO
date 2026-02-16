@@ -32,5 +32,9 @@ services:
         value: "43200"
       - key: SESSION_IDLE_TIMEOUT_SECONDS
         value: "600"
+      - key: SESSION_DB_SYNC_INTERVAL_SECONDS
+        value: "60"
+      - key: PROCESS_LIST_CACHE_TTL_SECONDS
+        value: "8"
       - key: SESSION_COOKIE_SECURE
         value: "true"

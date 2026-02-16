@@ -383,7 +383,9 @@
     const API_BASE = "/app/api";
     const SLA_WARN = 24;
     const SLA_BAD = 48;
-    const REFRESH_SECONDS = 30;
+    const REFRESH_SECONDS = 60;
+    const PAGE_SIZE = 120;
+    const MAX_PAGES = 20;
 
     const LABELS = {
       geral: {
@@ -419,6 +421,7 @@
     let loading = false;
     let countdown = REFRESH_SECONDS;
     let currentUsername = "";
+    let lastRefreshAt = 0;
 
     const $ = (id) => document.getElementById(id);
     const norm = (s) => String(s || "").trim().toLowerCase();
@@ -519,8 +522,19 @@
       }
     }
 
+    async function fetchProcessosPaged() {
+      const rows = [];
+      for (let page = 0, offset = 0; page < MAX_PAGES; page += 1, offset += PAGE_SIZE) {
+        const chunk = await api(`/processos?limit=${PAGE_SIZE}&offset=${offset}`);
+        if (!Array.isArray(chunk) || !chunk.length) break;
+        rows.push(...chunk);
+        if (chunk.length < PAGE_SIZE) break;
+      }
+      return rows;
+    }
+
     async function loadData(){
-      const rows = await api("/processos");
+      const rows = await fetchProcessosPaged();
       DATA = rows
         .map(fromBackend)
         .filter((row) => !currentUsername || norm(row.corretor) === currentUsername);
@@ -610,8 +624,9 @@
       history.replaceState({}, "", base);
     }
 
-    async function refreshDataAndRender(){
+    async function refreshDataAndRender(force = false){
       if (loading) return;
+      if (!force && document.hidden) return;
       loading = true;
       try{
         if (!currentUsername){
@@ -619,6 +634,7 @@
         }
         await loadData();
         applyFilters();
+        lastRefreshAt = Date.now();
       }catch(error){
         $("tbody").innerHTML = `<tr><td colspan="7" class="muted" style="padding:14px 12px;color:#fca5a5;">Erro ao carregar: ${esc(error.message)}</td></tr>`;
       }finally{
@@ -627,6 +643,10 @@
     }
 
     function tick(){
+      if (document.hidden){
+        $("refreshLabel").textContent = "pausado";
+        return;
+      }
       countdown -= 1;
       if (countdown <= 0){
         countdown = REFRESH_SECONDS;
@@ -648,9 +668,17 @@
       });
     });
     ["stG", "stC"].forEach((id) => $(id).addEventListener("change", applyFilters));
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) return;
+      $("refreshLabel").textContent = `${countdown}s`;
+      if (Date.now() - lastRefreshAt >= REFRESH_SECONDS * 1000){
+        countdown = REFRESH_SECONDS;
+        refreshDataAndRender(true).catch(() => null);
+      }
+    });
 
     showSavedIfNeeded();
-    refreshDataAndRender().catch(() => null);
+    refreshDataAndRender(true).catch(() => null);
     setInterval(tick, 1000);
   </script>
 </body>

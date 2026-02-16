@@ -723,6 +723,19 @@
       return data;
     }
 
+    async function fetchProcessosPaged() {
+      const pageSize = 120;
+      const maxPages = 20;
+      const rows = [];
+      for (let page = 0, offset = 0; page < maxPages; page += 1, offset += pageSize) {
+        const chunk = await api(`/processos?limit=${pageSize}&offset=${offset}`);
+        if (!Array.isArray(chunk) || !chunk.length) break;
+        rows.push(...chunk);
+        if (chunk.length < pageSize) break;
+      }
+      return rows;
+    }
+
     async function loadSessionProfile() {
       try {
         const response = await fetch("/auth/me", { credentials: "same-origin" });
@@ -981,7 +994,7 @@
     async function carregarDados() {
       try {
         await loadSessionProfile();
-        const processos = await api("/processos");
+        const processos = await fetchProcessosPaged();
         dados = processos.map(fromBackend);
         refreshObraOptions(dados);
         aplicarFiltros();

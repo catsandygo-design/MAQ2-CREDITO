@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlparse
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, create_engine, text
@@ -26,6 +26,7 @@ WEB_DIR = Path(__file__).resolve().parent / "web"
 SESSION_COOKIE_NAME = "sc_session"
 SESSION_TTL_SECONDS = int(os.getenv("SESSION_TTL_SECONDS", "43200"))
 SESSION_IDLE_TIMEOUT_SECONDS = int(os.getenv("SESSION_IDLE_TIMEOUT_SECONDS", "1800"))
+SESSION_DB_SYNC_INTERVAL_SECONDS = int(os.getenv("SESSION_DB_SYNC_INTERVAL_SECONDS", "60"))
 SESSION_IDLE_PASSIVE_PATHS = {
     "/app/api/processos",
 }
@@ -48,6 +49,10 @@ APP_ADMIN_PASSWORD = os.getenv("APP_ADMIN_PASSWORD", "12345")
 
 PASSWORD_HASH_ITERATIONS = int(os.getenv("PASSWORD_HASH_ITERATIONS", "200000"))
 ACTIVE_SESSIONS: dict[str, dict[str, Any]] = {}
+PROCESS_LIST_CACHE_TTL_SECONDS = int(os.getenv("PROCESS_LIST_CACHE_TTL_SECONDS", "8"))
+RUNTIME_SCHEMA_REVISION = "2026-02-16-performance-v1"
+PROCESS_LIST_CACHE: dict[str, dict[str, Any]] = {}
+SEED_USERS_READY = False
 
 
 def _normalize_username(value: Optional[str]) -> str:
@@ -225,12 +230,21 @@ def _new_session(user_id: uuid.UUID, username: str, role: str, must_change_passw
         "must_change_password": bool(must_change_password),
         "created_at": now,
         "last_seen_at": now,
+        "db_checked_at": now,
         "expires_at": now + timedelta(seconds=SESSION_TTL_SECONDS),
     }
     return token
 
 
 def _sync_session_from_db(token: str, session: dict[str, Any]) -> Optional[dict[str, Any]]:
+    now = _utcnow()
+    if SESSION_DB_SYNC_INTERVAL_SECONDS > 0:
+        checked_at = session.get("db_checked_at")
+        if isinstance(checked_at, datetime):
+            checked_at_utc = checked_at if checked_at.tzinfo else checked_at.replace(tzinfo=timezone.utc)
+            if checked_at_utc + timedelta(seconds=SESSION_DB_SYNC_INTERVAL_SECONDS) > now:
+                return session
+
     user_id_raw = str(session.get("user_id", "")).strip()
     if not user_id_raw or SessionLocal is None:
         return session
@@ -255,6 +269,7 @@ def _sync_session_from_db(token: str, session: dict[str, Any]) -> Optional[dict[
         session["username"] = user.username
         session["role"] = _normalize_role(user.role)
         session["must_change_password"] = bool(user.must_change_password)
+        session["db_checked_at"] = now
         return session
     except Exception:
         logger.exception("Falha ao validar usuario da sessao no banco.")
@@ -268,6 +283,45 @@ def _drop_sessions_for_user(user_id: uuid.UUID) -> None:
     stale_tokens = [token for token, data in ACTIVE_SESSIONS.items() if str(data.get("user_id", "")) == user_id_str]
     for token in stale_tokens:
         ACTIVE_SESSIONS.pop(token, None)
+
+
+def _process_list_cache_key(
+    role: str,
+    username: str,
+    limit: Optional[int],
+    offset: int,
+) -> str:
+    return f"{role}|{username}|{limit if limit is not None else 'all'}|{offset}"
+
+
+def _get_cached_process_list(cache_key: str) -> Optional[list["ProcessoOverviewOut"]]:
+    if PROCESS_LIST_CACHE_TTL_SECONDS <= 0:
+        return None
+    cached = PROCESS_LIST_CACHE.get(cache_key)
+    if not cached:
+        return None
+    expires_at = cached.get("expires_at")
+    if not isinstance(expires_at, datetime) or expires_at <= _utcnow():
+        PROCESS_LIST_CACHE.pop(cache_key, None)
+        return None
+    data = cached.get("data")
+    if isinstance(data, list):
+        return data
+    return None
+
+
+def _set_cached_process_list(cache_key: str, data: list["ProcessoOverviewOut"]) -> None:
+    if PROCESS_LIST_CACHE_TTL_SECONDS <= 0:
+        return
+    PROCESS_LIST_CACHE[cache_key] = {
+        "data": data,
+        "expires_at": _utcnow() + timedelta(seconds=PROCESS_LIST_CACHE_TTL_SECONDS),
+    }
+
+
+def _invalidate_process_list_cache() -> None:
+    if PROCESS_LIST_CACHE:
+        PROCESS_LIST_CACHE.clear()
 
 
 def _should_touch_session(request: Request) -> bool:
@@ -975,7 +1029,11 @@ def _get_user_by_username(db: Session, username: str) -> Optional[AppUser]:
     return db.query(AppUser).filter(func.lower(AppUser.username) == username_key).first()
 
 
-def _ensure_seed_users(db: Session) -> None:
+def _ensure_seed_users(db: Session, force: bool = False) -> None:
+    global SEED_USERS_READY
+    if SEED_USERS_READY and not force:
+        return
+
     seeds = []
     for username, account in APP_USERS.items():
         seeds.append((username, account["password"], _normalize_role(account["role"])))
@@ -1004,6 +1062,7 @@ def _ensure_seed_users(db: Session) -> None:
 
     if created or changed:
         db.commit()
+    SEED_USERS_READY = True
 
 
 def _normalize_empreendimento_nome(value: Optional[str]) -> str:
@@ -1030,6 +1089,21 @@ def _ensure_runtime_schema(db: Session) -> None:
     if not processos_table:
         return
 
+    clientes_table = db.execute(text("SELECT to_regclass('public.clientes')")).scalar()
+    documentos_table = db.execute(text("SELECT to_regclass('public.documentos')")).scalar()
+
+    db.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS app_runtime_meta (
+                meta_key TEXT PRIMARY KEY,
+                meta_value TEXT NOT NULL,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+    )
+
     statements = [
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_credito VARCHAR(30) DEFAULT 'EM_ANALISE'",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_sinal VARCHAR(30) DEFAULT 'NAO_TEM'",
@@ -1044,6 +1118,52 @@ def _ensure_runtime_schema(db: Session) -> None:
     ]
     for stmt in statements:
         db.execute(text(stmt))
+
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_created_at ON processos (created_at DESC)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_cliente_id ON processos (cliente_id)"))
+    db.execute(
+        text(
+            """
+            CREATE INDEX IF NOT EXISTS ix_processos_cca_responsavel_norm
+            ON processos ((LOWER(TRIM(COALESCE(cca_responsavel, '')))))
+            """
+        )
+    )
+
+    if clientes_table:
+        db.execute(
+            text(
+                """
+                CREATE INDEX IF NOT EXISTS ix_clientes_corretor_norm
+                ON clientes ((LOWER(TRIM(COALESCE(corretor, '')))))
+                """
+            )
+        )
+
+    if documentos_table:
+        db.execute(
+            text(
+                """
+                CREATE INDEX IF NOT EXISTS ix_documentos_processo_categoria_nome
+                ON documentos (processo_id, categoria, nome)
+                """
+            )
+        )
+        db.execute(
+            text(
+                """
+                CREATE INDEX IF NOT EXISTS ix_documentos_processo_status_doc
+                ON documentos (processo_id, status_doc)
+                """
+            )
+        )
+
+    current_revision = db.execute(
+        text("SELECT meta_value FROM app_runtime_meta WHERE meta_key = 'runtime_schema_revision'")
+    ).scalar()
+    if current_revision == RUNTIME_SCHEMA_REVISION:
+        db.commit()
+        return
 
     db.execute(
         text(
@@ -1176,6 +1296,18 @@ def _ensure_runtime_schema(db: Session) -> None:
             SET sla_cca_dias = COALESCE(sla_cca_dias, FLOOR(COALESCE(sla_cca_seconds, 0) / 86400.0)::INTEGER)
             """
         )
+    )
+    db.execute(
+        text(
+            """
+            INSERT INTO app_runtime_meta (meta_key, meta_value, updated_at)
+            VALUES ('runtime_schema_revision', :revision, NOW())
+            ON CONFLICT (meta_key) DO UPDATE
+            SET meta_value = EXCLUDED.meta_value,
+                updated_at = NOW()
+            """
+        ),
+        {"revision": RUNTIME_SCHEMA_REVISION},
     )
 
     db.commit()
@@ -1486,6 +1618,7 @@ def auth_change_password(
         ACTIVE_SESSIONS[token]["must_change_password"] = False
         ACTIVE_SESSIONS[token]["role"] = _normalize_role(user.role)
         ACTIVE_SESSIONS[token]["username"] = user.username
+        ACTIVE_SESSIONS[token]["db_checked_at"] = _utcnow()
 
     return {
         "ok": True,
@@ -1720,6 +1853,7 @@ def create_processo(payload: ProcessoCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(processo)
     _ensure_default_documentos(db, processo.id)
+    _invalidate_process_list_cache()
     return processo
 
 
@@ -1742,6 +1876,7 @@ def patch_processo(processo_id: uuid.UUID, payload: ProcessoUpdate, db: Session 
 
     db.commit()
     db.refresh(processo)
+    _invalidate_process_list_cache()
     return processo
 
 
@@ -1755,6 +1890,7 @@ def create_documento(payload: DocumentoCreate, db: Session = Depends(get_db)):
     db.add(documento)
     db.commit()
     db.refresh(documento)
+    _invalidate_process_list_cache()
     return documento
 
 
@@ -1774,6 +1910,7 @@ def patch_documento(documento_id: uuid.UUID, payload: DocumentoUpdate, db: Sessi
 
     db.commit()
     db.refresh(documento)
+    _invalidate_process_list_cache()
     return documento
 
 
@@ -1781,9 +1918,16 @@ def patch_documento(documento_id: uuid.UUID, payload: DocumentoUpdate, db: Sessi
 def app_list_processos(
     session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
     db: Session = Depends(get_db),
+    limit: Optional[int] = Query(default=120, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
 ):
     role = _normalize_role(str(session.get("role", "")))
     username = _normalize_username(str(session.get("username", "")))
+    cache_key = _process_list_cache_key(role, username, limit, offset)
+
+    cached = _get_cached_process_list(cache_key)
+    if cached is not None:
+        return cached
 
     query = db.query(Processo, Cliente).join(Cliente, Processo.cliente_id == Cliente.id)
     if role == ROLE_CORRETOR:
@@ -1795,37 +1939,47 @@ def app_list_processos(
             return []
         query = query.filter(func.lower(func.trim(func.coalesce(Processo.cca_responsavel, ""))) == username)
 
-    rows = query.order_by(Processo.created_at.desc()).all()
-    now = _utcnow()
+    query = query.order_by(Processo.created_at.desc()).offset(offset)
+    if limit is not None:
+        query = query.limit(limit)
 
-    return [
-        ProcessoOverviewOut(
-            processo_id=processo.id,
-            cliente_id=cliente.id,
-            cliente_nome=cliente.nome,
-            corretor=cliente.corretor,
-            obra=cliente.obra,
-            reserva=cliente.reserva,
-            status_credito=processo.status_credito,
-            status_geral=processo.status_geral,
-            status_cca=processo.status_cca,
-            status_agehab=processo.status_agehab,
-            status_sinal=processo.status_sinal,
-            status_fiador=processo.status_fiador,
-            cca_responsavel=processo.cca_responsavel,
-            pendente_fiador=processo.pendente_fiador,
-            pendente_sinal=processo.pendente_sinal,
-            sla_credito_dias=_compute_sla_hours(processo, SLA_OWNER_ANALISTA, now) // 24,
-            sla_corretor_dias=_compute_sla_hours(processo, SLA_OWNER_CORRETOR, now) // 24,
-            sla_cca_dias=_compute_sla_hours(processo, SLA_OWNER_CCA, now) // 24,
-            sla_analista_horas=_compute_sla_hours(processo, SLA_OWNER_ANALISTA, now),
-            sla_corretor_horas=_compute_sla_hours(processo, SLA_OWNER_CORRETOR, now),
-            sla_cca_horas=_compute_sla_hours(processo, SLA_OWNER_CCA, now),
-            sla_owner=_normalize_sla_owner(processo.sla_owner),
-            created_at=processo.created_at,
+    rows = query.all()
+    now = _utcnow()
+    output: list[ProcessoOverviewOut] = []
+    for processo, cliente in rows:
+        sla_analista_horas = _compute_sla_hours(processo, SLA_OWNER_ANALISTA, now)
+        sla_corretor_horas = _compute_sla_hours(processo, SLA_OWNER_CORRETOR, now)
+        sla_cca_horas = _compute_sla_hours(processo, SLA_OWNER_CCA, now)
+        output.append(
+            ProcessoOverviewOut(
+                processo_id=processo.id,
+                cliente_id=cliente.id,
+                cliente_nome=cliente.nome,
+                corretor=cliente.corretor,
+                obra=cliente.obra,
+                reserva=cliente.reserva,
+                status_credito=processo.status_credito,
+                status_geral=processo.status_geral,
+                status_cca=processo.status_cca,
+                status_agehab=processo.status_agehab,
+                status_sinal=processo.status_sinal,
+                status_fiador=processo.status_fiador,
+                cca_responsavel=processo.cca_responsavel,
+                pendente_fiador=processo.pendente_fiador,
+                pendente_sinal=processo.pendente_sinal,
+                sla_credito_dias=sla_analista_horas // 24,
+                sla_corretor_dias=sla_corretor_horas // 24,
+                sla_cca_dias=sla_cca_horas // 24,
+                sla_analista_horas=sla_analista_horas,
+                sla_corretor_horas=sla_corretor_horas,
+                sla_cca_horas=sla_cca_horas,
+                sla_owner=_normalize_sla_owner(processo.sla_owner),
+                created_at=processo.created_at,
+            )
         )
-        for processo, cliente in rows
-    ]
+
+    _set_cached_process_list(cache_key, output)
+    return output
 
 
 @app.post("/app/api/processos/intake")
@@ -1858,6 +2012,7 @@ def app_create_intake(
     db.refresh(processo)
 
     _ensure_default_documentos(db, processo.id)
+    _invalidate_process_list_cache()
     return {"ok": True, "cliente_id": str(cliente.id), "processo_id": str(processo.id)}
 
 
@@ -1966,6 +2121,7 @@ def app_patch_processo(
 
     db.commit()
     db.refresh(processo)
+    _invalidate_process_list_cache()
 
     now = _utcnow()
     processo_out = ProcessoOut.model_validate(processo)
@@ -2018,18 +2174,17 @@ def app_bulk_upsert_documentos(
         raise HTTPException(status_code=422, detail="Nenhum documento valido para salvar")
 
     can_update_credit = role == ROLE_ANALISTA
+    existing_docs = (
+        db.query(Documento)
+        .filter(Documento.processo_id == processo_id)
+        .all()
+    )
+    docs_by_key: dict[tuple[str, str], Documento] = {
+        (doc.categoria, doc.nome): doc for doc in existing_docs
+    }
 
-    for categoria, nome in dedup_map:
-        item = dedup_map[(categoria, nome)]
-        documento = (
-            db.query(Documento)
-            .filter(
-                Documento.processo_id == processo_id,
-                Documento.categoria == categoria,
-                Documento.nome == nome,
-            )
-            .first()
-        )
+    for (categoria, nome), item in dedup_map.items():
+        documento = docs_by_key.get((categoria, nome))
 
         status_doc = _doc_status(item.status_doc) if item.status_doc is not None else None
         status_credito = (
@@ -2045,15 +2200,15 @@ def app_bulk_upsert_documentos(
             if status_credito is not None:
                 documento.status_credito = status_credito
         else:
-            db.add(
-                Documento(
-                    processo_id=processo_id,
-                    categoria=categoria,
-                    nome=nome,
-                    status_doc=status_doc or "PENDENTE",
-                    status_credito=status_credito or "ANALISE",
-                )
+            novo_documento = Documento(
+                processo_id=processo_id,
+                categoria=categoria,
+                nome=nome,
+                status_doc=status_doc or "PENDENTE",
+                status_credito=status_credito or "ANALISE",
             )
+            docs_by_key[(categoria, nome)] = novo_documento
+            db.add(novo_documento)
 
     db.flush()
 
@@ -2076,6 +2231,7 @@ def app_bulk_upsert_documentos(
     _apply_sla_rules(processo, trigger=sla_trigger, has_enviado_docs=has_enviado_docs)
 
     db.commit()
+    _invalidate_process_list_cache()
     documentos = (
         db.query(Documento)
         .filter(Documento.processo_id == processo_id)
