@@ -1,6 +1,9 @@
 import os
 import uuid
 import logging
+import hashlib
+import hmac
+import secrets
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -27,6 +30,9 @@ SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() in {
 ROLE_CORRETOR = "corretor"
 ROLE_CCA = "cca"
 ROLE_ANALISTA = "analista"
+ROLE_ADMIN = "admin"
+
+VALID_ROLES = {ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN}
 
 APP_CCA_USER = os.getenv("APP_CCA_USER", os.getenv("APP_LOGIN_USER", "cca"))
 APP_CCA_PASSWORD = os.getenv("APP_CCA_PASSWORD", os.getenv("APP_LOGIN_PASSWORD", "cca123"))
@@ -34,7 +40,15 @@ APP_ANALISTA_USER = os.getenv("APP_ANALISTA_USER", "analista")
 APP_ANALISTA_PASSWORD = os.getenv("APP_ANALISTA_PASSWORD", "analista123")
 APP_CORRETOR_USER = os.getenv("APP_CORRETOR_USER", "corretor")
 APP_CORRETOR_PASSWORD = os.getenv("APP_CORRETOR_PASSWORD", "corretor123")
+APP_ADMIN_USER = os.getenv("APP_ADMIN_USER", "douglasadm")
+APP_ADMIN_PASSWORD = os.getenv("APP_ADMIN_PASSWORD", "12345")
+
+PASSWORD_HASH_ITERATIONS = int(os.getenv("PASSWORD_HASH_ITERATIONS", "200000"))
 ACTIVE_SESSIONS: dict[str, dict[str, Any]] = {}
+
+
+def _normalize_username(value: Optional[str]) -> str:
+    return (value or "").strip().lower()
 
 
 def _build_app_users() -> dict[str, dict[str, str]]:
@@ -43,10 +57,15 @@ def _build_app_users() -> dict[str, dict[str, str]]:
         (APP_CORRETOR_USER, APP_CORRETOR_PASSWORD, ROLE_CORRETOR),
         (APP_CCA_USER, APP_CCA_PASSWORD, ROLE_CCA),
         (APP_ANALISTA_USER, APP_ANALISTA_PASSWORD, ROLE_ANALISTA),
+        (APP_ADMIN_USER, APP_ADMIN_PASSWORD, ROLE_ADMIN),
+        ("Douglas", "1234", ROLE_ANALISTA),
+        ("Fabio", "1234", ROLE_CORRETOR),
+        ("Endy", "1234", ROLE_CCA),
+        ("Douglasadm", "12345", ROLE_ADMIN),
     ]
 
     for username_raw, password, role in configs:
-        username = (username_raw or "").strip()
+        username = _normalize_username(username_raw)
         if not username or not password:
             continue
         if username in users:
@@ -147,8 +166,45 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _new_salt() -> str:
+    return secrets.token_hex(16)
+
+
+def _hash_password(password: str, salt: str) -> str:
+    raw = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        bytes.fromhex(salt),
+        PASSWORD_HASH_ITERATIONS,
+    )
+    return raw.hex()
+
+
+def _verify_password(password: str, password_hash: str, password_salt: str) -> bool:
+    try:
+        computed = _hash_password(password, password_salt)
+    except Exception:
+        return False
+    return hmac.compare_digest(computed, password_hash)
+
+
+def _normalize_role(value: Optional[str]) -> str:
+    role = (value or "").strip().lower()
+    return role if role in VALID_ROLES else ROLE_CORRETOR
+
+
+def _home_for_session(session: Optional[dict[str, Any]]) -> str:
+    if not session:
+        return "/login"
+    if bool(session.get("must_change_password")):
+        return "/app/trocar-senha"
+    return _home_for_role(str(session.get("role", "")))
+
+
 def _home_for_role(role: Optional[str]) -> str:
     role_key = (role or "").strip().lower()
+    if role_key == ROLE_ADMIN:
+        return "/app/admin"
     if role_key == ROLE_ANALISTA:
         return "/app/analista"
     if role_key == ROLE_CCA:
@@ -156,17 +212,59 @@ def _home_for_role(role: Optional[str]) -> str:
     return "/app/corretor"
 
 
-def _new_session(username: str, role: str) -> str:
+def _new_session(user_id: uuid.UUID, username: str, role: str, must_change_password: bool) -> str:
     token = uuid.uuid4().hex
     now = _utcnow()
     ACTIVE_SESSIONS[token] = {
+        "user_id": str(user_id),
         "username": username,
         "role": role,
+        "must_change_password": bool(must_change_password),
         "created_at": now,
         "last_seen_at": now,
         "expires_at": now + timedelta(seconds=SESSION_TTL_SECONDS),
     }
     return token
+
+
+def _sync_session_from_db(token: str, session: dict[str, Any]) -> Optional[dict[str, Any]]:
+    user_id_raw = str(session.get("user_id", "")).strip()
+    if not user_id_raw or SessionLocal is None:
+        return session
+
+    try:
+        user_id = uuid.UUID(user_id_raw)
+    except ValueError:
+        ACTIVE_SESSIONS.pop(token, None)
+        return None
+
+    try:
+        db = SessionLocal()
+    except Exception:
+        logger.exception("Falha ao abrir sessao de banco para validar sessao ativa.")
+        return session
+
+    try:
+        user = db.get(AppUser, user_id)
+        if not user or not user.is_active:
+            ACTIVE_SESSIONS.pop(token, None)
+            return None
+        session["username"] = user.username
+        session["role"] = _normalize_role(user.role)
+        session["must_change_password"] = bool(user.must_change_password)
+        return session
+    except Exception:
+        logger.exception("Falha ao validar usuario da sessao no banco.")
+        return session
+    finally:
+        db.close()
+
+
+def _drop_sessions_for_user(user_id: uuid.UUID) -> None:
+    user_id_str = str(user_id)
+    stale_tokens = [token for token, data in ACTIVE_SESSIONS.items() if str(data.get("user_id", "")) == user_id_str]
+    for token in stale_tokens:
+        ACTIVE_SESSIONS.pop(token, None)
 
 
 def _read_session(request: Request) -> Optional[dict[str, Any]]:
@@ -177,6 +275,11 @@ def _read_session(request: Request) -> Optional[dict[str, Any]]:
     session = ACTIVE_SESSIONS.get(token)
     if not session:
         return None
+
+    synced = _sync_session_from_db(token, session)
+    if not synced:
+        return None
+    session = synced
 
     now = _utcnow()
     expires_at = session.get("expires_at")
@@ -219,8 +322,15 @@ def require_app_session(request: Request) -> dict[str, Any]:
     return session
 
 
-def require_app_user(request: Request) -> str:
+def require_fully_authenticated_session(request: Request) -> dict[str, Any]:
     session = require_app_session(request)
+    if bool(session.get("must_change_password")):
+        raise HTTPException(status_code=403, detail="Troca de senha obrigatoria")
+    return session
+
+
+def require_app_user(request: Request) -> str:
+    session = require_fully_authenticated_session(request)
     username = str(session.get("username", ""))
     if not username:
         raise HTTPException(status_code=401, detail="Nao autenticado")
@@ -228,11 +338,11 @@ def require_app_user(request: Request) -> str:
 
 
 def require_roles(*roles: str):
-    allowed_roles = {role.strip().lower() for role in roles if role}
+    allowed_roles = {_normalize_role(role) for role in roles if role}
 
     def _dependency(request: Request) -> dict[str, Any]:
-        session = require_app_session(request)
-        role = str(session.get("role", "")).strip().lower()
+        session = require_fully_authenticated_session(request)
+        role = _normalize_role(str(session.get("role", "")))
         if allowed_roles and role not in allowed_roles:
             raise HTTPException(status_code=403, detail="Sem permissao para este perfil")
         return session
@@ -363,6 +473,25 @@ class Documento(Base):
     processo: Mapped["Processo"] = relationship(back_populates="documentos")
 
 
+class AppUser(Base):
+    __tablename__ = "app_users"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    username: Mapped[str] = mapped_column(String(120), unique=True, nullable=False, index=True)
+    password_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    password_salt: Mapped[str] = mapped_column(String(64), nullable=False)
+    role: Mapped[str] = mapped_column(String(20), nullable=False, default=ROLE_CORRETOR)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    must_change_password: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
 class ClienteCreate(BaseModel):
     nome: str
     corretor: Optional[str] = None
@@ -430,6 +559,39 @@ class LoginPayload(BaseModel):
     password: str
 
 
+class ChangePasswordPayload(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class AdminUserCreate(BaseModel):
+    username: str
+    password: str
+    role: str
+
+
+class AdminUserUpdate(BaseModel):
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class AdminResetPasswordPayload(BaseModel):
+    new_password: str
+    force_change_password: bool = True
+
+
+class AppUserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    username: str
+    role: str
+    is_active: bool
+    must_change_password: bool
+    last_login_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class ProcessoIntakeCreate(BaseModel):
     nome: str
     corretor: Optional[str] = None
@@ -469,6 +631,43 @@ class DocumentoBulkItem(BaseModel):
 
 class DocumentoBulkUpsert(BaseModel):
     documentos: list[DocumentoBulkItem]
+
+
+def _set_user_password(user: AppUser, password: str, must_change_password: bool = True) -> None:
+    salt = _new_salt()
+    user.password_salt = salt
+    user.password_hash = _hash_password(password, salt)
+    user.must_change_password = bool(must_change_password)
+
+
+def _get_user_by_username(db: Session, username: str) -> Optional[AppUser]:
+    username_key = _normalize_username(username)
+    if not username_key:
+        return None
+    return db.query(AppUser).filter(func.lower(AppUser.username) == username_key).first()
+
+
+def _ensure_seed_users(db: Session) -> None:
+    seeds = []
+    for username, account in APP_USERS.items():
+        seeds.append((username, account["password"], _normalize_role(account["role"])))
+
+    created = 0
+    for username, password, role in seeds:
+        if _get_user_by_username(db, username):
+            continue
+        user = AppUser(
+            username=_normalize_username(username),
+            role=role,
+            is_active=True,
+            must_change_password=True,
+        )
+        _set_user_password(user, password, must_change_password=True)
+        db.add(user)
+        created += 1
+
+    if created:
+        db.commit()
 
 
 def get_db():
@@ -516,6 +715,20 @@ async def lifespan(_: FastAPI):
             logger.exception("Falha ao executar create_all no startup.")
             if os.getenv("STARTUP_DB_STRICT", "false").lower() in {"1", "true", "yes"}:
                 raise
+
+    if engine is not None:
+        try:
+            Base.metadata.create_all(bind=engine, tables=[AppUser.__table__])
+            if SessionLocal is not None:
+                db = SessionLocal()
+                try:
+                    _ensure_seed_users(db)
+                finally:
+                    db.close()
+        except SQLAlchemyError:
+            logger.exception("Falha ao preparar tabela de usuarios da aplicacao.")
+            if os.getenv("STARTUP_DB_STRICT", "false").lower() in {"1", "true", "yes"}:
+                raise
     yield
 
 
@@ -532,25 +745,28 @@ def root(request: Request):
 
 @app.get("/login")
 def login_page(request: Request):
-    role = _read_session_role(request)
-    if role:
-        return RedirectResponse(url=_home_for_role(role), status_code=302)
+    session = _read_session(request)
+    if session:
+        return RedirectResponse(url=_home_for_session(session), status_code=302)
     return FileResponse(WEB_DIR / "login.html")
 
 
 @app.get("/app")
 def app_root(request: Request):
-    role = _read_session_role(request)
-    if not role:
+    session = _read_session(request)
+    if not session:
         return RedirectResponse(url="/login", status_code=302)
-    return RedirectResponse(url=_home_for_role(role), status_code=302)
+    return RedirectResponse(url=_home_for_session(session), status_code=302)
 
 
 @app.get("/app/cca")
 def app_cca_page(request: Request):
-    role = _read_session_role(request)
-    if not role:
+    session = _read_session(request)
+    if not session:
         return RedirectResponse(url="/login", status_code=302)
+    if bool(session.get("must_change_password")):
+        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+    role = _normalize_role(str(session.get("role", "")))
     if role not in {ROLE_CCA, ROLE_ANALISTA}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
     return FileResponse(WEB_DIR / "cca.html")
@@ -558,17 +774,22 @@ def app_cca_page(request: Request):
 
 @app.get("/app/checklist")
 def app_checklist_page(request: Request):
-    role = _read_session_role(request)
-    if not role:
+    session = _read_session(request)
+    if not session:
         return RedirectResponse(url="/login", status_code=302)
+    if bool(session.get("must_change_password")):
+        return RedirectResponse(url="/app/trocar-senha", status_code=302)
     return FileResponse(WEB_DIR / "checklist.html")
 
 
 @app.get("/app/corretor")
 def app_corretor_page(request: Request):
-    role = _read_session_role(request)
-    if not role:
+    session = _read_session(request)
+    if not session:
         return RedirectResponse(url="/login", status_code=302)
+    if bool(session.get("must_change_password")):
+        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+    role = _normalize_role(str(session.get("role", "")))
     if role != ROLE_CORRETOR:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
     return FileResponse(WEB_DIR / "corretor_painel.html")
@@ -576,9 +797,12 @@ def app_corretor_page(request: Request):
 
 @app.get("/app/analista")
 def app_analista_page(request: Request):
-    role = _read_session_role(request)
-    if not role:
+    session = _read_session(request)
+    if not session:
         return RedirectResponse(url="/login", status_code=302)
+    if bool(session.get("must_change_password")):
+        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+    role = _normalize_role(str(session.get("role", "")))
     if role != ROLE_ANALISTA:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
 
@@ -592,27 +816,74 @@ def app_analista_page(request: Request):
 
 @app.get("/app/analise")
 def app_analise_page(request: Request):
-    role = _read_session_role(request)
-    if not role:
+    session = _read_session(request)
+    if not session:
         return RedirectResponse(url="/login", status_code=302)
+    if bool(session.get("must_change_password")):
+        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+    role = _normalize_role(str(session.get("role", "")))
     if role != ROLE_ANALISTA:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
     return FileResponse(WEB_DIR / "analista.html")
 
 
-@app.post("/auth/login")
-def auth_login(payload: LoginPayload):
-    username = payload.username.strip()
-    if not APP_USERS:
-        raise HTTPException(status_code=500, detail="Nenhuma credencial configurada no ambiente")
+@app.get("/app/admin")
+def app_admin_page(request: Request):
+    session = _read_session(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=302)
+    if bool(session.get("must_change_password")):
+        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+    role = _normalize_role(str(session.get("role", "")))
+    if role != ROLE_ADMIN:
+        return RedirectResponse(url=_home_for_role(role), status_code=302)
+    return FileResponse(WEB_DIR / "admin.html")
 
-    account = APP_USERS.get(username)
-    if not account or payload.password != account["password"]:
+
+@app.get("/app/trocar-senha")
+def app_change_password_page(request: Request):
+    session = _read_session(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=302)
+    return FileResponse(WEB_DIR / "change_password.html")
+
+
+@app.post("/auth/login")
+def auth_login(payload: LoginPayload, db: Session = Depends(get_db)):
+    _ensure_seed_users(db)
+
+    username = _normalize_username(payload.username)
+    if not username:
         raise HTTPException(status_code=401, detail="Credenciais invalidas")
 
-    role = account["role"]
-    token = _new_session(username, role)
-    response = JSONResponse({"ok": True, "username": username, "role": role, "home": _home_for_role(role)})
+    user = _get_user_by_username(db, username)
+    if not user:
+        raise HTTPException(status_code=401, detail="Credenciais invalidas")
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Acesso bloqueado. Procure o administrador.")
+    if not _verify_password(payload.password, user.password_hash, user.password_salt):
+        raise HTTPException(status_code=401, detail="Credenciais invalidas")
+
+    user.last_login_at = _utcnow()
+    db.commit()
+    db.refresh(user)
+
+    token = _new_session(
+        user_id=user.id,
+        username=user.username,
+        role=_normalize_role(user.role),
+        must_change_password=bool(user.must_change_password),
+    )
+    home = "/app/trocar-senha" if user.must_change_password else _home_for_role(user.role)
+    response = JSONResponse(
+        {
+            "ok": True,
+            "username": user.username,
+            "role": _normalize_role(user.role),
+            "must_change_password": bool(user.must_change_password),
+            "home": home,
+        }
+    )
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=token,
@@ -641,8 +912,154 @@ def auth_me(request: Request):
     if not session:
         raise HTTPException(status_code=401, detail="Nao autenticado")
     username = str(session.get("username", ""))
-    role = str(session.get("role", ""))
-    return {"ok": True, "username": username, "role": role, "home": _home_for_role(role)}
+    role = _normalize_role(str(session.get("role", "")))
+    must_change_password = bool(session.get("must_change_password"))
+    home = "/app/trocar-senha" if must_change_password else _home_for_role(role)
+    return {
+        "ok": True,
+        "username": username,
+        "role": role,
+        "must_change_password": must_change_password,
+        "home": home,
+    }
+
+
+@app.post("/auth/change-password")
+def auth_change_password(
+    payload: ChangePasswordPayload,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    session = require_app_session(request)
+    user_id_raw = str(session.get("user_id", "")).strip()
+    if not user_id_raw:
+        raise HTTPException(status_code=401, detail="Sessao invalida")
+
+    try:
+        user_id = uuid.UUID(user_id_raw)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail="Sessao invalida") from exc
+
+    user = db.get(AppUser, user_id)
+    if not user or not user.is_active:
+        raise HTTPException(status_code=403, detail="Acesso bloqueado")
+
+    current_password = payload.current_password or ""
+    new_password = (payload.new_password or "").strip()
+    if len(new_password) < 4:
+        raise HTTPException(status_code=422, detail="Nova senha deve ter ao menos 4 caracteres")
+
+    if not _verify_password(current_password, user.password_hash, user.password_salt):
+        raise HTTPException(status_code=401, detail="Senha atual invalida")
+
+    _set_user_password(user, new_password, must_change_password=False)
+    db.commit()
+    db.refresh(user)
+
+    token = request.cookies.get(SESSION_COOKIE_NAME)
+    if token and token in ACTIVE_SESSIONS:
+        ACTIVE_SESSIONS[token]["must_change_password"] = False
+        ACTIVE_SESSIONS[token]["role"] = _normalize_role(user.role)
+        ACTIVE_SESSIONS[token]["username"] = user.username
+
+    return {
+        "ok": True,
+        "username": user.username,
+        "role": _normalize_role(user.role),
+        "must_change_password": False,
+        "home": _home_for_role(user.role),
+    }
+
+
+@app.get("/app/api/admin/users", response_model=list[AppUserOut])
+def admin_list_users(
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    _ensure_seed_users(db)
+    users = db.query(AppUser).order_by(func.lower(AppUser.username).asc()).all()
+    return users
+
+
+@app.post("/app/api/admin/users", response_model=AppUserOut)
+def admin_create_user(
+    payload: AdminUserCreate,
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    username = _normalize_username(payload.username)
+    if not username:
+        raise HTTPException(status_code=422, detail="Usuario obrigatorio")
+    if len(payload.password or "") < 4:
+        raise HTTPException(status_code=422, detail="Senha deve ter ao menos 4 caracteres")
+    role = (payload.role or "").strip().lower()
+    if role not in VALID_ROLES:
+        raise HTTPException(status_code=422, detail="Perfil invalido")
+    if _get_user_by_username(db, username):
+        raise HTTPException(status_code=409, detail="Usuario ja existe")
+
+    user = AppUser(
+        username=username,
+        role=role,
+        is_active=True,
+        must_change_password=True,
+    )
+    _set_user_password(user, payload.password, must_change_password=True)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@app.patch("/app/api/admin/users/{user_id}", response_model=AppUserOut)
+def admin_update_user(
+    user_id: uuid.UUID,
+    payload: AdminUserUpdate,
+    session: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    user = db.get(AppUser, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario nao encontrado")
+    current_user_id = str(session.get("user_id", ""))
+
+    if payload.role is not None:
+        role = (payload.role or "").strip().lower()
+        if role not in VALID_ROLES:
+            raise HTTPException(status_code=422, detail="Perfil invalido")
+        user.role = role
+
+    if payload.is_active is not None:
+        if current_user_id and current_user_id == str(user.id) and not bool(payload.is_active):
+            raise HTTPException(status_code=422, detail="Admin nao pode bloquear a si mesmo")
+        user.is_active = bool(payload.is_active)
+        if not user.is_active:
+            _drop_sessions_for_user(user.id)
+
+    db.commit()
+    db.refresh(user)
+
+    return user
+
+
+@app.post("/app/api/admin/users/{user_id}/reset-password", response_model=AppUserOut)
+def admin_reset_password(
+    user_id: uuid.UUID,
+    payload: AdminResetPasswordPayload,
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    user = db.get(AppUser, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario nao encontrado")
+    if len(payload.new_password or "") < 4:
+        raise HTTPException(status_code=422, detail="Senha deve ter ao menos 4 caracteres")
+
+    _set_user_password(user, payload.new_password, must_change_password=payload.force_change_password)
+    db.commit()
+    db.refresh(user)
+    _drop_sessions_for_user(user.id)
+    return user
 
 
 @app.get("/health")

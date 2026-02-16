@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Painel Admin | Sistema de Credito</title>
+  <style>
+    :root{
+      --bg:#020617;
+      --bg2:#01040f;
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+      --border:rgba(148,163,184,.18);
+      --ok:#22c55e;
+      --warn:#f59e0b;
+      --danger:#ef4444;
+    }
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+    body{
+      margin:0;
+      min-height:100vh;
+      color:var(--text);
+      background:
+        radial-gradient(900px 650px at 20% 0%, rgba(31,41,55,.65) 0%, rgba(2,6,23,1) 60%),
+        linear-gradient(180deg,var(--bg),var(--bg2));
+      padding:18px 14px;
+    }
+    .wrap{max-width:1300px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+    .card{
+      border:1px solid var(--border);
+      border-radius:16px;
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+      overflow:hidden;
+    }
+    .top{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      padding:12px;
+    }
+    .title h1{margin:0;font-size:17px}
+    .title p{margin:4px 0 0;color:var(--muted);font-size:12px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.03);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:12px;
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn.primary{
+      border-color:rgba(34,197,94,.6);
+      background:rgba(34,197,94,.12);
+    }
+    .btn.danger{
+      border-color:rgba(239,68,68,.5);
+      background:rgba(239,68,68,.12);
+    }
+    .body{padding:12px}
+    .grid{
+      display:grid;
+      grid-template-columns:1.2fr 1fr 1fr 1fr auto;
+      gap:8px;
+      align-items:end;
+    }
+    @media (max-width:900px){.grid{grid-template-columns:1fr 1fr}}
+    .field{display:flex;flex-direction:column;gap:5px}
+    .field label{font-size:11px;color:var(--muted)}
+    input,select{
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:rgba(2,6,23,.60);
+      color:var(--text);
+      padding:10px 11px;
+      outline:none;
+      font-size:13px;
+    }
+    .feedback{
+      min-height:20px;
+      font-size:12px;
+      margin-top:8px;
+      color:#86efac;
+    }
+    .feedback.error{color:#fca5a5}
+    table{width:100%;border-collapse:collapse}
+    th,td{
+      padding:10px 8px;
+      border-top:1px solid rgba(148,163,184,.12);
+      font-size:12px;
+      text-align:left;
+      vertical-align:middle;
+    }
+    th{color:var(--muted);font-weight:600;background:rgba(2,6,23,.55)}
+    .pill{
+      display:inline-flex;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:10px;
+      border:1px solid rgba(148,163,184,.25);
+      background:rgba(255,255,255,.02);
+    }
+    .pill.ok{color:var(--ok);border-color:rgba(34,197,94,.55)}
+    .pill.bad{color:var(--danger);border-color:rgba(239,68,68,.55)}
+    .tiny{font-size:11px;color:var(--muted)}
+    .row-actions{display:flex;gap:6px;flex-wrap:wrap}
+    .row-actions .btn{padding:7px 9px;font-size:11px}
+    .role-select{min-width:120px}
+    .status-toggle{transform:scale(1.1)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="card">
+      <div class="top">
+        <div class="title">
+          <h1>Painel Admin</h1>
+          <p>Cadastro de funcionarios, reset de senha e bloqueio de acesso.</p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btnRefresh">Atualizar</button>
+          <button class="btn" id="btnTrocarSenha">Trocar minha senha</button>
+          <button class="btn danger" id="btnSair">Sair</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="body">
+        <form id="createForm" class="grid">
+          <div class="field">
+            <label for="newUsername">Usuario</label>
+            <input id="newUsername" required placeholder="ex.: douglas" />
+          </div>
+          <div class="field">
+            <label for="newPassword">Senha inicial</label>
+            <input id="newPassword" required minlength="4" type="password" placeholder="min. 4 caracteres" />
+          </div>
+          <div class="field">
+            <label for="newRole">Perfil</label>
+            <select id="newRole">
+              <option value="analista">Analista</option>
+              <option value="corretor">Corretor</option>
+              <option value="cca">CCA</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn primary" type="submit">Cadastrar funcionario</button>
+          </div>
+        </form>
+        <div id="feedback" class="feedback" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="body" style="padding:0;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:18%">Usuario</th>
+              <th style="width:12%">Perfil</th>
+              <th style="width:10%">Ativo</th>
+              <th style="width:16%">Troca obrigatoria</th>
+              <th style="width:16%">Ultimo login</th>
+              <th style="width:28%">Acoes</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyUsers">
+            <tr><td colspan="6" class="tiny">Carregando usuarios...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const feedback = document.getElementById("feedback");
+    const tbody = document.getElementById("tbodyUsers");
+    const createForm = document.getElementById("createForm");
+    let currentUser = null;
+    let users = [];
+
+    function setFeedback(message, isError = false) {
+      feedback.textContent = message || "";
+      feedback.classList.toggle("error", Boolean(isError));
+    }
+
+    function fmtDate(value) {
+      if (!value) return "-";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return "-";
+      return d.toLocaleString("pt-BR");
+    }
+
+    async function api(path, options = {}) {
+      const res = await fetch(path, {
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        window.location.href = "/login";
+        throw new Error("Nao autenticado");
+      }
+      if (res.status === 403 && String(data.detail || "").toLowerCase().includes("troca de senha")) {
+        window.location.href = "/app/trocar-senha";
+        throw new Error("Troca de senha obrigatoria");
+      }
+      if (!res.ok) throw new Error(data.detail || "Falha de comunicacao");
+      return data;
+    }
+
+    function roleOptions(selected) {
+      const roles = ["analista", "corretor", "cca", "admin"];
+      return roles.map((role) => `<option value="${role}" ${selected === role ? "selected" : ""}>${role}</option>`).join("");
+    }
+
+    function renderUsers() {
+      if (!users.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="tiny">Nenhum usuario cadastrado.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = users.map((u) => {
+        const isSelf = currentUser && currentUser.username === u.username;
+        return `
+          <tr data-id="${u.id}">
+            <td><b>${u.username}</b></td>
+            <td>
+              <select class="role-select">${roleOptions(u.role)}</select>
+            </td>
+            <td>
+              <input class="status-toggle" type="checkbox" ${u.is_active ? "checked" : ""} ${isSelf ? "disabled" : ""} />
+            </td>
+            <td>
+              <span class="pill ${u.must_change_password ? "bad" : "ok"}">
+                ${u.must_change_password ? "Sim" : "Nao"}
+              </span>
+            </td>
+            <td>${fmtDate(u.last_login_at)}</td>
+            <td>
+              <div class="row-actions">
+                <button class="btn btn-save" type="button">Salvar</button>
+                <button class="btn btn-reset" type="button">Resetar senha</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      tbody.querySelectorAll("tr[data-id]").forEach((row) => {
+        const userId = row.getAttribute("data-id");
+        const btnSave = row.querySelector(".btn-save");
+        const btnReset = row.querySelector(".btn-reset");
+        const roleSelect = row.querySelector(".role-select");
+        const activeToggle = row.querySelector(".status-toggle");
+
+        btnSave.addEventListener("click", async () => {
+          try {
+            const updated = await api(`/app/api/admin/users/${encodeURIComponent(userId)}`, {
+              method: "PATCH",
+              body: JSON.stringify({ role: roleSelect.value, is_active: Boolean(activeToggle.checked) }),
+            });
+            users = users.map((item) => (item.id === updated.id ? updated : item));
+            setFeedback(`Usuario ${updated.username} atualizado.`);
+            renderUsers();
+          } catch (error) {
+            setFeedback(error.message, true);
+            loadUsers().catch(() => null);
+          }
+        });
+
+        btnReset.addEventListener("click", async () => {
+          const pwd = prompt("Digite a nova senha temporaria (minimo 4 caracteres):");
+          if (!pwd) return;
+          if (pwd.trim().length < 4) {
+            setFeedback("Senha deve ter ao menos 4 caracteres.", true);
+            return;
+          }
+          try {
+            const updated = await api(`/app/api/admin/users/${encodeURIComponent(userId)}/reset-password`, {
+              method: "POST",
+              body: JSON.stringify({ new_password: pwd, force_change_password: true }),
+            });
+            users = users.map((item) => (item.id === updated.id ? updated : item));
+            setFeedback(`Senha de ${updated.username} resetada. Usuario deve trocar no primeiro login.`);
+            renderUsers();
+          } catch (error) {
+            setFeedback(error.message, true);
+          }
+        });
+      });
+    }
+
+    async function loadUsers() {
+      users = await api("/app/api/admin/users");
+      renderUsers();
+    }
+
+    async function loadMe() {
+      const me = await api("/auth/me");
+      currentUser = me;
+      if (me.role !== "admin") {
+        window.location.href = me.home || "/app";
+      }
+    }
+
+    createForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setFeedback("");
+      const username = createForm.newUsername.value.trim();
+      const password = createForm.newPassword.value;
+      const role = createForm.newRole.value;
+      if (username.length < 3) {
+        setFeedback("Usuario deve ter ao menos 3 caracteres.", true);
+        return;
+      }
+      if (password.length < 4) {
+        setFeedback("Senha deve ter ao menos 4 caracteres.", true);
+        return;
+      }
+      try {
+        await api("/app/api/admin/users", {
+          method: "POST",
+          body: JSON.stringify({ username, password, role }),
+        });
+        createForm.reset();
+        createForm.newRole.value = "analista";
+        setFeedback("Funcionario cadastrado com sucesso.");
+        await loadUsers();
+      } catch (error) {
+        setFeedback(error.message, true);
+      }
+    });
+
+    document.getElementById("btnRefresh").addEventListener("click", () => {
+      loadUsers().catch((error) => setFeedback(error.message, true));
+    });
+
+    document.getElementById("btnTrocarSenha").addEventListener("click", () => {
+      window.location.href = "/app/trocar-senha";
+    });
+
+    document.getElementById("btnSair").addEventListener("click", async () => {
+      await fetch("/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => null);
+      window.location.href = "/login";
+    });
+
+    (async () => {
+      try {
+        await loadMe();
+        await loadUsers();
+      } catch (error) {
+        setFeedback(error.message, true);
+      }
+    })();
+  </script>
+</body>
+</html>
