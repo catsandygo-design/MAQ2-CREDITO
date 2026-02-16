@@ -442,7 +442,7 @@ def root(request: Request):
 @app.get("/login")
 def login_page(request: Request):
     if _read_session_user(request):
-        return RedirectResponse(url="/app/cca", status_code=302)
+        return RedirectResponse(url="/app/checklist", status_code=302)
     return FileResponse(WEB_DIR / "login.html")
 
 
@@ -450,7 +450,7 @@ def login_page(request: Request):
 def app_root(request: Request):
     if not _read_session_user(request):
         return RedirectResponse(url="/login", status_code=302)
-    return RedirectResponse(url="/app/cca", status_code=302)
+    return RedirectResponse(url="/app/checklist", status_code=302)
 
 
 @app.get("/app/cca")

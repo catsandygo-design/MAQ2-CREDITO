@@ -1,322 +1,1515 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Checklist | Sistema de Cr�dito</title>
+  <meta charset="UTF-8">
+  <title>Checklist Documentos Repasse</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    :root {
-      --bg: #0b1220;
-      --card: #101a2e;
-      --line: #22314d;
-      --text: #e7eef9;
-      --muted: #9cb0d1;
-      --ok: #44d07c;
-      --warn: #ffbf47;
-      --bad: #ff6b6b;
+    :root{
+      --bg:#020617;
+      --bg-soft:#020617;
+      --accent:#22c55e;
+      --accent-border:rgba(34,197,94,0.65);
+      --text:#e5e7eb;
+      --text-soft:#9ca3af;
+      --border:#1f2937;
     }
-    * { box-sizing: border-box; font-family: "Segoe UI", Arial, sans-serif; }
-    body {
-      margin: 0;
-      background: radial-gradient(circle at 20% 0%, #1a2a45 0%, #0b1220 45%, #070c16 100%);
-      color: var(--text);
-      padding: 16px;
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+    body{
+      margin:0;
+      background:radial-gradient(circle at top,#1f2937 0,#020617 45%,#020617 100%);
+      color:var(--text);
+      padding:24px 12px 40px;
     }
-    .wrap { max-width: 1200px; margin: 0 auto; }
-    .top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 14px;
+    .wrapper{max-width:1100px;margin:0 auto;}
+    .card{
+      background:
+        radial-gradient(circle at top left, rgba(34,197,94,0.18), transparent 60%),
+        radial-gradient(circle at bottom right, rgba(34,197,94,0.05), transparent 70%),
+        var(--bg-soft);
+      border-radius:16px;
+      border:1px solid rgba(148,163,184,0.35);
+      padding:18px 20px 20px;
+      box-shadow:0 22px 40px rgba(15,23,42,0.95);
+      opacity:0;
+      transform:translateY(12px);
+      animation:fadeInUp .45s ease-out forwards;
+      position:relative;
+      overflow:hidden;
     }
-    .title h1 { margin: 0; font-size: 1.2rem; }
-    .title p { margin: 4px 0 0; color: var(--muted); font-size: .86rem; }
-    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    .btn {
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: #0f1a30;
-      color: var(--text);
-      padding: 9px 12px;
-      cursor: pointer;
-      font-size: .84rem;
-      font-weight: 700;
-      text-decoration: none;
+    .card::before{
+      content:"";
+      position:absolute;inset:0;
+      background:radial-gradient(circle at top center, rgba(34,197,94,0.07), transparent 60%);
+      opacity:0;pointer-events:none;
+      transition:opacity .3s ease;
     }
-    .primary { background: linear-gradient(180deg, #2fc16a, #24a35a); color: #05140a; border: 0; }
-    .card {
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
-      padding: 14px;
-      margin-bottom: 12px;
+    .card:hover::before{opacity:1;}
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+    .card-header{margin-bottom:8px;}
+    h1{margin:0 0 4px;font-size:1.4rem;}
+    .subtitle{font-size:.8rem;color:var(--text-soft);margin:0 0 10px;}
+
+    /* Caixa de instruÃ§Ãµes / assunto do e-mail */
+    .email-hint{
+      margin-bottom:14px;
+      padding:10px 12px 12px;
+      border-radius:12px;
+      border:1px dashed rgba(248,250,252,0.35);
+      background:
+        radial-gradient(circle at top left, rgba(34,197,94,0.16), transparent 60%),
+        rgba(15,23,42,0.96);
+      font-size:.78rem;
     }
-    .meta { color: var(--muted); font-size: .86rem; display: flex; gap: 12px; flex-wrap: wrap; }
-    .meta b { color: var(--text); }
-    table { width: 100%; border-collapse: collapse; font-size: .86rem; }
-    th, td { border-bottom: 1px solid var(--line); padding: 9px 8px; text-align: left; }
-    th { color: var(--muted); font-size: .76rem; text-transform: uppercase; letter-spacing: .04em; }
-    tr:last-child td { border-bottom: 0; }
-    input, select {
-      border: 1px solid var(--line);
-      border-radius: 9px;
-      background: #0a1426;
-      color: var(--text);
-      padding: 8px;
-      font-size: .86rem;
-      width: 100%;
-      outline: none;
+    .email-hint strong{
+      color:#bbf7d0;display:block;margin-bottom:4px;
+      text-transform:uppercase;letter-spacing:.09em;font-size:.78rem;
     }
-    .pill {
-      display: inline-block;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 4px 8px;
-      font-size: .76rem;
-      font-weight: 700;
+    .email-hint small{display:block;margin-bottom:6px;color:var(--text-soft);}
+    .email-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+    .email-label{min-width:130px;font-weight:500;color:var(--text-soft);}
+    .email-input{
+      flex:1;border-radius:999px;
+      border:1px solid rgba(148,163,184,0.5);
+      background:radial-gradient(circle at right, rgba(15,23,42,0.9), #020617);
+      color:#e5e7eb;font-size:.76rem;
+      padding:6px 10px;outline:none;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
-    .ok { border-color: rgba(68,208,124,.5); color: var(--ok); }
-    .warn { border-color: rgba(255,191,71,.5); color: var(--warn); }
-    .bad { border-color: rgba(255,107,107,.5); color: var(--bad); }
-    .empty { color: var(--muted); text-align: center; padding: 16px; }
-    .inline {
-      display: grid;
-      grid-template-columns: 1.3fr 1.6fr 1fr 1fr auto;
-      gap: 8px;
-      align-items: end;
+    .email-input[readonly]{cursor:default;user-select:all;}
+    .copy-btn{
+      border-radius:999px;border:1px solid rgba(34,197,94,0.8);
+      background:radial-gradient(circle at top left,#22c55e,#16a34a);
+      color:#020617;font-size:.7rem;font-weight:700;padding:6px 10px;
+      cursor:pointer;text-transform:uppercase;letter-spacing:.05em;
+      box-shadow:0 0 0 1px rgba(15,23,42,0.9),0 0 10px rgba(34,197,94,0.85);
+      transition:transform .08s ease, box-shadow .12s ease, filter .12s ease;
+      white-space:nowrap;
     }
-    @media (max-width: 900px) { .inline { grid-template-columns: 1fr; } }
-    .msg { color: var(--muted); font-size: .84rem; min-height: 20px; }
+    .copy-btn:hover{
+      transform:translateY(-1px);filter:brightness(1.08);
+      box-shadow:0 0 0 1px rgba(15,23,42,1),0 0 14px rgba(74,222,128,0.95);
+    }
+    .copy-btn:active{
+      transform:translateY(0);
+      box-shadow:0 0 0 1px rgba(15,23,42,1),0 0 6px rgba(34,197,94,0.7);
+    }
+    .copy-msg{font-size:.7rem;color:#a7f3d0;margin-top:4px;}
+
+    .header-grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:10px 16px;
+      margin-bottom:10px;
+      border:none;padding:0;
+    }
+    @media (max-width:900px){.header-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    @media (max-width:640px){
+      .header-grid{grid-template-columns:1fr;}
+      .email-row{flex-direction:column;align-items:stretch;}
+      .email-label{min-width:0;}
+      .copy-btn{align-self:flex-end;}
+    }
+
+    .form-group{display:flex;flex-direction:column;gap:4px;font-size:.8rem;}
+    label{color:var(--text-soft);font-weight:500;}
+    input,select{
+      color-scheme:dark;
+      background:linear-gradient(135deg,#022c22,#020617);
+      border-radius:999px;
+      border:1px solid var(--accent-border);
+      padding:8px 11px;
+      color:var(--text);
+      font-size:.8rem;
+      outline:none;
+      box-shadow:0 0 0 1px rgba(15,23,42,0.7);
+      transition:border-color .2s ease, box-shadow .2s ease, background .2s ease, transform .08s ease;
+      appearance:none;-webkit-appearance:none;-moz-appearance:none;
+      background-image:
+        linear-gradient(135deg,#022c22,#020617),
+        radial-gradient(circle at center,transparent 0,transparent 70%),
+        linear-gradient(45deg,#22c55e 0,#22c55e 50%,transparent 50%,transparent 100%);
+      background-repeat:no-repeat;
+      background-position:0 0,0 0,right 9px center;
+      background-size:100% 100%,100% 100%,9px 6px;
+    }
+    input{background-image:linear-gradient(135deg,#022c22,#020617);}
+    input::placeholder{color:rgba(148,163,184,0.75);}
+    input:focus-visible,select:focus-visible{
+      border-color:#bbf7d0;
+      box-shadow:0 0 0 1px rgba(15,23,42,0.9),0 0 0 3px rgba(34,197,94,0.55);
+      background-image:
+        linear-gradient(135deg,#064e3b,#020617),
+        radial-gradient(circle at center,transparent 0,transparent 70%),
+        linear-gradient(45deg,#bbf7d0 0,#22c55e 50%,transparent 50%,transparent 100%);
+      transform:translateY(-1px);
+    }
+
+    .section-title{
+      margin-top:16px;margin-bottom:6px;
+      font-size:.8rem;
+      text-transform:uppercase;
+      letter-spacing:.09em;
+      color:var(--text-soft);
+      border-top:1px dashed rgba(148,163,184,0.5);
+      padding-top:8px;
+      position:relative;
+    }
+    .section-title::after{
+      content:"";position:absolute;left:0;bottom:-2px;
+      width:42px;height:1px;
+      background:linear-gradient(90deg,var(--accent),transparent);
+      opacity:.7;
+    }
+    .section-block{margin-top:8px;margin-bottom:4px;transition:transform .15s ease;}
+    .section-block:hover{transform:translateY(-1px);}
+
+    .table-wrap{
+      border-radius:12px;
+      border:1px solid rgba(31,41,55,0.95);
+      overflow:hidden;
+      margin-bottom:10px;
+      background:rgba(15,23,42,0.97);
+    }
+    table{width:100%;border-collapse:collapse;font-size:.78rem;}
+    thead{background:rgba(15,23,42,1);}
+    th,td{
+      padding:6px 8px; /* menor -> aproxima as colunas */
+      border-bottom:1px solid rgba(31,41,55,0.85);
+      vertical-align:top;
+      text-align:left;
+    }
+    th{font-weight:600;color:var(--text-soft);font-size:.75rem;}
+    tbody tr:nth-child(even){background:rgba(15,23,42,0.9);}
+    tbody tr:last-child td{border-bottom:none;}
+    tbody tr{transition:background .15s ease, box-shadow .15s ease;}
+    tbody tr:hover{background:rgba(15,23,42,0.98);box-shadow:inset 2px 0 0 var(--accent);}
+
+    /* ===== AJUSTE PRINCIPAL: colunas status mais â€œcoladasâ€ ===== */
+    .doc-col{width:22%;font-weight:500;}
+    .desc-col{width:56%;color:var(--text-soft);white-space:pre-line;}
+    .status-doc-col{width:11%; padding-left:5px; padding-right:5px;}
+    .status-cred-col{width:11%; padding-left:5px; padding-right:5px;}
+    th.status-doc-col, th.status-cred-col{white-space:nowrap;}
+
+    .note{font-size:.75rem;color:var(--text-soft);margin-top:4px;}
+
+    .checkbox-row{
+      display:flex;align-items:center;gap:8px;
+      padding:8px 11px;border-radius:999px;
+      border:1px dashed rgba(34,197,94,0.55);
+      background:rgba(15,23,42,0.9);
+      font-size:.8rem;
+    }
+    .checkbox-row input[type="checkbox"]{
+      width:16px;height:16px;border-radius:4px;margin:0;
+      box-shadow:none;appearance:auto;background:#020617;
+    }
+    .checkbox-row label{margin:0;color:var(--text);font-weight:500;}
+    .muted{font-size:.72rem;color:var(--text-soft);}
+    .highlight-info{display:block;margin-top:4px;font-weight:600;color:#facc15;}
+    .visually-hidden{border:0;clip:rect(0 0 0 0);height:1px;margin:-1px;overflow:hidden;padding:0;position:absolute;width:1px;}
+    .hidden{display:none;}
+
+    /* PÃ­lulas */
+    .status-pill{
+      font-weight:800;
+      color:#f9fafb;
+      text-shadow:0 0 4px rgba(15,23,42,0.9);
+      letter-spacing:0.02em;
+      padding:7px 10px;
+    }
+    .status-pill.status-pendente{
+      border-color:#f97373;
+      box-shadow:0 0 0 1px rgba(15,23,42,0.95),0 0 12px rgba(248,113,113,0.95);
+      background-image:linear-gradient(135deg,#450a0a,#020617);
+    }
+    .status-pill.status-enviado{
+      border-color:#4ade80;
+      box-shadow:0 0 0 1px rgba(15,23,42,0.95),0 0 12px rgba(74,222,128,0.95);
+      background-image:linear-gradient(135deg,#065f46,#020617);
+    }
+
+    /* Status CrÃ©dito */
+    .status-pill.status-analise{
+      border-color:rgba(56,189,248,0.95);
+      box-shadow:0 0 0 1px rgba(15,23,42,0.95),0 0 12px rgba(56,189,248,0.85);
+      background-image:linear-gradient(135deg,#0c4a6e,#020617);
+    }
+    .status-pill.status-pendenciado{
+      border-color:rgba(250,204,21,0.95);
+      box-shadow:0 0 0 1px rgba(15,23,42,0.95),0 0 12px rgba(250,204,21,0.85);
+      background-image:linear-gradient(135deg,#78350f,#020617);
+    }
+    .status-pill.status-aprovado{
+      border-color:rgba(74,222,128,0.95);
+      box-shadow:0 0 0 1px rgba(15,23,42,0.95),0 0 12px rgba(74,222,128,0.95);
+      background-image:linear-gradient(135deg,#065f46,#020617);
+    }
+    .status-pill.status-reprovado{
+      border-color:rgba(248,113,113,0.95);
+      box-shadow:0 0 0 1px rgba(15,23,42,0.95),0 0 12px rgba(248,113,113,0.95);
+      background-image:linear-gradient(135deg,#450a0a,#020617);
+    }
   </style>
 </head>
 <body>
-  <main class="wrap">
-    <header class="top">
-      <div class="title">
-        <h1>Checklist de Documentos</h1>
-        <p id="subtitle">Carregando processo...</p>
-      </div>
-      <div class="actions">
-        <a class="btn" id="toCca" href="/app/cca">CCA</a>
-        <a class="btn" id="toAnalista" href="/app/analista">Analista</a>
-        <button class="btn primary" id="saveBtn" type="button">Salvar Checklist</button>
+<main class="wrapper">
+  <section class="card" aria-label="Checklist para documentos do repasse">
+    <header class="card-header">
+      <h1>Checklist para Documentos do Repasse</h1>
+      <p class="subtitle">
+        ConferÃªncia completa do dossiÃª: documentos do proponente, dependentes, Caixa e Agehab com regra de aceitaÃ§Ã£o por perfil.
+      </p>
+
+      <div class="email-hint">
+        <strong>Assunto do e-mail para envio dos kits</strong>
+        <small>Preencha o nome do cliente e o empreendimento acima. Depois clique em <b>COPIAR</b> e cole no assunto do e-mail.</small>
+
+        <div class="email-row">
+          <span class="email-label">Para documentos Caixa:</span>
+          <input id="assunto-caixa" class="email-input" type="text" readonly value="KIT CAIXA + NOME DO CLIENTE + EMPREENDIMENTO">
+          <button type="button" class="copy-btn" data-target="assunto-caixa">Copiar</button>
+        </div>
+
+        <div class="email-row">
+          <span class="email-label">Para documentos Agehab:</span>
+          <input id="assunto-agehab" class="email-input" type="text" readonly value="KIT AGEHAB + NOME DO CLIENTE + EMPREENDIMENTO">
+          <button type="button" class="copy-btn" data-target="assunto-agehab">Copiar</button>
+        </div>
+
+        <div id="copy-feedback" class="copy-msg" aria-live="polite"></div>
       </div>
     </header>
 
-    <section class="card">
-      <div class="meta" id="meta"></div>
-    </section>
+    <form novalidate>
+      <!-- CabeÃ§alho do processo -->
+      <fieldset class="header-grid" aria-label="Dados bÃ¡sicos do processo">
+        <legend class="visually-hidden">Dados bÃ¡sicos do processo</legend>
 
-    <section class="card">
-      <div class="inline" style="margin-bottom:10px;">
-        <div>
-          <label>Categoria</label>
-          <input id="newCategoria" type="text" placeholder="Ex.: proponente" />
+        <div class="form-group">
+          <label for="nome-cliente">Nome do cliente</label>
+          <input id="nome-cliente" type="text" placeholder="Digite o nome do cliente" autocomplete="name">
         </div>
-        <div>
-          <label>Documento</label>
-          <input id="newNome" type="text" placeholder="Ex.: Certid�o de nascimento" />
+        <div class="form-group">
+          <label for="corretor">Corretor</label>
+          <input id="corretor" type="text" placeholder="Nome do corretor" autocomplete="off">
         </div>
-        <div>
-          <label>Status doc</label>
-          <select id="newStatusDoc">
-            <option value="PENDENTE">PENDENTE</option>
-            <option value="ENVIADO">ENVIADO</option>
+        <div class="form-group">
+          <label for="reserva">Reserva</label>
+          <input id="reserva" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="CÃ³digo da reserva" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="obra">Obra / Empreendimento</label>
+          <input id="obra" type="text" placeholder="Ex.: AGL30, AGL32, FSA10" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="imobiliaria">ImobiliÃ¡ria</label>
+          <input id="imobiliaria" type="text" placeholder="Nome da imobiliÃ¡ria" autocomplete="organization">
+        </div>
+      </fieldset>
+
+      <!-- PERFIL / VÃNCULO / DEPENDENTE -->
+      <fieldset class="header-grid" aria-label="Perfil de renda, FGTS e informaÃ§Ãµes de dependente">
+        <legend class="visually-hidden">Perfil de renda e vÃ­nculo</legend>
+
+        <div class="form-group">
+          <label for="perfil-renda">Perfil de renda do proponente</label>
+          <select id="perfil-renda">
+            <option value="clt">CLT / Formal</option>
+            <option value="informal">Informal / AutÃ´nomo</option>
+            <option value="aposentado">Aposentado / Pensionista</option>
+            <option value="domestico">DomÃ©stico / contrataÃ§Ã£o por CPF (eSocial)</option>
           </select>
         </div>
-        <div>
-          <label>Status cr�dito</label>
-          <select id="newStatusCredito">
-            <option value="ANALISE">ANALISE</option>
-            <option value="PENDENCIADO">PENDENCIADO</option>
-            <option value="APROVADO">APROVADO</option>
-            <option value="REPROVADO">REPROVADO</option>
+
+        <div class="form-group" id="cotista-ctps-group">
+          <label>FGTS / vÃ­nculo em carteira</label>
+          <div class="checkbox-row">
+            <input type="checkbox" id="cotista-3-anos">
+            <label for="cotista-3-anos">Cliente com +3 anos de carteira assinada para uso de FGTS / vÃ­nculo formal</label>
+          </div>
+          <span class="muted">Se marcado, passa a exigir CTPS, independente do perfil de renda.</span>
+        </div>
+
+        <div class="form-group">
+          <label for="tipo-dependente">Tipo de dependente</label>
+          <select id="tipo-dependente">
+            <option value="filho-menor">Filho menor</option>
+            <option value="filho-maior">Filho maior</option>
+            <option value="tio-tia">Tio ou Tia</option>
+            <option value="irmao-irma">IrmÃ£o ou IrmÃ£</option>
+            <option value="pai-mae">Pai ou MÃ£e</option>
+            <option value="avos">AvÃ³s ou AvÃ´s</option>
+            <option value="bisavos">BisavÃ³ ou BisavÃ´</option>
+            <option value="sobrinho-sobrinha">Sobrinho ou Sobrinha</option>
           </select>
         </div>
-        <button class="btn" id="addRowBtn" type="button">Adicionar</button>
-      </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Categoria</th>
-            <th>Documento</th>
-            <th>Status Documento</th>
-            <th>Status Cr�dito</th>
-          </tr>
-        </thead>
-        <tbody id="tbody">
-          <tr><td colspan="4" class="empty">Carregando...</td></tr>
-        </tbody>
-      </table>
-      <div class="msg" id="msg"></div>
-    </section>
-  </main>
+        <div class="form-group">
+          <label for="estado-civil-proponente">Estado civil do proponente</label>
+          <select id="estado-civil-proponente">
+            <option value="solteiro">Solteiro(a)</option>
+            <option value="casado">Casado(a)</option>
+            <option value="divorciado">Divorciado(a)</option>
+            <option value="viuvo">ViÃºvo(a)</option>
+            <option value="uniao-estavel">UniÃ£o estÃ¡vel</option>
+          </select>
+        </div>
 
-  <script>
+        <div class="form-group hidden" id="estado-civil-dependente-group">
+          <label for="estado-civil-dependente">Estado civil do dependente</label>
+          <select id="estado-civil-dependente">
+            <option value="solteiro">Solteiro(a)</option>
+            <option value="casado">Casado(a)</option>
+            <option value="divorciado">Divorciado(a)</option>
+            <option value="viuvo">ViÃºvo(a)</option>
+          </select>
+        </div>
+
+        <div class="form-group hidden" id="conjuge-renda-group">
+          <label>Renda do cÃ´njuge</label>
+          <div class="checkbox-row">
+            <input type="checkbox" id="conjuge-tem-renda">
+            <label for="conjuge-tem-renda">CÃ´njuge tem renda para compor o cÃ¡lculo?</label>
+          </div>
+          <span class="muted">VisÃ­vel apenas se o proponente for Casado ou UniÃ£o estÃ¡vel.</span>
+        </div>
+
+        <div class="form-group hidden" id="irpf-informal-group">
+          <label>IRPF para renda informal</label>
+          <div class="checkbox-row">
+            <input type="checkbox" id="irpf-informal">
+            <label for="irpf-informal">Cliente vai utilizar IRPF + recibo para formalizar a renda</label>
+          </div>
+          <span class="muted">Ao marcar, passa a exigir IRPF na seÃ§Ã£o de documentos do proponente (somente perfil informal).</span>
+        </div>
+      </fieldset>
+
+      <!-- ======= FUNÃ‡ÃƒO PARA NÃƒO REPETIR CÃ“DIGO:
+           TODAS AS TABELAS ABAIXO JÃ VÃƒO COM 4 COLUNAS (Status Doc + Status CrÃ©dito) ======= -->
+
+      <!-- DOCUMENTOS DO PROPONENTE -->
+      <section class="section-block" id="sec-proponente" aria-labelledby="titulo-proponente">
+        <h2 class="section-title" id="titulo-proponente">Documentos do Proponente</h2>
+        <div class="table-wrap" role="region" aria-label="Documentos obrigatÃ³rios do proponente">
+          <table>
+            <thead>
+            <tr>
+              <th class="doc-col" scope="col">Documento</th>
+              <th class="desc-col" scope="col">O que Ã© aceito</th>
+              <th class="status-doc-col" scope="col">Status Doc.</th>
+              <th class="status-cred-col" scope="col">Status CrÃ©dito</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+              <td class="doc-col">Identidade e CPF</td>
+              <td class="desc-col" id="desc-identidade">CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fÃ© pÃºblica (dentro da validade) do proponente.</td>
+              <td class="status-doc-col">
+                <select aria-label="Status identidade proponente">
+                  <option>Pendente</option><option>Enviado</option>
+                </select>
+              </td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito identidade" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option>
+                  <option value="pendenciado">Pendenciado</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="doc-col">Comp. de estado civil</td>
+              <td class="desc-col" id="desc-estado-civil">CertidÃ£o de nascimento.</td>
+              <td class="status-doc-col">
+                <select aria-label="Status comp. estado civil proponente">
+                  <option>Pendente</option><option>Enviado</option>
+                </select>
+              </td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito estado civil" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option>
+                  <option value="pendenciado">Pendenciado</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="doc-col">Comprovante de residÃªncia</td>
+              <td class="desc-col">Comprovante deve estar aberto, nÃ£o precisa estar no nome do cliente.
+Pode ser: Ã¡gua, luz, telefone, fatura de internet e celular, fatura de cartÃ£o de crÃ©dito.</td>
+              <td class="status-doc-col">
+                <select aria-label="Status comprovante de residÃªncia proponente">
+                  <option>Pendente</option><option>Enviado</option>
+                </select>
+              </td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito residÃªncia" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option>
+                  <option value="pendenciado">Pendenciado</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            <tr id="row-irpf" style="display:none;">
+              <td class="doc-col">IRPF + recibo de entrega</td>
+              <td class="desc-col">DeclaraÃ§Ã£o completa do ano atual + recibo de entrega + DARF pago (se for o caso).
+<span class="highlight-info" role="note">Somente solicitar IRPF se o perfil de renda for INFORMAL e o campo â€œIRPF para renda informalâ€ estiver marcado.</span></td>
+              <td class="status-doc-col">
+                <select aria-label="Status IRPF proponente">
+                  <option>Pendente</option><option>Enviado</option>
+                </select>
+              </td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito IRPF" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option>
+                  <option value="pendenciado">Pendenciado</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            <tr id="row-fgts">
+              <td class="doc-col">Extrato FGTS (atualizado)</td>
+              <td class="desc-col">Retirado do app FGTS, pelo site da Caixa (senha do CartÃ£o CidadÃ£o) ou em qualquer agÃªncia da Caixa.
+Para militares/soldados, anexar tambÃ©m os 3 Ãºltimos extratos bancÃ¡rios da conta em que recebe o salÃ¡rio.</td>
+              <td class="status-doc-col">
+                <select aria-label="Status extrato FGTS proponente">
+                  <option>Pendente</option><option>Enviado</option>
+                </select>
+              </td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito FGTS" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option>
+                  <option value="pendenciado">Pendenciado</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            <tr id="row-ctps" style="display:none;">
+              <td class="doc-col">Carteira de trabalho (CTPS)</td>
+              <td class="desc-col">Aplicativo Carteira Digital com todas as informaÃ§Ãµes
+ou fotos legÃ­veis da CTPS fÃ­sica: qualificaÃ§Ã£o, contratos de trabalho
+e anotaÃ§Ãµes de alteraÃ§Ã£o de CNPJ, se houver.</td>
+              <td class="status-doc-col">
+                <select aria-label="Status CTPS proponente">
+                  <option>Pendente</option><option>Enviado</option>
+                </select>
+              </td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito CTPS" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option>
+                  <option value="pendenciado">Pendenciado</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- DEPENDENTE MENOR -->
+      <section class="section-block" id="sec-dep-menor" aria-labelledby="titulo-dep-menor">
+        <h2 class="section-title" id="titulo-dep-menor">Documentos do Dependente â€“ Filhos menores de 18 anos</h2>
+        <div class="table-wrap" role="region" aria-label="Documentos para dependente menor de idade">
+          <table>
+            <thead>
+            <tr>
+              <th class="doc-col" scope="col">Documento</th>
+              <th class="desc-col" scope="col">O que Ã© aceito</th>
+              <th class="status-doc-col" scope="col">Status Doc.</th>
+              <th class="status-cred-col" scope="col">Status CrÃ©dito</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+              <td class="doc-col">CertidÃ£o de nascimento</td>
+              <td class="desc-col">No caso de guarda ou adoÃ§Ã£o, anexar tambÃ©m os termos respectivos.</td>
+              <td class="status-doc-col">
+                <select aria-label="Status certidÃ£o dependente menor">
+                  <option>Pendente</option><option>Enviado</option>
+                </select>
+              </td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito dependente menor" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option>
+                  <option value="pendenciado">Pendenciado</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- DEPENDENTE MAIOR -->
+      <section class="section-block" id="sec-dep-maior" aria-labelledby="titulo-dep-maior">
+        <h2 class="section-title" id="titulo-dep-maior">Documentos do Dependente â€“ Filhos maiores / parentes atÃ© 3Âº grau</h2>
+        <div class="table-wrap" role="region" aria-label="Documentos para dependente maior ou parentes atÃ© 3Âº grau">
+          <table>
+            <thead>
+            <tr>
+              <th class="doc-col" scope="col">Documento</th>
+              <th class="desc-col" scope="col">O que Ã© aceito</th>
+              <th class="status-doc-col" scope="col">Status Doc.</th>
+              <th class="status-cred-col" scope="col">Status CrÃ©dito</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+              <td class="doc-col">Identidade e CPF</td>
+              <td class="desc-col" id="desc-identidade-dep">CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fÃ© pÃºblica (dentro da validade) do dependente.</td>
+              <td class="status-doc-col">
+                <select aria-label="Status identidade dependente maior">
+                  <option>Pendente</option><option>Enviado</option>
+                </select>
+              </td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito identidade dependente" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option>
+                  <option value="pendenciado">Pendenciado</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="doc-col">Comp. de estado civil</td>
+              <td class="desc-col" id="desc-estado-civil-dep">SOLTEIRO: CertidÃ£o de nascimento
+CASADO: CertidÃ£o de casamento â€“ precisa RG/CPF do cÃ´njuge se houver renda; anexar comprovante de renda
+VIÃšVO: CertidÃ£o de casamento e atestado de Ã³bito
+DIVORCIADO: CertidÃ£o de casamento averbada.</td>
+              <td class="status-doc-col">
+                <select aria-label="Status comp. estado civil dependente maior">
+                  <option>Pendente</option><option>Enviado</option>
+                </select>
+              </td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito estado civil dependente" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option>
+                  <option value="pendenciado">Pendenciado</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="doc-col">DeclaraÃ§Ã£o de parentesco</td>
+              <td class="desc-col">DeclaraÃ§Ã£o conforme regras da Caixa, vinculando o dependente ao proponente.</td>
+              <td class="status-doc-col">
+                <select aria-label="Status declaraÃ§Ã£o parentesco dependente maior">
+                  <option>Pendente</option><option>Enviado</option>
+                </select>
+              </td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito parentesco" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option>
+                  <option value="pendenciado">Pendenciado</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- RENDA CLT -->
+      <section class="section-block" id="sec-renda-clt" aria-labelledby="titulo-renda-clt">
+        <h2 class="section-title" id="titulo-renda-clt">Renda formal (CLT / vÃ­nculo empregatÃ­cio)</h2>
+        <div class="table-wrap" role="region" aria-label="Documentos para comprovaÃ§Ã£o de renda CLT / Formal">
+          <table>
+            <thead>
+            <tr>
+              <th class="doc-col" scope="col">Documento</th>
+              <th class="desc-col" scope="col">O que Ã© aceito</th>
+              <th class="status-doc-col" scope="col">Status Doc.</th>
+              <th class="status-cred-col" scope="col">Status CrÃ©dito</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+              <td class="doc-col">Holerites / contracheques</td>
+              <td class="desc-col">3 Ãºltimos holerites/contracheques do proponente.
+Devem constar nome do empregador, CNPJ, cargo, data de admissÃ£o e remuneraÃ§Ã£o bruta.</td>
+              <td class="status-doc-col">
+                <select aria-label="Status holerites CLT">
+                  <option>Pendente</option><option>Enviado</option>
+                </select>
+              </td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito holerites" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option>
+                  <option value="pendenciado">Pendenciado</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="doc-col">Comprovante de renda variÃ¡vel</td>
+              <td class="desc-col">Quando houver comissÃµes, adicional noturno, horas extras ou outras verbas variÃ¡veis,
+anexar holerites suficientes para cÃ¡lculo da mÃ©dia conforme regra da Caixa.</td>
+              <td class="status-doc-col">
+                <select aria-label="Status renda variÃ¡vel CLT">
+                  <option>Pendente</option><option>Enviado</option>
+                </select>
+              </td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito renda variÃ¡vel" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option>
+                  <option value="pendenciado">Pendenciado</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="doc-col">Carta do empregador (quando aplicÃ¡vel)</td>
+              <td class="desc-col">Carta em papel timbrado ou declaraÃ§Ã£o eletrÃ´nica do empregador, informando vÃ­nculo, salÃ¡rio e funÃ§Ã£o,
+apenas quando exigido pela anÃ¡lise do crÃ©dito.</td>
+              <td class="status-doc-col">
+                <select aria-label="Status carta empregador CLT">
+                  <option>Pendente</option><option>Enviado</option>
+                </select>
+              </td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito carta empregador" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option>
+                  <option value="pendenciado">Pendenciado</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- RENDA INFORMAL -->
+      <section class="section-block" id="sec-renda-informal" aria-labelledby="titulo-renda-informal">
+        <h2 class="section-title" id="titulo-renda-informal">Renda informal (inclui autÃ´nomos e profissional liberal)</h2>
+        <div class="table-wrap" role="region" aria-label="Documentos para comprovaÃ§Ã£o de renda informal">
+          <table>
+            <thead>
+            <tr>
+              <th class="doc-col" scope="col">Documento</th>
+              <th class="desc-col" scope="col">O que Ã© aceito</th>
+              <th class="status-doc-col" scope="col">Status Doc.</th>
+              <th class="status-cred-col" scope="col">Status CrÃ©dito</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+              <td class="doc-col">Extrato bancÃ¡rio</td>
+              <td class="desc-col">Extratos dos 3 Ãºltimos meses.
+Preferencialmente mÃªs fechado (ex.: 1 a 31 de janeiro, 1 a 28 de fevereiro).
+Aceitos extratos impressos ou em PDF emitidos pelo banco.
+Aceita bancos digitais (ex.: Nubank, PicPay).</td>
+              <td class="status-doc-col">
+                <select aria-label="Status extrato bancÃ¡rio renda informal">
+                  <option>Pendente</option><option>Enviado</option>
+                </select>
+              </td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito extrato bancÃ¡rio" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option>
+                  <option value="pendenciado">Pendenciado</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- APOSENTADOS -->
+      <section class="section-block" id="sec-aposentado" aria-labelledby="titulo-aposentado">
+        <h2 class="section-title" id="titulo-aposentado">Aposentados e Pensionistas</h2>
+        <div class="table-wrap" role="region" aria-label="Documentos para aposentados e pensionistas">
+          <table>
+            <thead>
+            <tr>
+              <th class="doc-col" scope="col">Documento</th>
+              <th class="desc-col" scope="col">O que Ã© aceito</th>
+              <th class="status-doc-col" scope="col">Status Doc.</th>
+              <th class="status-cred-col" scope="col">Status CrÃ©dito</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+              <td class="doc-col">Extrato de pagamento do benefÃ­cio</td>
+              <td class="desc-col">Ãšltimo extrato de benefÃ­cio, obtido pelo app Meu INSS ou site Dataprev.</td>
+              <td class="status-doc-col">
+                <select aria-label="Status extrato benefÃ­cio aposentado">
+                  <option>Pendente</option><option>Enviado</option>
+                </select>
+              </td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito benefÃ­cio" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option>
+                  <option value="pendenciado">Pendenciado</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- DOMÃ‰STICOS -->
+      <section class="section-block" id="sec-domestico" aria-labelledby="titulo-domestico">
+        <h2 class="section-title" id="titulo-domestico">DomÃ©sticos ou contrataÃ§Ã£o por CPF</h2>
+        <div class="table-wrap" role="region" aria-label="Documentos para trabalhadores domÃ©sticos ou contrataÃ§Ã£o por CPF">
+          <table>
+            <thead>
+            <tr>
+              <th class="doc-col" scope="col">Documento</th>
+              <th class="desc-col" scope="col">O que Ã© aceito</th>
+              <th class="status-doc-col" scope="col">Status Doc.</th>
+              <th class="status-cred-col" scope="col">Status CrÃ©dito</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+              <td class="doc-col">eSocial</td>
+              <td class="desc-col">Solicitar os 3 Ãºltimos comprovantes do eSocial do cliente.</td>
+              <td class="status-doc-col">
+                <select aria-label="Status eSocial domÃ©stico">
+                  <option>Pendente</option><option>Enviado</option>
+                </select>
+              </td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito eSocial" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option>
+                  <option value="pendenciado">Pendenciado</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- DOCUMENTOS CAIXA -->
+      <section class="section-block" id="sec-caixa" aria-labelledby="titulo-caixa">
+        <h2 class="section-title" id="titulo-caixa">Documentos Caixa</h2>
+
+        <div class="form-group" style="margin-bottom: 6px;">
+          <label for="cca-gerou">CCA gerou formulÃ¡rios de contrataÃ§Ã£o de cheque especial/cartÃ£o de crÃ©dito?</label>
+          <div class="checkbox-row">
+            <input type="checkbox" id="cca-gerou">
+            <label for="cca-gerou">Sim, CCA gerou os formulÃ¡rios de contrataÃ§Ã£o</label>
+          </div>
+          <span class="muted">
+            Se <strong>nÃ£o</strong> estiver marcado, considerar apenas DAMP, Ficha de cadastro Caixa, Ficha de abertura de conta e MO.
+            Se marcado, incluir tambÃ©m os formulÃ¡rios e propostas de cheque especial e cartÃ£o.
+          </span>
+        </div>
+
+        <div class="table-wrap" role="region" aria-label="Documentos padrÃ£o Caixa">
+          <table>
+            <thead>
+            <tr>
+              <th class="doc-col" scope="col">Documento</th>
+              <th class="desc-col" scope="col">O que Ã© aceito</th>
+              <th class="status-doc-col" scope="col">Status Doc.</th>
+              <th class="status-cred-col" scope="col">Status CrÃ©dito</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+              <td class="doc-col">DAMP</td>
+              <td class="desc-col">DAMP preenchida corretamente e assinada digitalmente pelo cliente.
+No fÃ­sico, precisa de aprovaÃ§Ã£o especÃ­fica do crÃ©dito.</td>
+              <td class="status-doc-col"><select aria-label="Status DAMP"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito DAMP" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="doc-col">Ficha de cadastro Caixa</td>
+              <td class="desc-col">Preenchida corretamente, com endereÃ§o de residÃªncia igual ao cadastro.
+Assinada digitalmente pelo proponente. No fÃ­sico, precisa de aprovaÃ§Ã£o.</td>
+              <td class="status-doc-col"><select aria-label="Status ficha de cadastro Caixa"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito ficha cadastro" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="doc-col">Ficha de abertura de conta</td>
+              <td class="desc-col">Assinada digitalmente; no fÃ­sico, precisa de aprovaÃ§Ã£o do crÃ©dito.</td>
+              <td class="status-doc-col"><select aria-label="Status ficha abertura de conta"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito abertura de conta" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="doc-col">MO</td>
+              <td class="desc-col">Assinada corretamente, sem sobrepor informaÃ§Ãµes importantes, sempre na segunda pÃ¡gina.
+Em caso de casal, o documento deve conter a assinatura de ambos os cÃ´njuges.</td>
+              <td class="status-doc-col"><select aria-label="Status MO"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito MO" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            <tr id="row-cheque-azul" style="display:none;">
+              <td class="doc-col">FormulÃ¡rio Cheque Azul</td>
+              <td class="desc-col">FormulÃ¡rio de contrataÃ§Ã£o de Cheque Azul/cheque especial,
+preenchido corretamente e assinado digitalmente pelo cliente.
+No fÃ­sico, somente com aprovaÃ§Ã£o do crÃ©dito.</td>
+              <td class="status-doc-col"><select aria-label="Status formulÃ¡rio Cheque Azul"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito Cheque Azul" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            <tr id="row-form-cartao" style="display:none;">
+              <td class="doc-col">FormulÃ¡rio CartÃ£o de CrÃ©dito</td>
+              <td class="desc-col">FormulÃ¡rio de contrataÃ§Ã£o do cartÃ£o de crÃ©dito Caixa,
+com todos os campos obrigatÃ³rios preenchidos e assinado digitalmente.</td>
+              <td class="status-doc-col"><select aria-label="Status formulÃ¡rio cartÃ£o de crÃ©dito"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito formulÃ¡rio cartÃ£o" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            <tr id="row-prop-cartao" style="display:none;">
+              <td class="doc-col">Proposta de CartÃ£o de CrÃ©dito</td>
+              <td class="desc-col">Proposta comercial de cartÃ£o de crÃ©dito emitida pela Caixa,
+vinculada ao cliente do financiamento e assinada digitalmente.</td>
+              <td class="status-doc-col"><select aria-label="Status proposta cartÃ£o de crÃ©dito"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="status-cred-col">
+                <select class="status-credito" aria-label="Status crÃ©dito proposta cartÃ£o" data-role="credito">
+                  <option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option>
+                </select>
+              </td>
+            </tr>
+
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- DOCUMENTOS AGEHAB -->
+      <section class="section-block" id="sec-agehab" aria-labelledby="titulo-agehab">
+        <h2 class="section-title" id="titulo-agehab">Documentos Agehab</h2>
+        <div class="table-wrap" role="region" aria-label="Documentos obrigatÃ³rios Agehab">
+          <table>
+            <thead>
+            <tr>
+              <th class="doc-col" scope="col">Documento</th>
+              <th class="desc-col" scope="col">O que Ã© aceito</th>
+              <th class="status-doc-col" scope="col">Status Doc.</th>
+              <th class="status-cred-col" scope="col">Status CrÃ©dito</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+              <td class="doc-col">DeclaraÃ§Ã£o de endereÃ§o</td>
+              <td class="desc-col">Utilizada quando necessÃ¡rio.
+Deve ser assinada pelo declarante via GOV.BR ou Clicksign.</td>
+              <td class="status-doc-col"><select aria-label="Status declaraÃ§Ã£o de endereÃ§o Agehab"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="status-cred-col"><select class="status-credito" aria-label="Status crÃ©dito declaraÃ§Ã£o endereÃ§o" data-role="credito"><option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select></td>
+            </tr>
+            <tr>
+              <td class="doc-col">DeclaraÃ§Ã£o de renda informal</td>
+              <td class="desc-col">Assinada pelo dependente via GOV.BR ou Clicksign, conforme modelo Agehab.</td>
+              <td class="status-doc-col"><select aria-label="Status declaraÃ§Ã£o de renda informal Agehab"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="status-cred-col"><select class="status-credito" aria-label="Status crÃ©dito renda informal" data-role="credito"><option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select></td>
+            </tr>
+            <tr>
+              <td class="doc-col">DeclaraÃ§Ã£o de nÃ£o renda</td>
+              <td class="desc-col">Para dependentes sem renda. Assinada pelo dependente via GOV.BR ou Clicksign.</td>
+              <td class="status-doc-col"><select aria-label="Status declaraÃ§Ã£o de nÃ£o renda Agehab"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="status-cred-col"><select class="status-credito" aria-label="Status crÃ©dito nÃ£o renda" data-role="credito"><option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select></td>
+            </tr>
+            <tr>
+              <td class="doc-col">VÃ­nculo â‰¥ 3 anos (cheque moradia)</td>
+              <td class="desc-col">Documentos com fÃ© pÃºblica que comprovem vÃ­nculo de, no mÃ­nimo, 3 anos
+em uma das cidades participantes do Cheque Moradia.</td>
+              <td class="status-doc-col"><select aria-label="Status vÃ­nculo 3 anos Agehab"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="status-cred-col"><select class="status-credito" aria-label="Status crÃ©dito vÃ­nculo 3 anos" data-role="credito"><option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select></td>
+            </tr>
+            <tr>
+              <td class="doc-col">Checklist Agehab</td>
+              <td class="desc-col">Preenchido corretamente e assinado pelo GOV.BR
+ou, em casos pontuais, a prÃ³prio punho conforme orientaÃ§Ã£o.</td>
+              <td class="status-doc-col"><select aria-label="Status checklist Agehab"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="status-cred-col"><select class="status-credito" aria-label="Status crÃ©dito checklist Agehab" data-role="credito"><option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select></td>
+            </tr>
+            <tr>
+              <td class="doc-col">Ficha Agehab</td>
+              <td class="desc-col">Preenchida pelo Assistente de CrÃ©dito e assinada pelo GOV.BR
+ou, em casos pontuais, a prÃ³prio punho.</td>
+              <td class="status-doc-col"><select aria-label="Status ficha Agehab"><option>Pendente</option><option>Enviado</option></select></td>
+              <td class="status-cred-col"><select class="status-credito" aria-label="Status crÃ©dito ficha Agehab" data-role="credito"><option value="analise">Em AnÃ¡lise</option><option value="pendenciado">Pendenciado</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select></td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer>
+        <p class="note">
+          *Este checklist Ã© apenas front-end. Em produÃ§Ã£o, esses campos alimentariam as tabelas de repasse
+          (proponente, dependentes, vÃ­nculos e checklist de documentos) com data/hora e usuÃ¡rio.
+        </p>
+      </footer>
+    </form>
+  </section>
+</main>
+
+<script>
+  const tipoDependenteSelect = document.getElementById('tipo-dependente');
+  const estadoCivilDepGroup = document.getElementById('estado-civil-dependente-group');
+  const estadoCivilDepSelect = document.getElementById('estado-civil-dependente');
+  const estadoCivilPropSelect = document.getElementById('estado-civil-proponente');
+  const conjugeRendaGroup = document.getElementById('conjuge-renda-group');
+
+  const perfilRendaSelect = document.getElementById('perfil-renda');
+
+  const secDepMenor = document.getElementById('sec-dep-menor');
+  const secDepMaior = document.getElementById('sec-dep-maior');
+
+  const secRendaClt = document.getElementById('sec-renda-clt');
+  const secRendaInformal = document.getElementById('sec-renda-informal');
+  const secAposentado = document.getElementById('sec-aposentado');
+  const secDomestico = document.getElementById('sec-domestico');
+
+  const rowIrpf = document.getElementById('row-irpf');
+  const rowFgts = document.getElementById('row-fgts');
+  const rowCtps = document.getElementById('row-ctps');
+
+  const descIdentidade = document.getElementById('desc-identidade');
+  const descEstadoCivil = document.getElementById('desc-estado-civil');
+
+  const descIdentidadeDep = document.getElementById('desc-identidade-dep');
+  const descEstadoCivilDep = document.getElementById('desc-estado-civil-dep');
+
+  const chkCotista = document.getElementById('cotista-3-anos');
+
+  const irpfInformalGroup = document.getElementById('irpf-informal-group');
+  const chkIrpfInformal = document.getElementById('irpf-informal');
+
+  const chkCcaGerou = document.getElementById('cca-gerou');
+  const rowChequeAzul = document.getElementById('row-cheque-azul');
+  const rowFormCartao = document.getElementById('row-form-cartao');
+  const rowPropCartao = document.getElementById('row-prop-cartao');
+
+  const nomeClienteInput = document.getElementById('nome-cliente');
+  const obraInput = document.getElementById('obra');
+  const assuntoCaixaInput = document.getElementById('assunto-caixa');
+  const assuntoAgehabInput = document.getElementById('assunto-agehab');
+  const copyFeedback = document.getElementById('copy-feedback');
+
+  function montarAssunto(prefixo) {
+    const nome = (nomeClienteInput.value || '').trim().toUpperCase();
+    const emp  = (obraInput.value || '').trim().toUpperCase();
+    const partes = [];
+    if (nome) partes.push(nome);
+    if (emp)  partes.push(emp);
+    const sufixo = partes.length ? ' + ' + partes.join(' + ') : ' + NOME DO CLIENTE + EMPREENDIMENTO';
+    return prefixo + sufixo;
+  }
+
+  function atualizarAssuntosEmail() {
+    assuntoCaixaInput.value  = montarAssunto('KIT CAIXA');
+    assuntoAgehabInput.value = montarAssunto('KIT AGEHAB');
+  }
+
+  function atualizarDependente() {
+    const tipo = tipoDependenteSelect.value;
+    if (tipo === 'filho-menor') {
+      secDepMenor.style.display = 'block';
+      secDepMaior.style.display = 'none';
+      estadoCivilDepGroup.classList.add('hidden');
+    } else {
+      secDepMenor.style.display = 'none';
+      secDepMaior.style.display = 'block';
+      estadoCivilDepGroup.classList.remove('hidden');
+    }
+  }
+
+  function atualizarEstadoCivilProponente() {
+    const val = estadoCivilPropSelect.value;
+
+    if (val === 'casado' || val === 'uniao-estavel') conjugeRendaGroup.classList.remove('hidden');
+    else conjugeRendaGroup.classList.add('hidden');
+
+    if (descIdentidade) {
+      let baseId, hintId = '';
+      if (val === 'casado' || val === 'uniao-estavel') {
+        baseId = 'CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fÃ© pÃºblica (dentro da validade) do proponente e do cÃ´njuge.';
+        hintId = '<span class="highlight-info" role="note">Orientar o corretor: Ã© obrigatÃ³rio anexar tambÃ©m o documento de identidade do cÃ´njuge.</span>';
+      } else {
+        baseId = 'CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fÃ© pÃºblica (dentro da validade) do proponente.';
+        hintId = '<span class="highlight-info" role="note">Orientar o corretor: anexar somente o documento de identidade do proponente.</span>';
+      }
+      descIdentidade.innerHTML = baseId + '<br>' + hintId;
+    }
+
+    if (descEstadoCivil) {
+      let textoEc = '';
+      switch (val) {
+        case 'solteiro': textoEc = 'CertidÃ£o de nascimento constando estado civil solteiro.'; break;
+        case 'casado': textoEc = 'CertidÃ£o de casamento.'; break;
+        case 'divorciado': textoEc = 'CertidÃ£o de casamento averbada com o divÃ³rcio.'; break;
+        case 'viuvo': textoEc = 'CertidÃ£o de casamento e atestado de Ã³bito do cÃ´njuge.'; break;
+        case 'uniao-estavel': textoEc = 'DocumentaÃ§Ã£o de uniÃ£o estÃ¡vel conforme modelo aceito pela Caixa.'; break;
+      }
+      descEstadoCivil.textContent = textoEc;
+    }
+  }
+
+  function atualizarEstadoCivilDependente() {
+    if (!estadoCivilDepSelect || !descIdentidadeDep || !descEstadoCivilDep) return;
+    const val = estadoCivilDepSelect.value;
+
+    let baseIdDep, hintDep = '';
+    if (val === 'casado') {
+      baseIdDep = 'CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fÃ© pÃºblica (dentro da validade) do dependente e do cÃ´njuge.';
+      hintDep = '<span class="highlight-info" role="note">Orientar o corretor: anexar a identidade/CPF do dependente e tambÃ©m do cÃ´njuge do dependente.</span>';
+    } else {
+      baseIdDep = 'CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fÃ© pÃºblica (dentro da validade) somente do dependente.';
+      hintDep = '<span class="highlight-info" role="note">Orientar o corretor: anexar apenas a identidade/CPF do dependente.</span>';
+    }
+    descIdentidadeDep.innerHTML = baseIdDep + '<br>' + hintDep;
+
+    const textoBaseCivilDep =
+`SOLTEIRO: CertidÃ£o de nascimento
+CASADO: CertidÃ£o de casamento â€“ precisa RG/CPF do cÃ´njuge se houver renda; anexar comprovante de renda
+VIÃšVO: CertidÃ£o de casamento e atestado de Ã³bito
+DIVORCIADO: CertidÃ£o de casamento averbada.`;
+
+    descEstadoCivilDep.textContent = textoBaseCivilDep;
+  }
+
+  function atualizarCarteiraTrabalho() {
+    const mostrar = chkCotista.checked;
+    rowCtps.style.display = mostrar ? 'table-row' : 'none';
+  }
+
+  function atualizarPerfilRenda() {
+    const perfil = perfilRendaSelect.value;
+
+    secRendaClt.style.display      = (perfil === 'clt') ? 'block' : 'none';
+    secRendaInformal.style.display = (perfil === 'informal') ? 'block' : 'none';
+    secAposentado.style.display    = (perfil === 'aposentado') ? 'block' : 'none';
+    secDomestico.style.display     = (perfil === 'domestico') ? 'block' : 'none';
+
+    if (perfil === 'informal') irpfInformalGroup.classList.remove('hidden');
+    else {
+      irpfInformalGroup.classList.add('hidden');
+      chkIrpfInformal.checked = false;
+    }
+
+    rowIrpf.style.display = (perfil === 'informal' && chkIrpfInformal.checked) ? 'table-row' : 'none';
+    rowFgts.style.display = (perfil === 'clt') ? 'table-row' : 'none';
+  }
+
+  function atualizarCcaFormularios() {
+    const display = chkCcaGerou.checked ? 'table-row' : 'none';
+    rowChequeAzul.style.display = display;
+    rowFormCartao.style.display = display;
+    rowPropCartao.style.display = display;
+  }
+
+  /* ===== Status Doc (Pendente/Enviado) ===== */
+  function atualizarVisualStatusDoc(select) {
+    const val = (select.value || '').toLowerCase();
+    select.classList.remove('status-pendente', 'status-enviado');
+    if (val === 'pendente') select.classList.add('status-pendente');
+    if (val === 'enviado')  select.classList.add('status-enviado');
+  }
+
+  function inicializarStatusDoc() {
+    const selects = document.querySelectorAll('select[aria-label^="Status "]:not([data-role="credito"])');
+    selects.forEach(sel => {
+      // sÃ³ aplica nos selects de doc que tem opÃ§Ãµes Pendente/Enviado
+      if ([...sel.options].some(o => (o.textContent || '').toLowerCase() === 'pendente')) {
+        sel.classList.add('status-pill');
+        atualizarVisualStatusDoc(sel);
+        sel.addEventListener('change', () => atualizarVisualStatusDoc(sel));
+      }
+    });
+  }
+
+  /* ===== Status CrÃ©dito (Em AnÃ¡lise/Pendenciado/Aprovado/Reprovado) ===== */
+  function atualizarVisualStatusCredito(select) {
+    const v = (select.value || '').toLowerCase();
+    select.classList.remove('status-analise','status-pendenciado','status-aprovado','status-reprovado');
+    if (v === 'analise') select.classList.add('status-analise');
+    if (v === 'pendenciado') select.classList.add('status-pendenciado');
+    if (v === 'aprovado') select.classList.add('status-aprovado');
+    if (v === 'reprovado') select.classList.add('status-reprovado');
+  }
+
+  function inicializarStatusCredito() {
+    const creditoSelects = document.querySelectorAll('select[data-role="credito"]');
+    creditoSelects.forEach(sel => {
+      sel.classList.add('status-pill');
+      atualizarVisualStatusCredito(sel);
+      sel.addEventListener('change', () => atualizarVisualStatusCredito(sel));
+
+      /* corretor sÃ³ visualiza */
+      sel.disabled = true;
+      sel.title = 'Atualizado pelo analista.';
+    });
+  }
+
+  async function copiarAssunto(idAlvo) {
+    const input = document.getElementById(idAlvo);
+    const texto = (input?.value || '').trim();
+    if (!texto) return;
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(texto);
+      } else {
+        input.select();
+        document.execCommand('copy');
+      }
+      copyFeedback.textContent = 'Assunto copiado. Cole no assunto do e-mail (Ctrl + V).';
+      setTimeout(() => { copyFeedback.textContent = ''; }, 3500);
+    } catch (e) {
+      alert('Assunto copiado. Cole no assunto do e-mail (Ctrl + V).');
+    }
+  }
+
+  function inicializarCopiarAssunto() {
+    document.querySelectorAll('.copy-btn[data-target]').forEach(btn => {
+      btn.addEventListener('click', () => copiarAssunto(btn.getAttribute('data-target')));
+    });
+  }
+
+  /* listeners */
+  perfilRendaSelect.addEventListener('change', atualizarPerfilRenda);
+  chkIrpfInformal.addEventListener('change', atualizarPerfilRenda);
+
+  tipoDependenteSelect.addEventListener('change', atualizarDependente);
+  estadoCivilPropSelect.addEventListener('change', atualizarEstadoCivilProponente);
+  if (estadoCivilDepSelect) estadoCivilDepSelect.addEventListener('change', atualizarEstadoCivilDependente);
+
+  chkCotista.addEventListener('change', atualizarCarteiraTrabalho);
+  chkCcaGerou.addEventListener('change', atualizarCcaFormularios);
+
+  nomeClienteInput.addEventListener('input', atualizarAssuntosEmail);
+  obraInput.addEventListener('input', atualizarAssuntosEmail);
+
+  /* init */
+  atualizarDependente();
+  atualizarEstadoCivilProponente();
+  atualizarPerfilRenda();
+  atualizarCarteiraTrabalho();
+  atualizarEstadoCivilDependente();
+  atualizarCcaFormularios();
+  inicializarStatusDoc();
+  inicializarStatusCredito();
+  inicializarCopiarAssunto();
+  atualizarAssuntosEmail();
+</script>
+<script>
+  (function () {
+    const API_BASE = "/app/api";
     const url = new URL(window.location.href);
-    const processoId = url.searchParams.get("processo_id");
+    let processoId = url.searchParams.get("processo_id");
+    let processoAtual = null;
+    let saving = false;
 
-    const subtitle = document.getElementById("subtitle");
-    const tbody = document.getElementById("tbody");
-    const meta = document.getElementById("meta");
-    const msg = document.getElementById("msg");
-    const toAnalista = document.getElementById("toAnalista");
+    function norm(value) {
+      return String(value || "").trim().toLowerCase();
+    }
 
-    let processo = null;
-    let cliente = null;
-    let documentos = [];
+    function normalizeName(text) {
+      return String(text || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+    }
 
-    async function fetchJSON(url, options = {}) {
-      const res = await fetch(url, {
+    async function api(path, options = {}) {
+      const response = await fetch(`${API_BASE}${path}`, {
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", ...(options.headers || {}) },
         ...options,
       });
 
-      if (res.status === 401) {
+      if (response.status === 401) {
         window.location.href = "/login";
         throw new Error("Nao autenticado");
       }
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.detail || "Falha na requisi��o");
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.detail || "Falha de comunicação");
       }
       return data;
     }
 
-    function categoriaPill(cat) {
-      const value = (cat || "").toLowerCase();
-      if (value.includes("caixa")) return "warn";
-      if (value.includes("agehab")) return "bad";
-      return "ok";
+    function sectionToCategory(sectionId) {
+      const map = {
+        "sec-proponente": "proponente",
+        "sec-dep-menor": "depmenor",
+        "sec-dep-maior": "depmaior",
+        "sec-renda-clt": "rendaclt",
+        "sec-renda-informal": "rendainf",
+        "sec-aposentado": "apos",
+        "sec-domestico": "dom",
+        "sec-caixa": "caixa",
+        "sec-agehab": "agehab",
+      };
+      return map[sectionId] || "proponente";
     }
 
-    function render() {
-      if (!documentos.length) {
-        tbody.innerHTML = '<tr><td colspan="4" class="empty">Sem documentos.</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = documentos.map((d, idx) => `
-        <tr>
-          <td>
-            <span class="pill ${categoriaPill(d.categoria)}">${d.categoria}</span>
-          </td>
-          <td>${d.nome}</td>
-          <td>
-            <select data-idx="${idx}" data-field="status_doc">
-              <option value="PENDENTE" ${d.status_doc === "PENDENTE" ? "selected" : ""}>PENDENTE</option>
-              <option value="ENVIADO" ${d.status_doc === "ENVIADO" ? "selected" : ""}>ENVIADO</option>
-            </select>
-          </td>
-          <td>
-            <select data-idx="${idx}" data-field="status_credito">
-              <option value="ANALISE" ${d.status_credito === "ANALISE" ? "selected" : ""}>ANALISE</option>
-              <option value="PENDENCIADO" ${d.status_credito === "PENDENCIADO" ? "selected" : ""}>PENDENCIADO</option>
-              <option value="APROVADO" ${d.status_credito === "APROVADO" ? "selected" : ""}>APROVADO</option>
-              <option value="REPROVADO" ${d.status_credito === "REPROVADO" ? "selected" : ""}>REPROVADO</option>
-            </select>
-          </td>
-        </tr>
-      `).join("");
+    function getRows() {
+      return Array.from(document.querySelectorAll("section.section-block tr")).map((row) => {
+        const nameCell = row.querySelector("td.doc-col");
+        const docSelect = row.querySelector("td.status-doc-col select, td.status-col select");
+        const creditoSelect = row.querySelector('select[data-role="credito"]');
+        const section = row.closest("section.section-block");
+        if (!nameCell || !docSelect || !section?.id) return null;
+        return {
+          row,
+          nome: String(nameCell.textContent || "").replace(/\s+/g, " ").trim(),
+          categoria: sectionToCategory(section.id),
+          docSelect,
+          creditoSelect,
+        };
+      }).filter(Boolean);
     }
 
-    function updateMeta() {
-      if (!processo || !cliente) return;
-
-      const pendentes = documentos.filter((d) => d.status_doc !== "ENVIADO").length;
-      const reprovados = documentos.filter((d) => d.status_credito === "REPROVADO").length;
-
-      subtitle.textContent = `Processo ${processo.id} - ${cliente.nome}`;
-      meta.innerHTML = `
-        <span><b>Cliente:</b> ${cliente.nome}</span>
-        <span><b>Corretor:</b> ${cliente.corretor || "-"}</span>
-        <span><b>Obra:</b> ${cliente.obra || "-"}</span>
-        <span><b>Pendentes:</b> ${pendentes}</span>
-        <span><b>Reprovados:</b> ${reprovados}</span>
-      `;
+    function uiDocToBackend(value) {
+      return norm(value) === "enviado" ? "ENVIADO" : "PENDENTE";
     }
 
-    async function loadProcesso() {
-      if (!processoId) {
-        subtitle.textContent = "Informe ?processo_id=... na URL.";
-        tbody.innerHTML = '<tr><td colspan="4" class="empty">Processo n�o informado.</td></tr>';
-        return;
-      }
-
-      toAnalista.href = `/app/analista?processo_id=${processoId}`;
-
-      const data = await fetchJSON(`/app/api/processos/${processoId}/full`);
-      processo = data.processo;
-      cliente = data.cliente;
-      documentos = data.documentos || [];
-      render();
-      updateMeta();
+    function backendDocToUi(value) {
+      return String(value || "").toUpperCase() === "ENVIADO" ? "Enviado" : "Pendente";
     }
 
-    function addDocumentoRow() {
-      const categoria = document.getElementById("newCategoria").value.trim();
-      const nome = document.getElementById("newNome").value.trim();
-      const statusDoc = document.getElementById("newStatusDoc").value;
-      const statusCredito = document.getElementById("newStatusCredito").value;
+    function processStatusToCredito(status) {
+      const s = norm(status).replace(/\s+/g, "_");
+      if (s === "aprovado") return "aprovado";
+      if (s === "reprovado") return "reprovado";
+      if (s === "pendente") return "pendenciado";
+      return "analise";
+    }
 
-      msg.textContent = "";
+    function backendCreditoToUi(value) {
+      const s = String(value || "").toUpperCase();
+      if (s === "APROVADO") return "aprovado";
+      if (s === "REPROVADO") return "reprovado";
+      if (s === "PENDENCIADO") return "pendenciado";
+      return "analise";
+    }
 
-      if (!categoria || !nome) {
-        msg.textContent = "Preencha categoria e documento.";
-        return;
-      }
+    function uiCreditoToBackend(value) {
+      const s = norm(value);
+      if (s === "aprovado") return "APROVADO";
+      if (s === "reprovado") return "REPROVADO";
+      if (s === "pendenciado") return "PENDENCIADO";
+      return "ANALISE";
+    }
 
-      documentos.push({
-        categoria,
+    function creditoByCategoria(categoria, processo) {
+      if (!processo) return "analise";
+      if (categoria === "caixa") return processStatusToCredito(processo.status_cca);
+      if (categoria === "agehab") return processStatusToCredito(processo.status_agehab);
+      return processStatusToCredito(processo.status_geral);
+    }
+
+    async function ensureProcesso() {
+      if (processoId) return true;
+
+      const nome = (document.getElementById("nome-cliente")?.value || "").trim();
+      if (!nome) return false;
+
+      const payload = {
         nome,
-        status_doc: statusDoc,
-        status_credito: statusCredito,
+        corretor: (document.getElementById("corretor")?.value || "").trim() || null,
+        obra: (document.getElementById("obra")?.value || "").trim() || null,
+        reserva: (document.getElementById("reserva")?.value || "").trim() || null,
+      };
+
+      const created = await api("/processos/intake", {
+        method: "POST",
+        body: JSON.stringify(payload),
       });
 
-      document.getElementById("newCategoria").value = "";
-      document.getElementById("newNome").value = "";
-      render();
-      updateMeta();
+      processoId = created.processo_id;
+      url.searchParams.set("processo_id", processoId);
+      history.replaceState({}, "", url.toString());
+      return true;
     }
 
-    async function saveChecklist() {
-      msg.textContent = "";
+    function applyVisuals() {
+      if (typeof atualizarAssuntosEmail === "function") atualizarAssuntosEmail();
+      if (typeof atualizarDependente === "function") atualizarDependente();
+      if (typeof atualizarEstadoCivilProponente === "function") atualizarEstadoCivilProponente();
+      if (typeof atualizarPerfilRenda === "function") atualizarPerfilRenda();
+      if (typeof atualizarCarteiraTrabalho === "function") atualizarCarteiraTrabalho();
+      if (typeof atualizarEstadoCivilDependente === "function") atualizarEstadoCivilDependente();
+      if (typeof atualizarCcaFormularios === "function") atualizarCcaFormularios();
+
+      getRows().forEach((item) => {
+        if (typeof atualizarVisualStatusDoc === "function") atualizarVisualStatusDoc(item.docSelect);
+        if (item.creditoSelect && typeof atualizarVisualStatusCredito === "function") {
+          atualizarVisualStatusCredito(item.creditoSelect);
+        }
+      });
+    }
+
+    async function carregarProcesso() {
       if (!processoId) return;
 
+      const data = await api(`/processos/${processoId}/full`);
+      processoAtual = data.processo;
+      const cliente = data.cliente;
+      const documentos = data.documentos || [];
+
+      const mapDocs = new Map(
+        documentos.map((doc) => [
+          `${normalizeName(doc.categoria)}|${normalizeName(doc.nome)}`,
+          doc,
+        ])
+      );
+
+      const nomeEl = document.getElementById("nome-cliente");
+      const corretorEl = document.getElementById("corretor");
+      const obraEl = document.getElementById("obra");
+      const reservaEl = document.getElementById("reserva");
+
+      if (nomeEl && !nomeEl.value) nomeEl.value = cliente.nome || "";
+      if (corretorEl && !corretorEl.value) corretorEl.value = cliente.corretor || "";
+      if (obraEl && !obraEl.value) obraEl.value = cliente.obra || "";
+      if (reservaEl && !reservaEl.value) reservaEl.value = cliente.reserva || "";
+
+      getRows().forEach((item) => {
+        const key = `${normalizeName(item.categoria)}|${normalizeName(item.nome)}`;
+        const found = mapDocs.get(key);
+
+        item.docSelect.value = backendDocToUi(found?.status_doc);
+
+        if (item.creditoSelect) {
+          const creditoValue = found?.status_credito
+            ? backendCreditoToUi(found.status_credito)
+            : creditoByCategoria(item.categoria, processoAtual);
+          item.creditoSelect.value = creditoValue;
+          item.creditoSelect.disabled = true;
+        }
+      });
+
+      applyVisuals();
+    }
+
+    async function salvarChecklist() {
+      if (saving) return;
+      const ok = await ensureProcesso();
+      if (!ok || !processoId) return;
+
+      const rows = getRows();
+      const documentos = rows.map((item) => ({
+        categoria: item.categoria,
+        nome: item.nome,
+        status_doc: uiDocToBackend(item.docSelect.value),
+        status_credito: uiCreditoToBackend(item.creditoSelect?.value || creditoByCategoria(item.categoria, processoAtual)),
+      }));
+
+      saving = true;
       try {
-        await fetchJSON(`/app/api/processos/${processoId}/documentos`, {
+        await api(`/processos/${processoId}/documentos`, {
           method: "PUT",
           body: JSON.stringify({ documentos }),
         });
-        msg.textContent = "Checklist salvo com sucesso.";
-        await loadProcesso();
-      } catch (err) {
-        msg.textContent = err.message;
+      } finally {
+        saving = false;
       }
     }
 
-    tbody.addEventListener("change", (event) => {
-      const el = event.target;
-      if (!(el instanceof HTMLSelectElement)) return;
-      const idx = Number(el.dataset.idx);
-      const field = el.dataset.field;
-      if (!Number.isInteger(idx) || !field || !documentos[idx]) return;
-      documentos[idx][field] = el.value;
-      updateMeta();
+    function debounce(fn, ms) {
+      let timer = null;
+      return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn(...args), ms);
+      };
+    }
+
+    const saveDebounced = debounce(() => {
+      salvarChecklist().catch(() => null);
+    }, 700);
+
+    getRows().forEach((item) => {
+      item.docSelect.addEventListener("change", saveDebounced);
     });
 
-    document.getElementById("addRowBtn").addEventListener("click", addDocumentoRow);
-    document.getElementById("saveBtn").addEventListener("click", saveChecklist);
-
-    loadProcesso().catch((err) => {
-      subtitle.textContent = err.message;
-      tbody.innerHTML = `<tr><td colspan="4" class="empty">${err.message}</td></tr>`;
+    ["nome-cliente", "corretor", "obra", "reserva"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener("blur", async () => {
+        try {
+          const created = await ensureProcesso();
+          if (created) saveDebounced();
+        } catch (_) {
+        }
+      });
     });
-  </script>
+
+    carregarProcesso().catch(() => null);
+
+    setInterval(() => {
+      if (!processoId) return;
+      carregarProcesso().catch(() => null);
+    }, 30000);
+  })();
+</script>
 </body>
 </html>
+
+

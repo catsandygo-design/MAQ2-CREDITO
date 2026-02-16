@@ -1,329 +1,599 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Painel CCA | Sistema de Cr�dito</title>
+  <title>Tela CCA â€“ Painel de EstÃ¡gios</title>
   <style>
-    :root {
-      --bg: #0b1220;
-      --card: #101a2e;
-      --line: #22314d;
-      --text: #e7eef9;
-      --muted: #9cb0d1;
-      --accent: #2fc16a;
-      --warn: #ffbf47;
-      --bad: #ff6b6b;
-      --ok: #44d07c;
-      --link: #6eb2ff;
+    :root{
+      --bg:#020617;
+      --bg-soft:#020617;
+      --card:#0b1220;
+      --line:rgba(148,163,184,.22);
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+
+      --ok:#22c55e;
+      --warn:#facc15;
+      --bad:#fb7185;
+      --info:#38bdf8;
+
+      --shadow:0 22px 40px rgba(15,23,42,0.95);
     }
-    * { box-sizing: border-box; font-family: "Segoe UI", Arial, sans-serif; }
-    body {
-      margin: 0;
-      background: radial-gradient(circle at 20% 0%, #1a2a45 0%, #0b1220 45%, #070c16 100%);
-      color: var(--text);
-      padding: 16px;
+
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+    body{
+      margin:0;
+      background:radial-gradient(circle at top,#1f2937 0,#020617 45%,#020617 100%);
+      color:var(--text);
+      padding:18px 12px 40px;
     }
-    .wrap { max-width: 1200px; margin: 0 auto; }
-    .top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
+    .wrapper{max-width:1250px;margin:0 auto;}
+    .card{
+      background:
+        radial-gradient(circle at top left, rgba(56,189,248,0.10), transparent 55%),
+        radial-gradient(circle at bottom right, rgba(34,197,94,0.10), transparent 60%),
+        var(--bg-soft);
+      border:1px solid rgba(148,163,184,0.30);
+      border-radius:16px;
+      padding:16px 16px 14px;
+      box-shadow:var(--shadow);
+      position:relative;
+      overflow:hidden;
     }
-    .title h1 { margin: 0; font-size: 1.25rem; }
-    .title p { margin: 4px 0 0; color: var(--muted); font-size: .86rem; }
-    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    button, .btn-link {
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: #0f1a30;
-      color: var(--text);
-      padding: 9px 12px;
-      cursor: pointer;
-      text-decoration: none;
-      font-size: .85rem;
-      font-weight: 700;
+
+    header{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:10px;
     }
-    .primary { background: linear-gradient(180deg, #2fc16a, #24a35a); color: #05140a; border: 0; }
-    .danger { border-color: #733; color: #ffb7b7; }
-    .card {
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
-      padding: 14px;
-      margin-bottom: 12px;
+    .title h1{
+      margin:0;
+      font-size:1.15rem;
+      letter-spacing:.2px;
     }
-    .grid {
-      display: grid;
-      gap: 10px;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+    .title p{
+      margin:4px 0 0;
+      color:var(--muted);
+      font-size:.78rem;
+      line-height:1.3;
     }
-    .grid.new { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    @media (max-width: 900px) { .grid, .grid.new { grid-template-columns: 1fr; } }
-    .fg { display: flex; flex-direction: column; gap: 6px; }
-    .fg label { font-size: .8rem; color: var(--muted); font-weight: 600; }
-    input, select {
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: #0a1426;
-      color: var(--text);
-      padding: 9px 10px;
-      font-size: .9rem;
-      outline: none;
-      width: 100%;
+
+    /* Top actions */
+    .actions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
     }
-    table { width: 100%; border-collapse: collapse; font-size: .86rem; }
-    th, td { border-bottom: 1px solid var(--line); padding: 9px 8px; text-align: left; }
-    th { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
-    tr:last-child td { border-bottom: 0; }
-    .badge {
-      display: inline-block;
-      border: 1px solid var(--line);
-      padding: 4px 8px;
-      border-radius: 999px;
-      font-size: .75rem;
-      font-weight: 700;
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      padding:7px 10px;
+      border-radius:999px;
+      font-size:.74rem;
+      font-weight:750;
+      letter-spacing:.02em;
+      border:1px solid rgba(148,163,184,.25);
+      background:rgba(15,23,42,.82);
+      color:var(--text);
+      white-space:nowrap;
     }
-    .ok { border-color: rgba(68,208,124,.5); color: var(--ok); }
-    .warn { border-color: rgba(255,191,71,.5); color: var(--warn); }
-    .bad { border-color: rgba(255,107,107,.5); color: var(--bad); }
-    .muted { color: var(--muted); }
-    .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-    .link-btn {
-      border: 1px solid rgba(110,178,255,.5);
-      color: var(--link);
-      background: rgba(110,178,255,.08);
-      border-radius: 8px;
-      padding: 6px 8px;
-      font-size: .78rem;
-      text-decoration: none;
-      font-weight: 700;
+
+    .btn{
+      cursor:pointer;
+      border-radius:999px;
+      padding:8px 11px;
+      font-size:.74rem;
+      font-weight:800;
+      letter-spacing:.05em;
+      text-transform:uppercase;
+      border:1px solid rgba(34,197,94,.75);
+      background:radial-gradient(circle at top left, #22c55e, #16a34a);
+      color:#04110b;
+      box-shadow:0 0 0 1px rgba(15,23,42,0.9), 0 0 12px rgba(34,197,94,0.55);
+      transition:transform .08s ease, filter .12s ease, box-shadow .12s ease;
     }
-    .empty { color: var(--muted); text-align: center; padding: 16px; }
+    .btn:hover{transform:translateY(-1px);filter:brightness(1.05);box-shadow:0 0 0 1px rgba(15,23,42,1), 0 0 16px rgba(74,222,128,0.75);}
+    .btn:active{transform:translateY(0);box-shadow:0 0 0 1px rgba(15,23,42,1), 0 0 8px rgba(74,222,128,0.55);}
+
+    /* Filters */
+    .filters{
+      display:grid;
+      grid-template-columns: 1.2fr 1fr 1fr 1fr;
+      gap:10px;
+      margin:10px 0 12px;
+      padding:10px;
+      border-radius:14px;
+      border:1px dashed rgba(148,163,184,0.30);
+      background:rgba(15,23,42,0.62);
+    }
+    @media (max-width: 980px){
+      .filters{grid-template-columns:1fr 1fr; }
+    }
+    @media (max-width: 560px){
+      .filters{grid-template-columns:1fr;}
+      header{flex-direction:column;align-items:flex-start;}
+      .actions{justify-content:flex-start;}
+    }
+    .fg{display:flex;flex-direction:column;gap:5px;}
+    .fg label{color:var(--muted);font-size:.72rem;font-weight:650;}
+    input,select{
+      color-scheme:dark;
+      border-radius:999px;
+      border:1px solid rgba(56,189,248,.30);
+      background:linear-gradient(135deg, rgba(2,44,34,.55), rgba(2,6,23,.95));
+      color:var(--text);
+      font-size:.78rem;
+      padding:8px 11px;
+      outline:none;
+      box-shadow:0 0 0 1px rgba(15,23,42,.65);
+      transition:border-color .2s ease, box-shadow .2s ease, transform .08s ease;
+      appearance:none;
+      background-image:
+        linear-gradient(135deg, rgba(2,44,34,.55), rgba(2,6,23,.95)),
+        linear-gradient(45deg, #22c55e 0, #22c55e 50%, transparent 50%, transparent 100%);
+      background-repeat:no-repeat;
+      background-position:0 0, right 10px center;
+      background-size:100% 100%, 9px 6px;
+    }
+    input{background-image:linear-gradient(135deg, rgba(2,44,34,.55), rgba(2,6,23,.95));}
+    input::placeholder{color:rgba(148,163,184,.75);}
+    input:focus-visible,select:focus-visible{
+      border-color:rgba(187,247,208,.85);
+      box-shadow:0 0 0 1px rgba(15,23,42,.9), 0 0 0 3px rgba(34,197,94,.35);
+      transform:translateY(-1px);
+    }
+
+    /* Table */
+    .table-wrap{
+      border-radius:14px;
+      border:1px solid rgba(31,41,55,0.95);
+      overflow:hidden;
+      background:rgba(15,23,42,0.82);
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:.78rem;
+    }
+    thead{background:rgba(2,6,23,0.95);}
+    th,td{
+      padding:8px 9px;
+      border-bottom:1px solid rgba(31,41,55,0.75);
+      text-align:left;
+      vertical-align:middle;
+    }
+    th{
+      color:var(--muted);
+      font-size:.72rem;
+      font-weight:800;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
+    tbody tr:nth-child(even){background:rgba(15,23,42,0.55);}
+    tbody tr:hover{
+      background:rgba(15,23,42,0.92);
+      box-shadow:inset 2px 0 0 rgba(34,197,94,0.85);
+    }
+
+    .col-cliente{width:22%;font-weight:750;}
+    .col-corretor{width:16%;}
+    .col-obra{width:8%; font-weight:750;}
+    .col-stage{width:9%;}
+
+    /* Stage badges */
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:7px 10px;
+      border-radius:999px;
+      font-weight:850;
+      font-size:.72rem;
+      border:1px solid rgba(148,163,184,.18);
+      background:rgba(2,6,23,.55);
+      color:var(--text);
+      white-space:nowrap;
+      min-width:110px;
+    }
+    .b-analise{
+      border-color:rgba(56,189,248,.9);
+      box-shadow:0 0 0 1px rgba(15,23,42,.9), 0 0 12px rgba(56,189,248,.30);
+      background:linear-gradient(135deg, rgba(12,74,110,.95), rgba(2,6,23,.85));
+    }
+    .b-pendente{
+      border-color:rgba(251,113,133,.95);
+      box-shadow:0 0 0 1px rgba(15,23,42,.9), 0 0 12px rgba(251,113,133,.28);
+      background:linear-gradient(135deg, rgba(69,10,10,.95), rgba(2,6,23,.88));
+    }
+    .b-pendenciado{
+      border-color:rgba(250,204,21,.95);
+      box-shadow:0 0 0 1px rgba(15,23,42,.9), 0 0 12px rgba(250,204,21,.22);
+      background:linear-gradient(135deg, rgba(120,53,15,.95), rgba(2,6,23,.88));
+    }
+    .b-ok{
+      border-color:rgba(74,222,128,.95);
+      box-shadow:0 0 0 1px rgba(15,23,42,.9), 0 0 12px rgba(74,222,128,.25);
+      background:linear-gradient(135deg, rgba(6,95,70,.95), rgba(2,6,23,.88));
+    }
+    .b-na{
+      border-color:rgba(148,163,184,.35);
+      box-shadow:none;
+      background:linear-gradient(135deg, rgba(30,41,59,.80), rgba(2,6,23,.88));
+      color:rgba(226,232,240,.85);
+    }
+
+    /* Small counter line */
+    .meta{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      margin-top:10px;
+      color:var(--muted);
+      font-size:.72rem;
+    }
+    .meta b{color:var(--text);}
+
+    /* Inline â€œeditâ€ (simulado) */
+    .row-actions{
+      display:flex;
+      gap:6px;
+      justify-content:flex-end;
+      align-items:center;
+    }
+    .mini{
+      border-radius:999px;
+      padding:7px 10px;
+      font-size:.72rem;
+      font-weight:850;
+      border:1px solid rgba(148,163,184,.22);
+      background:rgba(2,6,23,.55);
+      color:var(--text);
+      cursor:pointer;
+      transition:transform .08s ease, filter .12s ease;
+      white-space:nowrap;
+    }
+    .mini:hover{transform:translateY(-1px);filter:brightness(1.05);}
+    .mini:active{transform:translateY(0);}
+    .mini.primary{
+      border-color:rgba(56,189,248,.55);
+      box-shadow:0 0 0 1px rgba(15,23,42,.85), 0 0 10px rgba(56,189,248,.18);
+    }
+    .col-actions{width:7%; text-align:right;}
+    td.col-actions{padding-right:10px;}
   </style>
 </head>
-<body>
-  <main class="wrap">
-    <header class="top">
-      <div class="title">
-        <h1>Painel CCA</h1>
-        <p>Gest�o de processos, filtros e navega��o para checklist e analista.</p>
-      </div>
-      <div class="actions">
-        <a class="btn-link" href="/app/checklist">Checklist</a>
-        <a class="btn-link" href="/app/analista">Analista</a>
-        <button id="logoutBtn" class="danger" type="button">Sair</button>
-      </div>
-    </header>
 
-    <section class="card">
-      <div class="grid new">
-        <div class="fg">
-          <label for="nome">Nome do cliente</label>
-          <input id="nome" type="text" placeholder="Ex.: Maria da Silva" />
+<body>
+  <main class="wrapper">
+    <section class="card" aria-label="Painel do CCA">
+      <header>
+        <div class="title">
+          <h1>Painel CCA â€“ EstÃ¡gios do Cliente</h1>
+          <p>VisÃ£o operacional rÃ¡pida: Cliente, Corretor, Obra e andamento por etapa (CAD, CCA, AGEHAB, Fiador, Sinal).</p>
         </div>
-        <div class="fg">
-          <label for="corretor">Corretor</label>
-          <input id="corretor" type="text" placeholder="Ex.: Gabriela" />
+
+        <div class="actions">
+          <span class="pill" id="total-pill">Total: 0</span>
+          <span class="pill" id="pendencias-pill">PendÃªncias: 0</span>
+          <button class="btn" type="button" id="btn-export">Exportar CSV</button>
         </div>
+      </header>
+
+      <section class="filters" aria-label="Filtros">
+        <div class="fg">
+          <label for="q">Buscar (cliente / corretor / obra)</label>
+          <input id="q" type="text" placeholder="Ex.: MARIA, GABRIELA, AGL30" />
+        </div>
+
         <div class="fg">
           <label for="obra">Obra</label>
-          <input id="obra" type="text" placeholder="Ex.: AGL30" />
-        </div>
-        <div class="fg">
-          <label for="reserva">Reserva</label>
-          <input id="reserva" type="text" placeholder="Ex.: 10203" />
-        </div>
-      </div>
-      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-        <button id="createBtn" class="primary" type="button">Criar Processo</button>
-        <span class="muted" id="createMsg"></span>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="grid">
-        <div class="fg">
-          <label for="filterText">Buscar</label>
-          <input id="filterText" type="text" placeholder="Cliente, corretor, obra" />
-        </div>
-        <div class="fg">
-          <label for="filterObra">Filtrar por obra</label>
-          <input id="filterObra" type="text" placeholder="Ex.: AGL30" />
-        </div>
-        <div class="fg">
-          <label for="filterPend">Pend�ncias</label>
-          <select id="filterPend">
-            <option value="">Todos</option>
-            <option value="com">Com pend�ncia</option>
-            <option value="sem">Sem pend�ncia</option>
+          <select id="obra">
+            <option value="">Todas</option>
+            <option>AGL30</option>
+            <option>AGL32</option>
+            <option>FSA10</option>
+            <option>FSA11</option>
           </select>
         </div>
-      </div>
-    </section>
 
-    <section class="card">
-      <table>
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th>Corretor</th>
-            <th>Obra</th>
-            <th>Status Geral</th>
-            <th>CCA</th>
-            <th>AGEHAB</th>
-            <th>Pend�ncias</th>
-            <th>A��es</th>
-          </tr>
-        </thead>
-        <tbody id="tbody">
-          <tr><td colspan="8" class="empty">Carregando...</td></tr>
-        </tbody>
-      </table>
+        <div class="fg">
+          <label for="pendencias">PendÃªncias</label>
+          <select id="pendencias">
+            <option value="">Todas</option>
+            <option value="com">Com pendÃªncia</option>
+            <option value="sem">Sem pendÃªncia</option>
+          </select>
+        </div>
+
+        <div class="fg">
+          <label for="ordem">Ordenar</label>
+          <select id="ordem">
+            <option value="cliente">Cliente (Aâ€“Z)</option>
+            <option value="obra">Obra</option>
+            <option value="pendencia">PendÃªncias (maior â†’ menor)</option>
+          </select>
+        </div>
+      </section>
+
+      <div class="table-wrap" role="region" aria-label="Lista de clientes para CCA">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-cliente">Cliente</th>
+              <th class="col-corretor">Corretor</th>
+              <th class="col-obra">Obra</th>
+              <th class="col-stage">EstÃ¡gio CAD</th>
+              <th class="col-stage">EstÃ¡gio CCA</th>
+              <th class="col-stage">EstÃ¡gio AGEHAB</th>
+              <th class="col-stage">Pendente Fiador</th>
+              <th class="col-stage">Pendente Sinal</th>
+              <th class="col-actions">AÃ§Ãµes</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <!-- preenchido via JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="meta">
+        <div>Mostrando <b id="shown">0</b> de <b id="total">0</b></div>
+        <div>Dica: clique em <b>Detalhes</b> para abrir o dossiÃª (no seu sistema real, aqui chamaria a tela do cliente).</div>
+      </div>
     </section>
   </main>
 
   <script>
+    const API_BASE = "/app/api";
+
     const tbody = document.getElementById("tbody");
-    const filterText = document.getElementById("filterText");
-    const filterObra = document.getElementById("filterObra");
-    const filterPend = document.getElementById("filterPend");
-    const createMsg = document.getElementById("createMsg");
+    const q = document.getElementById("q");
+    const obraSel = document.getElementById("obra");
+    const pendSel = document.getElementById("pendencias");
+    const ordemSel = document.getElementById("ordem");
 
-    let processos = [];
+    const totalEl = document.getElementById("total");
+    const shownEl = document.getElementById("shown");
+    const totalPill = document.getElementById("total-pill");
+    const pendPill = document.getElementById("pendencias-pill");
 
-    async function fetchJSON(url, options = {}) {
-      const res = await fetch(url, {
+    let dados = [];
+    let listaAtual = [];
+
+    function norm(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(`${API_BASE}${path}`, {
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", ...(options.headers || {}) },
         ...options,
       });
 
-      if (res.status === 401) {
+      if (response.status === 401) {
         window.location.href = "/login";
         throw new Error("Nao autenticado");
       }
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.detail || "Falha na requisi��o");
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.detail || "Falha ao carregar dados");
       }
       return data;
     }
 
-    function statusClass(value) {
-      const txt = (value || "").toUpperCase();
-      if (txt.includes("APROV")) return "ok";
-      if (txt.includes("PEND")) return "bad";
-      if (txt.includes("ANAL")) return "warn";
-      return "warn";
+    function toStageLabel(raw) {
+      const v = norm(raw).replace(/\s+/g, "_");
+      if (v === "em_analise") return "Em Análise";
+      if (v === "pendente") return "Pendente";
+      if (v === "aprovado") return "Aprovado";
+      if (v === "reprovado") return "Reprovado";
+      return raw || "Em Análise";
     }
 
-    function pendenciaCount(item) {
-      let total = 0;
-      if (item.pendente_fiador) total += 1;
-      if (item.pendente_sinal) total += 1;
-      if ((item.status_geral || "").toUpperCase().includes("PEND")) total += 1;
-      return total;
+    function clsStage(v) {
+      const t = norm(v);
+      if (t.includes("aprov")) return "b-ok";
+      if (t.includes("reprov")) return "b-pendente";
+      if (t.includes("pendenc")) return "b-pendenciado";
+      if (t.includes("anális") || t.includes("analise")) return "b-analise";
+      if (t.includes("pend")) return "b-pendente";
+      return "b-na";
     }
 
-    function render() {
-      const text = filterText.value.trim().toLowerCase();
-      const obra = filterObra.value.trim().toLowerCase();
-      const pend = filterPend.value;
+    function clsPend(v) {
+      const t = norm(v);
+      if (t === "sim") return "b-pendente";
+      if (t === "não" || t === "nao") return "b-ok";
+      return "b-na";
+    }
 
-      const lista = processos.filter((p) => {
-        const haystack = `${p.cliente_nome} ${p.corretor || ""} ${p.obra || ""}`.toLowerCase();
-        if (text && !haystack.includes(text)) return false;
-        if (obra && !(p.obra || "").toLowerCase().includes(obra)) return false;
+    function badge(texto, classe) {
+      return `<span class="badge ${classe}">${texto}</span>`;
+    }
 
-        const hasPend = pendenciaCount(p) > 0;
-        if (pend === "com" && !hasPend) return false;
-        if (pend === "sem" && hasPend) return false;
-        return true;
+    function contarPendencias(item) {
+      let p = 0;
+      if (norm(item.fiador) === "sim") p += 1;
+      if (norm(item.sinal) === "sim") p += 1;
+      ["cad", "cca", "agehab"].forEach((k) => {
+        const v = norm(item[k]);
+        if (v.includes("pendente") || v.includes("pendenciado")) p += 1;
       });
-
-      if (!lista.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="empty">Nenhum processo encontrado.</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = lista.map((p) => {
-        const pend = pendenciaCount(p);
-        return `
-          <tr>
-            <td>${p.cliente_nome}</td>
-            <td>${p.corretor || "-"}</td>
-            <td>${p.obra || "-"}</td>
-            <td><span class="badge ${statusClass(p.status_geral)}">${p.status_geral}</span></td>
-            <td><span class="badge ${statusClass(p.status_cca)}">${p.status_cca}</span></td>
-            <td><span class="badge ${statusClass(p.status_agehab)}">${p.status_agehab}</span></td>
-            <td>
-              <span class="badge ${pend > 0 ? "bad" : "ok"}">
-                ${pend > 0 ? `${pend} pend�ncia(s)` : "Sem pend�ncia"}
-              </span>
-            </td>
-            <td>
-              <div class="row-actions">
-                <a class="link-btn" href="/app/checklist?processo_id=${p.processo_id}">Checklist</a>
-                <a class="link-btn" href="/app/analista?processo_id=${p.processo_id}">Analista</a>
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join("");
+      return p;
     }
 
-    async function loadProcessos() {
-      tbody.innerHTML = '<tr><td colspan="8" class="empty">Carregando...</td></tr>';
-      processos = await fetchJSON("/app/api/processos");
-      render();
-    }
-
-    async function createProcesso() {
-      createMsg.textContent = "";
-
-      const payload = {
-        nome: document.getElementById("nome").value.trim(),
-        corretor: document.getElementById("corretor").value.trim() || null,
-        obra: document.getElementById("obra").value.trim() || null,
-        reserva: document.getElementById("reserva").value.trim() || null,
+    function fromBackend(item) {
+      return {
+        processo_id: item.processo_id,
+        cliente: item.cliente_nome,
+        corretor: item.corretor || "-",
+        obra: item.obra || "-",
+        cad: toStageLabel(item.status_geral),
+        cca: toStageLabel(item.status_cca),
+        agehab: toStageLabel(item.status_agehab),
+        fiador: item.pendente_fiador ? "Sim" : "Não",
+        sinal: item.pendente_sinal ? "Sim" : "Não",
       };
+    }
 
-      if (!payload.nome) {
-        createMsg.textContent = "Informe o nome do cliente.";
-        return;
-      }
+    function getFilteredData() {
+      const termo = norm(q.value);
+      const obra = norm(obraSel.value);
+      const pend = norm(pendSel.value);
+      const ordem = norm(ordemSel.value || "cliente");
 
-      try {
-        const data = await fetchJSON("/app/api/processos/intake", {
-          method: "POST",
-          body: JSON.stringify(payload),
+      let lista = dados.map((d) => ({ ...d, _pend: contarPendencias(d) }));
+
+      if (termo) {
+        lista = lista.filter((it) => {
+          return (
+            norm(it.cliente).includes(termo) ||
+            norm(it.corretor).includes(termo) ||
+            norm(it.obra).includes(termo)
+          );
         });
+      }
 
-        window.location.href = `/app/checklist?processo_id=${data.processo_id}`;
-      } catch (err) {
-        createMsg.textContent = err.message;
+      if (obra) {
+        lista = lista.filter((it) => norm(it.obra) === obra);
+      }
+
+      if (pend === "com") {
+        lista = lista.filter((it) => it._pend > 0);
+      }
+
+      if (pend === "sem") {
+        lista = lista.filter((it) => it._pend === 0);
+      }
+
+      if (ordem === "cliente") {
+        lista.sort((a, b) => (a.cliente || "").localeCompare(b.cliente || ""));
+      } else if (ordem === "obra") {
+        lista.sort((a, b) => (a.obra || "").localeCompare(b.obra || ""));
+      } else if (ordem === "pendencia") {
+        lista.sort((a, b) => (b._pend || 0) - (a._pend || 0));
+      }
+
+      return lista;
+    }
+
+    function render(lista) {
+      if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="9" style="padding:14px;text-align:center;color:#9ca3af;">Nenhum processo encontrado.</td></tr>';
+      } else {
+        tbody.innerHTML = lista
+          .map(
+            (it) => `
+        <tr>
+          <td class="col-cliente">${it.cliente}</td>
+          <td class="col-corretor">${it.corretor}</td>
+          <td class="col-obra">${it.obra}</td>
+          <td class="col-stage">${badge(it.cad, clsStage(it.cad))}</td>
+          <td class="col-stage">${badge(it.cca, clsStage(it.cca))}</td>
+          <td class="col-stage">${badge(it.agehab, clsStage(it.agehab))}</td>
+          <td class="col-stage">${badge(it.fiador, clsPend(it.fiador))}</td>
+          <td class="col-stage">${badge(it.sinal, clsPend(it.sinal))}</td>
+          <td class="col-actions">
+            <div class="row-actions">
+              <button class="mini primary" type="button" onclick="detalhes('${encodeURIComponent(it.processo_id)}')">Detalhes</button>
+            </div>
+          </td>
+        </tr>`
+          )
+          .join("");
+      }
+
+      const total = dados.length;
+      const shown = lista.length;
+      const pendenciasTotal = dados.reduce((acc, it) => acc + (contarPendencias(it) > 0 ? 1 : 0), 0);
+      const pendenciasShown = lista.reduce((acc, it) => acc + (it._pend > 0 ? 1 : 0), 0);
+
+      totalEl.textContent = String(total);
+      shownEl.textContent = String(shown);
+      totalPill.textContent = `Total: ${shown}/${total}`;
+      pendPill.textContent = `Pendências: ${pendenciasShown}/${pendenciasTotal}`;
+    }
+
+    function aplicarFiltros() {
+      listaAtual = getFilteredData();
+      render(listaAtual);
+    }
+
+    function detalhes(processoIdEncoded) {
+      const processoId = decodeURIComponent(processoIdEncoded);
+      window.location.href = `/app/checklist?processo_id=${encodeURIComponent(processoId)}`;
+    }
+    window.detalhes = detalhes;
+
+    function exportCsv() {
+      const lista = listaAtual;
+      const header = [
+        "CLIENTE",
+        "CORRETOR",
+        "OBRA",
+        "ESTAGIO_CAD",
+        "ESTAGIO_CCA",
+        "ESTAGIO_AGEHAB",
+        "PENDENTE_FIADOR",
+        "PENDENTE_SINAL",
+      ];
+
+      const rows = lista.map((it) => [
+        it.cliente,
+        it.corretor,
+        it.obra,
+        it.cad,
+        it.cca,
+        it.agehab,
+        it.fiador,
+        it.sinal,
+      ]);
+
+      const csv = [header, ...rows]
+        .map((r) => r.map((v) => `"${String(v || "").replaceAll('"', '""')}"`).join(";"))
+        .join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "painel_cca.csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    async function carregarDados() {
+      try {
+        const processos = await api("/processos");
+        dados = processos.map(fromBackend);
+        aplicarFiltros();
+      } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="9" style="padding:14px;text-align:center;color:#fb7185;">${error.message}</td></tr>`;
       }
     }
 
-    async function logout() {
-      await fetch("/auth/logout", { method: "POST", credentials: "same-origin" });
-      window.location.href = "/login";
-    }
+    document.getElementById("btn-export").addEventListener("click", exportCsv);
+    [q, obraSel, pendSel, ordemSel].forEach((el) => el.addEventListener("input", aplicarFiltros));
+    [obraSel, pendSel, ordemSel].forEach((el) => el.addEventListener("change", aplicarFiltros));
 
-    document.getElementById("createBtn").addEventListener("click", createProcesso);
-    document.getElementById("logoutBtn").addEventListener("click", logout);
-    filterText.addEventListener("input", render);
-    filterObra.addEventListener("input", render);
-    filterPend.addEventListener("change", render);
-
-    loadProcessos().catch((err) => {
-      tbody.innerHTML = `<tr><td colspan="8" class="empty">${err.message}</td></tr>`;
-    });
+    carregarDados();
   </script>
 </body>
 </html>
+
+
