@@ -1711,7 +1711,12 @@ DIVORCIADO: Certidão averbada.</td>
 
         const currentCredito = String(current.status_credito || "").toUpperCase();
         const nextCredito = String(doc.status_credito || "").toUpperCase();
-        if ((currentCredito === "ANALISE" || currentCredito === "EM_ANALISE") && nextCredito !== "ANALISE" && nextCredito !== "EM_ANALISE") {
+        const pendingCreditos = new Set(["AGUARDANDO_ENVIO", "ANALISE", "EM_ANALISE"]);
+        if (pendingCreditos.has(currentCredito) && !pendingCreditos.has(nextCredito)) {
+          map.set(key, doc);
+          return;
+        }
+        if (currentCredito === "AGUARDANDO_ENVIO" && (nextCredito === "ANALISE" || nextCredito === "EM_ANALISE")) {
           map.set(key, doc);
           return;
         }

@@ -52,6 +52,22 @@
       overflow: hidden;
     }
 
+    .card > * {
+      position: relative;
+      z-index: 2;
+    }
+
+    .fx-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+      opacity: .38;
+      mix-blend-mode: screen;
+    }
+
     header {
       display: flex;
       align-items: flex-end;
@@ -202,7 +218,7 @@
 
     .filters {
       display: grid;
-      grid-template-columns: 1.2fr 1fr 1fr 1fr;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
       margin: 10px 0 12px;
       padding: 10px;
@@ -558,6 +574,54 @@
             <option value="pendencia_desc">Pendencias (maior-menor)</option>
           </select>
         </div>
+
+        <div class="fg">
+          <label for="status-cca-filter">Status CCA</label>
+          <select id="status-cca-filter">
+            <option value="">Todos</option>
+            <option value="analise_credito">Em Analise Credito</option>
+            <option value="pendente_credito">Pendente Credito</option>
+            <option value="analise_cca">Em Analise CCA</option>
+            <option value="pendente_cca">Pendente CCA</option>
+            <option value="aguardando_conformidade">Aguardando Conformidade</option>
+            <option value="conforme">Conforme</option>
+            <option value="tratando_produto">Tratando Produto</option>
+            <option value="agendado">Agendado</option>
+            <option value="assinatura_caixa">Assinatura Caixa</option>
+          </select>
+        </div>
+
+        <div class="fg">
+          <label for="status-agehab-filter">Status Agehab</label>
+          <select id="status-agehab-filter">
+            <option value="">Todos</option>
+            <option value="analise_credito">Em Analise Credito</option>
+            <option value="pendente_credito">Pendente Credito</option>
+            <option value="envio_agehab">Envio Agehab</option>
+            <option value="pendente_agehab">Pendente Agehab</option>
+            <option value="validado_agehab">Validado Agehab</option>
+          </select>
+        </div>
+
+        <div class="fg">
+          <label for="status-sinal-filter">Status Sinal</label>
+          <select id="status-sinal-filter">
+            <option value="">Todos</option>
+            <option value="nao_tem">Nao tem</option>
+            <option value="pendente">Pendente</option>
+            <option value="pago">Pago</option>
+          </select>
+        </div>
+
+        <div class="fg">
+          <label for="status-fiador-filter">Status Fiador</label>
+          <select id="status-fiador-filter">
+            <option value="">Todos</option>
+            <option value="nao_tem">Nao tem</option>
+            <option value="pendente">Pendente</option>
+            <option value="finalizado">Finalizado</option>
+          </select>
+        </div>
       </section>
 
       <div class="table-wrap" role="region" aria-label="Lista de clientes para CCA">
@@ -594,6 +658,7 @@
         <div>Mostrando <b id="shown">0</b> de <b id="total">0</b></div>
         <div>Dica: clique em <b>Detalhes</b> para abrir o dossie.</div>
       </div>
+      <canvas id="fxCanvas" class="fx-canvas" aria-hidden="true"></canvas>
     </section>
   </main>
 
@@ -605,6 +670,10 @@
     const obraSel = document.getElementById("obra");
     const pendSel = document.getElementById("pendencias");
     const ordemSel = document.getElementById("ordem");
+    const statusCcaSel = document.getElementById("status-cca-filter");
+    const statusAgehabSel = document.getElementById("status-agehab-filter");
+    const statusSinalSel = document.getElementById("status-sinal-filter");
+    const statusFiadorSel = document.getElementById("status-fiador-filter");
 
     const totalEl = document.getElementById("total");
     const shownEl = document.getElementById("shown");
@@ -648,6 +717,16 @@
         pendente_agehab: "Pendente",
         validado_agehab: "Aprovado",
       },
+      sinal: {
+        nao_tem: "Nao tem",
+        pendente: "Pendente",
+        pago: "Pago",
+      },
+      fiador: {
+        nao_tem: "Nao tem",
+        pendente: "Pendente",
+        finalizado: "Finalizado",
+      },
     };
 
     let dados = [];
@@ -663,6 +742,109 @@
       } else if (width <= 1680) {
         document.body.classList.add("compact-mode");
       }
+    }
+
+    function initCanvasFx() {
+      if (prefersReducedMotion) return;
+      const canvas = document.getElementById("fxCanvas");
+      const card = document.querySelector(".card");
+      if (!canvas || !card) return;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      let rafId = null;
+      const particles = [];
+      const palette = [
+        "rgba(56,189,248,0.28)",
+        "rgba(34,197,94,0.24)",
+        "rgba(250,204,21,0.18)",
+      ];
+
+      function resize() {
+        const rect = card.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.max(1, Math.round(rect.width * dpr));
+        canvas.height = Math.max(1, Math.round(rect.height * dpr));
+        canvas.style.width = `${Math.round(rect.width)}px`;
+        canvas.style.height = `${Math.round(rect.height)}px`;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function seedParticles() {
+        particles.length = 0;
+        const w = canvas.clientWidth || 1;
+        const h = canvas.clientHeight || 1;
+        const count = 22;
+        for (let i = 0; i < count; i += 1) {
+          particles.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            r: 1 + Math.random() * 2.2,
+            vx: (Math.random() - 0.5) * 0.22,
+            vy: (Math.random() - 0.5) * 0.22,
+            c: palette[i % palette.length],
+          });
+        }
+      }
+
+      function frame() {
+        if (document.hidden) {
+          rafId = requestAnimationFrame(frame);
+          return;
+        }
+
+        const w = canvas.clientWidth || 1;
+        const h = canvas.clientHeight || 1;
+        ctx.clearRect(0, 0, w, h);
+
+        for (const p of particles) {
+          p.x += p.vx;
+          p.y += p.vy;
+          if (p.x < -10) p.x = w + 10;
+          if (p.x > w + 10) p.x = -10;
+          if (p.y < -10) p.y = h + 10;
+          if (p.y > h + 10) p.y = -10;
+
+          ctx.beginPath();
+          ctx.fillStyle = p.c;
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        for (let i = 0; i < particles.length; i += 1) {
+          const a = particles[i];
+          for (let j = i + 1; j < particles.length; j += 1) {
+            const b = particles[j];
+            const dx = a.x - b.x;
+            const dy = a.y - b.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist > 95) continue;
+            const alpha = Math.max(0, 0.14 - dist / 680);
+            ctx.beginPath();
+            ctx.strokeStyle = `rgba(125,211,252,${alpha.toFixed(4)})`;
+            ctx.lineWidth = 0.7;
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+          }
+        }
+
+        rafId = requestAnimationFrame(frame);
+      }
+
+      resize();
+      seedParticles();
+      frame();
+
+      const onResize = () => {
+        resize();
+        seedParticles();
+      };
+      window.addEventListener("resize", onResize, { passive: true });
+      window.addEventListener("beforeunload", () => {
+        if (rafId) cancelAnimationFrame(rafId);
+      });
     }
 
     function animateRows() {
@@ -789,6 +971,10 @@
         estagioCca: stageLabel("cca", item.status_cca),
         estagioAgehabKey: stageKey(item.status_agehab),
         estagioAgehab: stageLabel("agehab", item.status_agehab),
+        statusSinalKey: stageKey(item.status_sinal),
+        statusSinal: stageLabel("sinal", item.status_sinal),
+        statusFiadorKey: stageKey(item.status_fiador),
+        statusFiador: stageLabel("fiador", item.status_fiador),
         fiadorPendente,
         sinalPendente,
       };
@@ -854,6 +1040,10 @@
       const obra = norm(obraSel.value);
       const pend = norm(pendSel.value);
       const ordem = norm(ordemSel.value || "cliente_az");
+      const statusCca = norm(statusCcaSel.value);
+      const statusAgehab = norm(statusAgehabSel.value);
+      const statusSinal = norm(statusSinalSel.value);
+      const statusFiador = norm(statusFiadorSel.value);
 
       let lista = dados.map((d) => ({ ...d, _pend: countPendencias(d) }));
 
@@ -869,6 +1059,22 @@
 
       if (obra) {
         lista = lista.filter((it) => norm(it.obra) === obra);
+      }
+
+      if (statusCca) {
+        lista = lista.filter((it) => it.estagioCcaKey === statusCca);
+      }
+
+      if (statusAgehab) {
+        lista = lista.filter((it) => it.estagioAgehabKey === statusAgehab);
+      }
+
+      if (statusSinal) {
+        lista = lista.filter((it) => it.statusSinalKey === statusSinal);
+      }
+
+      if (statusFiador) {
+        lista = lista.filter((it) => it.statusFiadorKey === statusFiador);
       }
 
       if (pend === "com") {
@@ -1010,11 +1216,16 @@
 
     document.getElementById("btn-export").addEventListener("click", exportCsv);
     document.getElementById("btn-logout").addEventListener("click", logout);
-    [q, obraSel, pendSel, ordemSel].forEach((el) => el.addEventListener("input", aplicarFiltros));
-    [obraSel, pendSel, ordemSel].forEach((el) => el.addEventListener("change", aplicarFiltros));
+    [q, obraSel, pendSel, ordemSel, statusCcaSel, statusAgehabSel, statusSinalSel, statusFiadorSel].forEach((el) => {
+      el.addEventListener("input", aplicarFiltros);
+    });
+    [obraSel, pendSel, ordemSel, statusCcaSel, statusAgehabSel, statusSinalSel, statusFiadorSel].forEach((el) => {
+      el.addEventListener("change", aplicarFiltros);
+    });
     window.addEventListener("resize", applyAdaptiveTypography, { passive: true });
 
     applyAdaptiveTypography();
+    initCanvasFx();
     carregarDados();
   </script>
 </body>

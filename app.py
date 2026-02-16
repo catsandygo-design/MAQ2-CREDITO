@@ -50,7 +50,7 @@ APP_ADMIN_PASSWORD = os.getenv("APP_ADMIN_PASSWORD", "12345")
 PASSWORD_HASH_ITERATIONS = int(os.getenv("PASSWORD_HASH_ITERATIONS", "200000"))
 ACTIVE_SESSIONS: dict[str, dict[str, Any]] = {}
 PROCESS_LIST_CACHE_TTL_SECONDS = int(os.getenv("PROCESS_LIST_CACHE_TTL_SECONDS", "8"))
-RUNTIME_SCHEMA_REVISION = "2026-02-16-performance-v1"
+RUNTIME_SCHEMA_REVISION = "2026-02-16-performance-v2-doc-credit-awaiting"
 PROCESS_LIST_CACHE: dict[str, dict[str, Any]] = {}
 SEED_USERS_READY = False
 
@@ -686,7 +686,13 @@ def _doc_status(value: Optional[str], fallback: str = "PENDENTE") -> str:
 
 def _credit_status(value: Optional[str], fallback: str = "ANALISE") -> str:
     raw = (value or "").strip().upper()
-    allowed = {"ANALISE", "PENDENCIADO", "APROVADO", "REPROVADO"}
+    aliases = {
+        "EM_ANALISE": "ANALISE",
+        "EM ANALISE": "ANALISE",
+        "AGUARDANDO ENVIO": "AGUARDANDO_ENVIO",
+    }
+    raw = aliases.get(raw, raw)
+    allowed = {"AGUARDANDO_ENVIO", "ANALISE", "PENDENCIADO", "APROVADO", "REPROVADO"}
     return raw if raw in allowed else fallback
 
 
@@ -723,7 +729,7 @@ def _ensure_default_documentos(db: Session, processo_id: uuid.UUID) -> None:
                 categoria=doc["categoria"],
                 nome=doc["nome"],
                 status_doc="PENDENTE",
-                status_credito="ANALISE",
+                status_credito="AGUARDANDO_ENVIO",
             )
         )
         created = True
@@ -794,7 +800,7 @@ class Documento(Base):
     categoria: Mapped[str] = mapped_column(String, nullable=False)
     nome: Mapped[str] = mapped_column(Text, nullable=False)
     status_doc: Mapped[str] = mapped_column(String, nullable=False, default="PENDENTE")
-    status_credito: Mapped[str] = mapped_column(String, nullable=False, default="ANALISE")
+    status_credito: Mapped[str] = mapped_column(String, nullable=False, default="AGUARDANDO_ENVIO")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -1164,6 +1170,21 @@ def _ensure_runtime_schema(db: Session) -> None:
     if current_revision == RUNTIME_SCHEMA_REVISION:
         db.commit()
         return
+
+    if documentos_table:
+        db.execute(
+            text(
+                """
+                UPDATE documentos
+                SET status_credito = CASE
+                    WHEN UPPER(COALESCE(status_credito, '')) IN ('PENDENCIADO', 'APROVADO', 'REPROVADO') THEN UPPER(status_credito)
+                    WHEN UPPER(COALESCE(status_credito, '')) IN ('AGUARDANDO_ENVIO', 'AGUARDANDO ENVIO') THEN 'AGUARDANDO_ENVIO'
+                    WHEN UPPER(COALESCE(status_doc, '')) = 'PENDENTE' THEN 'AGUARDANDO_ENVIO'
+                    ELSE 'ANALISE'
+                END
+                """
+            )
+        )
 
     db.execute(
         text(
@@ -2194,18 +2215,28 @@ def app_bulk_upsert_documentos(
         )
 
         if documento:
+            current_credit = _credit_status(documento.status_credito, fallback="AGUARDANDO_ENVIO")
             if status_doc is not None:
                 if not (role == ROLE_CORRETOR and documento.status_doc == "ENVIADO"):
                     documento.status_doc = status_doc
+                    if role == ROLE_CORRETOR:
+                        if status_doc == "ENVIADO" and current_credit == "AGUARDANDO_ENVIO":
+                            documento.status_credito = "ANALISE"
+                        elif status_doc == "PENDENTE" and current_credit in {"AGUARDANDO_ENVIO", "ANALISE"}:
+                            documento.status_credito = "AGUARDANDO_ENVIO"
             if status_credito is not None:
                 documento.status_credito = status_credito
         else:
+            if can_update_credit:
+                credito_default = status_credito or ("ANALISE" if status_doc == "ENVIADO" else "AGUARDANDO_ENVIO")
+            else:
+                credito_default = "ANALISE" if status_doc == "ENVIADO" else "AGUARDANDO_ENVIO"
             novo_documento = Documento(
                 processo_id=processo_id,
                 categoria=categoria,
                 nome=nome,
                 status_doc=status_doc or "PENDENTE",
-                status_credito=status_credito or "ANALISE",
+                status_credito=credito_default,
             )
             docs_by_key[(categoria, nome)] = novo_documento
             db.add(novo_documento)
