@@ -109,6 +109,11 @@
     .tiny{font-size:11px;color:var(--muted)}
     .row-actions{display:flex;gap:6px;flex-wrap:wrap}
     .row-actions .btn{padding:7px 9px;font-size:11px}
+    .btn[disabled]{opacity:.55;cursor:not-allowed;transform:none}
+    .btn.warn{
+      border-color:rgba(245,158,11,.55);
+      background:rgba(245,158,11,.12);
+    }
     .role-select{min-width:120px}
     .status-toggle{transform:scale(1.1)}
     .grid-emp{
@@ -289,10 +294,10 @@
           <tr data-id="${u.id}">
             <td><b>${esc(u.username)}</b></td>
             <td>
-              <select class="role-select">${roleOptions(u.role)}</select>
+              <select class="role-select" disabled>${roleOptions(u.role)}</select>
             </td>
             <td>
-              <input class="status-toggle" type="checkbox" ${u.is_active ? "checked" : ""} ${isSelf ? "disabled" : ""} />
+              <input class="status-toggle" type="checkbox" ${u.is_active ? "checked" : ""} disabled ${isSelf ? "data-self=\"1\"" : ""} />
             </td>
             <td>
               <span class="pill ${u.must_change_password ? "bad" : "ok"}">
@@ -302,8 +307,12 @@
             <td>${fmtDate(u.last_login_at)}</td>
             <td>
               <div class="row-actions">
+                <button class="btn warn btn-edit" type="button">Editar</button>
                 <button class="btn btn-save" type="button">Salvar</button>
                 <button class="btn btn-reset" type="button">Resetar senha</button>
+                <button class="btn danger btn-delete-user" type="button" ${isSelf ? "disabled" : ""}>
+                  ${u.is_active ? "Deletar" : "Reativar"}
+                </button>
               </div>
             </td>
           </tr>
@@ -312,12 +321,43 @@
 
       tbody.querySelectorAll("tr[data-id]").forEach((row) => {
         const userId = row.getAttribute("data-id");
+        const btnEdit = row.querySelector(".btn-edit");
         const btnSave = row.querySelector(".btn-save");
         const btnReset = row.querySelector(".btn-reset");
+        const btnDelete = row.querySelector(".btn-delete-user");
         const roleSelect = row.querySelector(".role-select");
         const activeToggle = row.querySelector(".status-toggle");
+        const isSelf = activeToggle.hasAttribute("data-self");
+        let editing = false;
+
+        function userFromState() {
+          return users.find((item) => item.id === userId);
+        }
+
+        function syncRowState() {
+          const user = userFromState();
+          if (!user) return;
+          roleSelect.value = user.role;
+          activeToggle.checked = Boolean(user.is_active);
+          btnDelete.textContent = user.is_active ? "Deletar" : "Reativar";
+          btnDelete.disabled = Boolean(isSelf);
+        }
+
+        function setEditing(next) {
+          editing = Boolean(next);
+          roleSelect.disabled = !editing;
+          activeToggle.disabled = !editing || Boolean(isSelf);
+          btnSave.disabled = !editing;
+          btnEdit.textContent = editing ? "Cancelar" : "Editar";
+          if (!editing) {
+            syncRowState();
+          }
+        }
+
+        setEditing(false);
 
         btnSave.addEventListener("click", async () => {
+          if (!editing) return;
           try {
             const updated = await api(`/app/api/admin/users/${encodeURIComponent(userId)}`, {
               method: "PATCH",
@@ -330,6 +370,10 @@
             setFeedback(error.message, true);
             loadUsers().catch(() => null);
           }
+        });
+
+        btnEdit.addEventListener("click", () => {
+          setEditing(!editing);
         });
 
         btnReset.addEventListener("click", async () => {
@@ -349,6 +393,35 @@
             renderUsers();
           } catch (error) {
             setFeedback(error.message, true);
+          }
+        });
+
+        btnDelete.addEventListener("click", async () => {
+          if (isSelf) return;
+          const user = userFromState();
+          if (!user) return;
+
+          const willDeactivate = Boolean(user.is_active);
+          const confirmation = willDeactivate
+            ? `Deseja deletar o usuario ${user.username}? O acesso sera bloqueado.`
+            : `Deseja reativar o usuario ${user.username}?`;
+          if (!confirm(confirmation)) return;
+
+          try {
+            const updated = await api(`/app/api/admin/users/${encodeURIComponent(userId)}`, {
+              method: "PATCH",
+              body: JSON.stringify({ is_active: !willDeactivate }),
+            });
+            users = users.map((item) => (item.id === updated.id ? updated : item));
+            setFeedback(
+              willDeactivate
+                ? `Usuario ${updated.username} deletado (acesso bloqueado).`
+                : `Usuario ${updated.username} reativado.`
+            );
+            renderUsers();
+          } catch (error) {
+            setFeedback(error.message, true);
+            loadUsers().catch(() => null);
           }
         });
       });
