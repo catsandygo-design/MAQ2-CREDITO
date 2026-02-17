@@ -1680,12 +1680,20 @@ def root(request: Request):
     return {"service": "sistema-credito-api", "status": "ok"}
 
 
+def _html_page(filename: str) -> FileResponse:
+    response = FileResponse(WEB_DIR / filename)
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
 @app.get("/login")
 def login_page(request: Request):
     session = _read_session(request)
     if session:
         return RedirectResponse(url=_home_for_session(session), status_code=302)
-    return FileResponse(WEB_DIR / "login.html")
+    return _html_page("login.html")
 
 
 @app.get("/app")
@@ -1706,7 +1714,7 @@ def app_cca_page(request: Request):
     role = _normalize_role(str(session.get("role", "")))
     if role not in {ROLE_CCA, ROLE_ANALISTA}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
-    return FileResponse(WEB_DIR / "cca.html")
+    return _html_page("cca.html")
 
 
 @app.get("/app/checklist")
@@ -1716,7 +1724,7 @@ def app_checklist_page(request: Request):
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
         return RedirectResponse(url="/app/trocar-senha", status_code=302)
-    return FileResponse(WEB_DIR / "checklist.html")
+    return _html_page("checklist.html")
 
 
 @app.get("/app/corretor")
@@ -1729,7 +1737,7 @@ def app_corretor_page(request: Request):
     role = _normalize_role(str(session.get("role", "")))
     if role != ROLE_CORRETOR:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
-    return FileResponse(WEB_DIR / "corretor_painel.html")
+    return _html_page("corretor_painel.html")
 
 
 @app.get("/app/analista")
@@ -1748,7 +1756,7 @@ def app_analista_page(request: Request):
         target = f"/app/analise?processo_id={processo_id}"
         return RedirectResponse(url=target, status_code=302)
 
-    return FileResponse(WEB_DIR / "analista_painel.html")
+    return _html_page("analista_painel.html")
 
 
 @app.get("/app/analise")
@@ -1761,7 +1769,7 @@ def app_analise_page(request: Request):
     role = _normalize_role(str(session.get("role", "")))
     if role != ROLE_ANALISTA:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
-    return FileResponse(WEB_DIR / "analista.html")
+    return _html_page("analista.html")
 
 
 @app.get("/app/admin")
@@ -1774,7 +1782,7 @@ def app_admin_page(request: Request):
     role = _normalize_role(str(session.get("role", "")))
     if role != ROLE_ADMIN:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
-    return FileResponse(WEB_DIR / "admin.html")
+    return _html_page("admin.html")
 
 
 @app.get("/admin")
@@ -1795,7 +1803,7 @@ def app_change_password_page(request: Request):
     session = _read_session(request)
     if not session:
         return RedirectResponse(url="/login", status_code=302)
-    return FileResponse(WEB_DIR / "change_password.html")
+    return _html_page("change_password.html")
 
 
 @app.post("/auth/login")
