@@ -103,7 +103,20 @@
       margin-bottom:10px;
       border:none;padding:0;
     }
+    .header-grid-dados{
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+    .header-grid-perfil #cotista-ctps-group,
+    .header-grid-perfil #irpf-informal-group,
+    .header-grid-perfil #conjuge-renda-group{
+      grid-column:span 2;
+    }
     @media (max-width:900px){.header-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    @media (max-width:900px){
+      .header-grid-perfil #cotista-ctps-group,
+      .header-grid-perfil #irpf-informal-group,
+      .header-grid-perfil #conjuge-renda-group{grid-column:span 1;}
+    }
     @media (max-width:640px){
       .header-grid{grid-template-columns:1fr;}
       .email-row{flex-direction:column;align-items:stretch;}
@@ -328,7 +341,7 @@
 
     <form novalidate>
       <!-- Cabeçalho do processo -->
-      <fieldset class="header-grid" aria-label="Dados básicos do processo">
+      <fieldset class="header-grid header-grid-dados" aria-label="Dados básicos do processo">
         <legend class="visually-hidden">Dados básicos do processo</legend>
 
         <div class="form-group">
@@ -338,10 +351,6 @@
         <div class="form-group">
           <label for="corretor">Corretor</label>
           <input id="corretor" type="text" placeholder="Nome do corretor" autocomplete="off">
-        </div>
-        <div class="form-group">
-          <label for="reserva">Reserva</label>
-          <input id="reserva" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Código da reserva" autocomplete="off">
         </div>
         <div class="form-group">
           <label for="obra">Obra / Empreendimento</label>
@@ -356,7 +365,7 @@
       </fieldset>
 
       <!-- PERFIL / VÍNCULO / DEPENDENTE -->
-      <fieldset class="header-grid" aria-label="Perfil de renda, FGTS e informações de dependente">
+      <fieldset class="header-grid header-grid-perfil" aria-label="Perfil de renda, FGTS e informações de dependente">
         <legend class="visually-hidden">Perfil de renda e vínculo</legend>
 
         <div class="form-group">
@@ -1219,6 +1228,32 @@ DIVORCIADO: Certidão de casamento averbada.`;
     if (val === 'enviado')  select.classList.add('status-enviado');
   }
 
+  function isCreditoPreAnalise(value) {
+    const v = (value || '').toLowerCase();
+    return v === 'aguardando_envio' || v === 'analise';
+  }
+
+  function getCreditoSelectFromDoc(docSelect) {
+    const row = docSelect?.closest('tr');
+    return row ? row.querySelector('select[data-role="credito"]') : null;
+  }
+
+  function sincronizarStatusCreditoComDoc(docSelect) {
+    const creditoSelect = getCreditoSelectFromDoc(docSelect);
+    if (!creditoSelect) return;
+
+    const docValor = (docSelect.value || '').toLowerCase();
+    const creditoAtual = (creditoSelect.value || '').toLowerCase();
+
+    if (docValor === 'enviado') {
+      if (creditoAtual === 'aguardando_envio') creditoSelect.value = 'analise';
+    } else if (isCreditoPreAnalise(creditoAtual)) {
+      creditoSelect.value = 'aguardando_envio';
+    }
+
+    atualizarVisualStatusCredito(creditoSelect);
+  }
+
   function aplicarRegraEdicaoStatusDoc(select) {
     const val = (select.value || '').toLowerCase();
     const bloqueado = val === 'enviado' || !window.CHECKLIST_CAN_EDIT_DOC;
@@ -1241,6 +1276,7 @@ DIVORCIADO: Certidão de casamento averbada.`;
         sel.addEventListener('change', () => {
           atualizarVisualStatusDoc(sel);
           aplicarRegraEdicaoStatusDoc(sel);
+          sincronizarStatusCreditoComDoc(sel);
         });
       }
     });
@@ -1263,6 +1299,15 @@ DIVORCIADO: Certidão de casamento averbada.`;
       if (![...sel.options].some((opt) => (opt.value || '').toLowerCase() === 'aguardando_envio')) {
         sel.insertAdjacentHTML('afterbegin', '<option value="aguardando_envio">Aguardando envio</option>');
       }
+
+      const row = sel.closest('tr');
+      const docSelect = row ? row.querySelector('select[aria-label^="Status "]:not([data-role="credito"])') : null;
+      if (docSelect) {
+        sincronizarStatusCreditoComDoc(docSelect);
+      } else if ((sel.value || '').toLowerCase() === 'analise') {
+        sel.value = 'aguardando_envio';
+      }
+
       sel.classList.add('status-pill');
       atualizarVisualStatusCredito(sel);
       sel.addEventListener('change', () => atualizarVisualStatusCredito(sel));
@@ -1491,7 +1536,6 @@ DIVORCIADO: Certidão de casamento averbada.`;
 
       const editableSelectors = [
         "#nome-cliente",
-        "#reserva",
         "#obra",
         "#corretor",
         "#perfil-renda",
@@ -1688,10 +1732,22 @@ DIVORCIADO: Certidão de casamento averbada.`;
     }
 
     function creditoByCategoria(categoria, processo) {
-      if (!processo) return "analise";
+      if (!processo) return "aguardando_envio";
       if (categoria === "caixa") return processStatusToCredito(processo.status_cca);
       if (categoria === "agehab") return processStatusToCredito(processo.status_agehab);
       return processStatusToCredito(processo.status_geral);
+    }
+
+    function coerceCreditoUiByDoc(docUiValue, creditoUiValue) {
+      const docUi = norm(docUiValue);
+      const creditoUi = norm(creditoUiValue).replace(/\s+/g, "_");
+      if (docUi !== "enviado" && (creditoUi === "analise" || creditoUi === "aguardando_envio")) {
+        return "aguardando_envio";
+      }
+      if (docUi === "enviado" && creditoUi === "aguardando_envio") {
+        return "analise";
+      }
+      return creditoUiValue;
     }
 
     async function ensureProcesso() {
@@ -1706,7 +1762,6 @@ DIVORCIADO: Certidão de casamento averbada.`;
           ? (currentUser.username || "").trim() || null
           : (document.getElementById("corretor")?.value || "").trim() || null,
         obra: (document.getElementById("obra")?.value || "").trim() || null,
-        reserva: (document.getElementById("reserva")?.value || "").trim() || null,
       };
 
       const created = await api("/processos/intake", {
@@ -1746,12 +1801,14 @@ DIVORCIADO: Certidão de casamento averbada.`;
         const key = docLookupKey(item.categoria, item.nome, item.docId);
         const found = mapDocs.get(key);
 
-        item.docSelect.value = backendDocToUi(found?.status_doc);
+        const docValue = backendDocToUi(found?.status_doc);
+        item.docSelect.value = docValue;
 
         if (item.creditoSelect) {
-          const creditoValue = found?.status_credito
+          let creditoValue = found?.status_credito
             ? backendCreditoToUi(found.status_credito)
             : creditoByCategoria(item.categoria, processoAtual);
+          creditoValue = coerceCreditoUiByDoc(docValue, creditoValue);
           item.creditoSelect.value = creditoValue;
           item.creditoSelect.disabled = true;
         }
@@ -1770,14 +1827,12 @@ DIVORCIADO: Certidão de casamento averbada.`;
 
       const nomeEl = document.getElementById("nome-cliente");
       const corretorEl = document.getElementById("corretor");
-      const reservaEl = document.getElementById("reserva");
 
       if (nomeEl && !nomeEl.value) nomeEl.value = cliente.nome || "";
       if (corretorEl && currentUser && currentUser.role !== "corretor" && !corretorEl.value) {
         corretorEl.value = cliente.corretor || "";
       }
       await loadEmpreendimentos(cliente.obra || "");
-      if (reservaEl && !reservaEl.value) reservaEl.value = cliente.reserva || "";
       aplicarDocumentosNaTela(documentos);
     }
 

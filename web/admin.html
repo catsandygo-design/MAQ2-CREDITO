@@ -159,7 +159,7 @@
           </div>
           <div class="field">
             <label for="newPassword">Senha inicial</label>
-            <input id="newPassword" required minlength="4" type="password" placeholder="min. 4 caracteres" />
+            <input id="newPassword" required minlength="10" type="password" placeholder="min. 10 caracteres" />
           </div>
           <div class="field">
             <label for="newRole">Perfil</label>
@@ -284,6 +284,16 @@
         .replaceAll("'", "&#39;");
     }
 
+    function passwordPolicyError(value) {
+      const pwd = String(value || "");
+      if (pwd.length < 10) return "Senha deve ter ao menos 10 caracteres.";
+      if (!/[A-Z]/.test(pwd)) return "Senha deve conter ao menos 1 letra maiuscula.";
+      if (!/[a-z]/.test(pwd)) return "Senha deve conter ao menos 1 letra minuscula.";
+      if (!/[0-9]/.test(pwd)) return "Senha deve conter ao menos 1 numero.";
+      if (!/[^A-Za-z0-9]/.test(pwd)) return "Senha deve conter ao menos 1 simbolo.";
+      return "";
+    }
+
     async function api(path, options = {}) {
       const res = await fetch(path, {
         credentials: "same-origin",
@@ -403,10 +413,11 @@
         });
 
         btnReset.addEventListener("click", async () => {
-          const pwd = prompt("Digite a nova senha temporaria (minimo 4 caracteres):");
+          const pwd = prompt("Digite a nova senha temporaria (minimo 10, com maiuscula, minuscula, numero e simbolo):");
           if (!pwd) return;
-          if (pwd.trim().length < 4) {
-            setFeedback("Senha deve ter ao menos 4 caracteres.", true);
+          const pwdError = passwordPolicyError(pwd.trim());
+          if (pwdError) {
+            setFeedback(pwdError, true);
             return;
           }
           try {
@@ -514,8 +525,9 @@
         setFeedback("Usuario deve ter ao menos 3 caracteres.", true);
         return;
       }
-      if (password.length < 4) {
-        setFeedback("Senha deve ter ao menos 4 caracteres.", true);
+      const pwdError = passwordPolicyError(password);
+      if (pwdError) {
+        setFeedback(pwdError, true);
         return;
       }
       try {

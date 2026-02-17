@@ -573,10 +573,6 @@
             <input id="corretor" type="text" placeholder="Nome do corretor" readonly data-info-only="1">
           </div>
           <div class="fg">
-            <label for="reserva">Reserva</label>
-            <input id="reserva" type="text" inputmode="numeric" placeholder="Código da reserva" readonly data-info-only="1">
-          </div>
-          <div class="fg">
             <label for="obra">Empreendimento</label>
             <input id="obra" type="text" placeholder="AGL30, AGL32, FSA10..." readonly data-info-only="1">
           </div>
@@ -1924,7 +1920,6 @@ DIVORCIADO: Certidão averbada.</td>
 
       if (byId("nome-cliente")) byId("nome-cliente").value = cliente.nome || "";
       if (byId("corretor")) byId("corretor").value = cliente.corretor || "";
-      if (byId("reserva")) byId("reserva").value = cliente.reserva || "";
       if (byId("obra")) byId("obra").value = cliente.obra || "";
 
       await loadCcaOptions(processo.cca_responsavel || "");
@@ -1974,6 +1969,22 @@ DIVORCIADO: Certidão averbada.</td>
       const statusSinal = byId("status-sinal")?.value || "nao_tem";
       const statusFiador = byId("status-fiador")?.value || "nao_tem";
       const ccaResponsavel = (byId("cca-responsavel")?.value || "").trim().toLowerCase() || null;
+      const observacao = (byId("observacao")?.value || "").trim() || null;
+
+      const temPendencia =
+        statusCredito === "pendenciado" ||
+        statusGeral === "pendenciado" ||
+        statusCaixa === "pendente_credito" ||
+        statusCaixa === "pendente_cca" ||
+        statusAgehab === "pendente_credito" ||
+        statusAgehab === "pendente_agehab" ||
+        statusSinal === "pendente" ||
+        statusFiador === "pendente";
+
+      if (temPendencia && (!observacao || observacao.length < 8)) {
+        alert("Para registrar pendencia, preencha observacao com pelo menos 8 caracteres.");
+        return;
+      }
 
       const payloadProcesso = {
         status_credito: backendFromUiCredito(statusCredito),
@@ -1983,7 +1994,7 @@ DIVORCIADO: Certidão averbada.</td>
         status_sinal: backendFromUiSinal(statusSinal),
         status_fiador: backendFromUiFiador(statusFiador),
         cca_responsavel: ccaResponsavel,
-        observacao: (byId("observacao")?.value || "").trim() || null,
+        observacao,
       };
 
       const documentos = getDocRows().map((row) => {

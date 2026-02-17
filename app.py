@@ -48,9 +48,16 @@ APP_ADMIN_USER = os.getenv("APP_ADMIN_USER", "douglasadm")
 APP_ADMIN_PASSWORD = os.getenv("APP_ADMIN_PASSWORD", "12345")
 
 PASSWORD_HASH_ITERATIONS = int(os.getenv("PASSWORD_HASH_ITERATIONS", "200000"))
+PASSWORD_MIN_LENGTH = int(os.getenv("PASSWORD_MIN_LENGTH", "10"))
+PASSWORD_REQUIRE_UPPER = os.getenv("PASSWORD_REQUIRE_UPPER", "true").lower() in {"1", "true", "yes"}
+PASSWORD_REQUIRE_LOWER = os.getenv("PASSWORD_REQUIRE_LOWER", "true").lower() in {"1", "true", "yes"}
+PASSWORD_REQUIRE_DIGIT = os.getenv("PASSWORD_REQUIRE_DIGIT", "true").lower() in {"1", "true", "yes"}
+PASSWORD_REQUIRE_SYMBOL = os.getenv("PASSWORD_REQUIRE_SYMBOL", "true").lower() in {"1", "true", "yes"}
+ALLOW_WEAK_SEED_PASSWORDS = os.getenv("ALLOW_WEAK_SEED_PASSWORDS", "true").lower() in {"1", "true", "yes"}
+ENABLE_LEGACY_DEMO_USERS = os.getenv("ENABLE_LEGACY_DEMO_USERS", "false").lower() in {"1", "true", "yes"}
 ACTIVE_SESSIONS: dict[str, dict[str, Any]] = {}
 PROCESS_LIST_CACHE_TTL_SECONDS = int(os.getenv("PROCESS_LIST_CACHE_TTL_SECONDS", "8"))
-RUNTIME_SCHEMA_REVISION = "2026-02-16-performance-v2-doc-credit-awaiting"
+RUNTIME_SCHEMA_REVISION = "2026-02-17-security-audit-v3"
 PROCESS_LIST_CACHE: dict[str, dict[str, Any]] = {}
 SEED_USERS_READY = False
 
@@ -66,11 +73,16 @@ def _build_app_users() -> dict[str, dict[str, str]]:
         (APP_CCA_USER, APP_CCA_PASSWORD, ROLE_CCA),
         (APP_ANALISTA_USER, APP_ANALISTA_PASSWORD, ROLE_ANALISTA),
         (APP_ADMIN_USER, APP_ADMIN_PASSWORD, ROLE_ADMIN),
-        ("Douglas", "1234", ROLE_ANALISTA),
-        ("Fabio", "1234", ROLE_CORRETOR),
-        ("Endy", "1234", ROLE_CCA),
-        ("Douglasadm", "12345", ROLE_ADMIN),
     ]
+    if ENABLE_LEGACY_DEMO_USERS:
+        configs.extend(
+            [
+                ("Douglas", "1234", ROLE_ANALISTA),
+                ("Fabio", "1234", ROLE_CORRETOR),
+                ("Endy", "1234", ROLE_CCA),
+                ("Douglasadm", "12345", ROLE_ADMIN),
+            ]
+        )
 
     for username_raw, password, role in configs:
         username = _normalize_username(username_raw)
@@ -194,6 +206,21 @@ def _verify_password(password: str, password_hash: str, password_salt: str) -> b
     except Exception:
         return False
     return hmac.compare_digest(computed, password_hash)
+
+
+def _password_policy_error(password: str) -> Optional[str]:
+    value = password or ""
+    if len(value) < PASSWORD_MIN_LENGTH:
+        return f"Senha deve ter ao menos {PASSWORD_MIN_LENGTH} caracteres."
+    if PASSWORD_REQUIRE_UPPER and not any(ch.isupper() for ch in value):
+        return "Senha deve conter ao menos 1 letra maiuscula."
+    if PASSWORD_REQUIRE_LOWER and not any(ch.islower() for ch in value):
+        return "Senha deve conter ao menos 1 letra minuscula."
+    if PASSWORD_REQUIRE_DIGIT and not any(ch.isdigit() for ch in value):
+        return "Senha deve conter ao menos 1 numero."
+    if PASSWORD_REQUIRE_SYMBOL and not any(not ch.isalnum() for ch in value):
+        return "Senha deve conter ao menos 1 simbolo."
+    return None
 
 
 def _normalize_role(value: Optional[str]) -> str:
@@ -322,6 +349,32 @@ def _set_cached_process_list(cache_key: str, data: list["ProcessoOverviewOut"]) 
 def _invalidate_process_list_cache() -> None:
     if PROCESS_LIST_CACHE:
         PROCESS_LIST_CACHE.clear()
+
+
+def _extract_origin_host(value: Optional[str]) -> str:
+    raw = (value or "").strip()
+    if not raw:
+        return ""
+    parsed = urlparse(raw)
+    host = (parsed.netloc or "").strip().lower()
+    if host.endswith(":80"):
+        host = host[:-3]
+    if host.endswith(":443"):
+        host = host[:-4]
+    return host
+
+
+def _request_host(request: Request) -> str:
+    host = (
+        (request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc or "")
+        .strip()
+        .lower()
+    )
+    if host.endswith(":80"):
+        host = host[:-3]
+    if host.endswith(":443"):
+        host = host[:-4]
+    return host
 
 
 def _should_touch_session(request: Request) -> bool:
@@ -678,6 +731,42 @@ def _process_fiador_status(value: Optional[str], fallback: str = "NAO_TEM") -> s
     return raw if raw in PROCESS_FIADOR_STATUSES else fallback
 
 
+def _is_pendencia_status(field: str, status_value: Optional[str]) -> bool:
+    token = _status_token(status_value)
+    if field in {"status_credito", "status_geral"}:
+        return token == "PENDENCIADO"
+    if field in {"status_cca", "status_agehab"}:
+        return token.startswith("PENDENTE_")
+    if field in {"status_sinal", "status_fiador"}:
+        return token == "PENDENTE"
+    return False
+
+
+def _validate_status_transition(field: str, current_value: Optional[str], next_value: Optional[str]) -> None:
+    current = _status_token(current_value)
+    nxt = _status_token(next_value)
+    if not current or current == nxt:
+        return
+
+    if field == "status_geral" and current in PROCESS_GERAL_FINAL_STATUSES and nxt != current:
+        raise HTTPException(status_code=422, detail="Processo finalizado nao permite reabertura de status geral.")
+    if field == "status_cca" and current in PROCESS_CCA_FINAL_STATUSES and nxt != current:
+        raise HTTPException(status_code=422, detail="Status Caixa finalizado nao permite reabertura.")
+    if field == "status_geral" and current == "NOVO" and nxt in {"APROVADO", "REPROVADO"}:
+        raise HTTPException(status_code=422, detail="Status geral nao pode ir de NOVO direto para resultado final.")
+
+
+def _stringify_audit_value(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, datetime):
+        return _as_utc(value).isoformat() if _as_utc(value) else value.isoformat()
+    text = str(value).strip()
+    return text or None
+
+
 def _doc_status(value: Optional[str], fallback: str = "PENDENTE") -> str:
     raw = (value or "").strip().upper()
     allowed = {"PENDENTE", "ENVIADO"}
@@ -749,7 +838,6 @@ class Cliente(Base):
     nome: Mapped[str] = mapped_column(Text, nullable=False)
     corretor: Mapped[Optional[str]] = mapped_column(Text)
     obra: Mapped[Optional[str]] = mapped_column(Text)
-    reserva: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     processos: Mapped[list["Processo"]] = relationship(back_populates="cliente", cascade="all, delete-orphan")
@@ -811,6 +899,26 @@ class Documento(Base):
     processo: Mapped["Processo"] = relationship(back_populates="documentos")
 
 
+class ProcessoEvento(Base):
+    __tablename__ = "processo_eventos"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    processo_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("processos.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    actor_username: Mapped[str] = mapped_column(String(120), nullable=False)
+    actor_role: Mapped[str] = mapped_column(String(20), nullable=False, default="system")
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    field_name: Mapped[Optional[str]] = mapped_column(String(100))
+    old_value: Mapped[Optional[str]] = mapped_column(Text)
+    new_value: Mapped[Optional[str]] = mapped_column(Text)
+    details: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
 class AppUser(Base):
     __tablename__ = "app_users"
 
@@ -848,7 +956,6 @@ class ClienteCreate(BaseModel):
     nome: str
     corretor: Optional[str] = None
     obra: Optional[str] = None
-    reserva: Optional[str] = None
 
 
 class ClienteOut(ClienteCreate):
@@ -920,6 +1027,53 @@ class DocumentoOut(BaseModel):
     status_credito: str
 
 
+class ProcessoEventoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    processo_id: uuid.UUID
+    actor_username: str
+    actor_role: str
+    event_type: str
+    field_name: Optional[str] = None
+    old_value: Optional[str] = None
+    new_value: Optional[str] = None
+    details: Optional[str] = None
+    created_at: datetime
+
+
+class ProcessoMetricasFunnelOut(BaseModel):
+    novo: int
+    em_andamento: int
+    pendenciado: int
+    aprovado: int
+    reprovado: int
+    distrato: int
+    cancelado: int
+
+
+class ProcessoMetricasSlaOut(BaseModel):
+    analista_alerta_24h: int
+    analista_critico_48h: int
+    corretor_alerta_24h: int
+    corretor_critico_48h: int
+    cca_alerta_24h: int
+    cca_critico_48h: int
+
+
+class ProcessoMetricasQualidadeOut(BaseModel):
+    processos_com_pendencia: int
+    first_pass_yield_percent: float
+    media_retrabalho_por_processo: float
+
+
+class ProcessoMetricasOut(BaseModel):
+    total_processos: int
+    funnel: ProcessoMetricasFunnelOut
+    sla: ProcessoMetricasSlaOut
+    qualidade: ProcessoMetricasQualidadeOut
+    updated_at: datetime
+
+
 class LoginPayload(BaseModel):
     username: str
     password: str
@@ -975,7 +1129,6 @@ class ProcessoIntakeCreate(BaseModel):
     nome: str
     corretor: Optional[str] = None
     obra: Optional[str] = None
-    reserva: Optional[str] = None
 
 
 class ProcessoOverviewOut(BaseModel):
@@ -984,7 +1137,6 @@ class ProcessoOverviewOut(BaseModel):
     cliente_nome: str
     corretor: Optional[str] = None
     obra: Optional[str] = None
-    reserva: Optional[str] = None
     status_credito: str
     status_geral: str
     status_cca: str
@@ -1021,6 +1173,60 @@ class DocumentoBulkUpsert(BaseModel):
     documentos: list[DocumentoBulkItem]
 
 
+def _record_processo_event(
+    db: Session,
+    *,
+    processo_id: uuid.UUID,
+    actor_username: str,
+    actor_role: str,
+    event_type: str,
+    field_name: Optional[str] = None,
+    old_value: Any = None,
+    new_value: Any = None,
+    details: Optional[str] = None,
+) -> None:
+    role_raw = (actor_role or "").strip().lower()
+    db.add(
+        ProcessoEvento(
+            processo_id=processo_id,
+            actor_username=_normalize_username(actor_username) or "system",
+            actor_role=role_raw if role_raw in VALID_ROLES else "system",
+            event_type=(event_type or "").strip().upper() or "EVENT",
+            field_name=(field_name or "").strip() or None,
+            old_value=_stringify_audit_value(old_value),
+            new_value=_stringify_audit_value(new_value),
+            details=(details or "").strip() or None,
+        )
+    )
+
+
+def _processo_has_pendencia(processo: "Processo") -> bool:
+    status_values = {
+        "status_credito": processo.status_credito,
+        "status_geral": processo.status_geral,
+        "status_cca": processo.status_cca,
+        "status_agehab": processo.status_agehab,
+        "status_sinal": processo.status_sinal,
+        "status_fiador": processo.status_fiador,
+    }
+    return any(_is_pendencia_status(field, value) for field, value in status_values.items())
+
+
+def _query_processos_by_scope(db: Session, role: str, username: str):
+    query = db.query(Processo)
+    if role == ROLE_CORRETOR:
+        if not username:
+            return query.filter(text("1=0"))
+        query = query.join(Cliente, Processo.cliente_id == Cliente.id).filter(
+            func.lower(func.trim(func.coalesce(Cliente.corretor, ""))) == username
+        )
+    elif role == ROLE_CCA:
+        if not username:
+            return query.filter(text("1=0"))
+        query = query.filter(func.lower(func.trim(func.coalesce(Processo.cca_responsavel, ""))) == username)
+    return query
+
+
 def _set_user_password(user: AppUser, password: str, must_change_password: bool = True) -> None:
     salt = _new_salt()
     user.password_salt = salt
@@ -1048,6 +1254,13 @@ def _ensure_seed_users(db: Session, force: bool = False) -> None:
     created = 0
     changed = 0
     for username, password, role in seeds:
+        policy_error = _password_policy_error(password)
+        if policy_error and not ALLOW_WEAK_SEED_PASSWORDS:
+            logger.warning("Seed ignorado para usuario '%s': %s", username, policy_error)
+            continue
+        if policy_error:
+            logger.warning("Senha fraca em usuario seed '%s': %s", username, policy_error)
+
         existing = _get_user_by_username(db, username)
         if existing:
             # Usuarios seed entram com troca opcional para facilitar acesso inicial.
@@ -1109,6 +1322,24 @@ def _ensure_runtime_schema(db: Session) -> None:
             """
         )
     )
+    db.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS processo_eventos (
+                id UUID PRIMARY KEY,
+                processo_id UUID NOT NULL REFERENCES processos(id) ON DELETE CASCADE,
+                actor_username TEXT NOT NULL,
+                actor_role VARCHAR(20) NOT NULL DEFAULT 'system',
+                event_type VARCHAR(50) NOT NULL,
+                field_name VARCHAR(100),
+                old_value TEXT,
+                new_value TEXT,
+                details TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+    )
 
     statements = [
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_credito VARCHAR(30) DEFAULT 'EM_ANALISE'",
@@ -1127,6 +1358,10 @@ def _ensure_runtime_schema(db: Session) -> None:
 
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_created_at ON processos (created_at DESC)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_cliente_id ON processos (cliente_id)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_status_geral ON processos (status_geral)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_status_credito ON processos (status_credito)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_status_cca ON processos (status_cca)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_status_agehab ON processos (status_agehab)"))
     db.execute(
         text(
             """
@@ -1137,6 +1372,7 @@ def _ensure_runtime_schema(db: Session) -> None:
     )
 
     if clientes_table:
+        db.execute(text("ALTER TABLE clientes DROP COLUMN IF EXISTS reserva"))
         db.execute(
             text(
                 """
@@ -1163,6 +1399,24 @@ def _ensure_runtime_schema(db: Session) -> None:
                 """
             )
         )
+        db.execute(
+            text(
+                """
+                CREATE INDEX IF NOT EXISTS ix_documentos_processo_status_credito
+                ON documentos (processo_id, status_credito)
+                """
+            )
+        )
+
+    db.execute(
+        text(
+            """
+            CREATE INDEX IF NOT EXISTS ix_processo_eventos_processo_created_at
+            ON processo_eventos (processo_id, created_at DESC)
+            """
+        )
+    )
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_processo_eventos_created_at ON processo_eventos (created_at DESC)"))
 
     current_revision = db.execute(
         text("SELECT meta_value FROM app_runtime_meta WHERE meta_key = 'runtime_schema_revision'")
@@ -1365,6 +1619,9 @@ async def lifespan(_: FastAPI):
     if DB_URL_HAS_PLACEHOLDERS:
         logger.warning("DATABASE_URL parece conter placeholders (<PASSWORD>, YOUR-PASSWORD, etc.).")
 
+    if not SESSION_COOKIE_SECURE:
+        logger.warning("SESSION_COOKIE_SECURE=false. Use true em producao com HTTPS.")
+
     if DATABASE_URL and _is_supabase_direct_host(DATABASE_URL):
         logger.warning(
             "DATABASE_URL aponta para conexao direta Supabase (db.<project-ref>.supabase.co), "
@@ -1398,6 +1655,21 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="Sistema Credito API", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def enforce_same_origin_for_write_requests(request: Request, call_next):
+    method = (request.method or "").upper()
+    path = (request.url.path or "").rstrip("/") or "/"
+    if method in {"POST", "PUT", "PATCH", "DELETE"} and (path.startswith("/app/api/") or path.startswith("/auth/")):
+        origin_host = _extract_origin_host(request.headers.get("origin"))
+        if not origin_host:
+            origin_host = _extract_origin_host(request.headers.get("referer"))
+        if origin_host:
+            req_host = _request_host(request)
+            if req_host and origin_host != req_host:
+                return JSONResponse(status_code=403, content={"detail": "Origem invalida para operacao autenticada."})
+    return await call_next(request)
 
 
 @app.get("/")
@@ -1624,8 +1896,9 @@ def auth_change_password(
 
     current_password = payload.current_password or ""
     new_password = (payload.new_password or "").strip()
-    if len(new_password) < 4:
-        raise HTTPException(status_code=422, detail="Nova senha deve ter ao menos 4 caracteres")
+    policy_error = _password_policy_error(new_password)
+    if policy_error:
+        raise HTTPException(status_code=422, detail=policy_error)
 
     if not _verify_password(current_password, user.password_hash, user.password_salt):
         raise HTTPException(status_code=401, detail="Senha atual invalida")
@@ -1669,8 +1942,9 @@ def admin_create_user(
     username = _normalize_username(payload.username)
     if not username:
         raise HTTPException(status_code=422, detail="Usuario obrigatorio")
-    if len(payload.password or "") < 4:
-        raise HTTPException(status_code=422, detail="Senha deve ter ao menos 4 caracteres")
+    policy_error = _password_policy_error(payload.password or "")
+    if policy_error:
+        raise HTTPException(status_code=422, detail=policy_error)
     role = (payload.role or "").strip().lower()
     if role not in VALID_ROLES:
         raise HTTPException(status_code=422, detail="Perfil invalido")
@@ -1731,8 +2005,9 @@ def admin_reset_password(
     user = db.get(AppUser, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Usuario nao encontrado")
-    if len(payload.new_password or "") < 4:
-        raise HTTPException(status_code=422, detail="Senha deve ter ao menos 4 caracteres")
+    policy_error = _password_policy_error(payload.new_password or "")
+    if policy_error:
+        raise HTTPException(status_code=422, detail=policy_error)
 
     _set_user_password(user, payload.new_password, must_change_password=payload.force_change_password)
     db.commit()
@@ -1850,7 +2125,11 @@ def api_health():
 
 
 @app.post("/api/clientes", response_model=ClienteOut)
-def create_cliente(payload: ClienteCreate, db: Session = Depends(get_db)):
+def create_cliente(
+    payload: ClienteCreate,
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
     cliente = Cliente(**payload.model_dump())
     db.add(cliente)
     db.commit()
@@ -1859,12 +2138,19 @@ def create_cliente(payload: ClienteCreate, db: Session = Depends(get_db)):
 
 
 @app.get("/api/clientes", response_model=list[ClienteOut])
-def list_clientes(db: Session = Depends(get_db)):
+def list_clientes(
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
     return db.query(Cliente).order_by(Cliente.created_at.desc()).all()
 
 
 @app.post("/api/processos", response_model=ProcessoOut)
-def create_processo(payload: ProcessoCreate, db: Session = Depends(get_db)):
+def create_processo(
+    payload: ProcessoCreate,
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
     cliente = db.get(Cliente, payload.cliente_id)
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente nao encontrado")
@@ -1879,7 +2165,11 @@ def create_processo(payload: ProcessoCreate, db: Session = Depends(get_db)):
 
 
 @app.get("/api/processos/{processo_id}", response_model=ProcessoOut)
-def get_processo(processo_id: uuid.UUID, db: Session = Depends(get_db)):
+def get_processo(
+    processo_id: uuid.UUID,
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
     processo = db.get(Processo, processo_id)
     if not processo:
         raise HTTPException(status_code=404, detail="Processo nao encontrado")
@@ -1887,7 +2177,12 @@ def get_processo(processo_id: uuid.UUID, db: Session = Depends(get_db)):
 
 
 @app.patch("/api/processos/{processo_id}", response_model=ProcessoOut)
-def patch_processo(processo_id: uuid.UUID, payload: ProcessoUpdate, db: Session = Depends(get_db)):
+def patch_processo(
+    processo_id: uuid.UUID,
+    payload: ProcessoUpdate,
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
     processo = db.get(Processo, processo_id)
     if not processo:
         raise HTTPException(status_code=404, detail="Processo nao encontrado")
@@ -1902,7 +2197,11 @@ def patch_processo(processo_id: uuid.UUID, payload: ProcessoUpdate, db: Session 
 
 
 @app.post("/api/documentos", response_model=DocumentoOut)
-def create_documento(payload: DocumentoCreate, db: Session = Depends(get_db)):
+def create_documento(
+    payload: DocumentoCreate,
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
     processo = db.get(Processo, payload.processo_id)
     if not processo:
         raise HTTPException(status_code=404, detail="Processo nao encontrado")
@@ -1916,12 +2215,21 @@ def create_documento(payload: DocumentoCreate, db: Session = Depends(get_db)):
 
 
 @app.get("/api/processos/{processo_id}/documentos", response_model=list[DocumentoOut])
-def list_documentos(processo_id: uuid.UUID, db: Session = Depends(get_db)):
+def list_documentos(
+    processo_id: uuid.UUID,
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
     return db.query(Documento).filter(Documento.processo_id == processo_id).all()
 
 
 @app.patch("/api/documentos/{documento_id}", response_model=DocumentoOut)
-def patch_documento(documento_id: uuid.UUID, payload: DocumentoUpdate, db: Session = Depends(get_db)):
+def patch_documento(
+    documento_id: uuid.UUID,
+    payload: DocumentoUpdate,
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
     documento = db.get(Documento, documento_id)
     if not documento:
         raise HTTPException(status_code=404, detail="Documento nao encontrado")
@@ -1978,7 +2286,6 @@ def app_list_processos(
                 cliente_nome=cliente.nome,
                 corretor=cliente.corretor,
                 obra=cliente.obra,
-                reserva=cliente.reserva,
                 status_credito=processo.status_credito,
                 status_geral=processo.status_geral,
                 status_cca=processo.status_cca,
@@ -2021,7 +2328,6 @@ def app_create_intake(
         nome=payload.nome.strip(),
         corretor=username if role == ROLE_CORRETOR else (_normalize_username(payload.corretor) if payload.corretor else None),
         obra=obra_nome,
-        reserva=payload.reserva.strip() if payload.reserva else None,
     )
     db.add(cliente)
     db.commit()
@@ -2031,6 +2337,15 @@ def app_create_intake(
     db.add(processo)
     db.commit()
     db.refresh(processo)
+    _record_processo_event(
+        db,
+        processo_id=processo.id,
+        actor_username=username,
+        actor_role=role,
+        event_type="PROCESSO_CRIADO",
+        details=f"Cliente: {cliente.nome}",
+    )
+    db.commit()
 
     _ensure_default_documentos(db, processo.id)
     _invalidate_process_list_cache()
@@ -2083,62 +2398,327 @@ def app_get_processo_full(
     )
 
 
+@app.get("/app/api/processos/{processo_id}/eventos", response_model=list[ProcessoEventoOut])
+def app_list_processo_eventos(
+    processo_id: uuid.UUID,
+    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+    limit: int = Query(default=200, ge=1, le=1000),
+):
+    processo = db.get(Processo, processo_id)
+    if not processo:
+        raise HTTPException(status_code=404, detail="Processo nao encontrado")
+
+    cliente = db.get(Cliente, processo.cliente_id)
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente nao encontrado")
+
+    role = _normalize_role(str(session.get("role", "")))
+    username = _normalize_username(str(session.get("username", "")))
+    if role == ROLE_CORRETOR and _normalize_username(cliente.corretor) != username:
+        raise HTTPException(status_code=403, detail="Sem permissao para acessar este processo")
+    if role == ROLE_CCA and _normalize_username(processo.cca_responsavel) != username:
+        raise HTTPException(status_code=403, detail="Sem permissao para acessar este processo")
+
+    return (
+        db.query(ProcessoEvento)
+        .filter(ProcessoEvento.processo_id == processo_id)
+        .order_by(ProcessoEvento.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+@app.get("/app/api/metricas/processos", response_model=ProcessoMetricasOut)
+def app_get_metricas_processos(
+    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    role = _normalize_role(str(session.get("role", "")))
+    username = _normalize_username(str(session.get("username", "")))
+    processos = _query_processos_by_scope(db, role, username).order_by(Processo.created_at.desc()).all()
+
+    total = len(processos)
+    funnel = {
+        "novo": 0,
+        "em_andamento": 0,
+        "pendenciado": 0,
+        "aprovado": 0,
+        "reprovado": 0,
+        "distrato": 0,
+        "cancelado": 0,
+    }
+    sla = {
+        "analista_alerta_24h": 0,
+        "analista_critico_48h": 0,
+        "corretor_alerta_24h": 0,
+        "corretor_critico_48h": 0,
+        "cca_alerta_24h": 0,
+        "cca_critico_48h": 0,
+    }
+
+    now = _utcnow()
+    process_ids: list[uuid.UUID] = []
+    pendencias_atuais: set[uuid.UUID] = set()
+    for processo in processos:
+        process_ids.append(processo.id)
+        geral = _status_token(processo.status_geral).lower()
+        if geral in funnel:
+            funnel[geral] += 1
+
+        sla_analista = _compute_sla_hours(processo, SLA_OWNER_ANALISTA, now)
+        sla_corretor = _compute_sla_hours(processo, SLA_OWNER_CORRETOR, now)
+        sla_cca = _compute_sla_hours(processo, SLA_OWNER_CCA, now)
+
+        if sla_analista >= 24:
+            sla["analista_alerta_24h"] += 1
+        if sla_analista >= 48:
+            sla["analista_critico_48h"] += 1
+        if sla_corretor >= 24:
+            sla["corretor_alerta_24h"] += 1
+        if sla_corretor >= 48:
+            sla["corretor_critico_48h"] += 1
+        if sla_cca >= 24:
+            sla["cca_alerta_24h"] += 1
+        if sla_cca >= 48:
+            sla["cca_critico_48h"] += 1
+
+        if _processo_has_pendencia(processo):
+            pendencias_atuais.add(processo.id)
+
+    pendencias_historicas: set[uuid.UUID] = set()
+    total_eventos_pendencia = 0
+    if process_ids:
+        pendencia_rows = (
+            db.query(ProcessoEvento.processo_id, func.count(ProcessoEvento.id))
+            .filter(ProcessoEvento.processo_id.in_(process_ids), ProcessoEvento.event_type == "PENDENCIA")
+            .group_by(ProcessoEvento.processo_id)
+            .all()
+        )
+        for processo_id, count in pendencia_rows:
+            pendencias_historicas.add(processo_id)
+            total_eventos_pendencia += int(count or 0)
+
+    processos_com_pendencia = len(pendencias_atuais.union(pendencias_historicas))
+    first_pass_yield = round(((total - processos_com_pendencia) / total) * 100, 2) if total > 0 else 0.0
+    media_retrabalho = round(total_eventos_pendencia / total, 2) if total > 0 else 0.0
+
+    return ProcessoMetricasOut(
+        total_processos=total,
+        funnel=ProcessoMetricasFunnelOut(**funnel),
+        sla=ProcessoMetricasSlaOut(**sla),
+        qualidade=ProcessoMetricasQualidadeOut(
+            processos_com_pendencia=processos_com_pendencia,
+            first_pass_yield_percent=first_pass_yield,
+            media_retrabalho_por_processo=media_retrabalho,
+        ),
+        updated_at=now,
+    )
+
+
 @app.patch("/app/api/processos/{processo_id}", response_model=ProcessoOut)
 def app_patch_processo(
     processo_id: uuid.UUID,
     payload: ProcessoUpdate,
-    _: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA)),
     db: Session = Depends(get_db),
 ):
     processo = db.get(Processo, processo_id)
     if not processo:
         raise HTTPException(status_code=404, detail="Processo nao encontrado")
 
+    actor_role = _normalize_role(str(session.get("role", "")))
+    actor_username = _normalize_username(str(session.get("username", "")))
     changes = payload.model_dump(exclude_unset=True)
     sla_trigger: Optional[str] = None
+    pending_requested = False
+    old_sla_owner = _normalize_sla_owner(processo.sla_owner)
+
     for field, value in changes.items():
         if field == "status_credito":
             status_credito = _process_credit_status(value)
+            _validate_status_transition(field, processo.status_credito, status_credito)
+            old_value = processo.status_credito
             processo.status_credito = status_credito
             if status_credito == "PENDENCIADO":
                 sla_trigger = "analista_pendenciou"
+                pending_requested = True
+            if old_value != status_credito:
+                event_type = "RETORNO_PENDENCIA" if _is_pendencia_status(field, old_value) and not _is_pendencia_status(field, status_credito) else ("PENDENCIA" if _is_pendencia_status(field, status_credito) else "STATUS_CHANGE")
+                _record_processo_event(
+                    db,
+                    processo_id=processo.id,
+                    actor_username=actor_username,
+                    actor_role=actor_role,
+                    event_type=event_type,
+                    field_name=field,
+                    old_value=old_value,
+                    new_value=status_credito,
+                )
         elif field == "status_geral":
             status_geral = _process_geral_status(value)
+            _validate_status_transition(field, processo.status_geral, status_geral)
+            old_value = processo.status_geral
             processo.status_geral = status_geral
             if status_geral == "PENDENCIADO":
                 sla_trigger = "analista_pendenciou"
+                pending_requested = True
+            if old_value != status_geral:
+                event_type = "RETORNO_PENDENCIA" if _is_pendencia_status(field, old_value) and not _is_pendencia_status(field, status_geral) else ("PENDENCIA" if _is_pendencia_status(field, status_geral) else "STATUS_CHANGE")
+                _record_processo_event(
+                    db,
+                    processo_id=processo.id,
+                    actor_username=actor_username,
+                    actor_role=actor_role,
+                    event_type=event_type,
+                    field_name=field,
+                    old_value=old_value,
+                    new_value=status_geral,
+                )
         elif field == "status_cca":
-            processo.status_cca = _process_caixa_status(value)
+            status_cca = _process_caixa_status(value)
+            _validate_status_transition(field, processo.status_cca, status_cca)
+            old_value = processo.status_cca
+            processo.status_cca = status_cca
+            if _is_pendencia_status(field, status_cca):
+                pending_requested = True
+            if old_value != status_cca:
+                event_type = "RETORNO_PENDENCIA" if _is_pendencia_status(field, old_value) and not _is_pendencia_status(field, status_cca) else ("PENDENCIA" if _is_pendencia_status(field, status_cca) else "STATUS_CHANGE")
+                _record_processo_event(
+                    db,
+                    processo_id=processo.id,
+                    actor_username=actor_username,
+                    actor_role=actor_role,
+                    event_type=event_type,
+                    field_name=field,
+                    old_value=old_value,
+                    new_value=status_cca,
+                )
         elif field == "status_agehab":
-            processo.status_agehab = _process_agehab_status(value)
+            status_agehab = _process_agehab_status(value)
+            _validate_status_transition(field, processo.status_agehab, status_agehab)
+            old_value = processo.status_agehab
+            processo.status_agehab = status_agehab
+            if _is_pendencia_status(field, status_agehab):
+                pending_requested = True
+            if old_value != status_agehab:
+                event_type = "RETORNO_PENDENCIA" if _is_pendencia_status(field, old_value) and not _is_pendencia_status(field, status_agehab) else ("PENDENCIA" if _is_pendencia_status(field, status_agehab) else "STATUS_CHANGE")
+                _record_processo_event(
+                    db,
+                    processo_id=processo.id,
+                    actor_username=actor_username,
+                    actor_role=actor_role,
+                    event_type=event_type,
+                    field_name=field,
+                    old_value=old_value,
+                    new_value=status_agehab,
+                )
         elif field == "status_sinal":
             status_sinal = _process_sinal_status(value)
+            _validate_status_transition(field, processo.status_sinal, status_sinal)
+            old_value = processo.status_sinal
             processo.status_sinal = status_sinal
             processo.pendente_sinal = status_sinal == "PENDENTE"
+            if _is_pendencia_status(field, status_sinal):
+                pending_requested = True
+            if old_value != status_sinal:
+                event_type = "RETORNO_PENDENCIA" if _is_pendencia_status(field, old_value) and not _is_pendencia_status(field, status_sinal) else ("PENDENCIA" if _is_pendencia_status(field, status_sinal) else "STATUS_CHANGE")
+                _record_processo_event(
+                    db,
+                    processo_id=processo.id,
+                    actor_username=actor_username,
+                    actor_role=actor_role,
+                    event_type=event_type,
+                    field_name=field,
+                    old_value=old_value,
+                    new_value=status_sinal,
+                )
         elif field == "status_fiador":
             status_fiador = _process_fiador_status(value)
+            _validate_status_transition(field, processo.status_fiador, status_fiador)
+            old_value = processo.status_fiador
             processo.status_fiador = status_fiador
             processo.pendente_fiador = status_fiador == "PENDENTE"
+            if _is_pendencia_status(field, status_fiador):
+                pending_requested = True
+            if old_value != status_fiador:
+                event_type = "RETORNO_PENDENCIA" if _is_pendencia_status(field, old_value) and not _is_pendencia_status(field, status_fiador) else ("PENDENCIA" if _is_pendencia_status(field, status_fiador) else "STATUS_CHANGE")
+                _record_processo_event(
+                    db,
+                    processo_id=processo.id,
+                    actor_username=actor_username,
+                    actor_role=actor_role,
+                    event_type=event_type,
+                    field_name=field,
+                    old_value=old_value,
+                    new_value=status_fiador,
+                )
         elif field == "cca_responsavel":
-            username = _normalize_username(value)
-            if not username:
+            old_value = processo.cca_responsavel
+            cca_username = _normalize_username(value)
+            if not cca_username:
                 processo.cca_responsavel = None
             else:
-                cca_user = _get_user_by_username(db, username)
+                cca_user = _get_user_by_username(db, cca_username)
                 if not cca_user or _normalize_role(cca_user.role) != ROLE_CCA or not cca_user.is_active:
                     raise HTTPException(status_code=422, detail="CCA invalido")
                 processo.cca_responsavel = cca_user.username
+            if old_value != processo.cca_responsavel:
+                _record_processo_event(
+                    db,
+                    processo_id=processo.id,
+                    actor_username=actor_username,
+                    actor_role=actor_role,
+                    event_type="ATRIBUICAO_CCA",
+                    field_name=field,
+                    old_value=old_value,
+                    new_value=processo.cca_responsavel,
+                )
         elif field in {"sla_credito_dias", "sla_corretor_dias", "sla_cca_dias"}:
             # SLA passa a ser calculado automaticamente pelo backend.
             continue
         else:
+            old_value = getattr(processo, field, None)
             setattr(processo, field, value)
+            new_value = getattr(processo, field, None)
+            if old_value != new_value:
+                _record_processo_event(
+                    db,
+                    processo_id=processo.id,
+                    actor_username=actor_username,
+                    actor_role=actor_role,
+                    event_type="PROCESSO_UPDATE" if field != "observacao" else "OBSERVACAO_UPDATE",
+                    field_name=field,
+                    old_value=old_value,
+                    new_value=new_value,
+                )
+
+    if pending_requested:
+        observacao_value = changes.get("observacao", processo.observacao) or ""
+        if len(str(observacao_value).strip()) < 8:
+            raise HTTPException(
+                status_code=422,
+                detail="Informe observacao com pelo menos 8 caracteres ao registrar pendencia.",
+            )
 
     _apply_sla_rules(
         processo,
         trigger=sla_trigger,
         has_enviado_docs=_process_has_enviado_docs(db, processo.id),
     )
+    new_sla_owner = _normalize_sla_owner(processo.sla_owner)
+    if old_sla_owner != new_sla_owner:
+        _record_processo_event(
+            db,
+            processo_id=processo.id,
+            actor_username=actor_username,
+            actor_role=actor_role,
+            event_type="SLA_OWNER_CHANGE",
+            field_name="sla_owner",
+            old_value=old_sla_owner,
+            new_value=new_sla_owner,
+            details=(sla_trigger or "regra_automatica"),
+        )
 
     db.commit()
     db.refresh(processo)
@@ -2180,6 +2760,10 @@ def app_bulk_upsert_documentos(
             raise HTTPException(status_code=403, detail="Sem permissao para atualizar este processo")
         raise HTTPException(status_code=403, detail="Perfil CCA possui acesso somente leitura nesta tela")
 
+    old_status_credito = processo.status_credito
+    old_status_geral = processo.status_geral
+    old_sla_owner = _normalize_sla_owner(processo.sla_owner)
+
     if not payload.documentos:
         raise HTTPException(status_code=422, detail="Lista de documentos vazia")
 
@@ -2215,6 +2799,8 @@ def app_bulk_upsert_documentos(
         )
 
         if documento:
+            old_status_doc = documento.status_doc
+            old_status_credito_doc = documento.status_credito
             current_credit = _credit_status(documento.status_credito, fallback="AGUARDANDO_ENVIO")
             if status_doc is not None:
                 if not (role == ROLE_CORRETOR and documento.status_doc == "ENVIADO"):
@@ -2226,6 +2812,28 @@ def app_bulk_upsert_documentos(
                             documento.status_credito = "AGUARDANDO_ENVIO"
             if status_credito is not None:
                 documento.status_credito = status_credito
+            if old_status_doc != documento.status_doc:
+                _record_processo_event(
+                    db,
+                    processo_id=processo.id,
+                    actor_username=username,
+                    actor_role=role,
+                    event_type="DOCUMENTO_STATUS_DOC",
+                    field_name=f"{categoria}:{nome}:status_doc",
+                    old_value=old_status_doc,
+                    new_value=documento.status_doc,
+                )
+            if old_status_credito_doc != documento.status_credito:
+                _record_processo_event(
+                    db,
+                    processo_id=processo.id,
+                    actor_username=username,
+                    actor_role=role,
+                    event_type="DOCUMENTO_STATUS_CREDITO",
+                    field_name=f"{categoria}:{nome}:status_credito",
+                    old_value=old_status_credito_doc,
+                    new_value=documento.status_credito,
+                )
         else:
             if can_update_credit:
                 credito_default = status_credito or ("ANALISE" if status_doc == "ENVIADO" else "AGUARDANDO_ENVIO")
@@ -2240,6 +2848,15 @@ def app_bulk_upsert_documentos(
             )
             docs_by_key[(categoria, nome)] = novo_documento
             db.add(novo_documento)
+            _record_processo_event(
+                db,
+                processo_id=processo.id,
+                actor_username=username,
+                actor_role=role,
+                event_type="DOCUMENTO_CRIADO",
+                field_name=f"{categoria}:{nome}",
+                new_value=f"{novo_documento.status_doc}|{novo_documento.status_credito}",
+            )
 
     db.flush()
 
@@ -2259,7 +2876,46 @@ def app_bulk_upsert_documentos(
             processo.status_geral = "EM_ANDAMENTO"
         sla_trigger = "corretor_enviou"
 
+    if old_status_credito != processo.status_credito:
+        _record_processo_event(
+            db,
+            processo_id=processo.id,
+            actor_username=username,
+            actor_role=role,
+            event_type="STATUS_CHANGE",
+            field_name="status_credito",
+            old_value=old_status_credito,
+            new_value=processo.status_credito,
+            details="ajuste_automatico_documentos",
+        )
+    if old_status_geral != processo.status_geral:
+        event_type = "RETORNO_PENDENCIA" if _is_pendencia_status("status_geral", old_status_geral) and not _is_pendencia_status("status_geral", processo.status_geral) else "STATUS_CHANGE"
+        _record_processo_event(
+            db,
+            processo_id=processo.id,
+            actor_username=username,
+            actor_role=role,
+            event_type=event_type,
+            field_name="status_geral",
+            old_value=old_status_geral,
+            new_value=processo.status_geral,
+            details="ajuste_automatico_documentos",
+        )
+
     _apply_sla_rules(processo, trigger=sla_trigger, has_enviado_docs=has_enviado_docs)
+    new_sla_owner = _normalize_sla_owner(processo.sla_owner)
+    if old_sla_owner != new_sla_owner:
+        _record_processo_event(
+            db,
+            processo_id=processo.id,
+            actor_username=username,
+            actor_role=role,
+            event_type="SLA_OWNER_CHANGE",
+            field_name="sla_owner",
+            old_value=old_sla_owner,
+            new_value=new_sla_owner,
+            details=(sla_trigger or "regra_automatica"),
+        )
 
     db.commit()
     _invalidate_process_list_cache()
