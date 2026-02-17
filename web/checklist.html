@@ -101,7 +101,10 @@
       grid-template-columns:repeat(3,minmax(0,1fr));
       gap:10px 16px;
       margin-bottom:10px;
-      border:none;padding:0;
+      border:1px solid rgba(34,197,94,0.22);
+      border-radius:14px;
+      padding:10px;
+      background:linear-gradient(180deg, rgba(15,23,42,0.55), rgba(2,6,23,0.35));
     }
     .header-grid-dados{
       grid-template-columns:repeat(2,minmax(0,1fr));
@@ -124,7 +127,20 @@
       .copy-btn{align-self:flex-end;}
     }
 
-    .form-group{display:flex;flex-direction:column;gap:4px;font-size:.8rem;}
+    .form-group{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      font-size:.8rem;
+      border-radius:12px;
+      padding:2px;
+      transition:transform .16s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .form-group:hover{transform:translateY(-1px);}
+    .form-group:focus-within{
+      background:linear-gradient(180deg, rgba(34,197,94,0.08), rgba(15,23,42,0.06));
+      box-shadow:0 0 0 1px rgba(34,197,94,0.35), 0 0 18px rgba(34,197,94,0.12);
+    }
     label{color:var(--text-soft);font-weight:500;}
     input,select{
       color-scheme:dark;
@@ -148,6 +164,10 @@
     }
     input{background-image:linear-gradient(135deg,#022c22,#020617);}
     input::placeholder{color:rgba(148,163,184,0.75);}
+    input:hover,select:hover{
+      border-color:rgba(187,247,208,0.75);
+      box-shadow:0 0 0 1px rgba(15,23,42,0.9),0 0 0 2px rgba(34,197,94,0.18);
+    }
     input:focus-visible,select:focus-visible{
       border-color:#bbf7d0;
       box-shadow:0 0 0 1px rgba(15,23,42,0.9),0 0 0 3px rgba(34,197,94,0.55);
@@ -182,6 +202,16 @@
     }
     .section-block{margin-top:8px;margin-bottom:4px;transition:transform .15s ease;}
     .section-block:hover{transform:translateY(-1px);}
+    body.ui-enhanced .section-block{
+      opacity:0;
+      transform:translateY(8px);
+    }
+    body.ui-enhanced .section-block.section-reveal{
+      opacity:1;
+      transform:translateY(0);
+      transition:opacity .28s ease, transform .24s ease, box-shadow .18s ease;
+      transition-delay:var(--reveal-delay,0ms);
+    }
 
     .table-wrap{
       border-radius:12px;
@@ -262,6 +292,22 @@
     .highlight-info{display:block;margin-top:4px;font-weight:600;color:#facc15;}
     .visually-hidden{border:0;clip:rect(0 0 0 0);height:1px;margin:-1px;overflow:hidden;padding:0;position:absolute;width:1px;}
     .hidden{display:none;}
+    #reserva,
+    label[for="reserva"]{display:none !important;}
+
+    @media (prefers-reduced-motion: reduce){
+      *, *::before, *::after{
+        animation-duration:.01ms !important;
+        animation-iteration-count:1 !important;
+        transition-duration:.01ms !important;
+        scroll-behavior:auto !important;
+      }
+      body.ui-enhanced .section-block,
+      body.ui-enhanced .section-block.section-reveal{
+        opacity:1;
+        transform:none;
+      }
+    }
 
     /* Pílulas */
     .status-pill{
@@ -1108,6 +1154,48 @@ ou, em casos pontuais, a próprio punho.</td>
   const copyFeedback = document.getElementById('copy-feedback');
   window.CHECKLIST_CAN_EDIT_DOC = true;
 
+  function removerReservaLegada() {
+    const removerGrupo = (node) => {
+      if (!node) return;
+      const group = node.closest('.form-group');
+      if (group) {
+        group.remove();
+        return;
+      }
+      if (node.parentNode) node.remove();
+    };
+
+    const campoReserva = document.getElementById('reserva');
+    removerGrupo(campoReserva);
+
+    document.querySelectorAll('label[for="reserva"]').forEach(removerGrupo);
+
+    document.querySelectorAll('.form-group').forEach((group) => {
+      const label = group.querySelector('label');
+      const input = group.querySelector('input,select,textarea');
+      const labelText = String(label?.textContent || '').trim().toLowerCase();
+      const placeholder = String(input?.getAttribute('placeholder') || '').toLowerCase();
+      const fieldId = String(input?.id || '').toLowerCase();
+      if (labelText === 'reserva' || fieldId === 'reserva' || placeholder.includes('reserva')) {
+        group.remove();
+      }
+    });
+
+    document.querySelectorAll('fieldset[aria-label*="Dados"]').forEach((fieldset) => {
+      fieldset.classList.add('header-grid-dados');
+    });
+  }
+
+  function aplicarEfeitosProfissionais() {
+    document.body.classList.add('ui-enhanced');
+    const sections = Array.from(document.querySelectorAll('.section-block'));
+    sections.forEach((section, index) => {
+      const delay = Math.min(index * 35, 280);
+      section.style.setProperty('--reveal-delay', `${delay}ms`);
+      requestAnimationFrame(() => section.classList.add('section-reveal'));
+    });
+  }
+
   function montarAssunto(prefixo) {
     const nome = (nomeClienteInput.value || '').trim().toUpperCase();
     const emp  = (obraInput.value || '').trim().toUpperCase();
@@ -1358,6 +1446,7 @@ DIVORCIADO: Certidão de casamento averbada.`;
   obraInput.addEventListener('change', atualizarAssuntosEmail);
 
   /* init */
+  removerReservaLegada();
   atualizarDependente();
   atualizarEstadoCivilProponente();
   atualizarPerfilRenda();
@@ -1368,6 +1457,7 @@ DIVORCIADO: Certidão de casamento averbada.`;
   inicializarStatusCredito();
   inicializarCopiarAssunto();
   atualizarAssuntosEmail();
+  aplicarEfeitosProfissionais();
 </script>
 <script>
   (function () {
@@ -1385,6 +1475,7 @@ DIVORCIADO: Certidão de casamento averbada.`;
     const saveBtn = document.getElementById("btnSalvarChecklist");
     const backBtn = document.getElementById("btnVoltarAcompanhamento");
     const saveFeedback = document.getElementById("save-feedback");
+    if (typeof removerReservaLegada === "function") removerReservaLegada();
 
     function norm(value) {
       return String(value || "").trim().toLowerCase();
@@ -1907,6 +1998,7 @@ DIVORCIADO: Certidão de casamento averbada.`;
         applyAccessMode();
         await loadEmpreendimentos();
         await carregarProcesso();
+        if (typeof removerReservaLegada === "function") removerReservaLegada();
         applyAccessMode();
       } catch (error) {
         setFeedback(`Erro ao carregar processo: ${error.message}`, true);
