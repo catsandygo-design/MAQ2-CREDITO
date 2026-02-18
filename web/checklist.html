@@ -2304,9 +2304,12 @@ DIVORCIADO: Certidão de casamento averbada.`;
         getRows().forEach((item) => {
           const key = docLookupKey(item.categoria, item.nome, item.docId);
           const found = mapDocs.get(key);
+          const pendenciaInfo = String(found?.pendencia_info || "").trim();
 
           const docValue = backendDocToUi(found?.status_doc);
           item.docSelect.value = docValue;
+          item.docSelect.dataset.pendenciaInfo = pendenciaInfo;
+          item.docSelect.title = pendenciaInfo ? `Pendencia: ${pendenciaInfo}` : "";
 
           if (item.creditoSelect) {
             let creditoValue = found?.status_credito
@@ -2315,10 +2318,19 @@ DIVORCIADO: Certidão de casamento averbada.`;
             creditoValue = coerceCreditoUiByDoc(docValue, creditoValue);
             item.creditoSelect.value = creditoValue;
             item.creditoSelect.disabled = true;
+            item.creditoSelect.dataset.pendenciaInfo = pendenciaInfo;
+            item.creditoSelect.title = pendenciaInfo ? `Pendencia: ${pendenciaInfo}` : "";
           }
         });
 
         applyVisuals();
+        getRows().forEach((item) => {
+          const pendenciaInfo = String(item.creditoSelect?.dataset?.pendenciaInfo || item.docSelect?.dataset?.pendenciaInfo || "").trim();
+          if (!pendenciaInfo) return;
+          const tooltip = `Pendencia: ${pendenciaInfo}`;
+          item.docSelect.title = tooltip;
+          if (item.creditoSelect) item.creditoSelect.title = tooltip;
+        });
       }
 
       async function carregarProcesso() {

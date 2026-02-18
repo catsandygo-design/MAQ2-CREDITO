@@ -1285,6 +1285,7 @@ DIVORCIADO: Certidão averbada.</td>
   const SLA_WARN = 24;
   const SLA_BAD  = 48;
   const REFRESH_SECONDS = 30;
+  const DOC_PENDENCIA_MIN_LEN = 8;
 
   let countdown = REFRESH_SECONDS;
   $("refreshLabel").textContent = `${countdown}s`;
@@ -1675,6 +1676,7 @@ DIVORCIADO: Certidão averbada.</td>
     const API_BASE = "/app/api";
     const url = new URL(window.location.href);
     const processoId = url.searchParams.get("processo_id");
+    const docSnapshot = new Map();
 
     function norm(value) {
       return String(value || "").trim().toLowerCase();
@@ -1801,6 +1803,20 @@ DIVORCIADO: Certidão averbada.</td>
       const cat = norm(categoria);
       const id = docId || inferDocId(cat, nome);
       return `${cat}|${id || normalizeName(nome)}`;
+    }
+
+    function syncDocSnapshot(documentos) {
+      const mapDocs = buildDocMap(documentos || []);
+      docSnapshot.clear();
+      getDocRows().forEach((row) => {
+        const key = docLookupKey(row.categoria, row.nome, row.docId);
+        const found = mapDocs.get(key);
+        docSnapshot.set(key, {
+          status_doc: String(found?.status_doc || "PENDENTE").toUpperCase(),
+          status_credito: String(found?.status_credito || "AGUARDANDO_ENVIO").toUpperCase(),
+          pendencia_info: String(found?.pendencia_info || "").trim(),
+        });
+      });
     }
 
     function buildDocMap(docs) {
@@ -2052,6 +2068,7 @@ DIVORCIADO: Certidão averbada.</td>
           if (typeof applySelectColor === "function") applySelectColor(row.select);
         }
       });
+      syncDocSnapshot(docs);
 
       if (typeof atualizarDependente === "function") atualizarDependente();
       if (typeof atualizarConjuge === "function") atualizarConjuge();
@@ -2105,15 +2122,46 @@ DIVORCIADO: Certidão averbada.</td>
         observacao,
       };
 
-      const documentos = getDocRows().map((row) => {
+      const documentos = [];
+      for (const row of getDocRows()) {
         const statusDoc = norm(row.select.value) === "enviado" ? "ENVIADO" : "PENDENTE";
-        return {
+        const statusCreditoDoc = statusDoc === "PENDENTE" ? "PENDENCIADO" : docCreditoFromUi(statusCredito);
+        const key = docLookupKey(row.categoria, row.nome, row.docId);
+        const previous = docSnapshot.get(key) || {};
+        const previousDocStatus = String(previous.status_doc || "").toUpperCase();
+        const previousPendenciaInfo = String(previous.pendencia_info || "").trim();
+        const becamePending = previousDocStatus === "ENVIADO" && statusDoc === "PENDENTE";
+        let pendenciaInfo = null;
+
+        if (statusDoc === "PENDENTE") {
+          if (becamePending) {
+            const prompted = window.prompt(
+              `Informe a pendencia do documento "${row.nome}" (minimo ${DOC_PENDENCIA_MIN_LEN} caracteres):`,
+              previousPendenciaInfo
+            );
+            if (prompted === null) {
+              alert("Salvar cancelado. Pendencia de documento precisa de informacao.");
+              return;
+            }
+            const cleaned = String(prompted || "").trim().replace(/\s+/g, " ");
+            if (cleaned.length < DOC_PENDENCIA_MIN_LEN) {
+              alert(`Pendencia do documento "${row.nome}" precisa ter no minimo ${DOC_PENDENCIA_MIN_LEN} caracteres.`);
+              return;
+            }
+            pendenciaInfo = cleaned;
+          } else if (String(previous.status_credito || "").toUpperCase() === "PENDENCIADO" && previousPendenciaInfo) {
+            pendenciaInfo = previousPendenciaInfo;
+          }
+        }
+
+        documentos.push({
           categoria: row.categoria,
           nome: row.nome,
           status_doc: statusDoc,
-          status_credito: docCreditoFromUi(statusCredito),
-        };
-      });
+          status_credito: statusCreditoDoc,
+          pendencia_info: pendenciaInfo,
+        });
+      }
 
       try {
         await api(`/processos/${processoId}`, {
@@ -2121,10 +2169,11 @@ DIVORCIADO: Certidão averbada.</td>
           body: JSON.stringify(payloadProcesso),
         });
 
-        await api(`/processos/${processoId}/documentos`, {
+        const savedDocs = await api(`/processos/${processoId}/documentos`, {
           method: "PUT",
           body: JSON.stringify({ documentos }),
         });
+        syncDocSnapshot(savedDocs);
 
         if (typeof buildPendenciasResumo === "function") buildPendenciasResumo();
         alert("Dados salvos com sucesso.");

@@ -64,7 +64,8 @@ try:
     FALL_RISK_DAYS = max(1, int(os.getenv("FALL_RISK_DAYS", "15")))
 except ValueError:
     FALL_RISK_DAYS = 15
-RUNTIME_SCHEMA_REVISION = "2026-02-18-sla-runtime-v5"
+RUNTIME_SCHEMA_REVISION = "2026-02-18-doc-pendencia-v6"
+PENDENCIA_INFO_MIN_LENGTH = 8
 PROCESS_LIST_CACHE: dict[str, dict[str, Any]] = {}
 SEED_USERS_READY = False
 
@@ -818,6 +819,11 @@ def _credit_status(value: Optional[str], fallback: str = "ANALISE") -> str:
     return raw if raw in allowed else fallback
 
 
+def _normalize_pendencia_info(value: Optional[str]) -> Optional[str]:
+    text = " ".join(str(value or "").strip().split())
+    return text or None
+
+
 DEFAULT_DOCUMENTOS = [
     {"categoria": "proponente", "nome": "Identidade e CPF"},
     {"categoria": "proponente", "nome": "Comprovante de estado civil"},
@@ -923,6 +929,7 @@ class Documento(Base):
     nome: Mapped[str] = mapped_column(Text, nullable=False)
     status_doc: Mapped[str] = mapped_column(String, nullable=False, default="PENDENTE")
     status_credito: Mapped[str] = mapped_column(String, nullable=False, default="AGUARDANDO_ENVIO")
+    pendencia_info: Mapped[Optional[str]] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -1069,6 +1076,7 @@ class DocumentoCreate(BaseModel):
 class DocumentoUpdate(BaseModel):
     status_doc: Optional[str] = None
     status_credito: Optional[str] = None
+    pendencia_info: Optional[str] = None
 
 
 class DocumentoOut(BaseModel):
@@ -1079,6 +1087,7 @@ class DocumentoOut(BaseModel):
     nome: str
     status_doc: str
     status_credito: str
+    pendencia_info: Optional[str] = None
 
 
 class ProcessoEventoOut(BaseModel):
@@ -1240,6 +1249,7 @@ class DocumentoBulkItem(BaseModel):
     nome: str
     status_doc: Optional[str] = None
     status_credito: Optional[str] = None
+    pendencia_info: Optional[str] = None
 
 
 class DocumentoBulkUpsert(BaseModel):
@@ -1536,6 +1546,7 @@ def _ensure_runtime_schema(db: Session) -> None:
         )
 
     if documentos_table:
+        db.execute(text("ALTER TABLE documentos ADD COLUMN IF NOT EXISTS pendencia_info TEXT"))
         db.execute(
             text(
                 """
@@ -3227,10 +3238,12 @@ def app_bulk_upsert_documentos(
             if can_update_credit and item.status_credito is not None
             else None
         )
+        pendencia_info = _normalize_pendencia_info(item.pendencia_info)
 
         if documento:
             old_status_doc = documento.status_doc
             old_status_credito_doc = documento.status_credito
+            old_pendencia_info = _normalize_pendencia_info(documento.pendencia_info)
             current_credit = _credit_status(documento.status_credito, fallback="AGUARDANDO_ENVIO")
             if status_doc is not None:
                 if not (role == ROLE_CORRETOR and documento.status_doc == "ENVIADO"):
@@ -3242,6 +3255,34 @@ def app_bulk_upsert_documentos(
                             documento.status_credito = "AGUARDANDO_ENVIO"
             if status_credito is not None:
                 documento.status_credito = status_credito
+            next_credit = _credit_status(documento.status_credito, fallback="AGUARDANDO_ENVIO")
+            became_pending_doc = old_status_doc != "PENDENTE" and documento.status_doc == "PENDENTE"
+            if next_credit == "PENDENCIADO":
+                if pendencia_info:
+                    documento.pendencia_info = pendencia_info
+                elif role == ROLE_ANALISTA and became_pending_doc:
+                    raise HTTPException(
+                        status_code=422,
+                        detail=(
+                            f"Documento '{nome}' foi pendenciado. "
+                            f"Informe pendencia_info com pelo menos {PENDENCIA_INFO_MIN_LENGTH} caracteres."
+                        ),
+                    )
+                elif old_pendencia_info:
+                    documento.pendencia_info = old_pendencia_info
+            else:
+                documento.pendencia_info = None
+
+            normalized_pendencia_info = _normalize_pendencia_info(documento.pendencia_info)
+            if normalized_pendencia_info and len(normalized_pendencia_info) < PENDENCIA_INFO_MIN_LENGTH:
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        f"Pendencia do documento '{nome}' precisa ter no minimo "
+                        f"{PENDENCIA_INFO_MIN_LENGTH} caracteres."
+                    ),
+                )
+            documento.pendencia_info = normalized_pendencia_info
             if old_status_doc != documento.status_doc:
                 _record_processo_event(
                     db,
@@ -3264,17 +3305,38 @@ def app_bulk_upsert_documentos(
                     old_value=old_status_credito_doc,
                     new_value=documento.status_credito,
                 )
+            if old_pendencia_info != documento.pendencia_info:
+                _record_processo_event(
+                    db,
+                    processo_id=processo.id,
+                    actor_username=username,
+                    actor_role=role,
+                    event_type="DOCUMENTO_PENDENCIA_INFO",
+                    field_name=f"{categoria}:{nome}:pendencia_info",
+                    old_value=old_pendencia_info,
+                    new_value=documento.pendencia_info,
+                )
         else:
             if can_update_credit:
                 credito_default = status_credito or ("ANALISE" if status_doc == "ENVIADO" else "AGUARDANDO_ENVIO")
             else:
                 credito_default = "ANALISE" if status_doc == "ENVIADO" else "AGUARDANDO_ENVIO"
+            credito_default_norm = _credit_status(credito_default, fallback="AGUARDANDO_ENVIO")
+            if pendencia_info and len(pendencia_info) < PENDENCIA_INFO_MIN_LENGTH:
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        f"Pendencia do documento '{nome}' precisa ter no minimo "
+                        f"{PENDENCIA_INFO_MIN_LENGTH} caracteres."
+                    ),
+                )
             novo_documento = Documento(
                 processo_id=processo_id,
                 categoria=categoria,
                 nome=nome,
                 status_doc=status_doc or "PENDENTE",
-                status_credito=credito_default,
+                status_credito=credito_default_norm,
+                pendencia_info=pendencia_info if credito_default_norm == "PENDENCIADO" else None,
             )
             docs_by_key[(categoria, nome)] = novo_documento
             db.add(novo_documento)
