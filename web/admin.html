@@ -111,6 +111,7 @@
     .pill.ok{color:var(--ok);border-color:rgba(34,197,94,.55)}
     .pill.bad{color:var(--danger);border-color:rgba(239,68,68,.55)}
     .tiny{font-size:calc(11px * var(--font-scale));color:var(--muted)}
+    .log-details{white-space:normal;word-break:break-word}
     .row-actions{display:flex;gap:6px;flex-wrap:wrap}
     .row-actions .btn{padding:7px 9px;font-size:calc(11px * var(--font-scale))}
     .btn[disabled]{opacity:.55;cursor:not-allowed;transform:none}
@@ -167,6 +168,7 @@
               <option value="analista">Analista</option>
               <option value="corretor">Corretor</option>
               <option value="cca">CCA</option>
+              <option value="gestor">Gestor</option>
               <option value="admin">Admin</option>
             </select>
           </div>
@@ -228,6 +230,36 @@
         </table>
       </div>
     </section>
+
+    <section class="card">
+      <div class="top">
+        <div class="title">
+          <h1>Logs do Sistema</h1>
+          <p>Auditoria de mudancas por usuario, tela e acao.</p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btnRefreshLogs">Atualizar logs</button>
+        </div>
+      </div>
+      <div class="body" style="padding:0;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:15%">Data/Hora</th>
+              <th style="width:14%">Usuario</th>
+              <th style="width:9%">Perfil</th>
+              <th style="width:12%">Tela</th>
+              <th style="width:16%">Acao</th>
+              <th style="width:14%">Entidade</th>
+              <th style="width:20%">Detalhes</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyLogs">
+            <tr><td colspan="7" class="tiny">Carregando logs...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </div>
 
   <script>
@@ -235,11 +267,13 @@
     const feedbackEmp = document.getElementById("feedbackEmp");
     const tbody = document.getElementById("tbodyUsers");
     const tbodyEmp = document.getElementById("tbodyEmp");
+    const tbodyLogs = document.getElementById("tbodyLogs");
     const createForm = document.getElementById("createForm");
     const empForm = document.getElementById("empForm");
     let currentUser = null;
     let users = [];
     let empreendimentos = [];
+    let logs = [];
 
     function applyAdaptiveTypography() {
       const width = window.innerWidth || 0;
@@ -314,7 +348,7 @@
     }
 
     function roleOptions(selected) {
-      const roles = ["analista", "corretor", "cca", "admin"];
+      const roles = ["analista", "corretor", "cca", "gestor", "admin"];
       return roles.map((role) => `<option value="${role}" ${selected === role ? "selected" : ""}>${role}</option>`).join("");
     }
 
@@ -402,6 +436,7 @@
             users = users.map((item) => (item.id === updated.id ? updated : item));
             setFeedback(`Usuario ${updated.username} atualizado.`);
             renderUsers();
+            await loadLogs();
           } catch (error) {
             setFeedback(error.message, true);
             loadUsers().catch(() => null);
@@ -428,6 +463,7 @@
             users = users.map((item) => (item.id === updated.id ? updated : item));
             setFeedback(`Senha de ${updated.username} resetada. Usuario deve trocar no primeiro login.`);
             renderUsers();
+            await loadLogs();
           } catch (error) {
             setFeedback(error.message, true);
           }
@@ -456,6 +492,7 @@
                 : `Usuario ${updated.username} reativado.`
             );
             renderUsers();
+            await loadLogs();
           } catch (error) {
             setFeedback(error.message, true);
             loadUsers().catch(() => null);
@@ -489,12 +526,34 @@
             await api(`/app/api/admin/empreendimentos/${encodeURIComponent(empId)}`, { method: "DELETE" });
             setFeedbackEmp("Empreendimento removido.");
             await loadEmpreendimentos();
+            await loadLogs();
           } catch (error) {
             setFeedbackEmp(error.message, true);
           }
         });
       });
       animateRows(tbodyEmp);
+    }
+
+    function renderLogs() {
+      if (!logs.length) {
+        tbodyLogs.innerHTML = `<tr><td colspan="7" class="tiny">Nenhum log encontrado.</td></tr>`;
+        return;
+      }
+
+      tbodyLogs.innerHTML = logs.map((item) => `
+        <tr>
+          <td>${fmtDate(item.created_at)}</td>
+          <td><b>${esc(item.actor_username)}</b></td>
+          <td>${esc(item.actor_role)}</td>
+          <td>${esc(item.tela)}</td>
+          <td>${esc(item.acao)}</td>
+          <td>${esc(item.entidade_tipo || "-")} ${item.entidade_id ? `#${esc(item.entidade_id.slice(0, 8))}` : ""}</td>
+          <td class="log-details">${esc(item.details || "-")}</td>
+        </tr>
+      `).join("");
+
+      animateRows(tbodyLogs);
     }
 
     async function loadUsers() {
@@ -505,6 +564,11 @@
     async function loadEmpreendimentos() {
       empreendimentos = await api("/app/api/admin/empreendimentos");
       renderEmpreendimentos();
+    }
+
+    async function loadLogs() {
+      logs = await api("/app/api/admin/logs?limit=250");
+      renderLogs();
     }
 
     async function loadMe() {
@@ -539,6 +603,7 @@
         createForm.newRole.value = "analista";
         setFeedback("Funcionario cadastrado com sucesso.");
         await loadUsers();
+        await loadLogs();
       } catch (error) {
         setFeedback(error.message, true);
       }
@@ -560,6 +625,7 @@
         empForm.reset();
         setFeedbackEmp("Empreendimento cadastrado com sucesso.");
         await loadEmpreendimentos();
+        await loadLogs();
       } catch (error) {
         setFeedbackEmp(error.message, true);
       }
@@ -569,6 +635,15 @@
       try {
         await loadUsers();
         await loadEmpreendimentos();
+        await loadLogs();
+      } catch (error) {
+        setFeedback(error.message, true);
+      }
+    });
+
+    document.getElementById("btnRefreshLogs").addEventListener("click", async () => {
+      try {
+        await loadLogs();
       } catch (error) {
         setFeedback(error.message, true);
       }
@@ -591,6 +666,7 @@
         await loadMe();
         await loadUsers();
         await loadEmpreendimentos();
+        await loadLogs();
       } catch (error) {
         setFeedback(error.message, true);
       }

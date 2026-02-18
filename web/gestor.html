@@ -515,21 +515,21 @@
                     <div class="kpi-icon">🔷</div>
                     <div class="kpi-label">Conformidade OK</div>
                     <div class="kpi-count" id="kpi-conformidade">—</div>
-                    <div class="kpi-sub">Sem pendências</div>
+                    <div class="kpi-sub">Status Caixa = CONFORME</div>
                 </article>
 
                 <article class="kpi-card kpi-purple">
                     <div class="kpi-icon">📤</div>
                     <div class="kpi-label">Enviados Conformidade</div>
                     <div class="kpi-count" id="kpi-env-conf">—</div>
-                    <div class="kpi-sub">Aguardando</div>
+                    <div class="kpi-sub">Status Caixa = AGUARDANDO_CONFORMIDADE</div>
                 </article>
 
                 <article class="kpi-card kpi-warn">
                     <div class="kpi-icon">🔍</div>
                     <div class="kpi-label">Em Análise</div>
                     <div class="kpi-count" id="kpi-analise">—</div>
-                    <div class="kpi-sub">Análise de crédito</div>
+                    <div class="kpi-sub">Crédito/CCA/Produto/Agendado</div>
                 </article>
 
                 <article class="kpi-card kpi-bad">
@@ -543,7 +543,7 @@
                     <div class="kpi-icon">🚨</div>
                     <div class="kpi-label">Passíveis de Cair</div>
                     <div class="kpi-count" id="kpi-cair">—</div>
-                    <div class="kpi-sub">15+ dias sem evolução</div>
+                    <div class="kpi-sub" id="kpi-cair-sub">Acima do prazo estimado</div>
                 </article>
             </section>
 
@@ -730,6 +730,8 @@
             document.getElementById("kpi-analise").textContent = data.em_analise;
             document.getElementById("kpi-pendencias").textContent = data.com_pendencias;
             document.getElementById("kpi-cair").textContent = data.passiveis_cair;
+            const riskDays = Number(data?.dias_estimativa_queda || 15);
+            document.getElementById("kpi-cair-sub").textContent = `${riskDays}+ dias desde o cadastro`;
         }
 
         function renderImobs(imobs) {

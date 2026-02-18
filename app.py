@@ -40,15 +40,15 @@ ROLE_GESTOR = "gestor"
 VALID_ROLES = {ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN, ROLE_GESTOR}
 
 APP_CCA_USER = os.getenv("APP_CCA_USER", os.getenv("APP_LOGIN_USER", "cca"))
-APP_CCA_PASSWORD = os.getenv("APP_CCA_PASSWORD", os.getenv("APP_LOGIN_PASSWORD", "cca123"))
+APP_CCA_PASSWORD = os.getenv("APP_CCA_PASSWORD", os.getenv("APP_LOGIN_PASSWORD", "Troque#Cca123"))
 APP_ANALISTA_USER = os.getenv("APP_ANALISTA_USER", "analista")
-APP_ANALISTA_PASSWORD = os.getenv("APP_ANALISTA_PASSWORD", "analista123")
+APP_ANALISTA_PASSWORD = os.getenv("APP_ANALISTA_PASSWORD", "Troque#Analista123")
 APP_CORRETOR_USER = os.getenv("APP_CORRETOR_USER", "corretor")
-APP_CORRETOR_PASSWORD = os.getenv("APP_CORRETOR_PASSWORD", "corretor123")
+APP_CORRETOR_PASSWORD = os.getenv("APP_CORRETOR_PASSWORD", "Troque#Corretor123")
 APP_ADMIN_USER = os.getenv("APP_ADMIN_USER", "douglasadm")
-APP_ADMIN_PASSWORD = os.getenv("APP_ADMIN_PASSWORD", "12345")
+APP_ADMIN_PASSWORD = os.getenv("APP_ADMIN_PASSWORD", "Troque#Admin123")
 APP_GESTOR_USER = os.getenv("APP_GESTOR_USER", "gestor")
-APP_GESTOR_PASSWORD = os.getenv("APP_GESTOR_PASSWORD", "gestor123")
+APP_GESTOR_PASSWORD = os.getenv("APP_GESTOR_PASSWORD", "Troque#Gestor123")
 
 PASSWORD_HASH_ITERATIONS = int(os.getenv("PASSWORD_HASH_ITERATIONS", "200000"))
 PASSWORD_MIN_LENGTH = int(os.getenv("PASSWORD_MIN_LENGTH", "10"))
@@ -56,11 +56,15 @@ PASSWORD_REQUIRE_UPPER = os.getenv("PASSWORD_REQUIRE_UPPER", "true").lower() in 
 PASSWORD_REQUIRE_LOWER = os.getenv("PASSWORD_REQUIRE_LOWER", "true").lower() in {"1", "true", "yes"}
 PASSWORD_REQUIRE_DIGIT = os.getenv("PASSWORD_REQUIRE_DIGIT", "true").lower() in {"1", "true", "yes"}
 PASSWORD_REQUIRE_SYMBOL = os.getenv("PASSWORD_REQUIRE_SYMBOL", "true").lower() in {"1", "true", "yes"}
-ALLOW_WEAK_SEED_PASSWORDS = os.getenv("ALLOW_WEAK_SEED_PASSWORDS", "true").lower() in {"1", "true", "yes"}
+ALLOW_WEAK_SEED_PASSWORDS = os.getenv("ALLOW_WEAK_SEED_PASSWORDS", "false").lower() in {"1", "true", "yes"}
 ENABLE_LEGACY_DEMO_USERS = os.getenv("ENABLE_LEGACY_DEMO_USERS", "false").lower() in {"1", "true", "yes"}
 ACTIVE_SESSIONS: dict[str, dict[str, Any]] = {}
 PROCESS_LIST_CACHE_TTL_SECONDS = int(os.getenv("PROCESS_LIST_CACHE_TTL_SECONDS", "8"))
-RUNTIME_SCHEMA_REVISION = "2026-02-17-security-audit-v3"
+try:
+    FALL_RISK_DAYS = max(1, int(os.getenv("FALL_RISK_DAYS", "15")))
+except ValueError:
+    FALL_RISK_DAYS = 15
+RUNTIME_SCHEMA_REVISION = "2026-02-18-security-audit-v4"
 PROCESS_LIST_CACHE: dict[str, dict[str, Any]] = {}
 SEED_USERS_READY = False
 
@@ -184,6 +188,20 @@ def _db_error_hint(exc: SQLAlchemyError) -> str:
         )
 
     return "Falha de conexao com banco. Revise o DATABASE_URL e a conectividade com o Supabase."
+
+
+def _warn_default_credentials() -> None:
+    defaults = {
+        _normalize_username(APP_CORRETOR_USER): ("corretor", "Troque#Corretor123"),
+        _normalize_username(APP_CCA_USER): ("cca", "Troque#Cca123"),
+        _normalize_username(APP_ANALISTA_USER): ("analista", "Troque#Analista123"),
+        _normalize_username(APP_ADMIN_USER): ("admin", "Troque#Admin123"),
+        _normalize_username(APP_GESTOR_USER): ("gestor", "Troque#Gestor123"),
+    }
+    for username, (role, expected_password) in defaults.items():
+        configured = APP_USERS.get(username, {}).get("password")
+        if configured == expected_password:
+            logger.warning("Credencial padrao em uso para perfil '%s'. Troque a senha no ambiente.", role)
 
 
 def _utcnow() -> datetime:
@@ -926,6 +944,20 @@ class ProcessoEvento(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
 
 
+class SistemaLog(Base):
+    __tablename__ = "sistema_logs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    actor_username: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    actor_role: Mapped[str] = mapped_column(String(20), nullable=False, default="system", index=True)
+    tela: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
+    acao: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    entidade_tipo: Mapped[Optional[str]] = mapped_column(String(60))
+    entidade_id: Mapped[Optional[str]] = mapped_column(String(120))
+    details: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
 class AppUser(Base):
     __tablename__ = "app_users"
 
@@ -1046,6 +1078,19 @@ class ProcessoEventoOut(BaseModel):
     field_name: Optional[str] = None
     old_value: Optional[str] = None
     new_value: Optional[str] = None
+    details: Optional[str] = None
+    created_at: datetime
+
+
+class SistemaLogOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    actor_username: str
+    actor_role: str
+    tela: str
+    acao: str
+    entidade_tipo: Optional[str] = None
+    entidade_id: Optional[str] = None
     details: Optional[str] = None
     created_at: datetime
 
@@ -1211,6 +1256,31 @@ def _record_processo_event(
     )
 
 
+def _record_system_log(
+    db: Session,
+    *,
+    actor_username: str,
+    actor_role: str,
+    tela: str,
+    acao: str,
+    entidade_tipo: Optional[str] = None,
+    entidade_id: Optional[str] = None,
+    details: Optional[str] = None,
+) -> None:
+    role_raw = (actor_role or "").strip().lower()
+    db.add(
+        SistemaLog(
+            actor_username=_normalize_username(actor_username) or "system",
+            actor_role=role_raw if role_raw in VALID_ROLES else "system",
+            tela=(tela or "").strip().lower() or "sistema",
+            acao=(acao or "").strip().upper() or "EVENT",
+            entidade_tipo=(entidade_tipo or "").strip().lower() or None,
+            entidade_id=(entidade_id or "").strip() or None,
+            details=(details or "").strip() or None,
+        )
+    )
+
+
 def _processo_has_pendencia(processo: "Processo") -> bool:
     status_values = {
         "status_credito": processo.status_credito,
@@ -1351,6 +1421,23 @@ def _ensure_runtime_schema(db: Session) -> None:
             """
         )
     )
+    db.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS sistema_logs (
+                id UUID PRIMARY KEY,
+                actor_username TEXT NOT NULL,
+                actor_role VARCHAR(20) NOT NULL DEFAULT 'system',
+                tela VARCHAR(60) NOT NULL,
+                acao VARCHAR(80) NOT NULL,
+                entidade_tipo VARCHAR(60),
+                entidade_id VARCHAR(120),
+                details TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+    )
 
     statements = [
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_credito VARCHAR(30) DEFAULT 'EM_ANALISE'",
@@ -1429,6 +1516,9 @@ def _ensure_runtime_schema(db: Session) -> None:
         )
     )
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_processo_eventos_created_at ON processo_eventos (created_at DESC)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_sistema_logs_created_at ON sistema_logs (created_at DESC)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_sistema_logs_actor_username ON sistema_logs (LOWER(TRIM(actor_username)))"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_sistema_logs_tela ON sistema_logs (LOWER(TRIM(tela)))"))
 
     current_revision = db.execute(
         text("SELECT meta_value FROM app_runtime_meta WHERE meta_key = 'runtime_schema_revision'")
@@ -1630,6 +1720,8 @@ def get_db():
 async def lifespan(_: FastAPI):
     if DB_URL_HAS_PLACEHOLDERS:
         logger.warning("DATABASE_URL parece conter placeholders (<PASSWORD>, YOUR-PASSWORD, etc.).")
+
+    _warn_default_credentials()
 
     if not SESSION_COOKIE_SECURE:
         logger.warning("SESSION_COOKIE_SECURE=false. Use true em producao com HTTPS.")
@@ -1969,7 +2061,7 @@ def admin_list_users(
 @app.post("/app/api/admin/users", response_model=AppUserOut)
 def admin_create_user(
     payload: AdminUserCreate,
-    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     username = _normalize_username(payload.username)
@@ -1992,6 +2084,17 @@ def admin_create_user(
     )
     _set_user_password(user, payload.password, must_change_password=True)
     db.add(user)
+    db.flush()
+    _record_system_log(
+        db,
+        actor_username=_normalize_username(str(session.get("username", ""))),
+        actor_role=_normalize_role(str(session.get("role", ""))),
+        tela="admin",
+        acao="USUARIO_CRIADO",
+        entidade_tipo="usuario",
+        entidade_id=str(user.id),
+        details=f"username={user.username}; role={user.role}; force_change_password=true",
+    )
     db.commit()
     db.refresh(user)
     return user
@@ -2008,19 +2111,38 @@ def admin_update_user(
     if not user:
         raise HTTPException(status_code=404, detail="Usuario nao encontrado")
     current_user_id = str(session.get("user_id", ""))
+    actor_username = _normalize_username(str(session.get("username", "")))
+    actor_role = _normalize_role(str(session.get("role", "")))
+    change_notes: list[str] = []
 
     if payload.role is not None:
         role = (payload.role or "").strip().lower()
         if role not in VALID_ROLES:
             raise HTTPException(status_code=422, detail="Perfil invalido")
+        if user.role != role:
+            change_notes.append(f"role:{user.role}->{role}")
         user.role = role
 
     if payload.is_active is not None:
         if current_user_id and current_user_id == str(user.id) and not bool(payload.is_active):
             raise HTTPException(status_code=422, detail="Admin nao pode bloquear a si mesmo")
+        if bool(user.is_active) != bool(payload.is_active):
+            change_notes.append(f"is_active:{bool(user.is_active)}->{bool(payload.is_active)}")
         user.is_active = bool(payload.is_active)
         if not user.is_active:
             _drop_sessions_for_user(user.id)
+
+    if change_notes:
+        _record_system_log(
+            db,
+            actor_username=actor_username,
+            actor_role=actor_role,
+            tela="admin",
+            acao="USUARIO_ATUALIZADO",
+            entidade_tipo="usuario",
+            entidade_id=str(user.id),
+            details=f"username={user.username}; " + "; ".join(change_notes),
+        )
 
     db.commit()
     db.refresh(user)
@@ -2032,7 +2154,7 @@ def admin_update_user(
 def admin_reset_password(
     user_id: uuid.UUID,
     payload: AdminResetPasswordPayload,
-    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     user = db.get(AppUser, user_id)
@@ -2043,6 +2165,16 @@ def admin_reset_password(
         raise HTTPException(status_code=422, detail=policy_error)
 
     _set_user_password(user, payload.new_password, must_change_password=payload.force_change_password)
+    _record_system_log(
+        db,
+        actor_username=_normalize_username(str(session.get("username", ""))),
+        actor_role=_normalize_role(str(session.get("role", ""))),
+        tela="admin",
+        acao="USUARIO_RESET_SENHA",
+        entidade_tipo="usuario",
+        entidade_id=str(user.id),
+        details=f"username={user.username}; force_change_password={bool(payload.force_change_password)}",
+    )
     db.commit()
     db.refresh(user)
     _drop_sessions_for_user(user.id)
@@ -2089,7 +2221,7 @@ def admin_list_empreendimentos(
 @app.post("/app/api/admin/empreendimentos", response_model=EmpreendimentoOut)
 def admin_create_empreendimento(
     payload: EmpreendimentoCreate,
-    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     nome = _normalize_empreendimento_nome(payload.nome)
@@ -2100,12 +2232,33 @@ def admin_create_empreendimento(
     if existing:
         if not existing.is_active:
             existing.is_active = True
+            _record_system_log(
+                db,
+                actor_username=_normalize_username(str(session.get("username", ""))),
+                actor_role=_normalize_role(str(session.get("role", ""))),
+                tela="admin",
+                acao="EMPREENDIMENTO_REATIVADO",
+                entidade_tipo="empreendimento",
+                entidade_id=str(existing.id),
+                details=f"nome={existing.nome}",
+            )
             db.commit()
             db.refresh(existing)
         return existing
 
     empreendimento = Empreendimento(nome=nome, is_active=True)
     db.add(empreendimento)
+    db.flush()
+    _record_system_log(
+        db,
+        actor_username=_normalize_username(str(session.get("username", ""))),
+        actor_role=_normalize_role(str(session.get("role", ""))),
+        tela="admin",
+        acao="EMPREENDIMENTO_CRIADO",
+        entidade_tipo="empreendimento",
+        entidade_id=str(empreendimento.id),
+        details=f"nome={empreendimento.nome}",
+    )
     db.commit()
     db.refresh(empreendimento)
     return empreendimento
@@ -2114,15 +2267,43 @@ def admin_create_empreendimento(
 @app.delete("/app/api/admin/empreendimentos/{empreendimento_id}")
 def admin_delete_empreendimento(
     empreendimento_id: uuid.UUID,
-    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     empreendimento = db.get(Empreendimento, empreendimento_id)
     if not empreendimento:
         raise HTTPException(status_code=404, detail="Empreendimento nao encontrado")
     empreendimento.is_active = False
+    _record_system_log(
+        db,
+        actor_username=_normalize_username(str(session.get("username", ""))),
+        actor_role=_normalize_role(str(session.get("role", ""))),
+        tela="admin",
+        acao="EMPREENDIMENTO_DESATIVADO",
+        entidade_tipo="empreendimento",
+        entidade_id=str(empreendimento.id),
+        details=f"nome={empreendimento.nome}",
+    )
     db.commit()
     return {"ok": True}
+
+
+@app.get("/app/api/admin/logs", response_model=list[SistemaLogOut])
+def admin_list_system_logs(
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+    limit: int = Query(default=300, ge=1, le=2000),
+    tela: Optional[str] = Query(default=None),
+    username: Optional[str] = Query(default=None),
+):
+    query = db.query(SistemaLog)
+    if tela:
+        query = query.filter(func.lower(func.trim(SistemaLog.tela)) == tela.strip().lower())
+    if username:
+        normalized_username = _normalize_username(username)
+        if normalized_username:
+            query = query.filter(func.lower(func.trim(SistemaLog.actor_username)) == normalized_username)
+    return query.order_by(SistemaLog.created_at.desc()).limit(limit).all()
 
 
 @app.get("/health")
@@ -2351,7 +2532,7 @@ def app_gestor_dashboard(
 ):
     rows = db.query(Processo, Cliente).join(Cliente, Processo.cliente_id == Cliente.id).all()
     now = _utcnow()
-    FIFTEEN_DAYS = 15 * 24 * 3600
+    risk_window_seconds = FALL_RISK_DAYS * 24 * 3600
 
     assinados = 0
     conformidade_ok = 0
@@ -2373,21 +2554,26 @@ def app_gestor_dashboard(
 
         if cca == "ASSINATURA_CAIXA":
             assinados += 1
-        elif cca in ("CONFORME", "AGENDADO", "AGUARDANDO_CONFORMIDADE") and agehab == "VALIDADO_AGEHAB" and sinal != "PENDENTE" and fiador != "PENDENTE":
+        elif cca == "CONFORME":
             conformidade_ok += 1
         elif cca == "AGUARDANDO_CONFORMIDADE":
             enviados_conformidade += 1
 
-        if cca == "ANALISE_CREDITO":
+        if cca in {"ANALISE_CREDITO", "ANALISE_CCA", "TRATANDO_PRODUTO", "AGENDADO"}:
             em_analise += 1
 
         if has_pend:
             com_pendencias += 1
-            updated = _as_utc(processo.updated_at)
-            if updated:
-                seconds_since = (now - updated).total_seconds()
-                if seconds_since >= FIFTEEN_DAYS:
-                    passiveis_cair += 1
+        created_at = _as_utc(processo.created_at)
+        processo_finalizado = (
+            _status_token(processo.status_geral) in PROCESS_GERAL_FINAL_STATUSES
+            or cca == "ASSINATURA_CAIXA"
+            or (cca == "CONFORME" and agehab == "VALIDADO_AGEHAB" and sinal != "PENDENTE" and fiador != "PENDENTE")
+        )
+        if created_at and not processo_finalizado:
+            seconds_since_created = (now - created_at).total_seconds()
+            if seconds_since_created >= risk_window_seconds:
+                passiveis_cair += 1
 
         imob_name = (getattr(cliente, 'imobiliaria', None) or "Sem imobiliária").strip() or "Sem imobiliária"
         imob_map[imob_name] = imob_map.get(imob_name, 0) + 1
@@ -2417,6 +2603,7 @@ def app_gestor_dashboard(
         "em_analise": em_analise,
         "com_pendencias": com_pendencias,
         "passiveis_cair": passiveis_cair,
+        "dias_estimativa_queda": FALL_RISK_DAYS,
         "imobiliarias": imobs,
     }
 
@@ -2456,6 +2643,16 @@ def app_create_intake(
         actor_role=role,
         event_type="PROCESSO_CRIADO",
         details=f"Cliente: {cliente.nome}",
+    )
+    _record_system_log(
+        db,
+        actor_username=username,
+        actor_role=role,
+        tela="checklist",
+        acao="PROCESSO_CRIADO",
+        entidade_tipo="processo",
+        entidade_id=str(processo.id),
+        details=f"cliente={cliente.nome}; corretor={cliente.corretor or '-'}; obra={cliente.obra or '-'}; imobiliaria={cliente.imobiliaria or '-'}",
     )
     db.commit()
 
@@ -2832,6 +3029,23 @@ def app_patch_processo(
             details=(sla_trigger or "regra_automatica"),
         )
 
+    if changes:
+        ordered_fields = ",".join(sorted(changes.keys()))
+        _record_system_log(
+            db,
+            actor_username=actor_username,
+            actor_role=actor_role,
+            tela="analista",
+            acao="PROCESSO_ATUALIZADO",
+            entidade_tipo="processo",
+            entidade_id=str(processo.id),
+            details=(
+                f"campos={ordered_fields}; "
+                f"status_geral={processo.status_geral}; status_credito={processo.status_credito}; "
+                f"status_cca={processo.status_cca}; status_agehab={processo.status_agehab}"
+            ),
+        )
+
     db.commit()
     db.refresh(processo)
     _invalidate_process_list_cache()
@@ -2979,6 +3193,7 @@ def app_bulk_upsert_documentos(
         .all()
     )
     has_enviado_docs = any(doc.status_doc == "ENVIADO" for doc in documentos)
+    enviados_count = sum(1 for doc in documentos if doc.status_doc == "ENVIADO")
 
     sla_trigger: Optional[str] = None
     if role == ROLE_CORRETOR and has_enviado_docs:
@@ -3028,6 +3243,22 @@ def app_bulk_upsert_documentos(
             new_value=new_sla_owner,
             details=(sla_trigger or "regra_automatica"),
         )
+
+    tela_origem = "checklist" if role == ROLE_CORRETOR else ("analista" if role == ROLE_ANALISTA else "admin")
+    _record_system_log(
+        db,
+        actor_username=username,
+        actor_role=role,
+        tela=tela_origem,
+        acao="DOCUMENTOS_SALVOS",
+        entidade_tipo="processo",
+        entidade_id=str(processo.id),
+        details=(
+            f"documentos_recebidos={len(dedup_map)}; "
+            f"documentos_enviados={enviados_count}; "
+            f"status_geral={processo.status_geral}; status_credito={processo.status_credito}"
+        ),
+    )
 
     db.commit()
     _invalidate_process_list_cache()
