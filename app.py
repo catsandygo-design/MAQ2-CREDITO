@@ -35,8 +35,9 @@ ROLE_CORRETOR = "corretor"
 ROLE_CCA = "cca"
 ROLE_ANALISTA = "analista"
 ROLE_ADMIN = "admin"
+ROLE_GESTOR = "gestor"
 
-VALID_ROLES = {ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN}
+VALID_ROLES = {ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN, ROLE_GESTOR}
 
 APP_CCA_USER = os.getenv("APP_CCA_USER", os.getenv("APP_LOGIN_USER", "cca"))
 APP_CCA_PASSWORD = os.getenv("APP_CCA_PASSWORD", os.getenv("APP_LOGIN_PASSWORD", "cca123"))
@@ -46,6 +47,8 @@ APP_CORRETOR_USER = os.getenv("APP_CORRETOR_USER", "corretor")
 APP_CORRETOR_PASSWORD = os.getenv("APP_CORRETOR_PASSWORD", "corretor123")
 APP_ADMIN_USER = os.getenv("APP_ADMIN_USER", "douglasadm")
 APP_ADMIN_PASSWORD = os.getenv("APP_ADMIN_PASSWORD", "12345")
+APP_GESTOR_USER = os.getenv("APP_GESTOR_USER", "gestor")
+APP_GESTOR_PASSWORD = os.getenv("APP_GESTOR_PASSWORD", "gestor123")
 
 PASSWORD_HASH_ITERATIONS = int(os.getenv("PASSWORD_HASH_ITERATIONS", "200000"))
 PASSWORD_MIN_LENGTH = int(os.getenv("PASSWORD_MIN_LENGTH", "10"))
@@ -73,6 +76,7 @@ def _build_app_users() -> dict[str, dict[str, str]]:
         (APP_CCA_USER, APP_CCA_PASSWORD, ROLE_CCA),
         (APP_ANALISTA_USER, APP_ANALISTA_PASSWORD, ROLE_ANALISTA),
         (APP_ADMIN_USER, APP_ADMIN_PASSWORD, ROLE_ADMIN),
+        (APP_GESTOR_USER, APP_GESTOR_PASSWORD, ROLE_GESTOR),
     ]
     if ENABLE_LEGACY_DEMO_USERS:
         configs.extend(
@@ -240,6 +244,8 @@ def _home_for_role(role: Optional[str]) -> str:
     role_key = (role or "").strip().lower()
     if role_key == ROLE_ADMIN:
         return "/app/admin"
+    if role_key == ROLE_GESTOR:
+        return "/app/gestor"
     if role_key == ROLE_ANALISTA:
         return "/app/analista"
     if role_key == ROLE_CCA:
@@ -838,6 +844,7 @@ class Cliente(Base):
     nome: Mapped[str] = mapped_column(Text, nullable=False)
     corretor: Mapped[Optional[str]] = mapped_column(Text)
     obra: Mapped[Optional[str]] = mapped_column(Text)
+    imobiliaria: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     processos: Mapped[list["Processo"]] = relationship(back_populates="cliente", cascade="all, delete-orphan")
@@ -956,6 +963,7 @@ class ClienteCreate(BaseModel):
     nome: str
     corretor: Optional[str] = None
     obra: Optional[str] = None
+    imobiliaria: Optional[str] = None
 
 
 class ClienteOut(ClienteCreate):
@@ -1130,6 +1138,7 @@ class ProcessoIntakeCreate(BaseModel):
     nome: str
     corretor: Optional[str] = None
     obra: Optional[str] = None
+    imobiliaria: Optional[str] = None
 
 
 class ProcessoOverviewOut(BaseModel):
@@ -1138,6 +1147,7 @@ class ProcessoOverviewOut(BaseModel):
     cliente_nome: str
     corretor: Optional[str] = None
     obra: Optional[str] = None
+    imobiliaria: Optional[str] = None
     status_credito: str
     status_geral: str
     status_cca: str
@@ -1374,6 +1384,7 @@ def _ensure_runtime_schema(db: Session) -> None:
 
     if clientes_table:
         db.execute(text("ALTER TABLE clientes DROP COLUMN IF EXISTS reserva"))
+        db.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS imobiliaria TEXT"))
         db.execute(
             text(
                 """
@@ -1784,6 +1795,19 @@ def app_admin_page(request: Request):
     if role != ROLE_ADMIN:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
     return _html_page("admin.html")
+
+
+@app.get("/app/gestor")
+def app_gestor_page(request: Request):
+    session = _read_session(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=302)
+    if bool(session.get("must_change_password")):
+        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+    role = _normalize_role(str(session.get("role", "")))
+    if role not in {ROLE_GESTOR, ROLE_ADMIN}:
+        return RedirectResponse(url=_home_for_role(role), status_code=302)
+    return _html_page("gestor.html")
 
 
 @app.get("/admin")
@@ -2295,6 +2319,7 @@ def app_list_processos(
                 cliente_nome=cliente.nome,
                 corretor=cliente.corretor,
                 obra=cliente.obra,
+                imobiliaria=getattr(cliente, 'imobiliaria', None),
                 status_credito=processo.status_credito,
                 status_geral=processo.status_geral,
                 status_cca=processo.status_cca,
@@ -2319,6 +2344,83 @@ def app_list_processos(
     return output
 
 
+@app.get("/app/api/gestor/dashboard")
+def app_gestor_dashboard(
+    _: dict[str, Any] = Depends(require_roles(ROLE_GESTOR, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    rows = db.query(Processo, Cliente).join(Cliente, Processo.cliente_id == Cliente.id).all()
+    now = _utcnow()
+    FIFTEEN_DAYS = 15 * 24 * 3600
+
+    assinados = 0
+    conformidade_ok = 0
+    enviados_conformidade = 0
+    em_analise = 0
+    com_pendencias = 0
+    passiveis_cair = 0
+    total = len(rows)
+
+    imob_map: dict[str, int] = {}
+    imob_corretores: dict[str, dict[str, int]] = {}
+
+    for processo, cliente in rows:
+        cca = _status_token(processo.status_cca)
+        agehab = _status_token(processo.status_agehab)
+        sinal = _status_token(processo.status_sinal)
+        fiador = _status_token(processo.status_fiador)
+        has_pend = _processo_has_pendencia(processo)
+
+        if cca == "ASSINATURA_CAIXA":
+            assinados += 1
+        elif cca in ("CONFORME", "AGENDADO", "AGUARDANDO_CONFORMIDADE") and agehab == "VALIDADO_AGEHAB" and sinal != "PENDENTE" and fiador != "PENDENTE":
+            conformidade_ok += 1
+        elif cca == "AGUARDANDO_CONFORMIDADE":
+            enviados_conformidade += 1
+
+        if cca == "ANALISE_CREDITO":
+            em_analise += 1
+
+        if has_pend:
+            com_pendencias += 1
+            updated = _as_utc(processo.updated_at)
+            if updated:
+                seconds_since = (now - updated).total_seconds()
+                if seconds_since >= FIFTEEN_DAYS:
+                    passiveis_cair += 1
+
+        imob_name = (getattr(cliente, 'imobiliaria', None) or "Sem imobiliária").strip() or "Sem imobiliária"
+        imob_map[imob_name] = imob_map.get(imob_name, 0) + 1
+
+        corretor_name = (cliente.corretor or "Sem corretor").strip() or "Sem corretor"
+        if imob_name not in imob_corretores:
+            imob_corretores[imob_name] = {}
+        imob_corretores[imob_name][corretor_name] = imob_corretores[imob_name].get(corretor_name, 0) + 1
+
+    imobs = [
+        {
+            "nome": k,
+            "total": v,
+            "corretores": [
+                {"nome": ck, "total": cv}
+                for ck, cv in sorted(imob_corretores.get(k, {}).items(), key=lambda x: -x[1])
+            ],
+        }
+        for k, v in sorted(imob_map.items(), key=lambda x: -x[1])
+    ]
+
+    return {
+        "total": total,
+        "assinados": assinados,
+        "conformidade_ok": conformidade_ok,
+        "enviados_conformidade": enviados_conformidade,
+        "em_analise": em_analise,
+        "com_pendencias": com_pendencias,
+        "passiveis_cair": passiveis_cair,
+        "imobiliarias": imobs,
+    }
+
+
 @app.post("/app/api/processos/intake")
 def app_create_intake(
     payload: ProcessoIntakeCreate,
@@ -2337,6 +2439,7 @@ def app_create_intake(
         nome=payload.nome.strip(),
         corretor=username if role == ROLE_CORRETOR else (_normalize_username(payload.corretor) if payload.corretor else None),
         obra=obra_nome,
+        imobiliaria=(payload.imobiliaria or "").strip() or None,
     )
     db.add(cliente)
     db.commit()

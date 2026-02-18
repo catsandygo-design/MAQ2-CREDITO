@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Painel Gestor - Dashboard</title>
+    <style>
+        :root {
+            --font-scale: 1;
+            --bg: #020617;
+            --bg-soft: #061027;
+            --line: rgba(148, 163, 184, 0.22);
+            --text: #e5e7eb;
+            --muted: #9ca3af;
+            --ok: #22c55e;
+            --warn: #facc15;
+            --bad: #fb7185;
+            --info: #38bdf8;
+            --purple: #a78bfa;
+            --shadow: 0 22px 40px rgba(15, 23, 42, 0.95);
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        body {
+            margin: 0;
+            font-size: calc(12px * var(--font-scale));
+            background: radial-gradient(circle at top, #1f2937 0, #020617 45%, #020617 100%);
+            color: var(--text);
+            padding: 18px 12px 40px;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .wrapper {
+            max-width: 1500px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ========== CANVAS BURACO NEGRO ========== */
+        #bhCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .card {
+            background:
+                radial-gradient(circle at top left, rgba(56, 189, 248, 0.10), transparent 55%),
+                radial-gradient(circle at bottom right, rgba(34, 197, 94, 0.10), transparent 60%),
+                var(--bg-soft);
+            border: 1px solid rgba(148, 163, 184, 0.30);
+            border-radius: 18px;
+            padding: 16px 16px 14px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card>* {
+            position: relative;
+            z-index: 2;
+        }
+
+        header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .title h1 {
+            margin: 0;
+            font-size: calc(1.45rem * var(--font-scale));
+            letter-spacing: .2px;
+        }
+
+        .title p {
+            margin: 4px 0 0;
+            color: var(--muted);
+            font-size: calc(.88rem * var(--font-scale));
+            line-height: 1.3;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            font-size: calc(.78rem * var(--font-scale));
+            font-weight: 750;
+            letter-spacing: .02em;
+            border: 1px solid rgba(148, 163, 184, .25);
+            background: rgba(15, 23, 42, .82);
+            color: var(--text);
+            white-space: nowrap;
+        }
+
+        .btn {
+            cursor: pointer;
+            border-radius: 999px;
+            padding: 8px 13px;
+            font-size: calc(.76rem * var(--font-scale));
+            font-weight: 800;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+            border: 1px solid rgba(34, 197, 94, .75);
+            background: radial-gradient(circle at top left, #22c55e, #16a34a);
+            color: #04110b;
+            box-shadow: 0 0 0 1px rgba(15, 23, 42, .9), 0 0 12px rgba(34, 197, 94, .55);
+            transition: transform .08s ease, filter .12s ease, box-shadow .12s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.05);
+            box-shadow: 0 0 0 1px rgba(15, 23, 42, 1), 0 0 16px rgba(74, 222, 128, .75);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 0 0 1px rgba(15, 23, 42, 1), 0 0 8px rgba(74, 222, 128, .55);
+        }
+
+        /* ========== KPI GRID ========== */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin: 14px 0;
+            padding: 12px;
+            border-radius: 14px;
+            border: 1px dashed rgba(148, 163, 184, .30);
+            background: rgba(15, 23, 42, .62);
+        }
+
+        .kpi-card {
+            border: 1px solid rgba(56, 189, 248, .30);
+            border-radius: 16px;
+            padding: 18px 14px;
+            background: linear-gradient(160deg, rgba(3, 19, 40, .95), rgba(2, 6, 23, .9));
+            text-align: center;
+            transition: transform .14s ease, box-shadow .2s ease, border-color .2s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            filter: brightness(1.03);
+        }
+
+        .kpi-card .kpi-icon {
+            font-size: calc(1.6rem * var(--font-scale));
+            margin-bottom: 6px;
+        }
+
+        .kpi-card .kpi-label {
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: #93c5fd;
+            font-weight: 800;
+            font-size: calc(.72rem * var(--font-scale));
+            min-height: 2.1em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .kpi-card .kpi-count {
+            margin-top: 8px;
+            font-size: calc(2.4rem * var(--font-scale));
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .kpi-card .kpi-sub {
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: calc(.76rem * var(--font-scale));
+        }
+
+        /* KPI color variants */
+        .kpi-ok {
+            border-color: rgba(74, 222, 128, .65);
+        }
+
+        .kpi-ok .kpi-count {
+            color: var(--ok);
+        }
+
+        .kpi-ok:hover {
+            box-shadow: 0 0 0 1px rgba(74, 222, 128, .7), 0 0 20px rgba(74, 222, 128, .35), 0 14px 30px rgba(2, 6, 23, .85);
+        }
+
+        .kpi-warn {
+            border-color: rgba(250, 204, 21, .65);
+        }
+
+        .kpi-warn .kpi-count {
+            color: var(--warn);
+        }
+
+        .kpi-warn:hover {
+            box-shadow: 0 0 0 1px rgba(250, 204, 21, .65), 0 0 20px rgba(250, 204, 21, .36), 0 14px 30px rgba(2, 6, 23, .85);
+        }
+
+        .kpi-bad {
+            border-color: rgba(251, 113, 133, .65);
+        }
+
+        .kpi-bad .kpi-count {
+            color: var(--bad);
+        }
+
+        .kpi-bad:hover {
+            box-shadow: 0 0 0 1px rgba(251, 113, 133, .7), 0 0 20px rgba(251, 113, 133, .4), 0 14px 30px rgba(2, 6, 23, .85);
+        }
+
+        .kpi-info {
+            border-color: rgba(56, 189, 248, .65);
+        }
+
+        .kpi-info .kpi-count {
+            color: var(--info);
+        }
+
+        .kpi-info:hover {
+            box-shadow: 0 0 0 1px rgba(56, 189, 248, .65), 0 0 20px rgba(56, 189, 248, .42), 0 14px 30px rgba(2, 6, 23, .85);
+        }
+
+        .kpi-purple {
+            border-color: rgba(167, 139, 250, .65);
+        }
+
+        .kpi-purple .kpi-count {
+            color: var(--purple);
+        }
+
+        .kpi-purple:hover {
+            box-shadow: 0 0 0 1px rgba(167, 139, 250, .7), 0 0 20px rgba(167, 139, 250, .35), 0 14px 30px rgba(2, 6, 23, .85);
+        }
+
+        .kpi-danger {
+            border-color: rgba(239, 68, 68, .75);
+        }
+
+        .kpi-danger .kpi-count {
+            color: #ef4444;
+        }
+
+        .kpi-danger:hover {
+            box-shadow: 0 0 0 1px rgba(239, 68, 68, .75), 0 0 22px rgba(239, 68, 68, .45), 0 14px 30px rgba(2, 6, 23, .85);
+        }
+
+        /* ========== IMOBILIÁRIAS SECTION ========== */
+        .section-title {
+            margin: 20px 0 10px;
+            font-size: calc(1.1rem * var(--font-scale));
+            font-weight: 800;
+            letter-spacing: .02em;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .imob-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .imob-card {
+            border: 1px solid rgba(56, 189, 248, .25);
+            border-radius: 16px;
+            padding: 16px;
+            background: linear-gradient(160deg, rgba(3, 19, 40, .92), rgba(2, 6, 23, .88));
+            cursor: pointer;
+            transition: transform .14s ease, box-shadow .2s ease, border-color .2s ease;
+        }
+
+        .imob-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(74, 222, 128, .6);
+            box-shadow: 0 0 0 1px rgba(74, 222, 128, .5), 0 0 18px rgba(74, 222, 128, .2), 0 12px 28px rgba(2, 6, 23, .85);
+        }
+
+        .imob-card.expanded {
+            border-color: rgba(74, 222, 128, .7);
+            box-shadow: 0 0 0 1px rgba(74, 222, 128, .5), 0 0 22px rgba(74, 222, 128, .25);
+        }
+
+        .imob-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .imob-name {
+            font-weight: 800;
+            font-size: calc(.92rem * var(--font-scale));
+            color: var(--text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .imob-count {
+            font-size: calc(1.5rem * var(--font-scale));
+            font-weight: 900;
+            color: var(--info);
+            flex-shrink: 0;
+        }
+
+        .imob-label {
+            color: var(--muted);
+            font-size: calc(.72rem * var(--font-scale));
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            margin-top: 2px;
+        }
+
+        .imob-arrow {
+            color: var(--muted);
+            transition: transform .2s ease;
+            font-size: .9rem;
+        }
+
+        .imob-card.expanded .imob-arrow {
+            transform: rotate(180deg);
+            color: var(--ok);
+        }
+
+        .corretores-list {
+            display: none;
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px dashed rgba(148, 163, 184, .25);
+        }
+
+        .imob-card.expanded .corretores-list {
+            display: block;
+        }
+
+        .corretor-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(31, 41, 55, .5);
+        }
+
+        .corretor-row:last-child {
+            border-bottom: none;
+        }
+
+        .corretor-name {
+            font-weight: 600;
+            font-size: calc(.82rem * var(--font-scale));
+            color: var(--text);
+        }
+
+        .corretor-count {
+            font-weight: 800;
+            font-size: calc(.88rem * var(--font-scale));
+            color: var(--ok);
+            background: rgba(34, 197, 94, .1);
+            border: 1px solid rgba(34, 197, 94, .25);
+            border-radius: 999px;
+            padding: 3px 10px;
+        }
+
+        /* ========== BAR CHART ========== */
+        .imob-bar-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .imob-bar {
+            flex: 1;
+            height: 6px;
+            background: rgba(31, 41, 55, .8);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .imob-bar-fill {
+            height: 100%;
+            border-radius: 6px;
+            background: linear-gradient(90deg, #22c55e, #38bdf8);
+            transition: width .5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .imob-bar-pct {
+            font-size: calc(.7rem * var(--font-scale));
+            color: var(--muted);
+            font-weight: 700;
+            min-width: 32px;
+            text-align: right;
+        }
+
+        /* ========== LOADING ========== */
+        .loading-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 50px 20px;
+            color: var(--muted);
+            font-size: calc(.92rem * var(--font-scale));
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(56, 189, 248, .3);
+            border-top-color: var(--info);
+            border-radius: 50%;
+            animation: spin .6s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 1280px) {
+            .kpi-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 780px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .actions {
+                justify-content: flex-start;
+            }
+
+            .kpi-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .imob-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="bhCanvas" aria-hidden="true"></canvas>
+
+    <main class="wrapper">
+        <section class="card" aria-label="Dashboard do Gestor">
+            <header>
+                <div class="title">
+                    <h1>🎯 Dashboard — Gestor</h1>
+                    <p>Acompanhamento geral de processos, pendências e volume por imobiliária.</p>
+                </div>
+                <div class="actions">
+                    <span class="pill" id="total-pill">Total: —</span>
+                    <button class="btn" type="button" id="btn-refresh">⟳ Atualizar</button>
+                    <button class="btn" type="button" id="btn-logout">Sair</button>
+                </div>
+            </header>
+
+            <!-- KPI CARDS -->
+            <section class="kpi-grid" id="kpi-grid" aria-label="Indicadores">
+                <article class="kpi-card kpi-ok">
+                    <div class="kpi-icon">✅</div>
+                    <div class="kpi-label">Já Assinaram</div>
+                    <div class="kpi-count" id="kpi-assinados">—</div>
+                    <div class="kpi-sub">Caixa Finalizado</div>
+                </article>
+
+                <article class="kpi-card kpi-info">
+                    <div class="kpi-icon">🔷</div>
+                    <div class="kpi-label">Conformidade OK</div>
+                    <div class="kpi-count" id="kpi-conformidade">—</div>
+                    <div class="kpi-sub">Sem pendências</div>
+                </article>
+
+                <article class="kpi-card kpi-purple">
+                    <div class="kpi-icon">📤</div>
+                    <div class="kpi-label">Enviados Conformidade</div>
+                    <div class="kpi-count" id="kpi-env-conf">—</div>
+                    <div class="kpi-sub">Aguardando</div>
+                </article>
+
+                <article class="kpi-card kpi-warn">
+                    <div class="kpi-icon">🔍</div>
+                    <div class="kpi-label">Em Análise</div>
+                    <div class="kpi-count" id="kpi-analise">—</div>
+                    <div class="kpi-sub">Análise de crédito</div>
+                </article>
+
+                <article class="kpi-card kpi-bad">
+                    <div class="kpi-icon">⚠️</div>
+                    <div class="kpi-label">Com Pendências</div>
+                    <div class="kpi-count" id="kpi-pendencias">—</div>
+                    <div class="kpi-sub">Clientes</div>
+                </article>
+
+                <article class="kpi-card kpi-danger">
+                    <div class="kpi-icon">🚨</div>
+                    <div class="kpi-label">Passíveis de Cair</div>
+                    <div class="kpi-count" id="kpi-cair">—</div>
+                    <div class="kpi-sub">15+ dias sem evolução</div>
+                </article>
+            </section>
+
+            <!-- VOLUME POR IMOBILIÁRIA -->
+            <h2 class="section-title">🏢 Volume por Imobiliária</h2>
+            <div id="imob-container" class="imob-grid">
+                <div class="loading-state" id="loading-imobs">
+                    <div class="loading-spinner"></div>
+                    Carregando dados...
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <script>
+        const API_BASE = "/app/api";
+        let dashboardData = null;
+
+        /* ---------- BURACO NEGRO ---------- */
+        (function () {
+            const canvas = document.getElementById("bhCanvas");
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+            const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            if (prefersReduced) return;
+
+            let W, H, centerX, centerY;
+            const particles = [];
+            const PARTICLE_COUNT = 90;
+            const EVENT_HORIZON = 18;
+
+            function resize() {
+                W = canvas.width = window.innerWidth;
+                H = canvas.height = window.innerHeight;
+                centerX = W / 2;
+                centerY = H / 2;
+            }
+
+            function spawnParticle() {
+                const edge = Math.floor(Math.random() * 4);
+                let x, y;
+                if (edge === 0) { x = Math.random() * W; y = -10; }
+                else if (edge === 1) { x = W + 10; y = Math.random() * H; }
+                else if (edge === 2) { x = Math.random() * W; y = H + 10; }
+                else { x = -10; y = Math.random() * H; }
+
+                return {
+                    x, y,
+                    vx: 0, vy: 0,
+                    r: Math.random() * 1.8 + 0.5,
+                    alpha: Math.random() * 0.4 + 0.2,
+                    hue: Math.random() > 0.6 ? 142 : (Math.random() > 0.5 ? 200 : 280),
+                    trail: [],
+                    alive: true,
+                };
+            }
+
+            function init() {
+                resize();
+                particles.length = 0;
+                for (let i = 0; i < PARTICLE_COUNT; i++) {
+                    const p = spawnParticle();
+                    // Start already somewhere in the screen
+                    p.x = Math.random() * W;
+                    p.y = Math.random() * H;
+                    particles.push(p);
+                }
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, W, H);
+
+                // Draw event horizon glow
+                const grd = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 60);
+                grd.addColorStop(0, "rgba(34, 197, 94, 0.12)");
+                grd.addColorStop(0.4, "rgba(56, 189, 248, 0.06)");
+                grd.addColorStop(1, "transparent");
+                ctx.fillStyle = grd;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 60, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Inner black hole
+                const inner = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, EVENT_HORIZON);
+                inner.addColorStop(0, "rgba(0, 0, 0, 0.7)");
+                inner.addColorStop(1, "rgba(0, 0, 0, 0)");
+                ctx.fillStyle = inner;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, EVENT_HORIZON, 0, Math.PI * 2);
+                ctx.fill();
+
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    const dx = centerX - p.x;
+                    const dy = centerY - p.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < EVENT_HORIZON) {
+                        // Respawn at edge
+                        const fresh = spawnParticle();
+                        particles[i] = fresh;
+                        continue;
+                    }
+
+                    // Gravity: stronger as closer
+                    const force = 80 / (dist * dist) * 60;
+                    const ax = (dx / dist) * force;
+                    const ay = (dy / dist) * force;
+
+                    // Orbital tangential force
+                    const tangentForce = 40 / (dist * dist) * 60;
+                    const tx = -(dy / dist) * tangentForce;
+                    const ty = (dx / dist) * tangentForce;
+
+                    p.vx += (ax + tx) * 0.016;
+                    p.vy += (ay + ty) * 0.016;
+                    p.vx *= 0.998;
+                    p.vy *= 0.998;
+
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    // Trail
+                    p.trail.push({ x: p.x, y: p.y });
+                    if (p.trail.length > 12) p.trail.shift();
+
+                    // Draw trail
+                    if (p.trail.length > 1) {
+                        ctx.beginPath();
+                        ctx.moveTo(p.trail[0].x, p.trail[0].y);
+                        for (let j = 1; j < p.trail.length; j++) {
+                            ctx.lineTo(p.trail[j].x, p.trail[j].y);
+                        }
+                        const trailAlpha = p.alpha * 0.3 * Math.min(1, 150 / dist);
+                        ctx.strokeStyle = `hsla(${p.hue}, 80%, 60%, ${trailAlpha})`;
+                        ctx.lineWidth = p.r * 0.6;
+                        ctx.stroke();
+                    }
+
+                    // Draw particle
+                    const brightness = Math.min(1, 100 / dist);
+                    const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 4);
+                    glow.addColorStop(0, `hsla(${p.hue}, 85%, 65%, ${p.alpha * brightness})`);
+                    glow.addColorStop(1, `hsla(${p.hue}, 85%, 65%, 0)`);
+                    ctx.fillStyle = glow;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r * 4, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Core
+                    ctx.beginPath();
+                    ctx.fillStyle = `hsla(${p.hue}, 90%, 80%, ${p.alpha * brightness * 1.5})`;
+                    ctx.arc(p.x, p.y, p.r * 0.8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                requestAnimationFrame(draw);
+            }
+
+            window.addEventListener("resize", resize);
+            init();
+            draw();
+        })();
+
+        /* ---------- API ---------- */
+        async function api(path) {
+            const res = await fetch(`${API_BASE}${path}`, { credentials: "same-origin" });
+            if (res.status === 401) {
+                window.location.href = "/login";
+                throw new Error("Nao autenticado");
+            }
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.detail || "Erro");
+            return data;
+        }
+
+        /* ---------- RENDER ---------- */
+        function renderKPIs(data) {
+            document.getElementById("total-pill").textContent = `Total: ${data.total}`;
+            document.getElementById("kpi-assinados").textContent = data.assinados;
+            document.getElementById("kpi-conformidade").textContent = data.conformidade_ok;
+            document.getElementById("kpi-env-conf").textContent = data.enviados_conformidade;
+            document.getElementById("kpi-analise").textContent = data.em_analise;
+            document.getElementById("kpi-pendencias").textContent = data.com_pendencias;
+            document.getElementById("kpi-cair").textContent = data.passiveis_cair;
+        }
+
+        function renderImobs(imobs) {
+            const container = document.getElementById("imob-container");
+            if (!imobs || imobs.length === 0) {
+                container.innerHTML = `<div class="loading-state">Nenhuma imobiliária encontrada.</div>`;
+                return;
+            }
+
+            const maxTotal = Math.max(...imobs.map(i => i.total));
+            let html = "";
+
+            imobs.forEach((imob, idx) => {
+                const pct = maxTotal > 0 ? Math.round((imob.total / maxTotal) * 100) : 0;
+                const corretoresHtml = (imob.corretores || []).map(c => `
+          <div class="corretor-row">
+            <span class="corretor-name">${escapeHtml(c.nome)}</span>
+            <span class="corretor-count">${c.total}</span>
+          </div>
+        `).join("");
+
+                html += `
+          <div class="imob-card" data-idx="${idx}" onclick="toggleImob(this)">
+            <div class="imob-header">
+              <div>
+                <div class="imob-name">${escapeHtml(imob.nome)}</div>
+                <div class="imob-label">Processos</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="imob-count">${imob.total}</span>
+                <span class="imob-arrow">▼</span>
+              </div>
+            </div>
+            <div class="imob-bar-wrap">
+              <div class="imob-bar"><div class="imob-bar-fill" style="width:${pct}%"></div></div>
+              <span class="imob-bar-pct">${pct}%</span>
+            </div>
+            <div class="corretores-list">
+              ${corretoresHtml || '<div style="color:var(--muted);font-size:.8rem;padding:8px 0;">Nenhum corretor</div>'}
+            </div>
+          </div>
+        `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function toggleImob(el) {
+            el.classList.toggle("expanded");
+        }
+
+        function escapeHtml(text) {
+            const d = document.createElement("div");
+            d.textContent = text || "";
+            return d.innerHTML;
+        }
+
+        /* ---------- LOAD ---------- */
+        async function loadDashboard() {
+            try {
+                dashboardData = await api("/gestor/dashboard");
+                renderKPIs(dashboardData);
+                renderImobs(dashboardData.imobiliarias);
+            } catch (err) {
+                const container = document.getElementById("imob-container");
+                container.innerHTML = `<div class="loading-state" style="color:var(--bad)">Erro: ${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        /* ---------- EVENTS ---------- */
+        document.getElementById("btn-refresh").addEventListener("click", loadDashboard);
+
+        document.getElementById("btn-logout").addEventListener("click", async () => {
+            try {
+                await fetch("/auth/logout", { method: "POST", credentials: "same-origin" });
+            } catch (_) { }
+            window.location.href = "/login";
+        });
+
+        /* ---------- INIT ---------- */
+        (async () => {
+            try {
+                const res = await fetch("/auth/me", { credentials: "same-origin" });
+                if (res.status === 401) { window.location.href = "/login"; return; }
+            } catch (_) { }
+            loadDashboard();
+        })();
+    </script>
+</body>
+
+</html>
