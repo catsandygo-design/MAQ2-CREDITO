@@ -575,56 +575,88 @@
       }
     }
 
-    /* Pílulas */
+    /* Pilulas neon/rainbow por tom */
     .status-pill {
+      --tone-1: #bfdbfe;
+      --tone-2: #60a5fa;
+      --tone-3: #1e3a8a;
+      --tone-glow: rgba(96, 165, 250, 0.52);
+      --tone-text: #dbeafe;
+      --tone-speed: 6.2s;
       font-weight: 800;
-      color: #f9fafb;
-      text-shadow: 0 0 4px rgba(15, 23, 42, 0.9);
+      color: var(--tone-text);
+      text-shadow: 0 0 8px var(--tone-glow);
       letter-spacing: 0.02em;
       padding: 7px 10px;
+      border: 1px solid transparent;
+      background:
+        linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.9)) padding-box,
+        linear-gradient(120deg, var(--tone-1), var(--tone-2), var(--tone-3), var(--tone-2), var(--tone-1)) border-box;
+      background-size: 100% 100%, 230% 230%;
+      box-shadow:
+        0 0 0 1px rgba(15, 23, 42, 0.95),
+        0 0 14px var(--tone-glow);
+      animation: statusToneFlow var(--tone-speed) linear infinite, statusTonePulse 1.9s ease-in-out infinite;
     }
 
-    .status-pill.status-pendente {
-      border-color: #f97373;
-      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.95), 0 0 12px rgba(248, 113, 113, 0.95);
-      background-image: linear-gradient(135deg, #450a0a, #020617);
+    @keyframes statusToneFlow {
+      0% {
+        background-position: 0% 50%, 0% 50%;
+      }
+
+      100% {
+        background-position: 0% 50%, 220% 50%;
+      }
     }
 
-    .status-pill.status-enviado {
-      border-color: #4ade80;
-      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.95), 0 0 12px rgba(74, 222, 128, 0.95);
-      background-image: linear-gradient(135deg, #065f46, #020617);
+    @keyframes statusTonePulse {
+      0%,
+      100% {
+        filter: brightness(0.96);
+      }
+
+      50% {
+        filter: brightness(1.15);
+      }
     }
 
-    /* Status Crédito */
-    .status-pill.status-analise {
-      border-color: rgba(56, 189, 248, 0.95);
-      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.95), 0 0 12px rgba(56, 189, 248, 0.85);
-      background-image: linear-gradient(135deg, #0c4a6e, #020617);
-    }
-
-    .status-pill.status-pendenciado {
-      border-color: rgba(250, 204, 21, 0.95);
-      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.95), 0 0 12px rgba(250, 204, 21, 0.85);
-      background-image: linear-gradient(135deg, #78350f, #020617);
-    }
-
-    .status-pill.status-aprovado {
-      border-color: rgba(74, 222, 128, 0.95);
-      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.95), 0 0 12px rgba(74, 222, 128, 0.95);
-      background-image: linear-gradient(135deg, #065f46, #020617);
-    }
-
+    .status-pill.status-pendente,
+    .status-pill.status-pendenciado,
     .status-pill.status-reprovado {
-      border-color: rgba(248, 113, 113, 0.95);
-      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.95), 0 0 12px rgba(248, 113, 113, 0.95);
-      background-image: linear-gradient(135deg, #450a0a, #020617);
+      --tone-1: #fca5a5;
+      --tone-2: #ef4444;
+      --tone-3: #7f1d1d;
+      --tone-glow: rgba(239, 68, 68, 0.62);
+      --tone-text: #fee2e2;
+      --tone-speed: 4.3s;
+    }
+
+    .status-pill.status-enviado,
+    .status-pill.status-aprovado {
+      --tone-1: #86efac;
+      --tone-2: #22c55e;
+      --tone-3: #14532d;
+      --tone-glow: rgba(34, 197, 94, 0.56);
+      --tone-text: #dcfce7;
+      --tone-speed: 5.7s;
     }
 
     .status-pill.status-aguardando-envio {
-      border-color: rgba(251, 191, 36, 0.95);
-      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.95), 0 0 12px rgba(251, 191, 36, 0.82);
-      background-image: linear-gradient(135deg, #78350f, #020617);
+      --tone-1: #bae6fd;
+      --tone-2: #60a5fa;
+      --tone-3: #1e40af;
+      --tone-glow: rgba(96, 165, 250, 0.5);
+      --tone-text: #dbeafe;
+      --tone-speed: 6.4s;
+    }
+
+    .status-pill.status-analise {
+      --tone-1: #fde68a;
+      --tone-2: #f59e0b;
+      --tone-3: #78350f;
+      --tone-glow: rgba(245, 158, 11, 0.58);
+      --tone-text: #fef3c7;
+      --tone-speed: 5s;
     }
   </style>
 </head>
@@ -1797,8 +1829,14 @@ DIVORCIADO: Certidão de casamento averbada.`;
       const creditoSelects = document.querySelectorAll('select[data-role="credito"]');
       creditoSelects.forEach(sel => {
         if (![...sel.options].some((opt) => (opt.value || '').toLowerCase() === 'aguardando_envio')) {
-          sel.insertAdjacentHTML('afterbegin', '<option value="aguardando_envio">Aguardando envio</option>');
+          sel.insertAdjacentHTML('afterbegin', '<option value="aguardando_envio">Aguardando</option>');
         }
+        const optAguardando = [...sel.options].find((opt) => (opt.value || '').toLowerCase() === 'aguardando_envio');
+        if (optAguardando) optAguardando.textContent = 'Aguardando';
+        const optAnalise = [...sel.options].find((opt) => (opt.value || '').toLowerCase() === 'analise');
+        if (optAnalise) optAnalise.textContent = 'Em Analise';
+        const optPendencia = [...sel.options].find((opt) => (opt.value || '').toLowerCase() === 'pendenciado');
+        if (optPendencia) optPendencia.textContent = 'Pendente';
 
         const row = sel.closest('tr');
         const docSelect = row ? row.querySelector('select[aria-label^="Status "]:not([data-role="credito"])') : null;
@@ -2217,14 +2255,6 @@ DIVORCIADO: Certidão de casamento averbada.`;
         return String(value || "").toUpperCase() === "ENVIADO" ? "Enviado" : "Pendente";
       }
 
-      function processStatusToCredito(status) {
-        const s = norm(status).replace(/\s+/g, "_");
-        if (s === "aprovado") return "aprovado";
-        if (s === "reprovado") return "reprovado";
-        if (s === "pendente") return "pendenciado";
-        return "aguardando_envio";
-      }
-
       function backendCreditoToUi(value) {
         const s = String(value || "").toUpperCase();
         if (s === "AGUARDANDO_ENVIO") return "aguardando_envio";
@@ -2234,11 +2264,8 @@ DIVORCIADO: Certidão de casamento averbada.`;
         return "analise";
       }
 
-      function creditoByCategoria(categoria, processo) {
-        if (!processo) return "aguardando_envio";
-        if (categoria === "caixa") return processStatusToCredito(processo.status_cca);
-        if (categoria === "agehab") return processStatusToCredito(processo.status_agehab);
-        return processStatusToCredito(processo.status_geral);
+      function creditoByCategoria(docUiValue) {
+        return norm(docUiValue) === "enviado" ? "analise" : "aguardando_envio";
       }
 
       function coerceCreditoUiByDoc(docUiValue, creditoUiValue) {
@@ -2314,7 +2341,7 @@ DIVORCIADO: Certidão de casamento averbada.`;
           if (item.creditoSelect) {
             let creditoValue = found?.status_credito
               ? backendCreditoToUi(found.status_credito)
-              : creditoByCategoria(item.categoria, processoAtual);
+              : creditoByCategoria(docValue);
             creditoValue = coerceCreditoUiByDoc(docValue, creditoValue);
             item.creditoSelect.value = creditoValue;
             item.creditoSelect.disabled = true;

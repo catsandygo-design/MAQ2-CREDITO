@@ -289,143 +289,125 @@
     }
 
     /* ===== Pills ===== */
-    .pill{
+    .pill,
+    .sla{
+      --tone-1: #bae6fd;
+      --tone-2: #60a5fa;
+      --tone-3: #1e3a8a;
+      --tone-glow: rgba(96,165,250,.52);
+      --tone-text: #dbeafe;
+      --tone-speed: 6.2s;
       display:inline-flex;
       align-items:center;
-      gap:6px;
-      padding: 4px 9px;
       border-radius: 999px;
-      font-size: var(--fs-xxs);
       border: 1px solid transparent;
+      color: var(--tone-text);
       background:
         linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
-        linear-gradient(115deg, #ff005d, #ff8a00, #ffe600, #00f5d4, #3a86ff, #8338ec, #ff005d) border-box;
-      background-size:100% 100%, 280% 280%;
+        linear-gradient(120deg, var(--tone-1), var(--tone-2), var(--tone-3), var(--tone-2), var(--tone-1)) border-box;
+      background-size:100% 100%, 230% 230%;
+      text-shadow: 0 0 8px var(--tone-glow);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.05),
+        0 0 0 1px rgba(15,23,42,.90),
+        0 0 14px var(--tone-glow);
+      animation: neonToneFlow var(--tone-speed) linear infinite, neonTonePulse 1.95s ease-in-out infinite;
       white-space:nowrap;
-      text-shadow: 0 0 6px rgba(226,232,240,.16);
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,.03),
-        0 0 0 1px rgba(15,23,42,.84);
-      animation: neonRainbowFlow 7.2s linear infinite;
     }
-    .pill.ok{
-      color: #dcfce7;
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,.06),
-        0 0 0 1px rgba(15,23,42,.92),
-        0 0 15px rgba(34,197,94,.45);
+    .pill{
+      gap:6px;
+      padding: 4px 9px;
+      font-size: var(--fs-xxs);
     }
-    .pill.warn{
-      color: #fef3c7;
-      animation: neonRainbowFlow 6.3s linear infinite, neonWarnPulse 1.95s ease-in-out infinite;
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,.06),
-        0 0 0 1px rgba(15,23,42,.92),
-        0 0 16px rgba(245,158,11,.48);
-    }
-    .pill.bad{
-      color: #fee2e2;
-      animation: neonRainbowFlow 4.9s linear infinite, neonBadPulse 1.08s ease-in-out infinite;
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,.07),
-        0 0 0 1px rgba(15,23,42,.92),
-        0 0 16px rgba(239,68,68,.56);
-    }
-    .pill.neutral{
-      color: #cbd5e1;
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,.02),
-        0 0 0 1px rgba(15,23,42,.86),
-        0 0 9px rgba(148,163,184,.16);
-    }
-
     .sla{
-      display:inline-flex;
-      align-items:center;
       justify-content:center;
       min-width: 58px;
       padding: 4px 10px;
-      border-radius: 999px;
       font-size: var(--fs-xxs);
-      border: 1px solid transparent;
-      background:
-        linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
-        linear-gradient(115deg, #ff005d, #ff8a00, #ffe600, #00f5d4, #3a86ff, #8338ec, #ff005d) border-box;
-      background-size:100% 100%, 280% 280%;
-      position: relative;
-      white-space:nowrap;
-      text-shadow: 0 0 6px rgba(226,232,240,.16);
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,.03),
-        0 0 0 1px rgba(15,23,42,.84);
-      animation: neonRainbowFlow 7.2s linear infinite;
     }
+    .pill.ok,
     .sla.ok{
-      color: #dcfce7;
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,.06),
-        0 0 0 1px rgba(15,23,42,.92),
-        0 0 15px rgba(34,197,94,.45);
+      --tone-1: #86efac;
+      --tone-2: #22c55e;
+      --tone-3: #14532d;
+      --tone-glow: rgba(34,197,94,.56);
+      --tone-text: #dcfce7;
+      --tone-speed: 5.7s;
     }
+    .pill.warn,
     .sla.warn{
-      color: #fef3c7;
-      animation: neonRainbowFlow 6.3s linear infinite, neonWarnPulse 1.9s ease-in-out infinite;
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,.06),
-        0 0 0 1px rgba(15,23,42,.92),
-        0 0 16px rgba(245,158,11,.48);
+      --tone-1: #fde68a;
+      --tone-2: #f59e0b;
+      --tone-3: #78350f;
+      --tone-glow: rgba(245,158,11,.58);
+      --tone-text: #fef3c7;
+      --tone-speed: 4.9s;
     }
+    .pill.bad,
     .sla.bad{
-      color: #fee2e2;
-      animation: neonRainbowFlow 4.9s linear infinite, neonBadPulse 1.05s ease-in-out infinite;
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,.07),
-        0 0 0 1px rgba(15,23,42,.92),
-        0 0 16px rgba(239,68,68,.56);
+      --tone-1: #fca5a5;
+      --tone-2: #ef4444;
+      --tone-3: #7f1d1d;
+      --tone-glow: rgba(239,68,68,.62);
+      --tone-text: #fee2e2;
+      --tone-speed: 4.2s;
     }
-    @keyframes neonRainbowFlow{
+    .pill.neutral,
+    .sla.neutral{
+      --tone-1: #bfdbfe;
+      --tone-2: #60a5fa;
+      --tone-3: #1e40af;
+      --tone-glow: rgba(96,165,250,.48);
+      --tone-text: #dbeafe;
+      --tone-speed: 6.3s;
+    }
+    @keyframes neonToneFlow{
       0%{background-position: 0% 50%, 0% 50%}
-      100%{background-position: 0% 50%, 240% 50%}
+      100%{background-position: 0% 50%, 220% 50%}
     }
-    @keyframes neonWarnPulse{
-      0%,100%{filter:brightness(.97)}
+    @keyframes neonTonePulse{
+      0%,100%{filter:brightness(.96)}
       50%{filter:brightness(1.15)}
     }
-    @keyframes neonBadPulse{
-      0%,100%{
-        box-shadow:
-          inset 0 0 0 1px rgba(255,255,255,.06),
-          0 0 0 1px rgba(15,23,42,.92),
-          0 0 14px rgba(244,63,94,.45);
-        filter:brightness(.97);
-      }
-      50%{
-        box-shadow:
-          inset 0 0 0 1px rgba(255,255,255,.10),
-          0 0 0 1px rgba(15,23,42,.92),
-          0 0 21px rgba(244,63,94,.70);
-        filter:brightness(1.20);
-      }
-    }
     .status.status-pill.status-pendente{
+      --tone-1: #fca5a5;
+      --tone-2: #ef4444;
+      --tone-3: #7f1d1d;
+      --tone-glow: rgba(239,68,68,.62);
+      --tone-text: #fee2e2;
+      --tone-speed: 4.3s;
       border-color: transparent !important;
-      color: #fee2e2 !important;
+      color: var(--tone-text) !important;
       background:
         linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
-        linear-gradient(115deg, #ff005d, #ff8a00, #ffe600, #00f5d4, #3a86ff, #8338ec, #ff005d) border-box !important;
-      background-size:100% 100%, 280% 280% !important;
-      text-shadow: 0 0 8px rgba(244,63,94,.62);
-      animation: neonRainbowFlow 4.9s linear infinite, neonBadPulse 1.05s ease-in-out infinite;
+        linear-gradient(120deg, var(--tone-1), var(--tone-2), var(--tone-3), var(--tone-2), var(--tone-1)) border-box !important;
+      background-size:100% 100%, 230% 230% !important;
+      text-shadow: 0 0 8px var(--tone-glow);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.06),
+        0 0 0 1px rgba(15,23,42,.92),
+        0 0 15px var(--tone-glow);
+      animation: neonToneFlow var(--tone-speed) linear infinite, neonTonePulse 1.85s ease-in-out infinite;
     }
     .status.status-pill.status-enviado{
+      --tone-1: #86efac;
+      --tone-2: #22c55e;
+      --tone-3: #14532d;
+      --tone-glow: rgba(34,197,94,.56);
+      --tone-text: #dcfce7;
+      --tone-speed: 5.8s;
       border-color: transparent !important;
-      color: #dcfce7 !important;
+      color: var(--tone-text) !important;
       background:
         linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
-        linear-gradient(115deg, #ff005d, #ff8a00, #ffe600, #00f5d4, #3a86ff, #8338ec, #ff005d) border-box !important;
-      background-size:100% 100%, 280% 280% !important;
-      text-shadow: 0 0 8px rgba(34,197,94,.52);
-      animation: neonRainbowFlow 6.3s linear infinite, neonWarnPulse 2.2s ease-in-out infinite;
+        linear-gradient(120deg, var(--tone-1), var(--tone-2), var(--tone-3), var(--tone-2), var(--tone-1)) border-box !important;
+      background-size:100% 100%, 230% 230% !important;
+      text-shadow: 0 0 8px var(--tone-glow);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.06),
+        0 0 0 1px rgba(15,23,42,.92),
+        0 0 15px var(--tone-glow);
+      animation: neonToneFlow var(--tone-speed) linear infinite, neonTonePulse 2.1s ease-in-out infinite;
     }
     @media (prefers-reduced-motion: reduce){
       .pill,
@@ -1159,7 +1141,7 @@ DIVORCIADO: Certidão averbada.</td>
             <label for="status-credito">Status credito</label>
             <select id="status-credito">
               <option value="em_analise">Em analise</option>
-              <option value="pendenciado">Pendenciado</option>
+              <option value="pendenciado">Pendente</option>
               <option value="aprovado">Aprovado</option>
               <option value="reprovado">Reprovado</option>
             </select>
@@ -1296,7 +1278,7 @@ DIVORCIADO: Certidão averbada.</td>
   const STATUS_LABELS = {
     credito: {
       em_analise: "Em analise",
-      pendenciado: "Pendenciado",
+      pendenciado: "Pendente",
       aprovado: "Aprovado",
       reprovado: "Reprovado",
     },
@@ -1389,21 +1371,15 @@ DIVORCIADO: Certidão averbada.</td>
   function applySelectColor(sel){
     const val = toLower(sel.value);
     sel.classList.remove("status-pendente","status-enviado");
-    sel.style.borderColor = "rgba(148,163,184,.42)";
-    sel.style.boxShadow = "inset 0 0 0 1px rgba(255,255,255,.03), 0 0 0 1px rgba(15,23,42,.9), 0 0 8px rgba(148,163,184,.16)";
-    sel.style.background = "linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86))";
-    sel.style.textShadow = "0 0 6px rgba(226,232,240,.16)";
+    sel.style.borderColor = "";
+    sel.style.boxShadow = "";
+    sel.style.background = "";
+    sel.style.textShadow = "";
 
     if(val==="pendente"){
       sel.classList.add("status-pendente");
-      sel.style.borderColor = "rgba(239,68,68,.95)";
-      sel.style.boxShadow = "inset 0 0 0 1px rgba(255,255,255,.05), 0 0 0 1px rgba(15,23,42,.95), 0 0 14px rgba(239,68,68,.35)";
-      sel.style.textShadow = "0 0 9px rgba(239,68,68,.58)";
     }else if(val==="enviado"){
       sel.classList.add("status-enviado");
-      sel.style.borderColor = "rgba(34,197,94,.92)";
-      sel.style.boxShadow = "inset 0 0 0 1px rgba(255,255,255,.05), 0 0 0 1px rgba(15,23,42,.95), 0 0 14px rgba(34,197,94,.34)";
-      sel.style.textShadow = "0 0 9px rgba(34,197,94,.48)";
     }
   }
 
@@ -2125,15 +2101,27 @@ DIVORCIADO: Certidão averbada.</td>
       const documentos = [];
       for (const row of getDocRows()) {
         const statusDoc = norm(row.select.value) === "enviado" ? "ENVIADO" : "PENDENTE";
-        const statusCreditoDoc = statusDoc === "PENDENTE" ? "PENDENCIADO" : docCreditoFromUi(statusCredito);
         const key = docLookupKey(row.categoria, row.nome, row.docId);
         const previous = docSnapshot.get(key) || {};
         const previousDocStatus = String(previous.status_doc || "").toUpperCase();
+        const previousCredito = String(previous.status_credito || "").toUpperCase();
         const previousPendenciaInfo = String(previous.pendencia_info || "").trim();
         const becamePending = previousDocStatus === "ENVIADO" && statusDoc === "PENDENTE";
+        const processoCreditoDoc = docCreditoFromUi(statusCredito);
+        let statusCreditoDoc = "AGUARDANDO_ENVIO";
         let pendenciaInfo = null;
 
-        if (statusDoc === "PENDENTE") {
+        if (statusDoc === "ENVIADO") {
+          statusCreditoDoc = (processoCreditoDoc === "APROVADO" || processoCreditoDoc === "REPROVADO")
+            ? processoCreditoDoc
+            : "ANALISE";
+        } else if (becamePending || (previousCredito === "PENDENCIADO" && previousPendenciaInfo)) {
+          statusCreditoDoc = "PENDENCIADO";
+        } else {
+          statusCreditoDoc = "AGUARDANDO_ENVIO";
+        }
+
+        if (statusCreditoDoc === "PENDENCIADO") {
           if (becamePending) {
             const prompted = window.prompt(
               `Informe a pendencia do documento "${row.nome}" (minimo ${DOC_PENDENCIA_MIN_LEN} caracteres):`,
@@ -2149,7 +2137,7 @@ DIVORCIADO: Certidão averbada.</td>
               return;
             }
             pendenciaInfo = cleaned;
-          } else if (String(previous.status_credito || "").toUpperCase() === "PENDENCIADO" && previousPendenciaInfo) {
+          } else if (previousCredito === "PENDENCIADO" && previousPendenciaInfo) {
             pendenciaInfo = previousPendenciaInfo;
           }
         }

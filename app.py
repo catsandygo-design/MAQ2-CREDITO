@@ -3257,6 +3257,18 @@ def app_bulk_upsert_documentos(
                 documento.status_credito = status_credito
             next_credit = _credit_status(documento.status_credito, fallback="AGUARDANDO_ENVIO")
             became_pending_doc = old_status_doc != "PENDENTE" and documento.status_doc == "PENDENTE"
+            if documento.status_doc != "ENVIADO" and next_credit != "PENDENCIADO":
+                documento.status_credito = "AGUARDANDO_ENVIO"
+                next_credit = "AGUARDANDO_ENVIO"
+            if (
+                documento.status_doc == "PENDENTE"
+                and next_credit == "PENDENCIADO"
+                and not became_pending_doc
+                and not pendencia_info
+                and not old_pendencia_info
+            ):
+                documento.status_credito = "AGUARDANDO_ENVIO"
+                next_credit = "AGUARDANDO_ENVIO"
             if next_credit == "PENDENCIADO":
                 if pendencia_info:
                     documento.pendencia_info = pendencia_info
@@ -3322,6 +3334,12 @@ def app_bulk_upsert_documentos(
             else:
                 credito_default = "ANALISE" if status_doc == "ENVIADO" else "AGUARDANDO_ENVIO"
             credito_default_norm = _credit_status(credito_default, fallback="AGUARDANDO_ENVIO")
+            status_doc_norm = status_doc or "PENDENTE"
+            if status_doc_norm != "ENVIADO":
+                if credito_default_norm == "PENDENCIADO" and not pendencia_info:
+                    credito_default_norm = "AGUARDANDO_ENVIO"
+                elif credito_default_norm != "PENDENCIADO":
+                    credito_default_norm = "AGUARDANDO_ENVIO"
             if pendencia_info and len(pendencia_info) < PENDENCIA_INFO_MIN_LENGTH:
                 raise HTTPException(
                     status_code=422,
@@ -3334,7 +3352,7 @@ def app_bulk_upsert_documentos(
                 processo_id=processo_id,
                 categoria=categoria,
                 nome=nome,
-                status_doc=status_doc or "PENDENTE",
+                status_doc=status_doc_norm,
                 status_credito=credito_default_norm,
                 pendencia_info=pendencia_info if credito_default_norm == "PENDENCIADO" else None,
             )
