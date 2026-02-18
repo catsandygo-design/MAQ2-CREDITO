@@ -1004,6 +1004,7 @@ class ProcessoOut(BaseModel):
     sla_cca_horas: Optional[int] = None
     sla_owner: Optional[str] = None
     observacao: Optional[str] = None
+    created_at: Optional[datetime] = None
 
 
 class DocumentoCreate(BaseModel):

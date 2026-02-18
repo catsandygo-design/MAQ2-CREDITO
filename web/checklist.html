@@ -408,6 +408,10 @@
           <label for="imobiliaria">Imobiliária</label>
           <input id="imobiliaria" type="text" placeholder="Nome da imobiliária" autocomplete="organization">
         </div>
+        <div class="form-group">
+          <label for="data-criacao">Data de criação do cadastro</label>
+          <input id="data-criacao" type="text" class="readonly-field" readonly placeholder="—" autocomplete="off">
+        </div>
       </fieldset>
 
       <!-- PERFIL / VÍNCULO / DEPENDENTE -->
@@ -1918,11 +1922,25 @@ DIVORCIADO: Certidão de casamento averbada.`;
 
       const nomeEl = document.getElementById("nome-cliente");
       const corretorEl = document.getElementById("corretor");
+      const dataCriacaoEl = document.getElementById("data-criacao");
 
       if (nomeEl && !nomeEl.value) nomeEl.value = cliente.nome || "";
       if (corretorEl && currentUser && currentUser.role !== "corretor" && !corretorEl.value) {
         corretorEl.value = cliente.corretor || "";
       }
+
+      if (dataCriacaoEl && processoAtual && processoAtual.created_at) {
+        try {
+          const dt = new Date(processoAtual.created_at);
+          dataCriacaoEl.value = dt.toLocaleDateString("pt-BR", {
+            day: "2-digit", month: "2-digit", year: "numeric",
+            hour: "2-digit", minute: "2-digit"
+          });
+        } catch (_) {
+          dataCriacaoEl.value = processoAtual.created_at;
+        }
+      }
+
       await loadEmpreendimentos(cliente.obra || "");
       aplicarDocumentosNaTela(documentos);
     }
