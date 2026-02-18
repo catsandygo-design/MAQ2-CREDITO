@@ -413,7 +413,8 @@
       .pill,
       .sla,
       .status.status-pill.status-pendente,
-      .status.status-pill.status-enviado{
+      .status.status-pill.status-enviado,
+      .status.status-credit-pill{
         animation: none;
       }
     }
@@ -539,6 +540,81 @@
       font-size: var(--fs-xs);
       border:1px solid rgba(148,163,184,.18);
       background: rgba(2,6,23,.55);
+    }
+
+    .status-doc-col,
+    .status-cred-col{
+      width:15%;
+      padding-left:6px !important;
+      padding-right:6px !important;
+      white-space:nowrap;
+    }
+
+    .status.status-credit-pill{
+      --tone-1: #bae6fd;
+      --tone-2: #60a5fa;
+      --tone-3: #1e40af;
+      --tone-glow: rgba(96,165,250,.5);
+      --tone-text: #dbeafe;
+      --tone-speed: 6.3s;
+      border-color: transparent !important;
+      color: var(--tone-text) !important;
+      text-shadow: 0 0 8px var(--tone-glow);
+      background:
+        linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
+        linear-gradient(120deg, var(--tone-1), var(--tone-2), var(--tone-3), var(--tone-2), var(--tone-1)) border-box !important;
+      background-size:100% 100%, 230% 230% !important;
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.06),
+        0 0 0 1px rgba(15,23,42,.92),
+        0 0 14px var(--tone-glow);
+      animation: neonToneFlow var(--tone-speed) linear infinite, neonTonePulse 1.95s ease-in-out infinite;
+      appearance:none;
+      -webkit-appearance:none;
+      pointer-events:none;
+      cursor:default;
+    }
+
+    .status.status-credit-pill:disabled{
+      opacity:1;
+      -webkit-text-fill-color: var(--tone-text);
+    }
+
+    .status.status-credit-pill.status-aguardando-envio{
+      --tone-1: #bae6fd;
+      --tone-2: #60a5fa;
+      --tone-3: #1e40af;
+      --tone-glow: rgba(96,165,250,.5);
+      --tone-text: #dbeafe;
+      --tone-speed: 6.4s;
+    }
+
+    .status.status-credit-pill.status-analise{
+      --tone-1: #fde68a;
+      --tone-2: #f59e0b;
+      --tone-3: #78350f;
+      --tone-glow: rgba(245,158,11,.58);
+      --tone-text: #fef3c7;
+      --tone-speed: 5s;
+    }
+
+    .status.status-credit-pill.status-pendenciado,
+    .status.status-credit-pill.status-reprovado{
+      --tone-1: #fca5a5;
+      --tone-2: #ef4444;
+      --tone-3: #7f1d1d;
+      --tone-glow: rgba(239,68,68,.62);
+      --tone-text: #fee2e2;
+      --tone-speed: 4.3s;
+    }
+
+    .status.status-credit-pill.status-aprovado{
+      --tone-1: #86efac;
+      --tone-2: #22c55e;
+      --tone-3: #14532d;
+      --tone-glow: rgba(34,197,94,.56);
+      --tone-text: #dcfce7;
+      --tone-speed: 5.7s;
     }
 
     .tiny{
@@ -1178,7 +1254,7 @@ DIVORCIADO: Certidão averbada.</td>
               <option value="conforme">Conforme</option>
               <option value="tratando_produto">Tratando Produto</option>
               <option value="agendado">Agendado</option>
-              <option value="assinatura_caixa">Assinatura Caixa</option>
+              <option value="assinatura_caixa">Finalizado</option>
             </select>
           </div>
 
@@ -1300,7 +1376,7 @@ DIVORCIADO: Certidão averbada.</td>
       conforme: "Conforme",
       tratando_produto: "Tratando Produto",
       agendado: "Agendado",
-      assinatura_caixa: "Assinatura Caixa",
+      assinatura_caixa: "Finalizado",
     },
     agehab: {
       analise_credito: "Analise Credito",
@@ -1313,7 +1389,7 @@ DIVORCIADO: Certidão averbada.</td>
 
   function pillClassFromStatus(v){
     const status = toLower(v);
-    if (["aprovado", "conforme", "validado_agehab", "pago", "finalizado"].includes(status)) return "ok";
+    if (["aprovado", "conforme", "validado_agehab", "pago", "finalizado", "assinatura_caixa"].includes(status)) return "ok";
     if (["pendenciado", "reprovado", "cancelado", "distrato", "pendente_credito", "pendente_cca", "pendente_agehab", "pendente"].includes(status)) return "bad";
     if (["novo", "nao_tem"].includes(status)) return "neutral";
     return "warn";
@@ -1616,6 +1692,9 @@ DIVORCIADO: Certidão averbada.</td>
     $(id).addEventListener("change", ()=>{
       setRightPills();
       setSlaBadges();
+      if (id === "status-credito" && typeof window.syncAnalistaDocCreditoStatus === "function") {
+        window.syncAnalistaDocCreditoStatus();
+      }
     });
   });
   ["sla-corretor","sla-credito"].forEach(id=>{
@@ -1917,7 +1996,7 @@ DIVORCIADO: Certidão averbada.</td>
       if (v === "conforme" || v === "aprovado") return "conforme";
       if (v === "tratando_produto") return "tratando_produto";
       if (v === "agendado") return "agendado";
-      if (v === "assinatura_caixa") return "assinatura_caixa";
+      if (v === "assinatura_caixa" || v === "finalizado") return "assinatura_caixa";
       return "analise_credito";
     }
 
@@ -1932,6 +2011,141 @@ DIVORCIADO: Certidão averbada.</td>
 
     function toUiDocStatus(value) {
       return String(value || "").toUpperCase() === "ENVIADO" ? "Enviado" : "Pendente";
+    }
+
+    function backendCreditoToUi(value) {
+      const s = String(value || "").toUpperCase();
+      if (s === "AGUARDANDO_ENVIO") return "aguardando_envio";
+      if (s === "APROVADO") return "aprovado";
+      if (s === "REPROVADO") return "reprovado";
+      if (s === "PENDENCIADO") return "pendenciado";
+      return "analise";
+    }
+
+    function getCreditoSelectFromDoc(docSelect) {
+      const row = docSelect?.closest("tr");
+      return row ? row.querySelector('select[data-role="credito"]') : null;
+    }
+
+    function applyCreditoSelectColor(select) {
+      if (!select) return;
+      const value = norm(select.value).replace(/\s+/g, "_");
+      select.classList.remove(
+        "status-aguardando-envio",
+        "status-analise",
+        "status-pendenciado",
+        "status-aprovado",
+        "status-reprovado"
+      );
+      if (value === "aguardando_envio") select.classList.add("status-aguardando-envio");
+      if (value === "analise") select.classList.add("status-analise");
+      if (value === "pendenciado") select.classList.add("status-pendenciado");
+      if (value === "aprovado") select.classList.add("status-aprovado");
+      if (value === "reprovado") select.classList.add("status-reprovado");
+    }
+
+    function ensureCreditoColumns() {
+      document.querySelectorAll("table.doc-table").forEach((table) => {
+        const headRow = table.querySelector("thead tr");
+        if (headRow) {
+          const headCells = Array.from(headRow.querySelectorAll("th"));
+          if (!headRow.querySelector("th.status-cred-col")) {
+            const th = document.createElement("th");
+            th.className = "status-cred-col";
+            th.textContent = "Status Credito";
+            th.style.width = "15%";
+            headRow.appendChild(th);
+          }
+          if (headCells.length >= 3) {
+            headCells[0].style.width = "24%";
+            headCells[1].style.width = "46%";
+            headCells[2].style.width = "15%";
+            headCells[2].classList.add("status-doc-col");
+          }
+        }
+
+        table.querySelectorAll("tbody tr").forEach((tr) => {
+          const docCell = tr.querySelector("td:nth-child(3)");
+          if (docCell) docCell.classList.add("status-doc-col");
+          if (tr.querySelector("td.status-cred-col")) return;
+
+          const td = document.createElement("td");
+          td.className = "status-cred-col";
+
+          const select = document.createElement("select");
+          select.className = "status status-credit-pill";
+          select.setAttribute("data-role", "credito");
+          select.disabled = true;
+          select.title = "Atualizado pelo analista.";
+          select.innerHTML = [
+            '<option value="aguardando_envio">Aguardando</option>',
+            '<option value="analise">Em Analise</option>',
+            '<option value="pendenciado">Pendente</option>',
+            '<option value="aprovado">Aprovado</option>',
+            '<option value="reprovado">Reprovado</option>',
+          ].join("");
+          td.appendChild(select);
+          tr.appendChild(td);
+
+          const docSelect = tr.querySelector("select.status.status-pill[data-doc][data-id]");
+          if (docSelect && !docSelect.dataset.creditoBound) {
+            docSelect.dataset.creditoBound = "1";
+            docSelect.addEventListener("change", () => {
+              syncDocCreditoStatus();
+            });
+          }
+        });
+      });
+    }
+
+    function deriveDocCreditoStatus(row, statusDocBackend) {
+      const key = docLookupKey(row.categoria, row.nome, row.docId);
+      const previous = docSnapshot.get(key) || {};
+      const previousDocStatus = String(previous.status_doc || "").toUpperCase();
+      const previousCredito = String(previous.status_credito || "").toUpperCase();
+      const previousPendenciaInfo = String(previous.pendencia_info || "").trim();
+      const becamePending = previousDocStatus === "ENVIADO" && statusDocBackend === "PENDENTE";
+      const processoCreditoDoc = docCreditoFromUi(byId("status-credito")?.value || "em_analise");
+
+      if (statusDocBackend === "ENVIADO") {
+        return (processoCreditoDoc === "APROVADO" || processoCreditoDoc === "REPROVADO")
+          ? processoCreditoDoc
+          : "ANALISE";
+      }
+      if (becamePending || (previousCredito === "PENDENCIADO" && previousPendenciaInfo)) {
+        return "PENDENCIADO";
+      }
+      return "AGUARDANDO_ENVIO";
+    }
+
+    function setCreditoCell(row, backendStatus) {
+      const creditoSelect = getCreditoSelectFromDoc(row.select);
+      if (!creditoSelect) return;
+
+      const statusDocBackend = norm(row.select.value) === "enviado" ? "ENVIADO" : "PENDENTE";
+      const backendValue = backendStatus
+        ? String(backendStatus || "").toUpperCase()
+        : deriveDocCreditoStatus(row, statusDocBackend);
+
+      creditoSelect.value = backendCreditoToUi(backendValue);
+      applyCreditoSelectColor(creditoSelect);
+
+      const key = docLookupKey(row.categoria, row.nome, row.docId);
+      const pendenciaInfo = String(docSnapshot.get(key)?.pendencia_info || "").trim();
+      creditoSelect.title = pendenciaInfo ? `Pendencia: ${pendenciaInfo}` : "Atualizado pelo analista.";
+    }
+
+    function syncDocCreditoStatus(docsFromBackend = null) {
+      const backendMap = docsFromBackend ? buildDocMap(docsFromBackend) : null;
+      getDocRows().forEach((row) => {
+        if (backendMap) {
+          const key = docLookupKey(row.categoria, row.nome, row.docId);
+          const found = backendMap.get(key);
+          setCreditoCell(row, found?.status_credito || null);
+          return;
+        }
+        setCreditoCell(row, null);
+      });
     }
 
     function toHoursFromDays(days) {
@@ -2041,10 +2255,11 @@ DIVORCIADO: Certidão averbada.</td>
         const found = docMap.get(key);
         if (found) {
           row.select.value = toUiDocStatus(found.status_doc);
-          if (typeof applySelectColor === "function") applySelectColor(row.select);
         }
+        if (typeof applySelectColor === "function") applySelectColor(row.select);
       });
       syncDocSnapshot(docs);
+      syncDocCreditoStatus(docs);
 
       if (typeof atualizarDependente === "function") atualizarDependente();
       if (typeof atualizarConjuge === "function") atualizarConjuge();
@@ -2162,9 +2377,12 @@ DIVORCIADO: Certidão averbada.</td>
           body: JSON.stringify({ documentos }),
         });
         syncDocSnapshot(savedDocs);
+        syncDocCreditoStatus(savedDocs);
 
         if (typeof buildPendenciasResumo === "function") buildPendenciasResumo();
-        alert("Dados salvos com sucesso.");
+        alert("Dados salvos com sucesso. Redirecionando para login.");
+        await logout();
+        return;
       } catch (error) {
         alert(`Erro ao salvar: ${error.message}`);
       }
@@ -2174,6 +2392,10 @@ DIVORCIADO: Certidão averbada.</td>
       await fetch("/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => null);
       window.location.href = "/login";
     }
+
+    ensureCreditoColumns();
+    window.syncAnalistaDocCreditoStatus = syncDocCreditoStatus;
+    syncDocCreditoStatus();
 
     rebindButton("btnSalvarTopo", saveAll);
     rebindButton("btnSalvarRight", saveAll);
