@@ -2635,6 +2635,31 @@ def app_gestor_dashboard(
     rows = db.query(Processo, Cliente).join(Cliente, Processo.cliente_id == Cliente.id).all()
     now = _utcnow()
     risk_window_seconds = FALL_RISK_DAYS * 24 * 3600
+    arrival_window_days = 7
+    arrival_projection_days = 30
+    arrival_window_start = now - timedelta(days=arrival_window_days)
+
+    enviados_rows = (
+        db.query(Documento.processo_id)
+        .filter(Documento.status_doc == "ENVIADO")
+        .distinct()
+        .all()
+    )
+    processos_com_doc_enviado = {processo_id for (processo_id,) in enviados_rows if processo_id is not None}
+    clientes_por_fase: dict[str, list[dict[str, Any]]] = {
+        "assinados": [],
+        "conformidade_ok": [],
+        "enviados_conformidade": [],
+        "em_analise": [],
+        "com_pendencias": [],
+        "passiveis_cair": [],
+        "nao_iniciado": [],
+        "sla_comercial": [],
+        "sla_credito": [],
+        "sla_cca": [],
+        "chegada": [],
+        "media_necessaria": [],
+    }
 
     assinados = 0
     conformidade_ok = 0
@@ -2642,6 +2667,12 @@ def app_gestor_dashboard(
     em_analise = 0
     com_pendencias = 0
     passiveis_cair = 0
+    nao_iniciado = 0
+    chegadas_ultimos_7_dias = 0
+    sla_sum_comercial = 0
+    sla_sum_credito = 0
+    sla_sum_cca = 0
+    processos_ativos = 0
     total = len(rows)
 
     imob_map: dict[str, int] = {}
@@ -2653,29 +2684,61 @@ def app_gestor_dashboard(
         sinal = _status_token(processo.status_sinal)
         fiador = _status_token(processo.status_fiador)
         has_pend = _processo_has_pendencia(processo)
+        created_at = _as_utc(processo.created_at)
+        cliente_item = {
+            "processo_id": str(processo.id),
+            "cliente_nome": cliente.nome,
+            "corretor": cliente.corretor,
+            "obra": cliente.obra,
+            "imobiliaria": getattr(cliente, "imobiliaria", None),
+            "status_geral": processo.status_geral,
+            "status_credito": processo.status_credito,
+            "status_cca": processo.status_cca,
+            "created_at": created_at.isoformat() if created_at else None,
+        }
 
         if cca == "ASSINATURA_CAIXA":
             assinados += 1
+            clientes_por_fase["assinados"].append(cliente_item)
         elif cca == "CONFORME":
             conformidade_ok += 1
+            clientes_por_fase["conformidade_ok"].append(cliente_item)
         elif cca == "AGUARDANDO_CONFORMIDADE":
             enviados_conformidade += 1
+            clientes_por_fase["enviados_conformidade"].append(cliente_item)
 
         if cca in {"ANALISE_CREDITO", "ANALISE_CCA", "TRATANDO_PRODUTO", "AGENDADO"}:
             em_analise += 1
+            clientes_por_fase["em_analise"].append(cliente_item)
 
         if has_pend:
             com_pendencias += 1
-        created_at = _as_utc(processo.created_at)
+            clientes_por_fase["com_pendencias"].append(cliente_item)
+        if created_at and created_at >= arrival_window_start:
+            chegadas_ultimos_7_dias += 1
+            clientes_por_fase["chegada"].append(cliente_item)
         processo_finalizado = (
             _status_token(processo.status_geral) in PROCESS_GERAL_FINAL_STATUSES
             or cca == "ASSINATURA_CAIXA"
             or (cca == "CONFORME" and agehab == "VALIDADO_AGEHAB" and sinal != "PENDENTE" and fiador != "PENDENTE")
         )
+        if not processo_finalizado:
+            processos_ativos += 1
+            sla_sum_comercial += _compute_sla_hours(processo, SLA_OWNER_CORRETOR, now)
+            sla_sum_credito += _compute_sla_hours(processo, SLA_OWNER_ANALISTA, now)
+            sla_sum_cca += _compute_sla_hours(processo, SLA_OWNER_CCA, now)
+            clientes_por_fase["sla_comercial"].append(cliente_item)
+            clientes_por_fase["sla_credito"].append(cliente_item)
+            clientes_por_fase["sla_cca"].append(cliente_item)
+            clientes_por_fase["media_necessaria"].append(cliente_item)
+            if processo.id not in processos_com_doc_enviado:
+                nao_iniciado += 1
+                clientes_por_fase["nao_iniciado"].append(cliente_item)
         if created_at and not processo_finalizado:
             seconds_since_created = (now - created_at).total_seconds()
             if seconds_since_created >= risk_window_seconds:
                 passiveis_cair += 1
+                clientes_por_fase["passiveis_cair"].append(cliente_item)
 
         imob_name = (getattr(cliente, 'imobiliaria', None) or "Sem imobiliária").strip() or "Sem imobiliária"
         imob_map[imob_name] = imob_map.get(imob_name, 0) + 1
@@ -2697,6 +2760,13 @@ def app_gestor_dashboard(
         for k, v in sorted(imob_map.items(), key=lambda x: -x[1])
     ]
 
+    sla_medio_comercial_horas = round(sla_sum_comercial / processos_ativos) if processos_ativos > 0 else 0
+    sla_medio_credito_horas = round(sla_sum_credito / processos_ativos) if processos_ativos > 0 else 0
+    sla_medio_cca_horas = round(sla_sum_cca / processos_ativos) if processos_ativos > 0 else 0
+    media_necessaria_dia = round(processos_ativos / FALL_RISK_DAYS, 2) if processos_ativos > 0 else 0.0
+    media_chegadas_dia_7d = round(chegadas_ultimos_7_dias / arrival_window_days, 2)
+    projecao_chegadas_30_dias = int(round(media_chegadas_dia_7d * arrival_projection_days))
+
     return {
         "total": total,
         "assinados": assinados,
@@ -2705,7 +2775,19 @@ def app_gestor_dashboard(
         "em_analise": em_analise,
         "com_pendencias": com_pendencias,
         "passiveis_cair": passiveis_cair,
+        "nao_iniciado": nao_iniciado,
+        "processos_ativos": processos_ativos,
+        "sla_medio_comercial_horas": sla_medio_comercial_horas,
+        "sla_medio_credito_horas": sla_medio_credito_horas,
+        "sla_medio_cca_horas": sla_medio_cca_horas,
+        "media_necessaria_dia": media_necessaria_dia,
+        "chegadas_ultimos_7_dias": chegadas_ultimos_7_dias,
+        "media_chegadas_dia_7d": media_chegadas_dia_7d,
+        "projecao_chegadas_30_dias": projecao_chegadas_30_dias,
+        "janela_chegadas_dias": arrival_window_days,
+        "janela_projecao_chegadas_dias": arrival_projection_days,
         "dias_estimativa_queda": FALL_RISK_DAYS,
+        "clientes_por_fase": clientes_por_fase,
         "imobiliarias": imobs,
     }
 

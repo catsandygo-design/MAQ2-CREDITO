@@ -163,10 +163,17 @@
             text-align: center;
             transition: transform .14s ease, box-shadow .2s ease, border-color .2s ease;
         }
+        .kpi-card[data-kpi] {
+            cursor: pointer;
+        }
 
         .kpi-card:hover {
             transform: translateY(-3px);
             filter: brightness(1.03);
+        }
+        .kpi-card.active-kpi {
+            border-color: rgba(255, 255, 255, .78);
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, .45), 0 0 24px rgba(56, 189, 248, .35), 0 14px 30px rgba(2, 6, 23, .85);
         }
 
         .kpi-card .kpi-icon {
@@ -270,6 +277,68 @@
 
         .kpi-danger:hover {
             box-shadow: 0 0 0 1px rgba(239, 68, 68, .75), 0 0 22px rgba(239, 68, 68, .45), 0 14px 30px rgba(2, 6, 23, .85);
+        }
+
+        .fase-panel {
+            margin: 10px 0 16px;
+            border: 1px solid rgba(148, 163, 184, .30);
+            border-radius: 16px;
+            padding: 12px;
+            background: linear-gradient(160deg, rgba(3, 19, 40, .88), rgba(2, 6, 23, .82));
+        }
+        .fase-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .fase-title {
+            font-size: calc(.94rem * var(--font-scale));
+            font-weight: 800;
+            color: #93c5fd;
+        }
+        .fase-meta {
+            color: var(--muted);
+            font-size: calc(.78rem * var(--font-scale));
+            font-weight: 700;
+        }
+        .fase-list {
+            max-height: 300px;
+            overflow: auto;
+            border-top: 1px dashed rgba(148, 163, 184, .24);
+            padding-top: 8px;
+        }
+        .fase-item {
+            display: grid;
+            grid-template-columns: minmax(180px, 1.2fr) minmax(140px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr);
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px dashed rgba(148, 163, 184, .14);
+            align-items: center;
+        }
+        .fase-item:last-child {
+            border-bottom: 0;
+        }
+        .fase-label {
+            color: var(--muted);
+            font-size: calc(.7rem * var(--font-scale));
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            font-weight: 700;
+        }
+        .fase-value {
+            color: var(--text);
+            font-size: calc(.82rem * var(--font-scale));
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .fase-empty {
+            color: var(--muted);
+            font-size: calc(.86rem * var(--font-scale));
+            padding: 14px 2px 6px;
         }
 
         /* ========== IMOBILIÁRIAS SECTION ========== */
@@ -474,11 +543,18 @@
             .imob-grid {
                 grid-template-columns: 1fr;
             }
+            .fase-item {
+                grid-template-columns: 1fr 1fr;
+            }
         }
 
         @media (max-width: 480px) {
             .kpi-grid {
                 grid-template-columns: 1fr;
+            }
+            .fase-item {
+                grid-template-columns: 1fr;
+                gap: 6px;
             }
         }
     </style>
@@ -504,48 +580,100 @@
 
             <!-- KPI CARDS -->
             <section class="kpi-grid" id="kpi-grid" aria-label="Indicadores">
-                <article class="kpi-card kpi-ok">
+                <article class="kpi-card kpi-ok" id="card-assinados" data-kpi="assinados">
                     <div class="kpi-icon">✅</div>
                     <div class="kpi-label">Já Assinaram</div>
                     <div class="kpi-count" id="kpi-assinados">—</div>
                     <div class="kpi-sub">Caixa Finalizado</div>
                 </article>
 
-                <article class="kpi-card kpi-info">
+                <article class="kpi-card kpi-info" id="card-conformidade" data-kpi="conformidade_ok">
                     <div class="kpi-icon">🔷</div>
                     <div class="kpi-label">Conformidade OK</div>
                     <div class="kpi-count" id="kpi-conformidade">—</div>
                     <div class="kpi-sub">Status Caixa = CONFORME</div>
                 </article>
 
-                <article class="kpi-card kpi-purple">
+                <article class="kpi-card kpi-purple" id="card-env-conf" data-kpi="enviados_conformidade">
                     <div class="kpi-icon">📤</div>
                     <div class="kpi-label">Enviados Conformidade</div>
                     <div class="kpi-count" id="kpi-env-conf">—</div>
                     <div class="kpi-sub">Status Caixa = AGUARDANDO_CONFORMIDADE</div>
                 </article>
 
-                <article class="kpi-card kpi-warn">
+                <article class="kpi-card kpi-warn" id="card-analise" data-kpi="em_analise">
                     <div class="kpi-icon">🔍</div>
                     <div class="kpi-label">Em Análise</div>
                     <div class="kpi-count" id="kpi-analise">—</div>
                     <div class="kpi-sub">Crédito/CCA/Produto/Agendado</div>
                 </article>
 
-                <article class="kpi-card kpi-bad">
+                <article class="kpi-card kpi-bad" id="card-pendencias" data-kpi="com_pendencias">
                     <div class="kpi-icon">⚠️</div>
                     <div class="kpi-label">Com Pendências</div>
                     <div class="kpi-count" id="kpi-pendencias">—</div>
                     <div class="kpi-sub">Clientes</div>
                 </article>
 
-                <article class="kpi-card kpi-danger">
+                <article class="kpi-card kpi-danger" id="card-cair" data-kpi="passiveis_cair">
                     <div class="kpi-icon">🚨</div>
                     <div class="kpi-label">Passíveis de Cair</div>
                     <div class="kpi-count" id="kpi-cair">—</div>
                     <div class="kpi-sub" id="kpi-cair-sub">Acima do prazo estimado</div>
                 </article>
-            </section>
+
+                <article class="kpi-card kpi-info" id="card-nao-iniciado" data-kpi="nao_iniciado">
+                    <div class="kpi-icon">🛑</div>
+                    <div class="kpi-label">Não Iniciado</div>
+                    <div class="kpi-count" id="kpi-nao-iniciado">—</div>
+                    <div class="kpi-sub">Reserva feita, sem envio de documento</div>
+                </article>
+
+                <article class="kpi-card kpi-info" id="card-sla-comercial" data-kpi="sla_comercial">
+                    <div class="kpi-icon">⏱️</div>
+                    <div class="kpi-label">SLA Médio Comercial</div>
+                    <div class="kpi-count" id="kpi-sla-comercial">—</div>
+                    <div class="kpi-sub">Média dos processos ativos</div>
+                </article>
+
+                <article class="kpi-card kpi-info" id="card-sla-credito" data-kpi="sla_credito">
+                    <div class="kpi-icon">📊</div>
+                    <div class="kpi-label">SLA Médio Crédito</div>
+                    <div class="kpi-count" id="kpi-sla-credito">—</div>
+                    <div class="kpi-sub">Média dos processos ativos</div>
+                </article>
+
+                <article class="kpi-card kpi-info" id="card-sla-cca" data-kpi="sla_cca">
+                    <div class="kpi-icon">🧾</div>
+                    <div class="kpi-label">SLA Médio CCA</div>
+                    <div class="kpi-count" id="kpi-sla-cca">—</div>
+                    <div class="kpi-sub">Média dos processos ativos</div>
+                </article>
+
+                <article class="kpi-card kpi-purple" id="card-chegada" data-kpi="chegada">
+                    <div class="kpi-icon">🚪</div>
+                    <div class="kpi-label">Cálculo de Chegada</div>
+                    <div class="kpi-count" id="kpi-chegada">—</div>
+                    <div class="kpi-sub" id="kpi-chegada-sub">Média e projeção</div>
+                </article>
+
+            <article class="kpi-card kpi-info" id="card-media-necessaria" data-kpi="media_necessaria">
+                <div class="kpi-icon">🎯</div>
+                <div class="kpi-label">Média Necessária</div>
+                <div class="kpi-count" id="kpi-media-necessaria">—</div>
+                <div class="kpi-sub" id="kpi-media-necessaria-sub">Finalização diaria necessaria</div>
+            </article>
+        </section>
+
+        <section class="fase-panel" id="fase-panel" aria-label="Clientes por fase">
+            <div class="fase-head">
+                <div class="fase-title" id="fase-title">Clique em um card para ver os clientes da fase</div>
+                <div class="fase-meta" id="fase-meta">0 clientes</div>
+            </div>
+            <div class="fase-list" id="fase-list">
+                <div class="fase-empty">Nenhuma fase selecionada.</div>
+            </div>
+        </section>
 
             <!-- VOLUME POR IMOBILIÁRIA -->
             <h2 class="section-title">🏢 Volume por Imobiliária</h2>
@@ -562,6 +690,21 @@
     <script>
         const API_BASE = "/app/api";
         let dashboardData = null;
+        let currentKpiKey = null;
+        const KPI_LABELS = {
+            assinados: "Ja Assinaram",
+            conformidade_ok: "Conformidade OK",
+            enviados_conformidade: "Enviados Conformidade",
+            em_analise: "Em Analise",
+            com_pendencias: "Com Pendencias",
+            passiveis_cair: "Passiveis de Cair",
+            nao_iniciado: "Nao Iniciado",
+            sla_comercial: "SLA Medio Comercial",
+            sla_credito: "SLA Medio Credito",
+            sla_cca: "SLA Medio CCA",
+            chegada: "Calculo de Chegada",
+            media_necessaria: "Media Necessaria",
+        };
 
         /* ---------- BURACO NEGRO ---------- */
         (function () {
@@ -722,6 +865,20 @@
         }
 
         /* ---------- RENDER ---------- */
+        function slaToneClass(hours) {
+            const h = Number(hours || 0);
+            if (h >= 48) return "kpi-danger";
+            if (h >= 24) return "kpi-warn";
+            return "kpi-ok";
+        }
+
+        function setKpiTone(cardId, toneClass) {
+            const card = document.getElementById(cardId);
+            if (!card) return;
+            card.classList.remove("kpi-ok", "kpi-warn", "kpi-bad", "kpi-info", "kpi-purple", "kpi-danger");
+            card.classList.add(toneClass);
+        }
+
         function renderKPIs(data) {
             document.getElementById("total-pill").textContent = `Total: ${data.total}`;
             document.getElementById("kpi-assinados").textContent = data.assinados;
@@ -730,8 +887,99 @@
             document.getElementById("kpi-analise").textContent = data.em_analise;
             document.getElementById("kpi-pendencias").textContent = data.com_pendencias;
             document.getElementById("kpi-cair").textContent = data.passiveis_cair;
+            document.getElementById("kpi-nao-iniciado").textContent = Number(data?.nao_iniciado || 0);
+
             const riskDays = Number(data?.dias_estimativa_queda || 15);
             document.getElementById("kpi-cair-sub").textContent = `${riskDays}+ dias desde o cadastro`;
+
+            const slaComercial = Number(data?.sla_medio_comercial_horas || 0);
+            const slaCredito = Number(data?.sla_medio_credito_horas || 0);
+            const slaCca = Number(data?.sla_medio_cca_horas || 0);
+            document.getElementById("kpi-sla-comercial").textContent = `${slaComercial}h`;
+            document.getElementById("kpi-sla-credito").textContent = `${slaCredito}h`;
+            document.getElementById("kpi-sla-cca").textContent = `${slaCca}h`;
+            setKpiTone("card-sla-comercial", slaToneClass(slaComercial));
+            setKpiTone("card-sla-credito", slaToneClass(slaCredito));
+            setKpiTone("card-sla-cca", slaToneClass(slaCca));
+
+            const janelaChegada = Number(data?.janela_chegadas_dias || 7);
+            const projecaoDias = Number(data?.janela_projecao_chegadas_dias || 30);
+            const chegadasJanela = Number(data?.chegadas_ultimos_7_dias || 0);
+            const mediaChegadaDia = Number(data?.media_chegadas_dia_7d || 0);
+            const projecaoChegadas = Number(data?.projecao_chegadas_30_dias || 0);
+            document.getElementById("kpi-chegada").textContent = `${mediaChegadaDia.toFixed(2)}/dia`;
+            document.getElementById("kpi-chegada-sub").textContent =
+                `${chegadasJanela} nos ultimos ${janelaChegada} dias | projecao ${projecaoDias}d: ${projecaoChegadas}`;
+
+            const mediaNecessaria = Number(data?.media_necessaria_dia || 0);
+            const processosAtivos = Number(data?.processos_ativos || 0);
+            document.getElementById("kpi-media-necessaria").textContent = `${mediaNecessaria.toFixed(2)}/dia`;
+            document.getElementById("kpi-media-necessaria-sub").textContent =
+                `${processosAtivos} ativos para girar em ${riskDays} dias`;
+            if (mediaNecessaria <= 0 || mediaChegadaDia >= mediaNecessaria) {
+                setKpiTone("card-media-necessaria", "kpi-ok");
+            } else if (mediaChegadaDia >= mediaNecessaria * 0.7) {
+                setKpiTone("card-media-necessaria", "kpi-warn");
+            } else {
+                setKpiTone("card-media-necessaria", "kpi-danger");
+            }
+        }
+
+        function renderFaseClientes(kpiKey) {
+            const faseTitle = document.getElementById("fase-title");
+            const faseMeta = document.getElementById("fase-meta");
+            const faseList = document.getElementById("fase-list");
+            if (!faseTitle || !faseMeta || !faseList) return;
+
+            currentKpiKey = kpiKey;
+            document.querySelectorAll(".kpi-card[data-kpi]").forEach((card) => {
+                card.classList.toggle("active-kpi", card.dataset.kpi === kpiKey);
+            });
+
+            const titulo = KPI_LABELS[kpiKey] || kpiKey;
+            const clientes = Array.isArray(dashboardData?.clientes_por_fase?.[kpiKey])
+                ? dashboardData.clientes_por_fase[kpiKey]
+                : [];
+
+            faseTitle.textContent = `Fase: ${titulo}`;
+            faseMeta.textContent = `${clientes.length} cliente(s)`;
+
+            if (!clientes.length) {
+                faseList.innerHTML = `<div class="fase-empty">Nenhum cliente nesta fase.</div>`;
+                return;
+            }
+
+            faseList.innerHTML = clientes.map((item) => {
+                const status = `${item.status_geral || "-"} | ${item.status_cca || "-"}`;
+                return `
+          <div class="fase-item">
+            <div>
+              <div class="fase-label">Cliente</div>
+              <div class="fase-value">${escapeHtml(item.cliente_nome || "")}</div>
+            </div>
+            <div>
+              <div class="fase-label">Corretor</div>
+              <div class="fase-value">${escapeHtml(item.corretor || "-")}</div>
+            </div>
+            <div>
+              <div class="fase-label">Obra</div>
+              <div class="fase-value">${escapeHtml(item.obra || "-")}</div>
+            </div>
+            <div>
+              <div class="fase-label">Status</div>
+              <div class="fase-value">${escapeHtml(status)}</div>
+            </div>
+          </div>
+        `;
+            }).join("");
+        }
+
+        function bindKpiCards() {
+            document.querySelectorAll(".kpi-card[data-kpi]").forEach((card) => {
+                card.addEventListener("click", () => {
+                    renderFaseClientes(card.dataset.kpi || "");
+                });
+            });
         }
 
         function renderImobs(imobs) {
@@ -795,6 +1043,9 @@
                 dashboardData = await api("/gestor/dashboard");
                 renderKPIs(dashboardData);
                 renderImobs(dashboardData.imobiliarias);
+                if (currentKpiKey) {
+                    renderFaseClientes(currentKpiKey);
+                }
             } catch (err) {
                 const container = document.getElementById("imob-container");
                 container.innerHTML = `<div class="loading-state" style="color:var(--bad)">Erro: ${escapeHtml(err.message)}</div>`;
@@ -812,6 +1063,8 @@
         });
 
         /* ---------- INIT ---------- */
+        bindKpiCards();
+
         (async () => {
             try {
                 const res = await fetch("/auth/me", { credentials: "same-origin" });
@@ -823,3 +1076,4 @@
 </body>
 
 </html>
+
