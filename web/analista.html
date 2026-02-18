@@ -18,6 +18,7 @@
       --warn:#f59e0b;
       --bad:#ef4444;
       --ok:#22c55e;
+      --led-neutral:#94a3b8;
 
       --card: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
       --glass: rgba(2,6,23,.65);
@@ -295,14 +296,48 @@
       padding: 4px 9px;
       border-radius: 999px;
       font-size: var(--fs-xxs);
-      border: 1px solid rgba(148,163,184,.16);
-      background: rgba(255,255,255,.02);
+      border: 1px solid transparent;
+      background:
+        linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
+        linear-gradient(115deg, #ff005d, #ff8a00, #ffe600, #00f5d4, #3a86ff, #8338ec, #ff005d) border-box;
+      background-size:100% 100%, 280% 280%;
       white-space:nowrap;
+      text-shadow: 0 0 6px rgba(226,232,240,.16);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.03),
+        0 0 0 1px rgba(15,23,42,.84);
+      animation: neonRainbowFlow 7.2s linear infinite;
     }
-    .pill.ok{border-color: rgba(34,197,94,.55); color: var(--ok)}
-    .pill.warn{border-color: rgba(245,158,11,.55); color: var(--warn)}
-    .pill.bad{border-color: rgba(239,68,68,.55); color: var(--bad)}
-    .pill.neutral{color: var(--muted)}
+    .pill.ok{
+      color: #dcfce7;
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.06),
+        0 0 0 1px rgba(15,23,42,.92),
+        0 0 15px rgba(34,197,94,.45);
+    }
+    .pill.warn{
+      color: #fef3c7;
+      animation: neonRainbowFlow 6.3s linear infinite, neonWarnPulse 1.95s ease-in-out infinite;
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.06),
+        0 0 0 1px rgba(15,23,42,.92),
+        0 0 16px rgba(245,158,11,.48);
+    }
+    .pill.bad{
+      color: #fee2e2;
+      animation: neonRainbowFlow 4.9s linear infinite, neonBadPulse 1.08s ease-in-out infinite;
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.07),
+        0 0 0 1px rgba(15,23,42,.92),
+        0 0 16px rgba(239,68,68,.56);
+    }
+    .pill.neutral{
+      color: #cbd5e1;
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.02),
+        0 0 0 1px rgba(15,23,42,.86),
+        0 0 9px rgba(148,163,184,.16);
+    }
 
     .sla{
       display:inline-flex;
@@ -312,23 +347,93 @@
       padding: 4px 10px;
       border-radius: 999px;
       font-size: var(--fs-xxs);
-      border: 1px solid rgba(148,163,184,.16);
-      background: rgba(2,6,23,.25);
+      border: 1px solid transparent;
+      background:
+        linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
+        linear-gradient(115deg, #ff005d, #ff8a00, #ffe600, #00f5d4, #3a86ff, #8338ec, #ff005d) border-box;
+      background-size:100% 100%, 280% 280%;
       position: relative;
       white-space:nowrap;
+      text-shadow: 0 0 6px rgba(226,232,240,.16);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.03),
+        0 0 0 1px rgba(15,23,42,.84);
+      animation: neonRainbowFlow 7.2s linear infinite;
     }
-    .sla.ok{border-color: rgba(34,197,94,.55); color: var(--ok)}
-    .sla.warn{border-color: rgba(245,158,11,.55); color: var(--warn)}
+    .sla.ok{
+      color: #dcfce7;
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.06),
+        0 0 0 1px rgba(15,23,42,.92),
+        0 0 15px rgba(34,197,94,.45);
+    }
+    .sla.warn{
+      color: #fef3c7;
+      animation: neonRainbowFlow 6.3s linear infinite, neonWarnPulse 1.9s ease-in-out infinite;
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.06),
+        0 0 0 1px rgba(15,23,42,.92),
+        0 0 16px rgba(245,158,11,.48);
+    }
     .sla.bad{
-      border-color: rgba(239,68,68,.55);
-      color: var(--bad);
-      box-shadow: 0 0 0 0 rgba(239,68,68,.20);
-      animation: slaPulse 1.2s infinite;
+      color: #fee2e2;
+      animation: neonRainbowFlow 4.9s linear infinite, neonBadPulse 1.05s ease-in-out infinite;
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.07),
+        0 0 0 1px rgba(15,23,42,.92),
+        0 0 16px rgba(239,68,68,.56);
     }
-    @keyframes slaPulse{
-      0%{box-shadow:0 0 0 0 rgba(239,68,68,.20)}
-      70%{box-shadow:0 0 0 10px rgba(239,68,68,0)}
-      100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}
+    @keyframes neonRainbowFlow{
+      0%{background-position: 0% 50%, 0% 50%}
+      100%{background-position: 0% 50%, 240% 50%}
+    }
+    @keyframes neonWarnPulse{
+      0%,100%{filter:brightness(.97)}
+      50%{filter:brightness(1.15)}
+    }
+    @keyframes neonBadPulse{
+      0%,100%{
+        box-shadow:
+          inset 0 0 0 1px rgba(255,255,255,.06),
+          0 0 0 1px rgba(15,23,42,.92),
+          0 0 14px rgba(244,63,94,.45);
+        filter:brightness(.97);
+      }
+      50%{
+        box-shadow:
+          inset 0 0 0 1px rgba(255,255,255,.10),
+          0 0 0 1px rgba(15,23,42,.92),
+          0 0 21px rgba(244,63,94,.70);
+        filter:brightness(1.20);
+      }
+    }
+    .status.status-pill.status-pendente{
+      border-color: transparent !important;
+      color: #fee2e2 !important;
+      background:
+        linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
+        linear-gradient(115deg, #ff005d, #ff8a00, #ffe600, #00f5d4, #3a86ff, #8338ec, #ff005d) border-box !important;
+      background-size:100% 100%, 280% 280% !important;
+      text-shadow: 0 0 8px rgba(244,63,94,.62);
+      animation: neonRainbowFlow 4.9s linear infinite, neonBadPulse 1.05s ease-in-out infinite;
+    }
+    .status.status-pill.status-enviado{
+      border-color: transparent !important;
+      color: #dcfce7 !important;
+      background:
+        linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
+        linear-gradient(115deg, #ff005d, #ff8a00, #ffe600, #00f5d4, #3a86ff, #8338ec, #ff005d) border-box !important;
+      background-size:100% 100%, 280% 280% !important;
+      text-shadow: 0 0 8px rgba(34,197,94,.52);
+      animation: neonRainbowFlow 6.3s linear infinite, neonWarnPulse 2.2s ease-in-out infinite;
+    }
+    @media (prefers-reduced-motion: reduce){
+      .pill,
+      .sla,
+      .status.status-pill.status-pendente,
+      .status.status-pill.status-enviado{
+        animation: none;
+      }
     }
 
     .prio{
@@ -1044,7 +1149,7 @@ DIVORCIADO: Certidão averbada.</td>
             <span class="pill" id="pillAgehab">Agehab: Analise Credito</span>
           </div>
           <div class="right">
-            <span class="sla ok" id="slaCor">SLA Corretor: 0h</span>
+            <span class="sla ok" id="slaCor">SLA Comercial: 0h</span>
             <span class="sla ok" id="slaCred">SLA Credito: 0h</span>
           </div>
         </div>
@@ -1125,7 +1230,7 @@ DIVORCIADO: Certidão averbada.</td>
           </div>
 
           <div class="fg">
-            <label for="sla-corretor">SLA corretor (h)</label>
+            <label for="sla-corretor">SLA comercial (h)</label>
             <input id="sla-corretor" type="number" min="0" step="1" value="0" />
           </div>
 
@@ -1266,7 +1371,7 @@ DIVORCIADO: Certidão averbada.</td>
     $("slaCor").className = `sla ${slaClass(cor)}`;
     $("slaCred").className = `sla ${slaClass(cred)}`;
 
-    $("slaCor").textContent = `SLA Corretor: ${cor}h`;
+    $("slaCor").textContent = `SLA Comercial: ${cor}h`;
     $("slaCred").textContent = `SLA Credito: ${cred}h`;
 
     const high = ($("status-geral").value==="pendenciado" && cred >= SLA_BAD);
@@ -1283,18 +1388,21 @@ DIVORCIADO: Certidão averbada.</td>
   function applySelectColor(sel){
     const val = toLower(sel.value);
     sel.classList.remove("status-pendente","status-enviado");
-    sel.style.borderColor = "rgba(148,163,184,.18)";
-    sel.style.boxShadow = "0 0 0 1px rgba(15,23,42,.65)";
-    sel.style.background = "rgba(2,6,23,.55)";
+    sel.style.borderColor = "rgba(148,163,184,.42)";
+    sel.style.boxShadow = "inset 0 0 0 1px rgba(255,255,255,.03), 0 0 0 1px rgba(15,23,42,.9), 0 0 8px rgba(148,163,184,.16)";
+    sel.style.background = "linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86))";
+    sel.style.textShadow = "0 0 6px rgba(226,232,240,.16)";
 
     if(val==="pendente"){
       sel.classList.add("status-pendente");
-      sel.style.borderColor = "rgba(239,68,68,.55)";
-      sel.style.boxShadow = "0 0 0 1px rgba(15,23,42,.9), 0 0 12px rgba(239,68,68,.20)";
+      sel.style.borderColor = "rgba(239,68,68,.95)";
+      sel.style.boxShadow = "inset 0 0 0 1px rgba(255,255,255,.05), 0 0 0 1px rgba(15,23,42,.95), 0 0 14px rgba(239,68,68,.35)";
+      sel.style.textShadow = "0 0 9px rgba(239,68,68,.58)";
     }else if(val==="enviado"){
       sel.classList.add("status-enviado");
-      sel.style.borderColor = "rgba(34,197,94,.55)";
-      sel.style.boxShadow = "0 0 0 1px rgba(15,23,42,.9), 0 0 12px rgba(34,197,94,.18)";
+      sel.style.borderColor = "rgba(34,197,94,.92)";
+      sel.style.boxShadow = "inset 0 0 0 1px rgba(255,255,255,.05), 0 0 0 1px rgba(15,23,42,.95), 0 0 14px rgba(34,197,94,.34)";
+      sel.style.textShadow = "0 0 9px rgba(34,197,94,.48)";
     }
   }
 

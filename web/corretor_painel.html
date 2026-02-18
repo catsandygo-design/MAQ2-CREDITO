@@ -13,6 +13,10 @@
     --accent:#22c55e;
     --danger:#ef4444;
     --warn:#f59e0b;
+    --led-ok:#22c55e;
+    --led-warn:#f59e0b;
+    --led-bad:#ef4444;
+    --led-neutral:#94a3b8;
     --border: rgba(148,163,184,.14);
 
     --fs-base:12px;
@@ -77,6 +81,30 @@
     0%{box-shadow: 0 0 0 0 rgba(34,197,94,.30)}
     70%{box-shadow: 0 0 0 8px rgba(34,197,94,0)}
     100%{box-shadow: 0 0 0 0 rgba(34,197,94,0)}
+  }
+  @keyframes neonRainbowFlow{
+    0%{background-position: 0% 50%, 0% 50%}
+    100%{background-position: 0% 50%, 240% 50%}
+  }
+  @keyframes neonWarnPulse{
+    0%,100%{filter:brightness(.97)}
+    50%{filter:brightness(1.15)}
+  }
+  @keyframes neonBadPulse{
+    0%,100%{
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.06),
+        0 0 0 1px rgba(15,23,42,.92),
+        0 0 14px rgba(244,63,94,.45);
+      filter:brightness(.97);
+    }
+    50%{
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.10),
+        0 0 0 1px rgba(15,23,42,.92),
+        0 0 21px rgba(244,63,94,.70);
+      filter:brightness(1.20);
+    }
   }
 
   .btn{
@@ -245,33 +273,108 @@
     padding:4px 8px;
     border-radius:999px;
     font-size:var(--fs-pill);
-    border:1px solid rgba(148,163,184,.16);
-    background: rgba(255,255,255,.02);
+    border:1px solid transparent;
+    background:
+      linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
+      linear-gradient(115deg, #ff005d, #ff8a00, #ffe600, #00f5d4, #3a86ff, #8338ec, #ff005d) border-box;
+    background-size:100% 100%, 280% 280%;
     white-space:nowrap;
     max-width:100%;
     min-width:0;
     overflow:hidden;
     text-overflow:ellipsis;
+    text-shadow: 0 0 6px rgba(226,232,240,.16);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.03),
+      0 0 0 1px rgba(15,23,42,.84);
+    animation: neonRainbowFlow 7.2s linear infinite;
   }
-  .ok{border-color: rgba(34,197,94,.55); color: var(--accent)}
-  .warn{border-color: rgba(245,158,11,.55); color: var(--warn)}
-  .bad{border-color: rgba(239,68,68,.55); color: var(--danger)}
-  .neutral{color: var(--muted)}
+  .pill.ok{
+    color: #dcfce7;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.06),
+      0 0 0 1px rgba(15,23,42,.92),
+      0 0 15px rgba(34,197,94,.45);
+  }
+  .pill.warn{
+    color: #fef3c7;
+    animation: neonRainbowFlow 6.3s linear infinite, neonWarnPulse 1.95s ease-in-out infinite;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.06),
+      0 0 0 1px rgba(15,23,42,.92),
+      0 0 16px rgba(245,158,11,.48);
+  }
+  .pill.bad{
+    color: #fee2e2;
+    animation: neonRainbowFlow 4.9s linear infinite, neonBadPulse 1.08s ease-in-out infinite;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.07),
+      0 0 0 1px rgba(15,23,42,.92),
+      0 0 16px rgba(239,68,68,.56);
+  }
+  .pill.neutral{
+    color: #cbd5e1;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.02),
+      0 0 0 1px rgba(15,23,42,.86),
+      0 0 9px rgba(148,163,184,.16);
+  }
 
   .sla{
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    min-width:54px;
+    min-width:66px;
     padding:4px 8px;
     border-radius:999px;
     font-size:var(--fs-pill);
-    border:1px solid rgba(148,163,184,.16);
-    background: rgba(2,6,23,.25);
+    border:1px solid transparent;
+    background:
+      linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
+      linear-gradient(115deg, #ff005d, #ff8a00, #ffe600, #00f5d4, #3a86ff, #8338ec, #ff005d) border-box;
+    background-size:100% 100%, 280% 280%;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 6px rgba(226,232,240,.16);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.03),
+      0 0 0 1px rgba(15,23,42,.84);
+    animation: neonRainbowFlow 7.2s linear infinite;
   }
-  .sla.ok{border-color: rgba(34,197,94,.55); color: var(--accent)}
-  .sla.warn{border-color: rgba(245,158,11,.55); color: var(--warn)}
-  .sla.bad{border-color: rgba(239,68,68,.55); color: var(--danger)}
+  .sla.ok{
+    color: #dcfce7;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.06),
+      0 0 0 1px rgba(15,23,42,.92),
+      0 0 15px rgba(34,197,94,.45);
+  }
+  .sla.warn{
+    color: #fef3c7;
+    animation: neonRainbowFlow 6.3s linear infinite, neonWarnPulse 1.9s ease-in-out infinite;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.06),
+      0 0 0 1px rgba(15,23,42,.92),
+      0 0 16px rgba(245,158,11,.48);
+  }
+  .sla.bad{
+    color: #fee2e2;
+    animation: neonRainbowFlow 4.9s linear infinite, neonBadPulse 1.05s ease-in-out infinite;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.07),
+      0 0 0 1px rgba(15,23,42,.92),
+      0 0 16px rgba(239,68,68,.56);
+  }
+  .sla.running{
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.05),
+      0 0 0 1px rgba(15,23,42,.9),
+      0 0 16px rgba(56,189,248,.38);
+  }
+  @media (prefers-reduced-motion: reduce){
+    .pill,
+    .sla{
+      animation: none;
+    }
+  }
   td.statusTd{overflow:hidden}
 </style>
 </head>
@@ -282,11 +385,11 @@
         <div class="badgeA">C</div>
         <div>
           <h1>Painel do Corretor</h1>
-          <p>Acompanhamento de envios | Status | SLA</p>
+          <p>Acompanhamento de envios | Status | SLA Comercial, Credito e CCA</p>
         </div>
       </div>
       <div class="rightTop">
-        <span class="chip"><span class="pulseDot"></span>Auto refresh: <strong id="refreshLabel">30s</strong></span>
+        <span class="chip"><span class="pulseDot"></span>Auto refresh: <strong id="refreshLabel">60s</strong></span>
         <a class="btn primary" id="btnCadastrar" href="/app/checklist?auto_back=1&return_to=%2Fapp%2Fcorretor">Cadastrar</a>
         <button class="btn danger" id="btnSair" type="button">Sair</button>
       </div>
@@ -369,7 +472,7 @@
               <th>Geral</th>
               <th>Caixa</th>
               <th>Agehab</th>
-              <th>SLA Corretor</th>
+              <th>SLA Comercial</th>
               <th>SLA Credito</th>
             </tr>
           </thead>
@@ -425,6 +528,7 @@
 
     const $ = (id) => document.getElementById(id);
     const norm = (s) => String(s || "").trim().toLowerCase();
+    $("refreshLabel").textContent = `${countdown}s`;
 
     function esc(value){
       return String(value ?? "")
@@ -452,25 +556,56 @@
       return [LABELS[area]?.[s] || status || "-", statusClass(s)];
     }
 
-    function toHours(days, createdAt){
+    function toSecondsFromDays(days, createdAt){
       const d = Number(days);
-      if (Number.isFinite(d) && d >= 0) return Math.round(d * 24);
+      if (Number.isFinite(d) && d >= 0) return Math.max(0, Math.round(d * 86400));
       const created = createdAt ? new Date(createdAt) : null;
       if (!created || Number.isNaN(created.getTime())) return 0;
-      return Math.max(0, Math.floor((Date.now() - created.getTime()) / 3600000));
+      return Math.max(0, Math.floor((Date.now() - created.getTime()) / 1000));
     }
 
-    function readSlaHours(item, hoursField, daysField){
-      const direct = Number(item?.[hoursField]);
-      if (Number.isFinite(direct) && direct >= 0) return Math.round(direct);
-      return toHours(item?.[daysField], item?.created_at);
+    function readSlaSeconds(item, secondsField, hoursField, daysField){
+      const directSeconds = Number(item?.[secondsField]);
+      if (Number.isFinite(directSeconds) && directSeconds >= 0) return Math.floor(directSeconds);
+      const directHours = Number(item?.[hoursField]);
+      if (Number.isFinite(directHours) && directHours >= 0) return Math.round(directHours * 3600);
+      return toSecondsFromDays(item?.[daysField], item?.created_at);
     }
 
-    function slaClass(hours){
-      const h = Number(hours || 0);
+    function hoursFromSeconds(seconds){
+      const safe = Number(seconds || 0);
+      if (!Number.isFinite(safe) || safe <= 0) return 0;
+      return Math.floor(safe / 3600);
+    }
+
+    function formatClock(seconds){
+      const safe = Math.max(0, Math.floor(Number(seconds || 0)));
+      const hh = Math.floor(safe / 3600);
+      const mm = Math.floor((safe % 3600) / 60);
+      const ss = safe % 60;
+      return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+    }
+
+    function slaClassFromSeconds(seconds){
+      const h = Number(seconds || 0) / 3600;
       if (h >= SLA_BAD) return "bad";
       if (h >= SLA_WARN) return "warn";
       return "ok";
+    }
+
+    function liveSlaSeconds(row, kind, nowMs = Date.now()){
+      const owner = String(row.slaOwner || "");
+      const elapsed = Math.max(0, Math.floor((nowMs - lastRefreshAt) / 1000));
+      if (kind === "comercial"){
+        const base = Number(row.slaComercialSeconds || 0);
+        return owner === "CORRETOR" ? base + elapsed : base;
+      }
+      if (kind === "credito"){
+        const base = Number(row.slaCreditoSeconds || 0);
+        return owner === "ANALISTA" ? base + elapsed : base;
+      }
+      const base = Number(row.slaCcaSeconds || 0);
+      return owner === "CCA" ? base + elapsed : base;
     }
 
     function fromBackend(item){
@@ -482,8 +617,10 @@
         geral: statusFromBackend(item.status_geral),
         caixa: statusFromBackend(item.status_cca),
         agehab: statusFromBackend(item.status_agehab),
-        slaCor: readSlaHours(item, "sla_corretor_horas", "sla_corretor_dias"),
-        slaCred: readSlaHours(item, "sla_analista_horas", "sla_credito_dias"),
+        slaOwner: String(item.sla_owner || "").trim().toUpperCase(),
+        slaComercialSeconds: readSlaSeconds(item, "sla_corretor_seconds", "sla_corretor_horas", "sla_corretor_dias"),
+        slaCreditoSeconds: readSlaSeconds(item, "sla_analista_seconds", "sla_analista_horas", "sla_credito_dias"),
+        slaCcaSeconds: readSlaSeconds(item, "sla_cca_seconds", "sla_cca_horas", "sla_cca_dias"),
       };
     }
 
@@ -547,8 +684,9 @@
       const pend = count((r) => r.geral === "pendenciado");
       const andamento = count((r) => r.geral === "em_andamento");
       const avg = (list) => list.length ? Math.round(list.reduce((a, b) => a + b, 0) / list.length) : 0;
-      const avgCor = avg(rows.map((r) => Number(r.slaCor || 0)));
-      const avgCred = avg(rows.map((r) => Number(r.slaCred || 0)));
+      const nowMs = Date.now();
+      const avgComercial = avg(rows.map((r) => hoursFromSeconds(liveSlaSeconds(r, "comercial", nowMs))));
+      const avgCredito = avg(rows.map((r) => hoursFromSeconds(liveSlaSeconds(r, "credito", nowMs))));
       const slaKpiClass = (v) => v >= SLA_BAD ? "bad" : (v >= SLA_WARN ? "warn" : "good");
 
       $("insights").innerHTML = `
@@ -556,8 +694,8 @@
         <div class="kpi good"><div class="k">Aprovados</div><div class="v">${aprov}</div><div class="s">status geral</div></div>
         <div class="kpi bad"><div class="k">Pendenciados</div><div class="v">${pend}</div><div class="s">status geral</div></div>
         <div class="kpi warn"><div class="k">Em andamento</div><div class="v">${andamento}</div><div class="s">status geral</div></div>
-        <div class="kpi ${slaKpiClass(avgCor)}"><div class="k">SLA medio corretor</div><div class="v">${avgCor}h</div><div class="s">media do filtro</div></div>
-        <div class="kpi ${slaKpiClass(avgCred)}"><div class="k">SLA medio credito</div><div class="v">${avgCred}h</div><div class="s">media do filtro</div></div>
+        <div class="kpi ${slaKpiClass(avgComercial)}"><div class="k">SLA medio comercial</div><div class="v">${avgComercial}h</div><div class="s">media do filtro</div></div>
+        <div class="kpi ${slaKpiClass(avgCredito)}"><div class="k">SLA medio credito</div><div class="v">${avgCredito}h</div><div class="s">media do filtro</div></div>
       `;
     }
 
@@ -573,6 +711,9 @@
         const [gTxt, gCls] = statusLabel("geral", r.geral);
         const [cTxt, cCls] = statusLabel("caixa", r.caixa);
         const [aTxt, aCls] = statusLabel("agehab", r.agehab);
+        const slaComercialSeconds = liveSlaSeconds(r, "comercial");
+        const slaCreditoSeconds = liveSlaSeconds(r, "credito");
+        const creditoRunning = String(r.slaOwner || "") === "ANALISTA";
         return `
           <tr>
             <td>
@@ -585,11 +726,29 @@
             <td class="statusTd"><span class="pill ${gCls}">${gTxt}</span></td>
             <td class="statusTd"><span class="pill ${cCls}">${cTxt}</span></td>
             <td class="statusTd"><span class="pill ${aCls}">${aTxt}</span></td>
-            <td style="text-align:center"><span class="sla ${slaClass(r.slaCor)}">${Number(r.slaCor || 0)}h</span></td>
-            <td style="text-align:center"><span class="sla ${slaClass(r.slaCred)}">${Number(r.slaCred || 0)}h</span></td>
+            <td style="text-align:center"><span class="sla ${slaClassFromSeconds(slaComercialSeconds)}">${hoursFromSeconds(slaComercialSeconds)}h</span></td>
+            <td style="text-align:center"><span class="sla ${slaClassFromSeconds(slaCreditoSeconds)}${creditoRunning ? " running" : ""}" data-sla-credito="1" data-owner="${esc(r.slaOwner)}" data-base-seconds="${Math.floor(Number(r.slaCreditoSeconds || 0))}">${formatClock(slaCreditoSeconds)}</span></td>
           </tr>
         `;
       }).join("");
+    }
+
+    function refreshCreditoTimers(){
+      const elapsed = Math.max(0, Math.floor((Date.now() - lastRefreshAt) / 1000));
+      document.querySelectorAll("[data-sla-credito='1']").forEach((node) => {
+        const owner = String(node.getAttribute("data-owner") || "").toUpperCase();
+        const baseSeconds = Math.max(0, Math.floor(Number(node.getAttribute("data-base-seconds") || 0)));
+        const running = owner === "ANALISTA";
+        const currentSeconds = running ? baseSeconds + elapsed : baseSeconds;
+        node.textContent = formatClock(currentSeconds);
+        node.classList.remove("ok", "warn", "bad");
+        node.classList.add(slaClassFromSeconds(currentSeconds));
+        if (running) {
+          node.classList.add("running");
+        } else {
+          node.classList.remove("running");
+        }
+      });
     }
 
     function applyFilters(){
@@ -608,7 +767,7 @@
         return hitQ && hitEmp && hitCor && hitG && hitC;
       });
 
-      out.sort((a, b) => Number(b.slaCred || 0) - Number(a.slaCred || 0));
+      out.sort((a, b) => liveSlaSeconds(b, "credito") - liveSlaSeconds(a, "credito"));
       render(out);
       renderInsights(out);
     }
@@ -633,8 +792,8 @@
           await loadSessionProfile();
         }
         await loadData();
-        applyFilters();
         lastRefreshAt = Date.now();
+        applyFilters();
       }catch(error){
         $("tbody").innerHTML = `<tr><td colspan="7" class="muted" style="padding:14px 12px;color:#fca5a5;">Erro ao carregar: ${esc(error.message)}</td></tr>`;
       }finally{
@@ -647,6 +806,7 @@
         $("refreshLabel").textContent = "pausado";
         return;
       }
+      refreshCreditoTimers();
       countdown -= 1;
       if (countdown <= 0){
         countdown = REFRESH_SECONDS;

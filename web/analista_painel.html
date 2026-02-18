@@ -14,6 +14,10 @@
     --accent:#22c55e;
     --danger:#ef4444;
     --warn:#f59e0b;
+    --led-ok:#22c55e;
+    --led-warn:#f59e0b;
+    --led-bad:#ef4444;
+    --led-neutral:#94a3b8;
     --border: rgba(148,163,184,.14);
 
     --fs-base:12px;
@@ -84,6 +88,30 @@
     0%{box-shadow: 0 0 0 0 rgba(34,197,94,.30)}
     70%{box-shadow: 0 0 0 8px rgba(34,197,94,0)}
     100%{box-shadow: 0 0 0 0 rgba(34,197,94,0)}
+  }
+  @keyframes neonRainbowFlow{
+    0%{background-position: 0% 50%, 0% 50%}
+    100%{background-position: 0% 50%, 240% 50%}
+  }
+  @keyframes neonWarnPulse{
+    0%,100%{filter:brightness(.97)}
+    50%{filter:brightness(1.15)}
+  }
+  @keyframes neonBadPulse{
+    0%,100%{
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.06),
+        0 0 0 1px rgba(15,23,42,.92),
+        0 0 14px rgba(244,63,94,.45);
+      filter:brightness(.97);
+    }
+    50%{
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.10),
+        0 0 0 1px rgba(15,23,42,.92),
+        0 0 21px rgba(244,63,94,.70);
+      filter:brightness(1.20);
+    }
   }
 
   .filters{
@@ -268,11 +296,19 @@
     padding: 4px 8px;
     border-radius:999px;
     font-size: var(--fs-pill);
-    border:1px solid rgba(148,163,184,.16);
+    border:1px solid transparent;
     white-space:nowrap;
-    background: rgba(255,255,255,.02);
+    background:
+      linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
+      linear-gradient(115deg, #ff005d, #ff8a00, #ffe600, #00f5d4, #3a86ff, #8338ec, #ff005d) border-box;
+    background-size:100% 100%, 280% 280%;
     max-width:100%;
     min-width:0;
+    text-shadow: 0 0 6px rgba(226,232,240,.16);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.03),
+      0 0 0 1px rgba(15,23,42,.84);
+    animation: neonRainbowFlow 7.2s linear infinite;
   }
   .pill .pillText{
     overflow:hidden;
@@ -280,10 +316,37 @@
     white-space:nowrap;
     min-width:0;
   }
-  .ok{border-color: rgba(34,197,94,.55); color: var(--accent);}
-  .warn{border-color: rgba(245,158,11,.55); color: var(--warn);}
-  .bad{border-color: rgba(239,68,68,.55); color: var(--danger);}
-  .neutral{color: var(--muted);}
+  .pill.ok{
+    color: #dcfce7;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.06),
+      0 0 0 1px rgba(15,23,42,.92),
+      0 0 15px rgba(34,197,94,.45);
+  }
+  .pill.warn{
+    color: #fef3c7;
+    animation: neonRainbowFlow 6.3s linear infinite, neonWarnPulse 1.95s ease-in-out infinite;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.06),
+      0 0 0 1px rgba(15,23,42,.92),
+      0 0 16px rgba(245,158,11,.48);
+  }
+  .pill.bad{
+    color: #fee2e2;
+    animation: neonRainbowFlow 4.9s linear infinite, neonBadPulse 1.08s ease-in-out infinite;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.07),
+      0 0 0 1px rgba(15,23,42,.92),
+      0 0 16px rgba(239,68,68,.56);
+  }
+  .pill.neutral{
+    border-color: rgba(148,163,184,.45);
+    color: #cbd5e1;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.02),
+      0 0 0 1px rgba(15,23,42,.86),
+      0 0 9px rgba(148,163,184,.16);
+  }
 
   .sla{
     display:inline-flex;align-items:center;justify-content:center;
@@ -291,22 +354,40 @@
     padding: 4px 8px;
     border-radius: 999px;
     font-size: var(--fs-pill);
-    border: 1px solid rgba(148,163,184,.16);
-    background: rgba(2,6,23,.25);
+    border: 1px solid transparent;
+    background:
+      linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
+      linear-gradient(115deg, #ff005d, #ff8a00, #ffe600, #00f5d4, #3a86ff, #8338ec, #ff005d) border-box;
+    background-size:100% 100%, 280% 280%;
     position: relative;
+    text-shadow: 0 0 6px rgba(226,232,240,.16);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.03),
+      0 0 0 1px rgba(15,23,42,.84);
+    animation: neonRainbowFlow 7.2s linear infinite;
   }
-  .sla.ok{border-color: rgba(34,197,94,.55); color: var(--accent);}
-  .sla.warn{border-color: rgba(245,158,11,.55); color: var(--warn);}
-  .sla.bad{border-color: rgba(239,68,68,.55); color: var(--danger);}
-
+  .sla.ok{
+    color: #dcfce7;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.06),
+      0 0 0 1px rgba(15,23,42,.92),
+      0 0 15px rgba(34,197,94,.45);
+  }
+  .sla.warn{
+    color: #fef3c7;
+    animation: neonRainbowFlow 6.3s linear infinite, neonWarnPulse 1.9s ease-in-out infinite;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.06),
+      0 0 0 1px rgba(15,23,42,.92),
+      0 0 16px rgba(245,158,11,.48);
+  }
   .sla.bad{
-    box-shadow: 0 0 0 0 rgba(239,68,68,.25);
-    animation: slaPulse 1.2s infinite;
-  }
-  @keyframes slaPulse{
-    0%{box-shadow:0 0 0 0 rgba(239,68,68,.22)}
-    70%{box-shadow:0 0 0 10px rgba(239,68,68,0)}
-    100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}
+    color: #fee2e2;
+    animation: neonRainbowFlow 4.9s linear infinite, neonBadPulse 1.05s ease-in-out infinite;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.07),
+      0 0 0 1px rgba(15,23,42,.92),
+      0 0 16px rgba(239,68,68,.56);
   }
 
   .prio{
@@ -378,6 +459,12 @@
   @keyframes cheerArm2{0%,100%{transform:rotate(30deg)}50%{transform:rotate(-30deg)}}
   @keyframes cheerLeg{0%,100%{transform:rotate(10deg)}50%{transform:rotate(-10deg)}}
   @keyframes cheerBody{0%,100%{transform:translateY(0)}50%{transform:translateY(-1px)}}
+  @media (prefers-reduced-motion: reduce){
+    .pill,
+    .sla{
+      animation: none;
+    }
+  }
 
   .hintRow{font-size:11px;color: var(--muted)}
   td.statusTd{overflow:hidden}
@@ -498,7 +585,7 @@
               <th>Geral</th>
               <th>Caixa</th>
               <th>Agehab</th>
-              <th>SLA Corretor</th>
+              <th>SLA Comercial</th>
               <th>SLA Credito</th>
             </tr>
           </thead>
@@ -789,7 +876,7 @@
       <div class="kpi bad"><div class="k">Pendenciados</div><div class="v">${pend}</div><div class="s">status geral</div></div>
       <div class="kpi warn"><div class="k">Em andamento</div><div class="v">${and}</div><div class="s">status geral</div></div>
       <div class="kpi bad"><div class="k">Prioridade alta</div><div class="v">${prios}</div><div class="s">pendenciado + SLA>=${SLA_BAD}h</div></div>
-      <div class="kpi ${clsSla(avgSlaCor)}"><div class="k">SLA medio corretor</div><div class="v">${avgSlaCor}h</div><div class="s">media do filtro</div></div>
+      <div class="kpi ${clsSla(avgSlaCor)}"><div class="k">SLA medio comercial</div><div class="v">${avgSlaCor}h</div><div class="s">media do filtro</div></div>
       <div class="kpi ${clsSla(avgSlaCred)}">
         <div class="k">SLA medio credito</div>
         <div class="v">${avgSlaCred}h</div>
