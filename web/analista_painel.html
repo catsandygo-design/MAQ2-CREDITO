@@ -47,6 +47,16 @@
       linear-gradient(180deg, var(--bg), var(--bg2));
   }
 
+  #bhCanvas{
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: .72;
+  }
+
   .wrap{
     height:100%;
     max-width:1500px;
@@ -56,6 +66,8 @@
     flex-direction:column;
     gap:12px;
     overflow:auto;
+    position: relative;
+    z-index: 1;
   }
 
   .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -160,34 +172,44 @@
   }
 
   .insights{
-    display:grid;
-    grid-template-columns: repeat(7, 1fr);
+    display:flex;
     gap:10px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    padding-bottom:2px;
+    scrollbar-width: thin;
   }
-  @media (max-width: 1200px){ .insights{grid-template-columns: repeat(3, 1fr)} }
-  @media (max-width: 760px){ .insights{grid-template-columns: repeat(2, 1fr)} }
+  .insights::-webkit-scrollbar{height:8px}
+  .insights::-webkit-scrollbar-track{background: rgba(2,6,23,.35)}
+  .insights::-webkit-scrollbar-thumb{
+    background: rgba(148,163,184,.25);
+    border-radius: 999px;
+  }
 
   .kpi{
+    flex: 0 0 205px;
     border:1px solid rgba(148,163,184,.14);
     background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.02));
     border-radius: var(--radius);
-    padding: 10px 10px;
+    min-height: 82px;
+    padding: 8px 10px;
     position: relative;
     overflow:hidden;
   }
+  .kpi.spark{flex-basis:245px}
   .kpi .k{font-size:11px;color:var(--muted)}
-  .kpi .v{margin-top:6px;font-size:15px;font-weight:900;letter-spacing:.2px}
-  .kpi .s{margin-top:4px;font-size:11px;color:var(--muted)}
+  .kpi .v{margin-top:4px;font-size:15px;font-weight:900;letter-spacing:.2px}
+  .kpi .s{margin-top:2px;font-size:10px;color:var(--muted)}
   .kpi.good .v{color: var(--accent)}
   .kpi.warn .v{color: var(--warn)}
   .kpi.bad .v{color: var(--danger)}
 
   .sparkWrap{
-    margin-top:8px;
+    margin-top:5px;
     border:1px solid rgba(148,163,184,.12);
     background: rgba(2,6,23,.35);
     border-radius: 10px;
-    padding:6px 8px;
+    padding:5px 8px;
   }
   canvas{display:block;width:100%;height:26px}
 
@@ -210,7 +232,7 @@
     min-height:0;
   }
 
-  table{width:100%;border-collapse:collapse;table-layout:fixed}
+  table{width:100%;min-width:1540px;border-collapse:collapse;table-layout:fixed}
 
   thead th{
     text-align:left;
@@ -473,6 +495,7 @@
 </head>
 
 <body>
+<canvas id="bhCanvas" aria-hidden="true"></canvas>
 <div class="wrap">
   <div class="topbar">
     <div class="title">
@@ -566,14 +589,17 @@
       <div class="scroll">
         <table>
           <colgroup>
-            <col style="width:28%">
-            <col style="width:12%">
-            <col style="width:8%">
-            <col style="width:12%">
-            <col style="width:14%">
-            <col style="width:14%">
-            <col style="width:6%">
-            <col style="width:6%">
+            <col style="width:23%">
+            <col style="width:11%">
+            <col style="width:7%">
+            <col style="width:9%">
+            <col style="width:9%">
+            <col style="width:9%">
+            <col style="width:9%">
+            <col style="width:7%">
+            <col style="width:7%">
+            <col style="width:5%">
+            <col style="width:4%">
           </colgroup>
           <thead>
             <tr>
@@ -582,7 +608,10 @@
               <th>CCA</th>
               <th>Estagio</th>
               <th>Repasse</th>
-              <th>Fila</th>
+              <th>Status Caixa</th>
+              <th>Status Agehab</th>
+              <th>Status Sinal</th>
+              <th>Status Fiador</th>
               <th>SLA Comercial</th>
               <th>SLA Credito</th>
             </tr>
@@ -595,6 +624,196 @@
 </div>
 
 <script>
+  (function initBlackHoleBg(){
+    const canvas = document.getElementById("bhCanvas");
+    if (!canvas) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let rafId = 0;
+    let renderer = null;
+    let mesh = null;
+    let material = null;
+    let geometry = null;
+    let onResize = null;
+
+    const vertexShader = `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = vec4(position, 1.0);
+      }
+    `;
+
+    const fragmentShader = `
+      precision highp float;
+
+      uniform float iTime;
+      uniform vec2 iResolution;
+
+      float hash(vec2 p) {
+        return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+      }
+
+      float noise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        return mix(
+          mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+          mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
+          f.y
+        );
+      }
+
+      float fbm(vec2 p) {
+        float v = 0.0;
+        float a = 0.5;
+        for (int i = 0; i < 5; i++) {
+          v += a * noise(p);
+          p *= 2.0;
+          a *= 0.5;
+        }
+        return v;
+      }
+
+      void main() {
+        vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution.xy) / min(iResolution.y, iResolution.x);
+
+        float r = length(uv);
+        float angle_raw = atan(uv.y, uv.x);
+
+        float bgNebula = fbm(uv * 2.5 + iTime * 0.03);
+        vec3 bgColor = mix(vec3(0.0), vec3(0.02, 0.03, 0.06), bgNebula);
+        float vignette = smoothstep(1.2, 0.3, r);
+
+        float suction = iTime * 0.12;
+        vec2 starUV = vec2(
+          r + suction * 0.4,
+          angle_raw + r * 2.5 + iTime * 0.1
+        );
+
+        vec3 starColor = vec3(0.0);
+        vec2 starGrid = starUV * 70.0;
+        vec2 cell = floor(starGrid);
+        float starSeed = hash(cell);
+
+        if (starSeed > 0.995) {
+          vec2 cellOffset = fract(starGrid) - 0.5;
+          float starDist = length(cellOffset);
+          float starCore = smoothstep(0.25, 0.0, starDist);
+          float twinkle = sin(iTime * 3.0 + starSeed * 40.0) * 0.5 + 0.5;
+          float maskStars = smoothstep(0.25, 0.5, r);
+          vec3 starBase = vec3(0.85, 0.9, 1.0);
+          starColor = starBase * twinkle * starCore * maskStars;
+        }
+
+        float angle = angle_raw + iTime * 0.2;
+        float horizon = 0.16;
+        float bending = 0.16 / (r + 0.01);
+        float pr = length(uv * (1.0 - bending));
+
+        float plasma = fbm(vec2(pr * 6.0, angle * 3.0 - iTime * 0.05));
+        float detail = pow(fbm(vec2(pr * 16.0, angle * 9.0 - iTime * 0.1)), 3.0) * 4.0;
+
+        float diskMask = smoothstep(0.7, 0.25, pr) * smoothstep(horizon - 0.05, horizon + 0.09, pr);
+
+        vec3 fire = vec3(1.0, 0.45, 0.12);
+        vec3 white = vec3(1.0, 0.95, 0.9);
+
+        vec3 color = bgColor * vignette;
+        color += fire * diskMask * (plasma + detail * 0.8);
+        color += white * detail * diskMask * 0.4;
+
+        float photonRing = smoothstep(0.012, 0.0, abs(r - horizon));
+        color += white * photonRing * 1.4;
+
+        float distToHorizon = max(abs(r - horizon), 0.012);
+        float glow = 0.012 / distToHorizon;
+        glow = clamp(glow, 0.0, 2.5);
+        color += fire * glow * 0.5;
+
+        float chroma = smoothstep(0.02, 0.0, abs(r - horizon));
+        color.r += chroma * 0.18;
+        color.b += chroma * -0.05;
+
+        if (r < horizon) color = vec3(0.0);
+
+        color += starColor;
+        color = pow(color, vec3(0.95));
+        gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
+      }
+    `;
+
+    async function boot(){
+      let THREE = null;
+      try {
+        THREE = await import("https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.module.js");
+      } catch (error) {
+        console.warn("Efeito de fundo indisponivel:", error);
+        return;
+      }
+
+      const uniforms = {
+        iTime: { value: 0 },
+        iResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+      };
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+      renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: true,
+        alpha: true,
+        powerPreference: "high-performance",
+      });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+
+      geometry = new THREE.PlaneGeometry(2, 2);
+      material = new THREE.ShaderMaterial({
+        uniforms,
+        vertexShader,
+        fragmentShader,
+      });
+      mesh = new THREE.Mesh(geometry, material);
+      scene.add(mesh);
+
+      const loop = (time) => {
+        if (document.hidden) {
+          rafId = requestAnimationFrame(loop);
+          return;
+        }
+        uniforms.iTime.value = time * 0.001;
+        renderer.render(scene, camera);
+        rafId = requestAnimationFrame(loop);
+      };
+      rafId = requestAnimationFrame(loop);
+
+      onResize = () => {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(w, h, false);
+        uniforms.iResolution.value.set(w, h);
+      };
+      window.addEventListener("resize", onResize, { passive: true });
+    }
+
+    boot();
+
+    window.addEventListener("beforeunload", () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      if (onResize) window.removeEventListener("resize", onResize);
+      if (mesh?.parent) mesh.parent.remove(mesh);
+      geometry?.dispose?.();
+      material?.dispose?.();
+      renderer?.dispose?.();
+    });
+  })();
+</script>
+
+<script>
   const API_BASE = "/app/api";
   const SLA_WARN = 24;
   const SLA_BAD = 48;
@@ -603,6 +822,8 @@
   const MAX_PAGES = 20;
 
   const UPDATE_PAGE_URL = (row) => `/app/analise?processo_id=${encodeURIComponent(row.processo_id)}`;
+  const TABLE_COLSPAN = 11;
+  const COMERCIAL_STAGES = new Set(["reserva", "em_processo", "credito", "secretaria_vendas"]);
 
   const LABELS = {
     geral: {
@@ -615,15 +836,39 @@
       envio_sienge: "Envio Sienge",
       venda_finalizada: "Venda Finalizada",
     },
-    caixa: {
+    repasse: {
       em_repasse: "Em Repasse",
       inicio_repasse: "Inicio Repasse",
       assinatura_autorizada: "Assinatura Autorizada",
       sem_repasse: "Sem Repasse",
     },
-    agehab: {
-      comercial: "Comercial",
-      repasse: "Repasse",
+    statusCaixa: {
+      analise_credito: "Analise Credito",
+      pendente_credito: "Pendente Credito",
+      analise_cca: "Analise CCA",
+      pendente_cca: "Pendente CCA",
+      aguardando_conformidade: "Aguardando Conformidade",
+      conforme: "Conforme",
+      tratando_produto: "Tratando Produto",
+      agendado: "Agendado",
+      assinatura_caixa: "Finalizado",
+    },
+    statusAgehab: {
+      analise_credito: "Analise Credito",
+      pendente_credito: "Pendente Credito",
+      envio_agehab: "Envio Agehab",
+      pendente_agehab: "Pendente Agehab",
+      validado_agehab: "Validado Agehab",
+    },
+    sinal: {
+      nao_tem: "Nao tem",
+      pendente: "Pendente",
+      pago: "Pago",
+    },
+    fiador: {
+      nao_tem: "Nao tem",
+      pendente: "Pendente",
+      finalizado: "Finalizado",
     },
   };
 
@@ -679,10 +924,15 @@
 
   function classForStatus(value){
     const v = statusFromBackend(value);
+    if (!v || v === "-") return "neutral";
     if (["venda_finalizada", "assinatura_autorizada", "aprovado", "conforme", "validado_agehab", "pago", "finalizado"].includes(v)) return "ok";
     if (["pendenciado", "reprovado", "cancelado", "distrato", "pendente_credito", "pendente_cca", "pendente_agehab", "pendente"].includes(v)) return "bad";
     if (["novo", "nao_tem", "reserva", "sem_repasse", "comercial", "repasse"].includes(v)) return "neutral";
     return "warn";
+  }
+
+  function filaByEstagio(estagio){
+    return COMERCIAL_STAGES.has(statusFromBackend(estagio)) ? "comercial" : "repasse";
   }
 
   function toHours(days, createdAt){
@@ -727,10 +977,11 @@
       cca: item.cca_responsavel || "-",
       credito: statusFromBackend(item.status_credito),
       geral: statusFromBackend(item.estagio_comercial || item.status_geral),
-      caixa: statusFromBackend(item.etapa_repasse || "sem_repasse"),
-      agehab: statusFromBackend(item.fila_atual || "comercial"),
-      sinal: statusFromBackend(item.status_sinal),
-      fiador: statusFromBackend(item.status_fiador),
+      repasse: statusFromBackend(item.etapa_repasse || "sem_repasse"),
+      statusCaixa: statusFromBackend(item.status_cca || "analise_credito"),
+      statusAgehab: statusFromBackend(item.status_agehab || "analise_credito"),
+      sinal: statusFromBackend(item.status_sinal || "nao_tem"),
+      fiador: statusFromBackend(item.status_fiador || "nao_tem"),
       slaCor: readSlaHours(item, "sla_corretor_horas", "sla_corretor_dias"),
       slaCred: readSlaHours(item, "sla_analista_horas", "sla_credito_dias"),
       slaCca: readSlaHours(item, "sla_cca_horas", "sla_cca_dias"),
@@ -811,7 +1062,7 @@
   }
 
   function isCelebrating(row){
-    return row.geral === "venda_finalizada" || row.caixa === "assinatura_autorizada";
+    return row.geral === "venda_finalizada" || row.repasse === "assinatura_autorizada";
   }
 
   function slaClass(hours){
@@ -826,7 +1077,7 @@
   }
 
   function isHighPriority(row){
-    return row.agehab === "comercial" && openDays(row) > 15;
+    return filaByEstagio(row.geral) === "comercial" && openDays(row) > 15;
   }
   function prioBadge(){
     return `<span class="prio"><span class="dot"></span>PRIORIDADE ALTA</span>`;
@@ -850,8 +1101,8 @@
   function trackHistory(rows){
     const count = (pred)=> rows.reduce((acc,r)=> acc + (pred(r)?1:0), 0);
     const total = rows.length;
-    const comercial = count(r => r.agehab === "comercial");
-    const repasse = count(r => r.agehab === "repasse");
+    const comercial = count(r => filaByEstagio(r.geral) === "comercial");
+    const repasse = count(r => filaByEstagio(r.geral) === "repasse");
     history.push({ t: Date.now(), total, comercial, repasse });
     if(history.length > HISTORY_MAX) history.shift();
   }
@@ -860,10 +1111,10 @@
     const total = rows.length || 0;
     const count = (pred)=> rows.reduce((acc,r)=> acc + (pred(r)?1:0), 0);
 
-    const comercial = count(r => r.agehab === "comercial");
-    const repasse = count(r => r.agehab === "repasse");
+    const comercial = count(r => filaByEstagio(r.geral) === "comercial");
+    const repasse = count(r => filaByEstagio(r.geral) === "repasse");
     const finalizados = count(r => r.geral === "venda_finalizada");
-    const assinados = count(r => r.caixa === "assinatura_autorizada");
+    const assinados = count(r => r.repasse === "assinatura_autorizada");
     const prios = count(r=> isHighPriority(r));
 
     const avg = (arr)=> arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length) : 0;
@@ -880,7 +1131,7 @@
       <div class="kpi good"><div class="k">Assinatura autorizada</div><div class="v">${assinados}</div><div class="s">etapa repasse</div></div>
       <div class="kpi bad"><div class="k">Prioridade alta</div><div class="v">${prios}</div><div class="s">comercial acima de 15 dias</div></div>
       <div class="kpi ${clsSla(avgSlaCor)}"><div class="k">SLA medio comercial</div><div class="v">${avgSlaCor}h</div><div class="s">media do filtro</div></div>
-      <div class="kpi ${clsSla(avgSlaCred)}">
+      <div class="kpi ${clsSla(avgSlaCred)} spark">
         <div class="k">SLA medio credito</div>
         <div class="v">${avgSlaCred}h</div>
         <div class="s">media do filtro</div>
@@ -937,7 +1188,7 @@
     $("countInfo").textContent = `${rows.length} processo(s)`;
 
     if(!rows.length){
-      tb.innerHTML = `<tr><td colspan="8" class="muted" style="padding:14px 12px;">Nenhum resultado com esses filtros.</td></tr>`;
+      tb.innerHTML = `<tr><td colspan="${TABLE_COLSPAN}" class="muted" style="padding:14px 12px;">Nenhum resultado com esses filtros.</td></tr>`;
       return;
     }
 
@@ -946,8 +1197,11 @@
       const celebrating = isCelebrating(r);
 
       const [gTxt,gCls] = statusText("geral", r.geral);
-      const [cTxt,cCls] = statusText("caixa", r.caixa);
-      const [aTxt,aCls] = statusText("agehab", r.agehab);
+      const [rTxt,rCls] = statusText("repasse", r.repasse);
+      const [cTxt,cCls] = statusText("statusCaixa", r.statusCaixa);
+      const [aTxt,aCls] = statusText("statusAgehab", r.statusAgehab);
+      const [sTxt,sCls] = statusText("sinal", r.sinal);
+      const [fTxt,fCls] = statusText("fiador", r.fiador);
 
       const prio = isHighPriority(r) ? prioBadge() : "";
       const url = UPDATE_PAGE_URL(r);
@@ -964,8 +1218,11 @@
           <td style="font-weight:800">${esc(r.corretor)}</td>
           <td>${esc(r.cca)}</td>
           <td class="statusTd">${pill(gTxt, gCls, moving, celebrating)}</td>
+          <td class="statusTd">${pill(rTxt, rCls, moving, celebrating)}</td>
           <td class="statusTd">${pill(cTxt, cCls, moving, celebrating)}</td>
           <td class="statusTd">${pill(aTxt, aCls, moving, celebrating)}</td>
+          <td class="statusTd">${pill(sTxt, sCls, moving, celebrating)}</td>
+          <td class="statusTd">${pill(fTxt, fCls, moving, celebrating)}</td>
           <td style="text-align:center">${slaBadge(r.slaCor)}</td>
           <td style="text-align:center">${slaBadge(r.slaCred)}</td>
         </tr>
@@ -975,7 +1232,7 @@
 
   function showError(message){
     $("countInfo").textContent = "0 processo(s)";
-    $("tbody").innerHTML = `<tr><td colspan="8" class="muted" style="padding:14px 12px;color:#fca5a5;">${esc(message)}</td></tr>`;
+    $("tbody").innerHTML = `<tr><td colspan="${TABLE_COLSPAN}" class="muted" style="padding:14px 12px;color:#fca5a5;">${esc(message)}</td></tr>`;
   }
 
   function applyFilters(){
@@ -992,7 +1249,7 @@
       const hitCor = !cor || norm(r.corretor).includes(cor);
       const hitCca = !cca || norm(r.cca) === cca;
       const hitG = !stG || r.geral===stG;
-      const hitC = !stC || r.caixa===stC;
+      const hitC = !stC || r.repasse===stC;
       return hitQ && hitEmp && hitCor && hitCca && hitG && hitC;
     });
 

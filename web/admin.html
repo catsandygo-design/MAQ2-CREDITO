@@ -27,9 +27,26 @@
         linear-gradient(180deg,var(--bg),var(--bg2));
       padding:18px 14px;
     }
+    #bhCanvas{
+      position:fixed;
+      inset:0;
+      width:100%;
+      height:100%;
+      z-index:0;
+      pointer-events:none;
+      opacity:.72;
+    }
     body.compact-mode{--font-scale:.94}
     body.compact-tight{--font-scale:.88}
-    .wrap{max-width:1300px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+    .wrap{
+      max-width:1300px;
+      margin:0 auto;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      position:relative;
+      z-index:1;
+    }
     .card{
       border:1px solid var(--border);
       border-radius:16px;
@@ -136,6 +153,7 @@
   </style>
 </head>
 <body>
+  <canvas id="bhCanvas" aria-hidden="true"></canvas>
   <div class="wrap">
     <section class="card">
       <div class="top">
@@ -261,6 +279,196 @@
       </div>
     </section>
   </div>
+
+  <script>
+    (function initBlackHoleBg(){
+      const canvas = document.getElementById("bhCanvas");
+      if (!canvas) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+      let rafId = 0;
+      let renderer = null;
+      let mesh = null;
+      let material = null;
+      let geometry = null;
+      let onResize = null;
+
+      const vertexShader = `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = vec4(position, 1.0);
+        }
+      `;
+
+      const fragmentShader = `
+        precision highp float;
+
+        uniform float iTime;
+        uniform vec2 iResolution;
+
+        float hash(vec2 p) {
+          return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+        }
+
+        float noise(vec2 p) {
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          f = f * f * (3.0 - 2.0 * f);
+          return mix(
+            mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+            mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
+            f.y
+          );
+        }
+
+        float fbm(vec2 p) {
+          float v = 0.0;
+          float a = 0.5;
+          for (int i = 0; i < 5; i++) {
+            v += a * noise(p);
+            p *= 2.0;
+            a *= 0.5;
+          }
+          return v;
+        }
+
+        void main() {
+          vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution.xy) / min(iResolution.y, iResolution.x);
+
+          float r = length(uv);
+          float angle_raw = atan(uv.y, uv.x);
+
+          float bgNebula = fbm(uv * 2.5 + iTime * 0.03);
+          vec3 bgColor = mix(vec3(0.0), vec3(0.02, 0.03, 0.06), bgNebula);
+          float vignette = smoothstep(1.2, 0.3, r);
+
+          float suction = iTime * 0.12;
+          vec2 starUV = vec2(
+            r + suction * 0.4,
+            angle_raw + r * 2.5 + iTime * 0.1
+          );
+
+          vec3 starColor = vec3(0.0);
+          vec2 starGrid = starUV * 70.0;
+          vec2 cell = floor(starGrid);
+          float starSeed = hash(cell);
+
+          if (starSeed > 0.995) {
+            vec2 cellOffset = fract(starGrid) - 0.5;
+            float starDist = length(cellOffset);
+            float starCore = smoothstep(0.25, 0.0, starDist);
+            float twinkle = sin(iTime * 3.0 + starSeed * 40.0) * 0.5 + 0.5;
+            float maskStars = smoothstep(0.25, 0.5, r);
+            vec3 starBase = vec3(0.85, 0.9, 1.0);
+            starColor = starBase * twinkle * starCore * maskStars;
+          }
+
+          float angle = angle_raw + iTime * 0.2;
+          float horizon = 0.16;
+          float bending = 0.16 / (r + 0.01);
+          float pr = length(uv * (1.0 - bending));
+
+          float plasma = fbm(vec2(pr * 6.0, angle * 3.0 - iTime * 0.05));
+          float detail = pow(fbm(vec2(pr * 16.0, angle * 9.0 - iTime * 0.1)), 3.0) * 4.0;
+
+          float diskMask = smoothstep(0.7, 0.25, pr) * smoothstep(horizon - 0.05, horizon + 0.09, pr);
+
+          vec3 fire = vec3(1.0, 0.45, 0.12);
+          vec3 white = vec3(1.0, 0.95, 0.9);
+
+          vec3 color = bgColor * vignette;
+          color += fire * diskMask * (plasma + detail * 0.8);
+          color += white * detail * diskMask * 0.4;
+
+          float photonRing = smoothstep(0.012, 0.0, abs(r - horizon));
+          color += white * photonRing * 1.4;
+
+          float distToHorizon = max(abs(r - horizon), 0.012);
+          float glow = 0.012 / distToHorizon;
+          glow = clamp(glow, 0.0, 2.5);
+          color += fire * glow * 0.5;
+
+          float chroma = smoothstep(0.02, 0.0, abs(r - horizon));
+          color.r += chroma * 0.18;
+          color.b += chroma * -0.05;
+
+          if (r < horizon) color = vec3(0.0);
+
+          color += starColor;
+          color = pow(color, vec3(0.95));
+          gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
+        }
+      `;
+
+      async function boot(){
+        let THREE = null;
+        try {
+          THREE = await import("https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.module.js");
+        } catch (error) {
+          console.warn("Efeito de fundo indisponivel:", error);
+          return;
+        }
+
+        const uniforms = {
+          iTime: { value: 0 },
+          iResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+        };
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+        renderer = new THREE.WebGLRenderer({
+          canvas,
+          antialias: true,
+          alpha: true,
+          powerPreference: "high-performance",
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight, false);
+
+        geometry = new THREE.PlaneGeometry(2, 2);
+        material = new THREE.ShaderMaterial({
+          uniforms,
+          vertexShader,
+          fragmentShader,
+        });
+        mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+
+        const loop = (time) => {
+          if (document.hidden) {
+            rafId = requestAnimationFrame(loop);
+            return;
+          }
+          uniforms.iTime.value = time * 0.001;
+          renderer.render(scene, camera);
+          rafId = requestAnimationFrame(loop);
+        };
+        rafId = requestAnimationFrame(loop);
+
+        onResize = () => {
+          const w = window.innerWidth;
+          const h = window.innerHeight;
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+          renderer.setSize(w, h, false);
+          uniforms.iResolution.value.set(w, h);
+        };
+        window.addEventListener("resize", onResize, { passive: true });
+      }
+
+      boot();
+
+      window.addEventListener("beforeunload", () => {
+        if (rafId) cancelAnimationFrame(rafId);
+        if (onResize) window.removeEventListener("resize", onResize);
+        if (mesh?.parent) mesh.parent.remove(mesh);
+        geometry?.dispose?.();
+        material?.dispose?.();
+        renderer?.dispose?.();
+      });
+    })();
+  </script>
 
   <script>
     const feedback = document.getElementById("feedback");

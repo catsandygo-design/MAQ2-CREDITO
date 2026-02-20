@@ -48,6 +48,16 @@
       color:var(--text);
     }
 
+    #bhCanvas{
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      opacity: .72;
+    }
+
     /* ===== Layout ===== */
     .wrap{
       height:100%;
@@ -57,6 +67,8 @@
       display:flex;
       flex-direction:column;
       gap:12px;
+      position: relative;
+      z-index: 1;
     }
 
     .topbar{
@@ -409,26 +421,6 @@
         0 0 15px var(--tone-glow);
       animation: neonToneFlow var(--tone-speed) linear infinite, neonTonePulse 2.1s ease-in-out infinite;
     }
-    .status.status-pill.status-nao-aplica{
-      --tone-1: #e5e7eb;
-      --tone-2: #94a3b8;
-      --tone-3: #1f2937;
-      --tone-glow: rgba(148,163,184,.45);
-      --tone-text: #e5e7eb;
-      --tone-speed: 6s;
-      border-color: transparent !important;
-      color: var(--tone-text) !important;
-      background:
-        linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
-        linear-gradient(120deg, var(--tone-1), var(--tone-2), var(--tone-3), var(--tone-2), var(--tone-1)) border-box !important;
-      background-size:100% 100%, 230% 230% !important;
-      text-shadow: 0 0 8px var(--tone-glow);
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,.06),
-        0 0 0 1px rgba(15,23,42,.92),
-        0 0 15px var(--tone-glow);
-      animation: neonToneFlow var(--tone-speed) linear infinite, neonTonePulse 2s ease-in-out infinite;
-    }
     @media (prefers-reduced-motion: reduce){
       .pill,
       .sla,
@@ -637,15 +629,6 @@
       --tone-speed: 5.7s;
     }
 
-    .status.status-credit-pill.status-nao-aplica{
-      --tone-1: #e5e7eb;
-      --tone-2: #94a3b8;
-      --tone-3: #1f2937;
-      --tone-glow: rgba(148,163,184,.45);
-      --tone-text: #e5e7eb;
-      --tone-speed: 6s;
-    }
-
     .tiny{
       font-size: var(--fs-xs);
       color: var(--muted);
@@ -725,6 +708,7 @@
 </head>
 
 <body>
+<canvas id="bhCanvas" aria-hidden="true"></canvas>
 <div class="wrap">
 
   <!-- ===== Top ===== -->
@@ -1412,6 +1396,196 @@ DIVORCIADO: Certidão averbada.</td>
 </div>
 
 <script>
+  (function initBlackHoleBg(){
+    const canvas = document.getElementById("bhCanvas");
+    if (!canvas) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let rafId = 0;
+    let renderer = null;
+    let mesh = null;
+    let material = null;
+    let geometry = null;
+    let onResize = null;
+
+    const vertexShader = `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = vec4(position, 1.0);
+      }
+    `;
+
+    const fragmentShader = `
+      precision highp float;
+
+      uniform float iTime;
+      uniform vec2 iResolution;
+
+      float hash(vec2 p) {
+        return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+      }
+
+      float noise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        return mix(
+          mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+          mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
+          f.y
+        );
+      }
+
+      float fbm(vec2 p) {
+        float v = 0.0;
+        float a = 0.5;
+        for (int i = 0; i < 5; i++) {
+          v += a * noise(p);
+          p *= 2.0;
+          a *= 0.5;
+        }
+        return v;
+      }
+
+      void main() {
+        vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution.xy) / min(iResolution.y, iResolution.x);
+
+        float r = length(uv);
+        float angle_raw = atan(uv.y, uv.x);
+
+        float bgNebula = fbm(uv * 2.5 + iTime * 0.03);
+        vec3 bgColor = mix(vec3(0.0), vec3(0.02, 0.03, 0.06), bgNebula);
+        float vignette = smoothstep(1.2, 0.3, r);
+
+        float suction = iTime * 0.12;
+        vec2 starUV = vec2(
+          r + suction * 0.4,
+          angle_raw + r * 2.5 + iTime * 0.1
+        );
+
+        vec3 starColor = vec3(0.0);
+        vec2 starGrid = starUV * 70.0;
+        vec2 cell = floor(starGrid);
+        float starSeed = hash(cell);
+
+        if (starSeed > 0.995) {
+          vec2 cellOffset = fract(starGrid) - 0.5;
+          float starDist = length(cellOffset);
+          float starCore = smoothstep(0.25, 0.0, starDist);
+          float twinkle = sin(iTime * 3.0 + starSeed * 40.0) * 0.5 + 0.5;
+          float maskStars = smoothstep(0.25, 0.5, r);
+          vec3 starBase = vec3(0.85, 0.9, 1.0);
+          starColor = starBase * twinkle * starCore * maskStars;
+        }
+
+        float angle = angle_raw + iTime * 0.2;
+        float horizon = 0.16;
+        float bending = 0.16 / (r + 0.01);
+        float pr = length(uv * (1.0 - bending));
+
+        float plasma = fbm(vec2(pr * 6.0, angle * 3.0 - iTime * 0.05));
+        float detail = pow(fbm(vec2(pr * 16.0, angle * 9.0 - iTime * 0.1)), 3.0) * 4.0;
+
+        float diskMask = smoothstep(0.7, 0.25, pr) * smoothstep(horizon - 0.05, horizon + 0.09, pr);
+
+        vec3 fire = vec3(1.0, 0.45, 0.12);
+        vec3 white = vec3(1.0, 0.95, 0.9);
+
+        vec3 color = bgColor * vignette;
+        color += fire * diskMask * (plasma + detail * 0.8);
+        color += white * detail * diskMask * 0.4;
+
+        float photonRing = smoothstep(0.012, 0.0, abs(r - horizon));
+        color += white * photonRing * 1.4;
+
+        float distToHorizon = max(abs(r - horizon), 0.012);
+        float glow = 0.012 / distToHorizon;
+        glow = clamp(glow, 0.0, 2.5);
+        color += fire * glow * 0.5;
+
+        float chroma = smoothstep(0.02, 0.0, abs(r - horizon));
+        color.r += chroma * 0.18;
+        color.b += chroma * -0.05;
+
+        if (r < horizon) color = vec3(0.0);
+
+        color += starColor;
+        color = pow(color, vec3(0.95));
+        gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
+      }
+    `;
+
+    async function boot(){
+      let THREE = null;
+      try {
+        THREE = await import("https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.module.js");
+      } catch (error) {
+        console.warn("Efeito de fundo indisponivel:", error);
+        return;
+      }
+
+      const uniforms = {
+        iTime: { value: 0 },
+        iResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+      };
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+      renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: true,
+        alpha: true,
+        powerPreference: "high-performance",
+      });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+
+      geometry = new THREE.PlaneGeometry(2, 2);
+      material = new THREE.ShaderMaterial({
+        uniforms,
+        vertexShader,
+        fragmentShader,
+      });
+      mesh = new THREE.Mesh(geometry, material);
+      scene.add(mesh);
+
+      const loop = (time) => {
+        if (document.hidden) {
+          rafId = requestAnimationFrame(loop);
+          return;
+        }
+        uniforms.iTime.value = time * 0.001;
+        renderer.render(scene, camera);
+        rafId = requestAnimationFrame(loop);
+      };
+      rafId = requestAnimationFrame(loop);
+
+      onResize = () => {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(w, h, false);
+        uniforms.iResolution.value.set(w, h);
+      };
+      window.addEventListener("resize", onResize, { passive: true });
+    }
+
+    boot();
+
+    window.addEventListener("beforeunload", () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      if (onResize) window.removeEventListener("resize", onResize);
+      if (mesh?.parent) mesh.parent.remove(mesh);
+      geometry?.dispose?.();
+      material?.dispose?.();
+      renderer?.dispose?.();
+    });
+  })();
+</script>
+
+<script>
   // =========================
   // Helpers
   // =========================
@@ -1557,7 +1731,7 @@ DIVORCIADO: Certidão averbada.</td>
   // =========================
   function applySelectColor(sel){
     const val = toLower(sel.value);
-    sel.classList.remove("status-pendente","status-enviado","status-nao-aplica");
+    sel.classList.remove("status-pendente","status-enviado");
     sel.style.borderColor = "";
     sel.style.boxShadow = "";
     sel.style.background = "";
@@ -1567,8 +1741,6 @@ DIVORCIADO: Certidão averbada.</td>
       sel.classList.add("status-pendente");
     }else if(val==="enviado"){
       sel.classList.add("status-enviado");
-    }else if(val==="nao_aplica"){
-      sel.classList.add("status-nao-aplica");
     }
   }
 
@@ -2170,7 +2342,7 @@ DIVORCIADO: Certidão averbada.</td>
     function toUiDocStatus(value) {
       const s = String(value || "").toUpperCase();
       if (s === "ENVIADO" || s === "APROVADO") return "Enviado";
-      if (s === "NAO_APLICA") return "Nao_Aplica";
+      if (s === "NAO_APLICA") return "Enviado";
       return "Pendente";
     }
 
@@ -2180,7 +2352,7 @@ DIVORCIADO: Certidão averbada.</td>
       if (s === "APROVADO") return "aprovado";
       if (s === "REPROVADO") return "reprovado";
       if (s === "PENDENCIADO") return "pendenciado";
-      if (s === "NAO_APLICA") return "nao_aplica";
+      if (s === "NAO_APLICA") return "aprovado";
       return "analise";
     }
 
@@ -2197,15 +2369,13 @@ DIVORCIADO: Certidão averbada.</td>
         "status-analise",
         "status-pendenciado",
         "status-aprovado",
-        "status-reprovado",
-        "status-nao-aplica"
+        "status-reprovado"
       );
       if (value === "aguardando_envio") select.classList.add("status-aguardando-envio");
       if (value === "analise") select.classList.add("status-analise");
       if (value === "pendenciado") select.classList.add("status-pendenciado");
       if (value === "aprovado") select.classList.add("status-aprovado");
       if (value === "reprovado") select.classList.add("status-reprovado");
-      if (value === "nao_aplica") select.classList.add("status-nao-aplica");
     }
 
     function ensureCreditoColumns() {
@@ -2247,19 +2417,12 @@ DIVORCIADO: Certidão averbada.</td>
             '<option value="pendenciado">Pendente</option>',
             '<option value="aprovado">Aprovado</option>',
             '<option value="reprovado">Reprovado</option>',
-            '<option value="nao_aplica">Nao se aplica</option>',
           ].join("");
           td.appendChild(select);
           tr.appendChild(td);
 
           const docSelect = tr.querySelector("select.status.status-pill[data-doc][data-id]");
           if (docSelect && !docSelect.dataset.creditoBound) {
-            if (!Array.from(docSelect.options || []).some((opt) => norm(opt.value || opt.textContent) === "nao_aplica")) {
-              const opt = document.createElement("option");
-              opt.value = "Nao_Aplica";
-              opt.textContent = "Nao se aplica";
-              docSelect.appendChild(opt);
-            }
             docSelect.dataset.creditoBound = "1";
             docSelect.addEventListener("change", () => {
               syncDocCreditoStatus();
@@ -2278,9 +2441,6 @@ DIVORCIADO: Certidão averbada.</td>
       const becamePending = previousDocStatus !== "PENDENTE" && statusDocBackend === "PENDENTE";
       const processoCreditoDoc = docCreditoFromUi(byId("status-credito")?.value || "em_analise");
 
-      if (statusDocBackend === "NAO_APLICA") {
-        return "NAO_APLICA";
-      }
       if (statusDocBackend === "ENVIADO" || statusDocBackend === "APROVADO") {
         return (processoCreditoDoc === "APROVADO" || processoCreditoDoc === "REPROVADO")
           ? processoCreditoDoc
@@ -2299,7 +2459,7 @@ DIVORCIADO: Certidão averbada.</td>
       const statusDocUi = norm(row.select.value).replace(/\s+/g, "_");
       const statusDocBackend = statusDocUi === "enviado"
         ? "ENVIADO"
-        : (statusDocUi === "nao_aplica" ? "NAO_APLICA" : "PENDENTE");
+        : "PENDENTE";
       const backendValue = backendStatus
         ? String(backendStatus || "").toUpperCase()
         : deriveDocCreditoStatus(row, statusDocBackend);
@@ -2358,19 +2518,11 @@ DIVORCIADO: Certidão averbada.</td>
         if (sel.dataset.triMounted === "1") return;
         sel.dataset.triMounted = "1";
 
-        if (!Array.from(sel.options || []).some((opt) => norm(opt.value || opt.textContent) === "nao_aplica")) {
-          const opt = document.createElement("option");
-          opt.value = "Nao_Aplica";
-          opt.textContent = "Nao se aplica";
-          sel.appendChild(opt);
-        }
-
         const wrap = document.createElement("div");
         wrap.className = "tri-doc";
         const choices = [
           { value: "Pendente", label: "Pendente" },
           { value: "Enviado", label: "Aprovado" },
-          { value: "Nao_Aplica", label: "Nao se aplica" },
         ];
 
         choices.forEach((choice) => {
@@ -2556,7 +2708,7 @@ DIVORCIADO: Certidão averbada.</td>
         const statusDocUi = norm(row.select.value).replace(/\s+/g, "_");
         const statusDoc = statusDocUi === "enviado"
           ? "ENVIADO"
-          : (statusDocUi === "nao_aplica" ? "NAO_APLICA" : "PENDENTE");
+          : "PENDENTE";
         const key = docLookupKey(row.categoria, row.nome, row.docId);
         const previous = docSnapshot.get(key) || {};
         const previousDocStatus = String(previous.status_doc || "").toUpperCase();
@@ -2567,9 +2719,7 @@ DIVORCIADO: Certidão averbada.</td>
         let statusCreditoDoc = "AGUARDANDO_ENVIO";
         let pendenciaInfo = null;
 
-        if (statusDoc === "NAO_APLICA") {
-          statusCreditoDoc = "NAO_APLICA";
-        } else if (statusDoc === "ENVIADO") {
+        if (statusDoc === "ENVIADO") {
           statusCreditoDoc = (processoCreditoDoc === "APROVADO" || processoCreditoDoc === "REPROVADO")
             ? processoCreditoDoc
             : "ANALISE";
