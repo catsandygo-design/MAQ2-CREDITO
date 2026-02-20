@@ -123,6 +123,54 @@
   @media (max-width: 1200px){ .filters{grid-template-columns: 1fr 1fr 1fr} }
   @media (max-width: 760px){ .filters{grid-template-columns: 1fr} }
 
+  .importSection{
+    display:flex;
+    gap:12px;
+    align-items:stretch;
+    border:1px solid rgba(148,163,184,.14);
+    border-radius:14px;
+    background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+    padding:10px;
+  }
+  .importFields{
+    display:grid;
+    gap:8px;
+    flex:1;
+  }
+  .importRow{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:center;
+  }
+  .importHint{
+    color:var(--muted);
+    font-size:11px;
+  }
+  .importMeter{
+    width:14px;
+    min-width:14px;
+    border-radius:999px;
+    border:1px solid rgba(148,163,184,.22);
+    background: rgba(2,6,23,.7);
+    overflow:hidden;
+    position:relative;
+  }
+  .importFill{
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:0;
+    height:0%;
+    background: linear-gradient(180deg, rgba(34,197,94,.95), rgba(16,185,129,.95));
+    transition:height .25s ease;
+  }
+  .importMsg{
+    color:var(--muted);
+    font-size:11px;
+    min-height:16px;
+  }
+
   .field{display:flex;flex-direction:column;gap:6px}
   .field label{font-size:11px;color:var(--muted)}
   .field input,.field select{
@@ -512,32 +560,28 @@
     </div>
 
     <div class="field">
-      <label>Status geral</label>
+      <label>Estagio comercial</label>
       <select id="stG">
         <option value="">Todos</option>
-        <option value="novo">Novo</option>
-        <option value="em_andamento">Em andamento</option>
-        <option value="pendenciado">Pendenciado</option>
-        <option value="aprovado">Aprovado</option>
-        <option value="reprovado">Reprovado</option>
-        <option value="distrato">Distrato</option>
-        <option value="cancelado">Cancelado</option>
+        <option value="reserva">Reserva</option>
+        <option value="em_processo">Em Processo</option>
+        <option value="credito">Credito</option>
+        <option value="secretaria_vendas">Secretaria de Vendas</option>
+        <option value="assinatura_diretoria">Assinatura Diretoria</option>
+        <option value="autorizacao_diretoria">Autorizacao Diretoria</option>
+        <option value="envio_sienge">Envio Sienge</option>
+        <option value="venda_finalizada">Venda Finalizada</option>
       </select>
     </div>
 
     <div class="field">
-      <label>Status Caixa</label>
+      <label>Etapa repasse</label>
       <select id="stC">
         <option value="">Todos</option>
-        <option value="analise_credito">Analise Credito</option>
-        <option value="pendente_credito">Pendente Credito</option>
-        <option value="analise_cca">Analise CCA</option>
-        <option value="pendente_cca">Pendente CCA</option>
-        <option value="aguardando_conformidade">Aguardando Conformidade</option>
-        <option value="conforme">Conforme</option>
-        <option value="tratando_produto">Tratando Produto</option>
-        <option value="agendado">Agendado</option>
-        <option value="assinatura_caixa">Assinatura Caixa</option>
+        <option value="em_repasse">Em Repasse</option>
+        <option value="inicio_repasse">Inicio Repasse</option>
+        <option value="assinatura_autorizada">Assinatura Autorizada</option>
+        <option value="sem_repasse">Sem Repasse</option>
       </select>
     </div>
 
@@ -547,6 +591,25 @@
     </div>
   </div>
 
+  <section class="importSection" aria-label="Importacao por planilha">
+    <div class="importFields">
+      <div class="importRow">
+        <input id="fileImport" type="file" accept=".csv,.xlsx" />
+        <button class="btn primary" id="btnImportar" type="button">Importar Planilha</button>
+      </div>
+      <div class="importRow">
+        <input id="metaMensal" type="number" min="0" step="1" placeholder="Meta mensal do gestor" />
+        <button class="btn" id="btnSalvarMeta" type="button">Salvar Meta</button>
+      </div>
+      <div class="importHint" id="metaHint">Meta mensal definida pelo analista.</div>
+      <div class="importHint">Colunas obrigatorias: nome_cliente, data_cadastro, estagio, empreendimento, corretor, imobiliaria.</div>
+      <div class="importMsg" id="importMsg">Aguardando arquivo...</div>
+    </div>
+    <div class="importMeter" title="Progresso da importacao">
+      <div class="importFill" id="importFill"></div>
+    </div>
+  </section>
+
   <div class="insights" id="insights"></div>
 
   <div class="card">
@@ -554,7 +617,7 @@
       <div class="left">
         <h2>Fila de Processos</h2>
         <div class="sub">
-          "Prioridade alta" quando <b>geral = pendenciado</b> e <b>SLA credito >= 48h</b>.
+          "Prioridade alta" quando <b>cliente fica no Comercial por mais de 15 dias</b> sem entrar no Repasse.
           <span class="hintRow">Clique no nome do cliente para abrir a pagina de atualizacao.</span>
         </div>
       </div>
@@ -582,9 +645,9 @@
               <th>Cliente</th>
               <th>Corretor</th>
               <th>CCA</th>
-              <th>Geral</th>
-              <th>Caixa</th>
-              <th>Agehab</th>
+              <th>Estagio</th>
+              <th>Repasse</th>
+              <th>Fila</th>
               <th>SLA Comercial</th>
               <th>SLA Credito</th>
             </tr>
@@ -608,31 +671,24 @@
 
   const LABELS = {
     geral: {
-      novo: "Novo",
-      em_andamento: "Em andamento",
-      pendenciado: "Pendenciado",
-      aprovado: "Aprovado",
-      reprovado: "Reprovado",
-      distrato: "Distrato",
-      cancelado: "Cancelado",
+      reserva: "Reserva",
+      em_processo: "Em Processo",
+      credito: "Credito",
+      secretaria_vendas: "Secretaria de Vendas",
+      assinatura_diretoria: "Assinatura Diretoria",
+      autorizacao_diretoria: "Autorizacao Diretoria",
+      envio_sienge: "Envio Sienge",
+      venda_finalizada: "Venda Finalizada",
     },
     caixa: {
-      analise_credito: "Analise Credito",
-      pendente_credito: "Pendente Credito",
-      analise_cca: "Analise CCA",
-      pendente_cca: "Pendente CCA",
-      aguardando_conformidade: "Aguardando Conformidade",
-      conforme: "Conforme",
-      tratando_produto: "Tratando Produto",
-      agendado: "Agendado",
-      assinatura_caixa: "Assinatura Caixa",
+      em_repasse: "Em Repasse",
+      inicio_repasse: "Inicio Repasse",
+      assinatura_autorizada: "Assinatura Autorizada",
+      sem_repasse: "Sem Repasse",
     },
     agehab: {
-      analise_credito: "Analise Credito",
-      pendente_credito: "Pendente Credito",
-      envio_agehab: "Envio Agehab",
-      pendente_agehab: "Pendente Agehab",
-      validado_agehab: "Validado Agehab",
+      comercial: "Comercial",
+      repasse: "Repasse",
     },
   };
 
@@ -640,10 +696,17 @@
   let loading = false;
   let history = [];
   let ccasLoaded = false;
+  let metaLoaded = false;
   let lastRefreshAt = 0;
 
   const $ = (id) => document.getElementById(id);
   const norm = (s) => String(s || "").trim().toLowerCase();
+  const setImportProgress = (percent) => {
+    const fill = $("importFill");
+    if (!fill) return;
+    const safe = Math.max(0, Math.min(100, Number(percent || 0)));
+    fill.style.height = `${safe}%`;
+  };
 
   $("refreshLabel").textContent = `${REFRESH_SECONDS}s`;
   $("slaRuleLabel").textContent = `>=${SLA_BAD}h`;
@@ -667,6 +730,53 @@
     return data;
   }
 
+  async function uploadPlanilha(file) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${API_BASE}/processos/importar`, true);
+      xhr.withCredentials = true;
+
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable) return;
+        const pct = Math.round((event.loaded / event.total) * 100);
+        setImportProgress(pct);
+      };
+
+      xhr.onerror = () => reject(new Error("Falha de rede durante a importacao."));
+      xhr.onload = () => {
+        let data = {};
+        try { data = JSON.parse(xhr.responseText || "{}"); } catch (_) {}
+        if (xhr.status === 401) {
+          window.location.href = "/login";
+          reject(new Error("Nao autenticado"));
+          return;
+        }
+        if (xhr.status < 200 || xhr.status >= 300) {
+          reject(new Error(data.detail || "Falha ao importar planilha."));
+          return;
+        }
+        resolve(data);
+      };
+
+      const formData = new FormData();
+      formData.append("file", file);
+      xhr.send(formData);
+    });
+  }
+
+  async function loadMetaMensal() {
+    const metaInput = $("metaMensal");
+    const metaHint = $("metaHint");
+    if (!metaInput) return;
+    const data = await api("/gestor/meta");
+    const meta = Number(data?.meta ?? 0);
+    metaInput.value = String(Number.isFinite(meta) && meta >= 0 ? Math.round(meta) : 0);
+    if (metaHint) {
+      metaHint.textContent = `Meta mensal atual: ${metaInput.value || "0"} (definida pelo analista).`;
+    }
+    metaLoaded = true;
+  }
+
   function esc(value){
     return String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -688,9 +798,9 @@
 
   function classForStatus(value){
     const v = statusFromBackend(value);
-    if (["aprovado", "conforme", "validado_agehab", "pago", "finalizado"].includes(v)) return "ok";
+    if (["venda_finalizada", "assinatura_autorizada", "aprovado", "conforme", "validado_agehab", "pago", "finalizado"].includes(v)) return "ok";
     if (["pendenciado", "reprovado", "cancelado", "distrato", "pendente_credito", "pendente_cca", "pendente_agehab", "pendente"].includes(v)) return "bad";
-    if (["novo", "nao_tem"].includes(v)) return "neutral";
+    if (["novo", "nao_tem", "reserva", "sem_repasse", "comercial", "repasse"].includes(v)) return "neutral";
     return "warn";
   }
 
@@ -713,6 +823,20 @@
     return toHours(item?.[daysField], item?.created_at);
   }
 
+  function toProcessDate(value){
+    if (!value) return null;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed;
+  }
+
+  function openDays(row){
+    const source = toProcessDate(row.dataCadastroOrigem) || toProcessDate(row.createdAt);
+    if (!source) return 0;
+    const diff = Date.now() - source.getTime();
+    return Math.max(0, Math.floor(diff / 86400000));
+  }
+
   function fromBackend(item){
     return {
       processo_id: item.processo_id,
@@ -721,14 +845,16 @@
       corretor: item.corretor || "-",
       cca: item.cca_responsavel || "-",
       credito: statusFromBackend(item.status_credito),
-      geral: statusFromBackend(item.status_geral),
-      caixa: statusFromBackend(item.status_cca),
-      agehab: statusFromBackend(item.status_agehab),
+      geral: statusFromBackend(item.estagio_comercial || item.status_geral),
+      caixa: statusFromBackend(item.etapa_repasse || "sem_repasse"),
+      agehab: statusFromBackend(item.fila_atual || "comercial"),
       sinal: statusFromBackend(item.status_sinal),
       fiador: statusFromBackend(item.status_fiador),
       slaCor: readSlaHours(item, "sla_corretor_horas", "sla_corretor_dias"),
       slaCred: readSlaHours(item, "sla_analista_horas", "sla_credito_dias"),
       slaCca: readSlaHours(item, "sla_cca_horas", "sla_cca_dias"),
+      dataCadastroOrigem: item.data_cadastro_origem || null,
+      createdAt: item.created_at || null,
     };
   }
 
@@ -800,18 +926,11 @@
   }
 
   function isWalking(row){
-    const anyAnalise =
-      row.credito === "em_analise" ||
-      row.geral === "em_andamento" ||
-      row.caixa.includes("analise") ||
-      row.agehab.includes("analise");
-
-    const concluido = ["aprovado", "reprovado", "cancelado", "distrato"].includes(row.geral);
-    return anyAnalise && !concluido;
+    return !isCelebrating(row);
   }
 
   function isCelebrating(row){
-    return ["aprovado", "reprovado", "cancelado", "distrato"].includes(row.geral) || row.caixa === "assinatura_caixa";
+    return row.geral === "venda_finalizada" || row.caixa === "assinatura_autorizada";
   }
 
   function slaClass(hours){
@@ -826,7 +945,7 @@
   }
 
   function isHighPriority(row){
-    return row.geral === "pendenciado" && Number(row.slaCred || 0) >= SLA_BAD;
+    return row.agehab === "comercial" && openDays(row) > 15;
   }
   function prioBadge(){
     return `<span class="prio"><span class="dot"></span>PRIORIDADE ALTA</span>`;
@@ -835,10 +954,11 @@
   function severityScore(row){
     const slaC = Number(row.slaCred||0);
     const slaR = Number(row.slaCor||0);
+    const aging = openDays(row);
     const prio = isHighPriority(row) ? 10000 : 0;
     const sCritCred = (slaC >= SLA_BAD ? 4000 : slaC >= SLA_WARN ? 2000 : 0);
     const sCritCor  = (slaR >= SLA_BAD ? 2000 : slaR >= SLA_WARN ? 1000 : 0);
-    return prio + sCritCred + sCritCor + (slaC * 3) + slaR;
+    return prio + sCritCred + sCritCor + (slaC * 3) + slaR + (aging * 10);
   }
   function sortCriticalFirst(rows){
     return [...rows].sort((a,b)=> severityScore(b) - severityScore(a));
@@ -849,9 +969,9 @@
   function trackHistory(rows){
     const count = (pred)=> rows.reduce((acc,r)=> acc + (pred(r)?1:0), 0);
     const total = rows.length;
-    const pend = count(r=> r.geral === "pendenciado");
-    const andamento = count(r=> r.geral === "em_andamento");
-    history.push({ t: Date.now(), total, pend, andamento });
+    const comercial = count(r => r.agehab === "comercial");
+    const repasse = count(r => r.agehab === "repasse");
+    history.push({ t: Date.now(), total, comercial, repasse });
     if(history.length > HISTORY_MAX) history.shift();
   }
 
@@ -859,9 +979,10 @@
     const total = rows.length || 0;
     const count = (pred)=> rows.reduce((acc,r)=> acc + (pred(r)?1:0), 0);
 
-    const aprov = count(r=> r.geral === "aprovado");
-    const pend = count(r=> r.geral === "pendenciado");
-    const and = count(r=> r.geral === "em_andamento");
+    const comercial = count(r => r.agehab === "comercial");
+    const repasse = count(r => r.agehab === "repasse");
+    const finalizados = count(r => r.geral === "venda_finalizada");
+    const assinados = count(r => r.caixa === "assinatura_autorizada");
     const prios = count(r=> isHighPriority(r));
 
     const avg = (arr)=> arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length) : 0;
@@ -872,10 +993,11 @@
 
     $("insights").innerHTML = `
       <div class="kpi"><div class="k">Total na fila</div><div class="v">${total}</div><div class="s">apos filtros</div></div>
-      <div class="kpi good"><div class="k">Aprovados</div><div class="v">${aprov}</div><div class="s">status geral</div></div>
-      <div class="kpi bad"><div class="k">Pendenciados</div><div class="v">${pend}</div><div class="s">status geral</div></div>
-      <div class="kpi warn"><div class="k">Em andamento</div><div class="v">${and}</div><div class="s">status geral</div></div>
-      <div class="kpi bad"><div class="k">Prioridade alta</div><div class="v">${prios}</div><div class="s">pendenciado + SLA>=${SLA_BAD}h</div></div>
+      <div class="kpi good"><div class="k">Comercial</div><div class="v">${comercial}</div><div class="s">fila comercial</div></div>
+      <div class="kpi warn"><div class="k">Repasse</div><div class="v">${repasse}</div><div class="s">fila repasse</div></div>
+      <div class="kpi good"><div class="k">Venda finalizada</div><div class="v">${finalizados}</div><div class="s">estagio comercial</div></div>
+      <div class="kpi good"><div class="k">Assinatura autorizada</div><div class="v">${assinados}</div><div class="s">etapa repasse</div></div>
+      <div class="kpi bad"><div class="k">Prioridade alta</div><div class="v">${prios}</div><div class="s">comercial acima de 15 dias</div></div>
       <div class="kpi ${clsSla(avgSlaCor)}"><div class="k">SLA medio comercial</div><div class="v">${avgSlaCor}h</div><div class="s">media do filtro</div></div>
       <div class="kpi ${clsSla(avgSlaCred)}">
         <div class="k">SLA medio credito</div>
@@ -1009,6 +1131,9 @@
       if (!ccasLoaded) {
         await loadCcaFilter();
       }
+      if (!metaLoaded) {
+        await loadMetaMensal();
+      }
       await loadData();
       applyFilters();
       lastRefreshAt = Date.now();
@@ -1049,6 +1174,61 @@
   });
   ["ccaFilter","stG","stC"].forEach(id=>{
     $(id).addEventListener("change", applyFilters);
+  });
+
+  $("btnSalvarMeta").addEventListener("click", async () => {
+    const metaInput = $("metaMensal");
+    const metaHint = $("metaHint");
+    const raw = String(metaInput?.value || "").trim();
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      if (metaHint) metaHint.textContent = "Informe uma meta valida (numero inteiro >= 0).";
+      return;
+    }
+    const meta = Math.round(parsed);
+    try {
+      const data = await api("/gestor/meta", {
+        method: "PUT",
+        body: JSON.stringify({ meta }),
+      });
+      if (metaInput) metaInput.value = String(Number(data?.meta ?? meta));
+      if (metaHint) metaHint.textContent = `Meta mensal salva: ${metaInput?.value || meta} (definida pelo analista).`;
+    } catch (error) {
+      if (metaHint) metaHint.textContent = `Erro ao salvar meta: ${error.message}`;
+    }
+  });
+
+  $("btnImportar").addEventListener("click", async () => {
+    const fileEl = $("fileImport");
+    const msgEl = $("importMsg");
+    const btn = $("btnImportar");
+    const file = fileEl?.files?.[0];
+    if (!file) {
+      if (msgEl) msgEl.textContent = "Selecione um arquivo .csv ou .xlsx para importar.";
+      return;
+    }
+
+    btn.disabled = true;
+    setImportProgress(0);
+    if (msgEl) msgEl.textContent = "Importando planilha...";
+    try {
+      const data = await uploadPlanilha(file);
+      const total = Number(data?.total_linhas || 0);
+      const importados = Number(data?.importados || 0);
+      const ignorados = Number(data?.ignorados_existentes || 0);
+      const invalidados = Number(data?.invalidados || 0);
+      const finalPct = total > 0 ? Math.round((importados / total) * 100) : 100;
+      setImportProgress(finalPct);
+      if (msgEl) {
+        msgEl.textContent = `Importacao concluida: ${importados} importado(s), ${ignorados} ignorado(s), ${invalidados} invalido(s), total ${total} linha(s) processada(s).`;
+      }
+      await refreshDataAndRender(true);
+    } catch (error) {
+      if (msgEl) msgEl.textContent = `Erro na importacao: ${error.message}`;
+      setImportProgress(0);
+    } finally {
+      btn.disabled = false;
+    }
   });
 
   document.addEventListener("visibilitychange", () => {

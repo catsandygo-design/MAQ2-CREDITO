@@ -1,19 +1,23 @@
 import os
+import io
+import csv
 import uuid
 import logging
 import hashlib
 import hmac
 import secrets
+import calendar
+import unicodedata
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlparse
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, create_engine, text
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, create_engine, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
@@ -31,6 +35,12 @@ SESSION_IDLE_PASSIVE_PATHS = {
     "/app/api/processos",
 }
 SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() in {"1", "true", "yes"}
+CORRETOR_ROUTE_ENABLED = os.getenv("CORRETOR_ROUTE_ENABLED", "false").lower() in {"1", "true", "yes"}
+try:
+    GESTOR_META_MENSAL = max(0, int(os.getenv("GESTOR_META_MENSAL", "0")))
+except ValueError:
+    GESTOR_META_MENSAL = 0
+META_MENSAL_RUNTIME_KEY = "gestor_meta_mensal"
 ROLE_CORRETOR = "corretor"
 ROLE_CCA = "cca"
 ROLE_ANALISTA = "analista"
@@ -64,8 +74,8 @@ try:
     FALL_RISK_DAYS = max(1, int(os.getenv("FALL_RISK_DAYS", "15")))
 except ValueError:
     FALL_RISK_DAYS = 15
-RUNTIME_SCHEMA_REVISION = "2026-02-18-doc-pendencia-v6"
-PENDENCIA_INFO_MIN_LENGTH = 8
+RUNTIME_SCHEMA_REVISION = "2026-02-20-fluxo-v2-import-estagios-v7"
+PENDENCIA_INFO_MIN_LENGTH = 0
 PROCESS_LIST_CACHE: dict[str, dict[str, Any]] = {}
 SEED_USERS_READY = False
 
@@ -269,7 +279,9 @@ def _home_for_role(role: Optional[str]) -> str:
         return "/app/analista"
     if role_key == ROLE_CCA:
         return "/app/cca"
-    return "/app/corretor"
+    if role_key == ROLE_CORRETOR:
+        return "/app/corretor" if CORRETOR_ROUTE_ENABLED else "/login"
+    return "/app/analista"
 
 
 def _new_session(user_id: uuid.UUID, username: str, role: str, must_change_password: bool) -> str:
@@ -514,6 +526,54 @@ PROCESS_FIADOR_STATUSES = {"NAO_TEM", "PENDENTE", "FINALIZADO"}
 PROCESS_GERAL_FINAL_STATUSES = {"APROVADO", "REPROVADO", "DISTRATO", "CANCELADO"}
 PROCESS_CCA_FINAL_STATUSES = {"ASSINATURA_CAIXA", "FINALIZADO"}
 
+ESTAGIO_COMERCIAL_VALUES = [
+    "RESERVA",
+    "EM_PROCESSO",
+    "CREDITO",
+    "SECRETARIA_VENDAS",
+    "ASSINATURA_DIRETORIA",
+    "AUTORIZACAO_DIRETORIA",
+    "ENVIO_SIENGE",
+    "VENDA_FINALIZADA",
+]
+ESTAGIO_COMERCIAL_SET = set(ESTAGIO_COMERCIAL_VALUES)
+ESTAGIO_COMERCIAL_INDEX = {value: idx for idx, value in enumerate(ESTAGIO_COMERCIAL_VALUES)}
+REPASSE_ETAPAS_VALUES = [
+    "EM_REPASSE",
+    "INICIO_REPASSE",
+    "ASSINATURA_AUTORIZADA",
+]
+REPASSE_ETAPAS_SET = set(REPASSE_ETAPAS_VALUES)
+ESTAGIOS_REPASSE_COMERCIAL = {
+    "ASSINATURA_DIRETORIA",
+    "AUTORIZACAO_DIRETORIA",
+    "ENVIO_SIENGE",
+    "VENDA_FINALIZADA",
+}
+ESTAGIOS_DASH_COMERCIAL = {"EM_PROCESSO", "CREDITO", "SECRETARIA_VENDAS"}
+IMPORT_REQUIRED_COLUMNS = {
+    "nome_cliente",
+    "data_cadastro",
+    "estagio",
+    "empreendimento",
+    "corretor",
+    "imobiliaria",
+}
+IMPORT_COLUMN_ALIASES = {
+    "nome": "nome_cliente",
+    "cliente": "nome_cliente",
+    "nome_cliente": "nome_cliente",
+    "nome_do_cliente": "nome_cliente",
+    "data": "data_cadastro",
+    "data_cadastro": "data_cadastro",
+    "data_de_cadastro": "data_cadastro",
+    "estagio": "estagio",
+    "empreendimento": "empreendimento",
+    "obra": "empreendimento",
+    "corretor": "corretor",
+    "imobiliaria": "imobiliaria",
+}
+
 SLA_OWNER_NONE = "NONE"
 SLA_OWNER_CORRETOR = "CORRETOR"
 SLA_OWNER_ANALISTA = "ANALISTA"
@@ -523,6 +583,81 @@ SLA_OWNER_VALUES = {SLA_OWNER_NONE, SLA_OWNER_CORRETOR, SLA_OWNER_ANALISTA, SLA_
 
 def _status_token(value: Optional[str]) -> str:
     return (value or "").strip().upper()
+
+
+def _normalize_text_key(value: Optional[str]) -> str:
+    text = str(value or "").strip().lower()
+    if not text:
+        return ""
+    normalized = unicodedata.normalize("NFKD", text)
+    return "".join(ch for ch in normalized if not unicodedata.combining(ch)).replace(" ", "_")
+
+
+def _process_estagio_comercial(value: Optional[str], fallback: str = "RESERVA") -> str:
+    token = _normalize_text_key(value)
+    aliases = {
+        "reserva": "RESERVA",
+        "em_processo": "EM_PROCESSO",
+        "credito": "CREDITO",
+        "secretaria_vendas": "SECRETARIA_VENDAS",
+        "secretaria_de_vendas": "SECRETARIA_VENDAS",
+        "assinatura_diretoria": "ASSINATURA_DIRETORIA",
+        "autorizacao_diretoria": "AUTORIZACAO_DIRETORIA",
+        "envio_sienge": "ENVIO_SIENGE",
+        "venda_finalizada": "VENDA_FINALIZADA",
+    }
+    mapped = aliases.get(token, "")
+    return mapped if mapped in ESTAGIO_COMERCIAL_SET else fallback
+
+
+def _process_etapa_repasse(value: Optional[str], fallback: Optional[str] = None) -> Optional[str]:
+    token = _normalize_text_key(value)
+    aliases = {
+        "em_repasse": "EM_REPASSE",
+        "inicio_repasse": "INICIO_REPASSE",
+        "assinatura_autorizada": "ASSINATURA_AUTORIZADA",
+    }
+    mapped = aliases.get(token, "")
+    if mapped in REPASSE_ETAPAS_SET:
+        return mapped
+    return fallback
+
+
+def _should_be_in_repasse(processo: "Processo") -> bool:
+    stage = _process_estagio_comercial(getattr(processo, "estagio_comercial", None))
+    return stage in ESTAGIOS_REPASSE_COMERCIAL
+
+
+def _fila_atual_from_processo(processo: "Processo") -> str:
+    if _should_be_in_repasse(processo) or _process_etapa_repasse(getattr(processo, "etapa_repasse", None)):
+        return "REPASSE"
+    return "COMERCIAL"
+
+
+def _can_set_assinatura_autorizada(processo: "Processo") -> bool:
+    stage = _process_estagio_comercial(getattr(processo, "estagio_comercial", None))
+    sinal = _process_sinal_status(getattr(processo, "status_sinal", None))
+    fiador = _process_fiador_status(getattr(processo, "status_fiador", None))
+    return stage == "VENDA_FINALIZADA" and sinal in {"NAO_TEM", "PAGO"} and fiador in {"NAO_TEM", "FINALIZADO"}
+
+
+def _sync_estagio_repasse_rules(processo: "Processo", now: Optional[datetime] = None) -> None:
+    stage = _process_estagio_comercial(getattr(processo, "estagio_comercial", None))
+    processo.estagio_comercial = stage
+    if stage in ESTAGIOS_REPASSE_COMERCIAL and not _process_etapa_repasse(getattr(processo, "etapa_repasse", None)):
+        processo.etapa_repasse = "EM_REPASSE"
+
+    if stage == "RESERVA":
+        processo.status_geral = "NOVO"
+        processo.status_credito = "EM_ANALISE"
+    elif stage == "VENDA_FINALIZADA":
+        processo.status_geral = "APROVADO"
+        processo.status_credito = "APROVADO"
+        processo.status_cca = "ASSINATURA_CAIXA"
+    else:
+        processo.status_geral = "EM_ANDAMENTO"
+        if _status_token(processo.status_credito) == "REPROVADO":
+            processo.status_credito = "EM_ANALISE"
 
 
 def _normalize_sla_owner(value: Optional[str], fallback: str = SLA_OWNER_NONE) -> str:
@@ -657,7 +792,7 @@ def _switch_sla_owner(processo: "Processo", owner: str, now: Optional[datetime] 
 def _process_has_enviado_docs(db: Session, processo_id: uuid.UUID) -> bool:
     row = (
         db.query(Documento.id)
-        .filter(Documento.processo_id == processo_id, Documento.status_doc == "ENVIADO")
+        .filter(Documento.processo_id == processo_id, Documento.status_doc.in_(["ENVIADO", "APROVADO", "NAO_APLICA"]))
         .first()
     )
     return row is not None
@@ -803,8 +938,18 @@ def _stringify_audit_value(value: Any) -> Optional[str]:
 
 def _doc_status(value: Optional[str], fallback: str = "PENDENTE") -> str:
     raw = (value or "").strip().upper()
-    allowed = {"PENDENTE", "ENVIADO"}
+    aliases = {
+        "NAO APLICA": "NAO_APLICA",
+        "N/A": "NAO_APLICA",
+    }
+    raw = aliases.get(raw, raw)
+    allowed = {"PENDENTE", "ENVIADO", "APROVADO", "NAO_APLICA"}
     return raw if raw in allowed else fallback
+
+
+def _doc_is_done(status_doc: Optional[str]) -> bool:
+    token = _doc_status(status_doc, fallback="PENDENTE")
+    return token in {"ENVIADO", "APROVADO", "NAO_APLICA"}
 
 
 def _credit_status(value: Optional[str], fallback: str = "ANALISE") -> str:
@@ -813,9 +958,11 @@ def _credit_status(value: Optional[str], fallback: str = "ANALISE") -> str:
         "EM_ANALISE": "ANALISE",
         "EM ANALISE": "ANALISE",
         "AGUARDANDO ENVIO": "AGUARDANDO_ENVIO",
+        "NAO APLICA": "NAO_APLICA",
+        "N/A": "NAO_APLICA",
     }
     raw = aliases.get(raw, raw)
-    allowed = {"AGUARDANDO_ENVIO", "ANALISE", "PENDENCIADO", "APROVADO", "REPROVADO"}
+    allowed = {"AGUARDANDO_ENVIO", "ANALISE", "PENDENCIADO", "APROVADO", "REPROVADO", "NAO_APLICA"}
     return raw if raw in allowed else fallback
 
 
@@ -838,7 +985,7 @@ DEFAULT_DOCUMENTOS = [
 ]
 
 
-def _ensure_default_documentos(db: Session, processo_id: uuid.UUID) -> None:
+def _ensure_default_documentos(db: Session, processo_id: uuid.UUID, *, autocommit: bool = True) -> None:
     existing = (
         db.query(Documento.categoria, Documento.nome)
         .filter(Documento.processo_id == processo_id)
@@ -862,7 +1009,7 @@ def _ensure_default_documentos(db: Session, processo_id: uuid.UUID) -> None:
         )
         created = True
 
-    if created:
+    if created and autocommit:
         db.commit()
 
 
@@ -878,6 +1025,7 @@ class Cliente(Base):
     corretor: Mapped[Optional[str]] = mapped_column(Text)
     obra: Mapped[Optional[str]] = mapped_column(Text)
     imobiliaria: Mapped[Optional[str]] = mapped_column(Text)
+    data_cadastro_origem: Mapped[Optional[date]] = mapped_column(Date)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     processos: Mapped[list["Processo"]] = relationship(back_populates="cliente", cascade="all, delete-orphan")
@@ -894,6 +1042,8 @@ class Processo(Base):
     status_agehab: Mapped[str] = mapped_column(String, nullable=False, default="ANALISE_CREDITO")
     status_sinal: Mapped[str] = mapped_column(String, nullable=False, default="NAO_TEM")
     status_fiador: Mapped[str] = mapped_column(String, nullable=False, default="NAO_TEM")
+    estagio_comercial: Mapped[str] = mapped_column(String(40), nullable=False, default="RESERVA")
+    etapa_repasse: Mapped[Optional[str]] = mapped_column(String(40))
     cca_responsavel: Mapped[Optional[str]] = mapped_column(String(120))
     pendente_fiador: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     pendente_sinal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -1012,6 +1162,7 @@ class ClienteCreate(BaseModel):
     corretor: Optional[str] = None
     obra: Optional[str] = None
     imobiliaria: Optional[str] = None
+    data_cadastro_origem: Optional[date] = None
 
 
 class ClienteOut(ClienteCreate):
@@ -1030,6 +1181,8 @@ class ProcessoUpdate(BaseModel):
     status_agehab: Optional[str] = None
     status_sinal: Optional[str] = None
     status_fiador: Optional[str] = None
+    estagio_comercial: Optional[str] = None
+    etapa_repasse: Optional[str] = None
     cca_responsavel: Optional[str] = None
     pendente_fiador: Optional[bool] = None
     pendente_sinal: Optional[bool] = None
@@ -1049,6 +1202,9 @@ class ProcessoOut(BaseModel):
     status_agehab: str
     status_sinal: str
     status_fiador: str
+    estagio_comercial: str
+    etapa_repasse: Optional[str] = None
+    fila_atual: Optional[str] = None
     cca_responsavel: Optional[str] = None
     pendente_fiador: bool
     pendente_sinal: bool
@@ -1206,6 +1362,8 @@ class ProcessoIntakeCreate(BaseModel):
     corretor: Optional[str] = None
     obra: Optional[str] = None
     imobiliaria: Optional[str] = None
+    data_cadastro_origem: Optional[date] = None
+    estagio_comercial: Optional[str] = None
 
 
 class ProcessoOverviewOut(BaseModel):
@@ -1221,6 +1379,9 @@ class ProcessoOverviewOut(BaseModel):
     status_agehab: str
     status_sinal: str
     status_fiador: str
+    estagio_comercial: str
+    etapa_repasse: Optional[str] = None
+    fila_atual: Optional[str] = None
     cca_responsavel: Optional[str] = None
     pendente_fiador: bool
     pendente_sinal: bool
@@ -1235,7 +1396,33 @@ class ProcessoOverviewOut(BaseModel):
     sla_cca_seconds: Optional[int] = None
     sla_owner: Optional[str] = None
     sla_active_since: Optional[datetime] = None
+    data_cadastro_origem: Optional[date] = None
     created_at: Optional[datetime] = None
+
+
+class ImportPlanilhaRowOut(BaseModel):
+    linha: int
+    nome_cliente: Optional[str] = None
+    status: str
+    motivo: Optional[str] = None
+
+
+class ImportPlanilhaOut(BaseModel):
+    ok: bool
+    total_linhas: int
+    importados: int
+    ignorados_existentes: int
+    invalidados: int
+    resultados: list[ImportPlanilhaRowOut]
+
+
+class GestorMetaPayload(BaseModel):
+    meta: int
+
+
+class GestorMetaOut(BaseModel):
+    meta: int
+    fonte: str
 
 
 class ProcessoFullOut(BaseModel):
@@ -1411,6 +1598,106 @@ def _resolve_empreendimento_nome(db: Session, value: Optional[str]) -> Optional[
     return None
 
 
+def _normalize_cliente_key(value: Optional[str]) -> str:
+    raw = " ".join((value or "").strip().lower().split())
+    if not raw:
+        return ""
+    normalized = unicodedata.normalize("NFKD", raw)
+    ascii_text = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    return " ".join(ascii_text.split())
+
+
+def _parse_import_date(value: Any) -> Optional[date]:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, (int, float)):
+        serial = int(value)
+        if 1 <= serial <= 60000:
+            # Excel serial date (compatible with 1900 date system).
+            return (datetime(1899, 12, 30) + timedelta(days=serial)).date()
+        return None
+
+    raw = str(value).strip()
+    if not raw:
+        return None
+    try:
+        numeric = float(raw.replace(",", "."))
+        serial = int(numeric)
+        if 1 <= serial <= 60000:
+            return (datetime(1899, 12, 30) + timedelta(days=serial)).date()
+    except ValueError:
+        pass
+    for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y", "%d.%m.%Y"):
+        try:
+            return datetime.strptime(raw, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _normalize_import_header(value: Any) -> str:
+    token = _normalize_text_key(str(value or ""))
+    return IMPORT_COLUMN_ALIASES.get(token, token)
+
+
+def _canonicalize_import_rows(raw_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for raw in raw_rows:
+        item: dict[str, Any] = {}
+        for key, value in (raw or {}).items():
+            canonical = _normalize_import_header(key)
+            if canonical in IMPORT_REQUIRED_COLUMNS:
+                item[canonical] = value
+        rows.append(item)
+    return rows
+
+
+def _parse_csv_import(content: bytes) -> list[dict[str, Any]]:
+    text_value = content.decode("utf-8-sig", errors="replace")
+    reader = csv.DictReader(io.StringIO(text_value))
+    return [dict(row) for row in reader if row is not None]
+
+
+def _parse_xlsx_import(content: bytes) -> list[dict[str, Any]]:
+    try:
+        from openpyxl import load_workbook  # type: ignore
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail="Importacao XLSX indisponivel no servidor. Instale a dependencia openpyxl.",
+        ) from exc
+
+    wb = load_workbook(io.BytesIO(content), data_only=True, read_only=True)
+    ws = wb.active
+    rows_iter = ws.iter_rows(values_only=True)
+    header_row = next(rows_iter, None)
+    if not header_row:
+        return []
+    headers = [str(cell or "").strip() for cell in header_row]
+    rows: list[dict[str, Any]] = []
+    for values in rows_iter:
+        item: dict[str, Any] = {}
+        for idx, header in enumerate(headers):
+            if not header:
+                continue
+            item[header] = values[idx] if idx < len(values) else None
+        rows.append(item)
+    return rows
+
+
+def _load_import_rows(filename: Optional[str], content: bytes) -> list[dict[str, Any]]:
+    name = (filename or "").lower().strip()
+    if name.endswith(".csv"):
+        return _canonicalize_import_rows(_parse_csv_import(content))
+    if name.endswith(".xlsx"):
+        return _canonicalize_import_rows(_parse_xlsx_import(content))
+    raise HTTPException(status_code=422, detail="Formato nao suportado. Envie arquivo .csv ou .xlsx.")
+
+
 def _set_runtime_meta(db: Session, key: str, value: str) -> None:
     table_exists = db.execute(text("SELECT to_regclass('public.app_runtime_meta')")).scalar()
     if not table_exists:
@@ -1427,6 +1714,26 @@ def _set_runtime_meta(db: Session, key: str, value: str) -> None:
         ),
         {"key": key, "value": value},
     )
+
+
+def _get_runtime_meta(db: Session, key: str) -> Optional[str]:
+    table_exists = db.execute(text("SELECT to_regclass('public.app_runtime_meta')")).scalar()
+    if not table_exists:
+        return None
+    return db.execute(
+        text("SELECT meta_value FROM app_runtime_meta WHERE meta_key = :key"),
+        {"key": key},
+    ).scalar()
+
+
+def _resolve_gestor_meta_mensal(db: Session) -> tuple[int, str]:
+    runtime_value = _get_runtime_meta(db, META_MENSAL_RUNTIME_KEY)
+    if runtime_value is not None:
+        try:
+            return max(0, int(str(runtime_value).strip() or "0")), "runtime"
+        except ValueError:
+            pass
+    return GESTOR_META_MENSAL, "env"
 
 
 def _reconcile_active_sla_timers(db: Session, now: Optional[datetime] = None) -> int:
@@ -1507,6 +1814,8 @@ def _ensure_runtime_schema(db: Session) -> None:
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_credito VARCHAR(30) DEFAULT 'EM_ANALISE'",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_sinal VARCHAR(30) DEFAULT 'NAO_TEM'",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_fiador VARCHAR(30) DEFAULT 'NAO_TEM'",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS estagio_comercial VARCHAR(40) DEFAULT 'RESERVA'",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS etapa_repasse VARCHAR(40)",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS cca_responsavel VARCHAR(120)",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_cca_dias INTEGER",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_owner VARCHAR(20) DEFAULT 'NONE'",
@@ -1524,6 +1833,8 @@ def _ensure_runtime_schema(db: Session) -> None:
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_status_credito ON processos (status_credito)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_status_cca ON processos (status_cca)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_status_agehab ON processos (status_agehab)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_estagio_comercial ON processos (estagio_comercial)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_etapa_repasse ON processos (etapa_repasse)"))
     db.execute(
         text(
             """
@@ -1536,6 +1847,7 @@ def _ensure_runtime_schema(db: Session) -> None:
     if clientes_table:
         db.execute(text("ALTER TABLE clientes DROP COLUMN IF EXISTS reserva"))
         db.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS imobiliaria TEXT"))
+        db.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS data_cadastro_origem DATE"))
         db.execute(
             text(
                 """
@@ -1598,8 +1910,9 @@ def _ensure_runtime_schema(db: Session) -> None:
                 """
                 UPDATE documentos
                 SET status_credito = CASE
-                    WHEN UPPER(COALESCE(status_credito, '')) IN ('PENDENCIADO', 'APROVADO', 'REPROVADO') THEN UPPER(status_credito)
+                    WHEN UPPER(COALESCE(status_credito, '')) IN ('PENDENCIADO', 'APROVADO', 'REPROVADO', 'NAO_APLICA') THEN UPPER(status_credito)
                     WHEN UPPER(COALESCE(status_credito, '')) IN ('AGUARDANDO_ENVIO', 'AGUARDANDO ENVIO') THEN 'AGUARDANDO_ENVIO'
+                    WHEN UPPER(COALESCE(status_doc, '')) = 'NAO_APLICA' THEN 'NAO_APLICA'
                     WHEN UPPER(COALESCE(status_doc, '')) = 'PENDENTE' THEN 'AGUARDANDO_ENVIO'
                     ELSE 'ANALISE'
                 END
@@ -1691,6 +2004,37 @@ def _ensure_runtime_schema(db: Session) -> None:
                 WHEN UPPER(COALESCE(status_fiador, '')) IN ('NAO_TEM', 'PENDENTE', 'FINALIZADO') THEN UPPER(status_fiador)
                 WHEN pendente_fiador IS TRUE THEN 'PENDENTE'
                 ELSE 'NAO_TEM'
+            END
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            UPDATE processos
+            SET estagio_comercial = CASE
+                WHEN UPPER(COALESCE(estagio_comercial, '')) IN (
+                    'RESERVA', 'EM_PROCESSO', 'CREDITO', 'SECRETARIA_VENDAS',
+                    'ASSINATURA_DIRETORIA', 'AUTORIZACAO_DIRETORIA', 'ENVIO_SIENGE', 'VENDA_FINALIZADA'
+                ) THEN UPPER(estagio_comercial)
+                WHEN UPPER(COALESCE(status_geral, '')) IN ('NOVO') THEN 'RESERVA'
+                WHEN UPPER(COALESCE(status_geral, '')) IN ('APROVADO') THEN 'VENDA_FINALIZADA'
+                WHEN UPPER(COALESCE(status_cca, '')) IN ('ASSINATURA_CAIXA') THEN 'VENDA_FINALIZADA'
+                ELSE 'EM_PROCESSO'
+            END
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            UPDATE processos
+            SET etapa_repasse = CASE
+                WHEN UPPER(COALESCE(etapa_repasse, '')) IN ('EM_REPASSE', 'INICIO_REPASSE', 'ASSINATURA_AUTORIZADA')
+                    THEN UPPER(etapa_repasse)
+                WHEN UPPER(COALESCE(estagio_comercial, '')) IN ('ASSINATURA_DIRETORIA', 'AUTORIZACAO_DIRETORIA', 'ENVIO_SIENGE', 'VENDA_FINALIZADA')
+                    THEN 'EM_REPASSE'
+                ELSE NULL
             END
             """
         )
@@ -1922,6 +2266,9 @@ def app_checklist_page(request: Request):
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
         return RedirectResponse(url="/app/trocar-senha", status_code=302)
+    role = _normalize_role(str(session.get("role", "")))
+    if role not in {ROLE_ANALISTA, ROLE_CCA, ROLE_ADMIN}:
+        return RedirectResponse(url=_home_for_role(role), status_code=302)
     return _html_page("checklist.html")
 
 
@@ -1935,6 +2282,13 @@ def app_corretor_page(request: Request):
     role = _normalize_role(str(session.get("role", "")))
     if role != ROLE_CORRETOR:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
+    if not CORRETOR_ROUTE_ENABLED:
+        token = request.cookies.get(SESSION_COOKIE_NAME)
+        if token:
+            ACTIVE_SESSIONS.pop(token, None)
+        response = RedirectResponse(url="/login", status_code=302)
+        response.delete_cookie(key=SESSION_COOKIE_NAME)
+        return response
     return _html_page("corretor_painel.html")
 
 
@@ -2032,6 +2386,9 @@ def auth_login(payload: LoginPayload, db: Session = Depends(get_db)):
         raise HTTPException(status_code=403, detail="Acesso bloqueado. Procure o administrador.")
     if not _verify_password(payload.password, user.password_hash, user.password_salt):
         raise HTTPException(status_code=401, detail="Credenciais invalidas")
+    normalized_role = _normalize_role(user.role)
+    if normalized_role == ROLE_CORRETOR and not CORRETOR_ROUTE_ENABLED:
+        raise HTTPException(status_code=403, detail="Acesso do perfil corretor esta inativo no momento.")
 
     user.last_login_at = _utcnow()
     db.commit()
@@ -2040,7 +2397,7 @@ def auth_login(payload: LoginPayload, db: Session = Depends(get_db)):
     token = _new_session(
         user_id=user.id,
         username=user.username,
-        role=_normalize_role(user.role),
+        role=normalized_role,
         must_change_password=bool(user.must_change_password),
     )
     home = "/app/trocar-senha" if user.must_change_password else _home_for_role(user.role)
@@ -2048,7 +2405,7 @@ def auth_login(payload: LoginPayload, db: Session = Depends(get_db)):
         {
             "ok": True,
             "username": user.username,
-            "role": _normalize_role(user.role),
+            "role": normalized_role,
             "must_change_password": bool(user.must_change_password),
             "home": home,
         }
@@ -2277,7 +2634,7 @@ def admin_reset_password(
 
 @app.get("/app/api/ccas", response_model=list[str])
 def app_list_ccas(
-    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
+    _: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     rows = (
@@ -2291,7 +2648,7 @@ def app_list_ccas(
 
 @app.get("/app/api/empreendimentos", response_model=list[EmpreendimentoOut])
 def app_list_empreendimentos(
-    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
+    _: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     rows = (
@@ -2554,7 +2911,7 @@ def patch_documento(
 
 @app.get("/app/api/processos", response_model=list[ProcessoOverviewOut])
 def app_list_processos(
-    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
     db: Session = Depends(get_db),
     limit: Optional[int] = Query(default=120, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
@@ -2605,6 +2962,9 @@ def app_list_processos(
                 status_agehab=processo.status_agehab,
                 status_sinal=processo.status_sinal,
                 status_fiador=processo.status_fiador,
+                estagio_comercial=_process_estagio_comercial(processo.estagio_comercial),
+                etapa_repasse=_process_etapa_repasse(processo.etapa_repasse),
+                fila_atual=_fila_atual_from_processo(processo),
                 cca_responsavel=processo.cca_responsavel,
                 pendente_fiador=processo.pendente_fiador,
                 pendente_sinal=processo.pendente_sinal,
@@ -2619,6 +2979,7 @@ def app_list_processos(
                 sla_cca_seconds=sla_cca_seconds,
                 sla_owner=_normalize_sla_owner(processo.sla_owner),
                 sla_active_since=_as_utc(processo.sla_active_since),
+                data_cadastro_origem=getattr(cliente, "data_cadastro_origem", None),
                 created_at=processo.created_at,
             )
         )
@@ -2634,115 +2995,75 @@ def app_gestor_dashboard(
 ):
     rows = db.query(Processo, Cliente).join(Cliente, Processo.cliente_id == Cliente.id).all()
     now = _utcnow()
-    risk_window_seconds = FALL_RISK_DAYS * 24 * 3600
-    arrival_window_days = 7
-    arrival_projection_days = 30
-    arrival_window_start = now - timedelta(days=arrival_window_days)
-
-    enviados_rows = (
-        db.query(Documento.processo_id)
-        .filter(Documento.status_doc == "ENVIADO")
-        .distinct()
-        .all()
-    )
-    processos_com_doc_enviado = {processo_id for (processo_id,) in enviados_rows if processo_id is not None}
-    clientes_por_fase: dict[str, list[dict[str, Any]]] = {
-        "assinados": [],
-        "conformidade_ok": [],
-        "enviados_conformidade": [],
-        "em_analise": [],
-        "com_pendencias": [],
-        "passiveis_cair": [],
-        "nao_iniciado": [],
-        "sla_comercial": [],
-        "sla_credito": [],
-        "sla_cca": [],
-        "chegada": [],
-        "media_necessaria": [],
-    }
-
-    assinados = 0
-    conformidade_ok = 0
-    enviados_conformidade = 0
-    em_analise = 0
-    com_pendencias = 0
-    passiveis_cair = 0
-    nao_iniciado = 0
-    chegadas_ultimos_7_dias = 0
-    sla_sum_comercial = 0
-    sla_sum_credito = 0
-    sla_sum_cca = 0
-    processos_ativos = 0
     total = len(rows)
+
+    total_comercial = 0
+    total_repasse = 0
+    total_assinados = 0
+    provaveis_cair = 0
+    real = 0
+
+    clientes_comercial: list[dict[str, Any]] = []
+    clientes_repasse: list[dict[str, Any]] = []
+    clientes_assinados: list[dict[str, Any]] = []
+    clientes_provaveis_cair: list[dict[str, Any]] = []
+    clientes_realizados: list[dict[str, Any]] = []
+    clientes_estagios: list[dict[str, Any]] = []
 
     imob_map: dict[str, int] = {}
     imob_corretores: dict[str, dict[str, int]] = {}
 
     for processo, cliente in rows:
-        cca = _status_token(processo.status_cca)
-        agehab = _status_token(processo.status_agehab)
-        sinal = _status_token(processo.status_sinal)
-        fiador = _status_token(processo.status_fiador)
-        has_pend = _processo_has_pendencia(processo)
-        created_at = _as_utc(processo.created_at)
+        estagio = _process_estagio_comercial(getattr(processo, "estagio_comercial", None))
+        etapa_repasse = _process_etapa_repasse(getattr(processo, "etapa_repasse", None))
+        fila_atual = _fila_atual_from_processo(processo)
+        created_at_utc = _as_utc(processo.created_at)
+        data_referencia = cliente.data_cadastro_origem or (created_at_utc.date() if created_at_utc else None)
+        dias_em_aberto = (now.date() - data_referencia).days if data_referencia else None
+
         cliente_item = {
             "processo_id": str(processo.id),
             "cliente_nome": cliente.nome,
             "corretor": cliente.corretor,
             "obra": cliente.obra,
             "imobiliaria": getattr(cliente, "imobiliaria", None),
+            "estagio_comercial": estagio,
+            "etapa_repasse": etapa_repasse,
+            "fila_atual": fila_atual,
             "status_geral": processo.status_geral,
             "status_credito": processo.status_credito,
             "status_cca": processo.status_cca,
-            "created_at": created_at.isoformat() if created_at else None,
+            "status_agehab": processo.status_agehab,
+            "status_sinal": processo.status_sinal,
+            "status_fiador": processo.status_fiador,
+            "dias_em_aberto": dias_em_aberto,
+            "data_cadastro_origem": data_referencia.isoformat() if data_referencia else None,
         }
+        clientes_estagios.append(cliente_item)
 
-        if cca == "ASSINATURA_CAIXA":
-            assinados += 1
-            clientes_por_fase["assinados"].append(cliente_item)
-        elif cca == "CONFORME":
-            conformidade_ok += 1
-            clientes_por_fase["conformidade_ok"].append(cliente_item)
-        elif cca == "AGUARDANDO_CONFORMIDADE":
-            enviados_conformidade += 1
-            clientes_por_fase["enviados_conformidade"].append(cliente_item)
+        if estagio in ESTAGIOS_DASH_COMERCIAL:
+            total_comercial += 1
+            clientes_comercial.append(cliente_item)
 
-        if cca in {"ANALISE_CREDITO", "ANALISE_CCA", "TRATANDO_PRODUTO", "AGENDADO"}:
-            em_analise += 1
-            clientes_por_fase["em_analise"].append(cliente_item)
+        if estagio in ESTAGIOS_REPASSE_COMERCIAL:
+            total_repasse += 1
+            clientes_repasse.append(cliente_item)
 
-        if has_pend:
-            com_pendencias += 1
-            clientes_por_fase["com_pendencias"].append(cliente_item)
-        if created_at and created_at >= arrival_window_start:
-            chegadas_ultimos_7_dias += 1
-            clientes_por_fase["chegada"].append(cliente_item)
-        processo_finalizado = (
-            _status_token(processo.status_geral) in PROCESS_GERAL_FINAL_STATUSES
-            or cca == "ASSINATURA_CAIXA"
-            or (cca == "CONFORME" and agehab == "VALIDADO_AGEHAB" and sinal != "PENDENTE" and fiador != "PENDENTE")
-        )
-        if not processo_finalizado:
-            processos_ativos += 1
-            sla_sum_comercial += _compute_sla_hours(processo, SLA_OWNER_CORRETOR, now)
-            sla_sum_credito += _compute_sla_hours(processo, SLA_OWNER_ANALISTA, now)
-            sla_sum_cca += _compute_sla_hours(processo, SLA_OWNER_CCA, now)
-            clientes_por_fase["sla_comercial"].append(cliente_item)
-            clientes_por_fase["sla_credito"].append(cliente_item)
-            clientes_por_fase["sla_cca"].append(cliente_item)
-            clientes_por_fase["media_necessaria"].append(cliente_item)
-            if processo.id not in processos_com_doc_enviado:
-                nao_iniciado += 1
-                clientes_por_fase["nao_iniciado"].append(cliente_item)
-        if created_at and not processo_finalizado:
-            seconds_since_created = (now - created_at).total_seconds()
-            if seconds_since_created >= risk_window_seconds:
-                passiveis_cair += 1
-                clientes_por_fase["passiveis_cair"].append(cliente_item)
+        if etapa_repasse == "ASSINATURA_AUTORIZADA":
+            total_assinados += 1
+            clientes_assinados.append(cliente_item)
 
-        imob_name = (getattr(cliente, 'imobiliaria', None) or "Sem imobiliária").strip() or "Sem imobiliária"
+        if estagio == "VENDA_FINALIZADA":
+            real += 1
+            clientes_realizados.append(cliente_item)
+
+        reached_repasse = estagio in ESTAGIOS_REPASSE_COMERCIAL
+        if not reached_repasse and dias_em_aberto is not None and dias_em_aberto > FALL_RISK_DAYS:
+            provaveis_cair += 1
+            clientes_provaveis_cair.append(cliente_item)
+
+        imob_name = (getattr(cliente, "imobiliaria", None) or "Sem imobiliaria").strip() or "Sem imobiliaria"
         imob_map[imob_name] = imob_map.get(imob_name, 0) + 1
-
         corretor_name = (cliente.corretor or "Sem corretor").strip() or "Sem corretor"
         if imob_name not in imob_corretores:
             imob_corretores[imob_name] = {}
@@ -2760,63 +3081,125 @@ def app_gestor_dashboard(
         for k, v in sorted(imob_map.items(), key=lambda x: -x[1])
     ]
 
-    sla_medio_comercial_horas = round(sla_sum_comercial / processos_ativos) if processos_ativos > 0 else 0
-    sla_medio_credito_horas = round(sla_sum_credito / processos_ativos) if processos_ativos > 0 else 0
-    sla_medio_cca_horas = round(sla_sum_cca / processos_ativos) if processos_ativos > 0 else 0
-    media_necessaria_dia = round(processos_ativos / FALL_RISK_DAYS, 2) if processos_ativos > 0 else 0.0
-    media_chegadas_dia_7d = round(chegadas_ultimos_7_dias / arrival_window_days, 2)
-    projecao_chegadas_30_dias = int(round(media_chegadas_dia_7d * arrival_projection_days))
+    hoje = now.date()
+    dias_no_mes = calendar.monthrange(hoje.year, hoje.month)[1]
+    dias_decorridos = max(1, hoje.day)
+    previsao = int(round((real / dias_decorridos) * dias_no_mes)) if real > 0 else 0
+    meta, meta_source = _resolve_gestor_meta_mensal(db)
+
+    clientes_por_fase: dict[str, list[dict[str, Any]]] = {
+        "assinados": clientes_assinados,
+        "conformidade_ok": clientes_comercial,
+        "enviados_conformidade": clientes_repasse,
+        "em_analise": [],
+        "com_pendencias": clientes_realizados,
+        "passiveis_cair": clientes_provaveis_cair,
+        "nao_iniciado": [],
+        "sla_comercial": clientes_comercial,
+        "sla_credito": clientes_repasse,
+        "sla_cca": clientes_assinados,
+        "chegada": [],
+        "media_necessaria": [],
+        "comercial": clientes_comercial,
+        "repasse": clientes_repasse,
+        "realizados": clientes_realizados,
+    }
 
     return {
         "total": total,
-        "assinados": assinados,
-        "conformidade_ok": conformidade_ok,
-        "enviados_conformidade": enviados_conformidade,
-        "em_analise": em_analise,
-        "com_pendencias": com_pendencias,
-        "passiveis_cair": passiveis_cair,
-        "nao_iniciado": nao_iniciado,
-        "processos_ativos": processos_ativos,
-        "sla_medio_comercial_horas": sla_medio_comercial_horas,
-        "sla_medio_credito_horas": sla_medio_credito_horas,
-        "sla_medio_cca_horas": sla_medio_cca_horas,
-        "media_necessaria_dia": media_necessaria_dia,
-        "chegadas_ultimos_7_dias": chegadas_ultimos_7_dias,
-        "media_chegadas_dia_7d": media_chegadas_dia_7d,
-        "projecao_chegadas_30_dias": projecao_chegadas_30_dias,
-        "janela_chegadas_dias": arrival_window_days,
-        "janela_projecao_chegadas_dias": arrival_projection_days,
+        "assinados": total_assinados,
+        "conformidade_ok": total_comercial,
+        "enviados_conformidade": total_repasse,
+        "em_analise": meta,
+        "com_pendencias": real,
+        "passiveis_cair": provaveis_cair,
+        "nao_iniciado": previsao,
+        "processos_ativos": total_comercial + total_repasse,
+        "sla_medio_comercial_horas": 0,
+        "sla_medio_credito_horas": 0,
+        "sla_medio_cca_horas": 0,
+        "media_necessaria_dia": 0,
+        "chegadas_ultimos_7_dias": 0,
+        "media_chegadas_dia_7d": 0,
+        "projecao_chegadas_30_dias": 0,
+        "janela_chegadas_dias": 7,
+        "janela_projecao_chegadas_dias": 30,
         "dias_estimativa_queda": FALL_RISK_DAYS,
         "clientes_por_fase": clientes_por_fase,
         "imobiliarias": imobs,
+        "total_comercial": total_comercial,
+        "total_repasse": total_repasse,
+        "provaveis_cair": provaveis_cair,
+        "total_assinados": total_assinados,
+        "meta": meta,
+        "meta_fonte": meta_source,
+        "real": real,
+        "previsao": previsao,
+        "clientes_estagios": clientes_estagios,
     }
+
+
+@app.get("/app/api/gestor/meta", response_model=GestorMetaOut)
+def app_get_gestor_meta(
+    _: dict[str, Any] = Depends(require_roles(ROLE_GESTOR, ROLE_ANALISTA, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    meta, fonte = _resolve_gestor_meta_mensal(db)
+    return GestorMetaOut(meta=meta, fonte=fonte)
+
+
+@app.put("/app/api/gestor/meta", response_model=GestorMetaOut)
+def app_set_gestor_meta(
+    payload: GestorMetaPayload,
+    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    meta_value = max(0, int(payload.meta or 0))
+    _set_runtime_meta(db, META_MENSAL_RUNTIME_KEY, str(meta_value))
+    _record_system_log(
+        db,
+        actor_username=_normalize_username(str(session.get("username", ""))),
+        actor_role=_normalize_role(str(session.get("role", ""))),
+        tela="analista_painel",
+        acao="META_GESTOR_ATUALIZADA",
+        entidade_tipo="configuracao",
+        entidade_id=META_MENSAL_RUNTIME_KEY,
+        details=f"meta={meta_value}",
+    )
+    db.commit()
+    meta, fonte = _resolve_gestor_meta_mensal(db)
+    return GestorMetaOut(meta=meta, fonte=fonte)
 
 
 @app.post("/app/api/processos/intake")
 def app_create_intake(
     payload: ProcessoIntakeCreate,
-    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
-    role = _normalize_role(str(session.get("role", "")))
     username = _normalize_username(str(session.get("username", "")))
     obra_nome = _resolve_empreendimento_nome(db, payload.obra)
-    if role == ROLE_CORRETOR and not obra_nome:
-        raise HTTPException(status_code=422, detail="Selecione um empreendimento cadastrado.")
     if payload.obra and not obra_nome:
         raise HTTPException(status_code=422, detail="Empreendimento invalido. Selecione um empreendimento cadastrado.")
+    estagio = _process_estagio_comercial(payload.estagio_comercial, fallback="RESERVA")
 
     cliente = Cliente(
         nome=payload.nome.strip(),
-        corretor=username if role == ROLE_CORRETOR else (_normalize_username(payload.corretor) if payload.corretor else None),
+        corretor=_normalize_username(payload.corretor) if payload.corretor else None,
         obra=obra_nome,
         imobiliaria=(payload.imobiliaria or "").strip() or None,
+        data_cadastro_origem=payload.data_cadastro_origem,
     )
     db.add(cliente)
     db.commit()
     db.refresh(cliente)
 
-    processo = Processo(cliente_id=cliente.id)
+    processo = Processo(
+        cliente_id=cliente.id,
+        estagio_comercial=estagio,
+        etapa_repasse="EM_REPASSE" if estagio in ESTAGIOS_REPASSE_COMERCIAL else None,
+    )
+    _sync_estagio_repasse_rules(processo, _utcnow())
     _switch_sla_owner(processo, SLA_OWNER_ANALISTA, _utcnow())
     db.add(processo)
     db.commit()
@@ -2825,19 +3208,22 @@ def app_create_intake(
         db,
         processo_id=processo.id,
         actor_username=username,
-        actor_role=role,
+        actor_role=_normalize_role(str(session.get("role", ""))),
         event_type="PROCESSO_CRIADO",
         details=f"Cliente: {cliente.nome}",
     )
     _record_system_log(
         db,
         actor_username=username,
-        actor_role=role,
+        actor_role=_normalize_role(str(session.get("role", ""))),
         tela="checklist",
         acao="PROCESSO_CRIADO",
         entidade_tipo="processo",
         entidade_id=str(processo.id),
-        details=f"cliente={cliente.nome}; corretor={cliente.corretor or '-'}; obra={cliente.obra or '-'}; imobiliaria={cliente.imobiliaria or '-'}",
+        details=(
+            f"cliente={cliente.nome}; corretor={cliente.corretor or '-'}; obra={cliente.obra or '-'}; "
+            f"imobiliaria={cliente.imobiliaria or '-'}; estagio={processo.estagio_comercial}"
+        ),
     )
     db.commit()
 
@@ -2846,10 +3232,198 @@ def app_create_intake(
     return {"ok": True, "cliente_id": str(cliente.id), "processo_id": str(processo.id)}
 
 
+@app.post("/app/api/processos/importar", response_model=ImportPlanilhaOut)
+async def app_importar_processos_planilha(
+    file: UploadFile = File(...),
+    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    filename = (file.filename or "").strip()
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=422, detail="Arquivo vazio.")
+
+    raw_rows = _load_import_rows(filename, content)
+    provided_columns: set[str] = set()
+    for row in raw_rows:
+        provided_columns.update(row.keys())
+
+    missing = sorted(IMPORT_REQUIRED_COLUMNS - provided_columns)
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Colunas obrigatorias ausentes: {', '.join(missing)}",
+        )
+
+    actor_username = _normalize_username(str(session.get("username", "")))
+    actor_role = _normalize_role(str(session.get("role", "")))
+    existing_keys = {
+        _normalize_cliente_key(name)
+        for (name,) in db.query(Cliente.nome).all()
+        if _normalize_cliente_key(name)
+    }
+    created_keys_in_batch: set[str] = set()
+
+    resultados: list[ImportPlanilhaRowOut] = []
+    importados = 0
+    ignorados_existentes = 0
+    invalidados = 0
+
+    for row_number, row in enumerate(raw_rows, start=2):
+        nome = " ".join(str(row.get("nome_cliente") or "").strip().split())
+        stage_raw = row.get("estagio")
+        estagio = _process_estagio_comercial(stage_raw, fallback="")
+        cadastro_raw = row.get("data_cadastro")
+        data_cadastro_origem = _parse_import_date(cadastro_raw)
+
+        if not nome:
+            invalidados += 1
+            resultados.append(
+                ImportPlanilhaRowOut(
+                    linha=row_number,
+                    nome_cliente=None,
+                    status="invalido",
+                    motivo="nome_cliente vazio",
+                )
+            )
+            continue
+
+        if not estagio:
+            invalidados += 1
+            resultados.append(
+                ImportPlanilhaRowOut(
+                    linha=row_number,
+                    nome_cliente=nome,
+                    status="invalido",
+                    motivo=f"estagio invalido: {stage_raw}",
+                )
+            )
+            continue
+
+        if not str(cadastro_raw or "").strip():
+            invalidados += 1
+            resultados.append(
+                ImportPlanilhaRowOut(
+                    linha=row_number,
+                    nome_cliente=nome,
+                    status="invalido",
+                    motivo="data_cadastro obrigatoria",
+                )
+            )
+            continue
+
+        if data_cadastro_origem is None:
+            invalidados += 1
+            resultados.append(
+                ImportPlanilhaRowOut(
+                    linha=row_number,
+                    nome_cliente=nome,
+                    status="invalido",
+                    motivo="data_cadastro invalida",
+                )
+            )
+            continue
+
+        cliente_key = _normalize_cliente_key(nome)
+        if not cliente_key:
+            invalidados += 1
+            resultados.append(
+                ImportPlanilhaRowOut(
+                    linha=row_number,
+                    nome_cliente=nome,
+                    status="invalido",
+                    motivo="nome_cliente invalido",
+                )
+            )
+            continue
+
+        if cliente_key in existing_keys or cliente_key in created_keys_in_batch:
+            ignorados_existentes += 1
+            resultados.append(
+                ImportPlanilhaRowOut(
+                    linha=row_number,
+                    nome_cliente=nome,
+                    status="ignorado_existente",
+                    motivo="cliente ja existe na base",
+                )
+            )
+            continue
+
+        empreendimento_raw = _normalize_empreendimento_nome(row.get("empreendimento"))
+        empreendimento_resolvido = _resolve_empreendimento_nome(db, empreendimento_raw)
+        empreendimento = empreendimento_resolvido or empreendimento_raw or None
+
+        cliente = Cliente(
+            nome=nome,
+            corretor=_normalize_username(str(row.get("corretor") or "")) or None,
+            obra=empreendimento,
+            imobiliaria=" ".join(str(row.get("imobiliaria") or "").strip().split()) or None,
+            data_cadastro_origem=data_cadastro_origem,
+        )
+        db.add(cliente)
+        db.flush()
+
+        processo = Processo(
+            cliente_id=cliente.id,
+            estagio_comercial=estagio,
+            etapa_repasse="EM_REPASSE" if estagio in ESTAGIOS_REPASSE_COMERCIAL else None,
+        )
+        _sync_estagio_repasse_rules(processo, _utcnow())
+        _switch_sla_owner(processo, SLA_OWNER_ANALISTA, _utcnow())
+        db.add(processo)
+        db.flush()
+
+        _record_processo_event(
+            db,
+            processo_id=processo.id,
+            actor_username=actor_username,
+            actor_role=actor_role,
+            event_type="PROCESSO_IMPORTADO_PLANILHA",
+            details=f"cliente={cliente.nome}; estagio={processo.estagio_comercial}",
+        )
+        _record_system_log(
+            db,
+            actor_username=actor_username,
+            actor_role=actor_role,
+            tela="analista_painel",
+            acao="IMPORTACAO_PLANILHA_ITEM",
+            entidade_tipo="processo",
+            entidade_id=str(processo.id),
+            details=(
+                f"linha={row_number}; cliente={cliente.nome}; estagio={processo.estagio_comercial}; "
+                f"empreendimento={cliente.obra or '-'}"
+            ),
+        )
+        _ensure_default_documentos(db, processo.id, autocommit=False)
+
+        created_keys_in_batch.add(cliente_key)
+        importados += 1
+        resultados.append(
+            ImportPlanilhaRowOut(
+                linha=row_number,
+                nome_cliente=nome,
+                status="importado",
+                motivo=None,
+            )
+        )
+
+    db.commit()
+    _invalidate_process_list_cache()
+
+    return ImportPlanilhaOut(
+        ok=True,
+        total_linhas=len(raw_rows),
+        importados=importados,
+        ignorados_existentes=ignorados_existentes,
+        invalidados=invalidados,
+        resultados=resultados,
+    )
+
+
 @app.get("/app/api/processos/{processo_id}/full", response_model=ProcessoFullOut)
 def app_get_processo_full(
     processo_id: uuid.UUID,
-    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     processo = db.get(Processo, processo_id)
@@ -2888,6 +3462,9 @@ def app_get_processo_full(
     processo_out.sla_cca_dias = processo_out.sla_cca_horas // 24
     processo_out.sla_owner = _normalize_sla_owner(processo.sla_owner)
     processo_out.sla_active_since = _as_utc(processo.sla_active_since)
+    processo_out.estagio_comercial = _process_estagio_comercial(processo.estagio_comercial)
+    processo_out.etapa_repasse = _process_etapa_repasse(processo.etapa_repasse)
+    processo_out.fila_atual = _fila_atual_from_processo(processo)
 
     return ProcessoFullOut(
         processo=processo_out,
@@ -2899,7 +3476,7 @@ def app_get_processo_full(
 @app.get("/app/api/processos/{processo_id}/eventos", response_model=list[ProcessoEventoOut])
 def app_list_processo_eventos(
     processo_id: uuid.UUID,
-    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
     db: Session = Depends(get_db),
     limit: int = Query(default=200, ge=1, le=1000),
 ):
@@ -2929,7 +3506,7 @@ def app_list_processo_eventos(
 
 @app.get("/app/api/metricas/processos", response_model=ProcessoMetricasOut)
 def app_get_metricas_processos(
-    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     role = _normalize_role(str(session.get("role", "")))
@@ -3029,8 +3606,8 @@ def app_patch_processo(
     actor_username = _normalize_username(str(session.get("username", "")))
     changes = payload.model_dump(exclude_unset=True)
     sla_trigger: Optional[str] = None
-    pending_requested = False
     old_sla_owner = _normalize_sla_owner(processo.sla_owner)
+    estagio_changed = False
 
     for field, value in changes.items():
         if field == "status_credito":
@@ -3040,7 +3617,6 @@ def app_patch_processo(
             processo.status_credito = status_credito
             if status_credito == "PENDENCIADO":
                 sla_trigger = "analista_pendenciou"
-                pending_requested = True
             if old_value != status_credito:
                 event_type = "RETORNO_PENDENCIA" if _is_pendencia_status(field, old_value) and not _is_pendencia_status(field, status_credito) else ("PENDENCIA" if _is_pendencia_status(field, status_credito) else "STATUS_CHANGE")
                 _record_processo_event(
@@ -3060,7 +3636,6 @@ def app_patch_processo(
             processo.status_geral = status_geral
             if status_geral == "PENDENCIADO":
                 sla_trigger = "analista_pendenciou"
-                pending_requested = True
             if old_value != status_geral:
                 event_type = "RETORNO_PENDENCIA" if _is_pendencia_status(field, old_value) and not _is_pendencia_status(field, status_geral) else ("PENDENCIA" if _is_pendencia_status(field, status_geral) else "STATUS_CHANGE")
                 _record_processo_event(
@@ -3078,8 +3653,6 @@ def app_patch_processo(
             _validate_status_transition(field, processo.status_cca, status_cca)
             old_value = processo.status_cca
             processo.status_cca = status_cca
-            if _is_pendencia_status(field, status_cca):
-                pending_requested = True
             if old_sla_owner == SLA_OWNER_CCA and status_cca == "PENDENTE_CCA":
                 sla_trigger = "cca_pendenciou"
             if old_value != status_cca:
@@ -3099,8 +3672,6 @@ def app_patch_processo(
             _validate_status_transition(field, processo.status_agehab, status_agehab)
             old_value = processo.status_agehab
             processo.status_agehab = status_agehab
-            if _is_pendencia_status(field, status_agehab):
-                pending_requested = True
             if old_sla_owner == SLA_OWNER_CCA and status_agehab == "PENDENTE_AGEHAB":
                 sla_trigger = "cca_pendenciou"
             if old_value != status_agehab:
@@ -3121,8 +3692,6 @@ def app_patch_processo(
             old_value = processo.status_sinal
             processo.status_sinal = status_sinal
             processo.pendente_sinal = status_sinal == "PENDENTE"
-            if _is_pendencia_status(field, status_sinal):
-                pending_requested = True
             if old_value != status_sinal:
                 event_type = "RETORNO_PENDENCIA" if _is_pendencia_status(field, old_value) and not _is_pendencia_status(field, status_sinal) else ("PENDENCIA" if _is_pendencia_status(field, status_sinal) else "STATUS_CHANGE")
                 _record_processo_event(
@@ -3141,8 +3710,6 @@ def app_patch_processo(
             old_value = processo.status_fiador
             processo.status_fiador = status_fiador
             processo.pendente_fiador = status_fiador == "PENDENTE"
-            if _is_pendencia_status(field, status_fiador):
-                pending_requested = True
             if old_value != status_fiador:
                 event_type = "RETORNO_PENDENCIA" if _is_pendencia_status(field, old_value) and not _is_pendencia_status(field, status_fiador) else ("PENDENCIA" if _is_pendencia_status(field, status_fiador) else "STATUS_CHANGE")
                 _record_processo_event(
@@ -3154,6 +3721,64 @@ def app_patch_processo(
                     field_name=field,
                     old_value=old_value,
                     new_value=status_fiador,
+                )
+        elif field == "estagio_comercial":
+            next_stage = _process_estagio_comercial(value, fallback="")
+            if not next_stage:
+                raise HTTPException(status_code=422, detail="Estagio comercial invalido.")
+            old_value = _process_estagio_comercial(processo.estagio_comercial)
+            processo.estagio_comercial = next_stage
+            estagio_changed = old_value != next_stage
+            if old_value != next_stage:
+                _record_processo_event(
+                    db,
+                    processo_id=processo.id,
+                    actor_username=actor_username,
+                    actor_role=actor_role,
+                    event_type="ESTAGIO_COMERCIAL_UPDATE",
+                    field_name=field,
+                    old_value=old_value,
+                    new_value=next_stage,
+                )
+            etapa_before = _process_etapa_repasse(processo.etapa_repasse)
+            _sync_estagio_repasse_rules(processo, _utcnow())
+            etapa_after = _process_etapa_repasse(processo.etapa_repasse)
+            if etapa_before != etapa_after:
+                _record_processo_event(
+                    db,
+                    processo_id=processo.id,
+                    actor_username=actor_username,
+                    actor_role=actor_role,
+                    event_type="ETAPA_REPASSE_AUTO",
+                    field_name="etapa_repasse",
+                    old_value=etapa_before,
+                    new_value=etapa_after,
+                    details="entrada_automatica_repasse",
+                )
+        elif field == "etapa_repasse":
+            next_step = _process_etapa_repasse(value, fallback=None)
+            if value is not None and str(value).strip() and not next_step:
+                raise HTTPException(status_code=422, detail="Etapa de repasse invalida.")
+            if next_step == "ASSINATURA_AUTORIZADA" and not _can_set_assinatura_autorizada(processo):
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        "Nao pode avancar para ASSINATURA_AUTORIZADA. "
+                        "Exige estagio VENDA_FINALIZADA e validacao de sinal/fiador."
+                    ),
+                )
+            old_value = _process_etapa_repasse(processo.etapa_repasse)
+            processo.etapa_repasse = next_step
+            if old_value != next_step:
+                _record_processo_event(
+                    db,
+                    processo_id=processo.id,
+                    actor_username=actor_username,
+                    actor_role=actor_role,
+                    event_type="ETAPA_REPASSE_UPDATE",
+                    field_name=field,
+                    old_value=old_value,
+                    new_value=next_step,
                 )
         elif field == "cca_responsavel":
             old_value = processo.cca_responsavel
@@ -3195,13 +3820,8 @@ def app_patch_processo(
                     new_value=new_value,
                 )
 
-    if pending_requested:
-        observacao_value = changes.get("observacao", processo.observacao) or ""
-        if len(str(observacao_value).strip()) < 8:
-            raise HTTPException(
-                status_code=422,
-                detail="Informe observacao com pelo menos 8 caracteres ao registrar pendencia.",
-            )
+    if estagio_changed:
+        _sync_estagio_repasse_rules(processo, _utcnow())
 
     _apply_sla_rules(
         processo,
@@ -3256,6 +3876,9 @@ def app_patch_processo(
     processo_out.sla_cca_dias = processo_out.sla_cca_horas // 24
     processo_out.sla_owner = _normalize_sla_owner(processo.sla_owner)
     processo_out.sla_active_since = _as_utc(processo.sla_active_since)
+    processo_out.estagio_comercial = _process_estagio_comercial(processo.estagio_comercial)
+    processo_out.etapa_repasse = _process_etapa_repasse(processo.etapa_repasse)
+    processo_out.fila_atual = _fila_atual_from_processo(processo)
     return processo_out
 
 
@@ -3263,7 +3886,7 @@ def app_patch_processo(
 def app_bulk_upsert_documentos(
     processo_id: uuid.UUID,
     payload: DocumentoBulkUpsert,
-    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     processo = db.get(Processo, processo_id)
@@ -3328,18 +3951,22 @@ def app_bulk_upsert_documentos(
             old_pendencia_info = _normalize_pendencia_info(documento.pendencia_info)
             current_credit = _credit_status(documento.status_credito, fallback="AGUARDANDO_ENVIO")
             if status_doc is not None:
-                if not (role == ROLE_CORRETOR and documento.status_doc == "ENVIADO"):
+                if not (role == ROLE_CORRETOR and _doc_is_done(documento.status_doc)):
                     documento.status_doc = status_doc
                     if role == ROLE_CORRETOR:
-                        if status_doc == "ENVIADO" and current_credit == "AGUARDANDO_ENVIO":
+                        if _doc_is_done(status_doc) and current_credit == "AGUARDANDO_ENVIO":
                             documento.status_credito = "ANALISE"
                         elif status_doc == "PENDENTE" and current_credit in {"AGUARDANDO_ENVIO", "ANALISE"}:
                             documento.status_credito = "AGUARDANDO_ENVIO"
             if status_credito is not None:
                 documento.status_credito = status_credito
+            elif documento.status_doc == "NAO_APLICA":
+                documento.status_credito = "NAO_APLICA"
+            elif _doc_is_done(documento.status_doc) and _credit_status(documento.status_credito, fallback="AGUARDANDO_ENVIO") == "AGUARDANDO_ENVIO":
+                documento.status_credito = "ANALISE"
             next_credit = _credit_status(documento.status_credito, fallback="AGUARDANDO_ENVIO")
             became_pending_doc = old_status_doc != "PENDENTE" and documento.status_doc == "PENDENTE"
-            if documento.status_doc != "ENVIADO" and next_credit != "PENDENCIADO":
+            if not _doc_is_done(documento.status_doc) and next_credit != "PENDENCIADO":
                 documento.status_credito = "AGUARDANDO_ENVIO"
                 next_credit = "AGUARDANDO_ENVIO"
             if (
@@ -3354,13 +3981,10 @@ def app_bulk_upsert_documentos(
             if next_credit == "PENDENCIADO":
                 if pendencia_info:
                     documento.pendencia_info = pendencia_info
-                elif role == ROLE_ANALISTA and became_pending_doc:
+                elif role == ROLE_ANALISTA and (became_pending_doc or not old_pendencia_info):
                     raise HTTPException(
                         status_code=422,
-                        detail=(
-                            f"Documento '{nome}' foi pendenciado. "
-                            f"Informe pendencia_info com pelo menos {PENDENCIA_INFO_MIN_LENGTH} caracteres."
-                        ),
+                        detail=(f"Documento '{nome}' foi pendenciado. Informe pendencia_info."),
                     )
                 elif old_pendencia_info:
                     documento.pendencia_info = old_pendencia_info
@@ -3368,14 +3992,6 @@ def app_bulk_upsert_documentos(
                 documento.pendencia_info = None
 
             normalized_pendencia_info = _normalize_pendencia_info(documento.pendencia_info)
-            if normalized_pendencia_info and len(normalized_pendencia_info) < PENDENCIA_INFO_MIN_LENGTH:
-                raise HTTPException(
-                    status_code=422,
-                    detail=(
-                        f"Pendencia do documento '{nome}' precisa ter no minimo "
-                        f"{PENDENCIA_INFO_MIN_LENGTH} caracteres."
-                    ),
-                )
             documento.pendencia_info = normalized_pendencia_info
             if old_status_doc != documento.status_doc:
                 _record_processo_event(
@@ -3412,23 +4028,26 @@ def app_bulk_upsert_documentos(
                 )
         else:
             if can_update_credit:
-                credito_default = status_credito or ("ANALISE" if status_doc == "ENVIADO" else "AGUARDANDO_ENVIO")
+                if (status_doc or "").upper() == "NAO_APLICA":
+                    credito_default = status_credito or "NAO_APLICA"
+                else:
+                    credito_default = status_credito or ("ANALISE" if _doc_is_done(status_doc) else "AGUARDANDO_ENVIO")
             else:
-                credito_default = "ANALISE" if status_doc == "ENVIADO" else "AGUARDANDO_ENVIO"
+                credito_default = "NAO_APLICA" if (status_doc or "").upper() == "NAO_APLICA" else ("ANALISE" if _doc_is_done(status_doc) else "AGUARDANDO_ENVIO")
             credito_default_norm = _credit_status(credito_default, fallback="AGUARDANDO_ENVIO")
             status_doc_norm = status_doc or "PENDENTE"
-            if status_doc_norm != "ENVIADO":
-                if credito_default_norm == "PENDENCIADO" and not pendencia_info:
+            if not _doc_is_done(status_doc_norm):
+                if credito_default_norm != "PENDENCIADO":
                     credito_default_norm = "AGUARDANDO_ENVIO"
-                elif credito_default_norm != "PENDENCIADO":
-                    credito_default_norm = "AGUARDANDO_ENVIO"
-            if pendencia_info and len(pendencia_info) < PENDENCIA_INFO_MIN_LENGTH:
+                elif not pendencia_info:
+                    raise HTTPException(
+                        status_code=422,
+                        detail=f"Documento '{nome}' foi pendenciado. Informe pendencia_info.",
+                    )
+            if credito_default_norm == "PENDENCIADO" and not pendencia_info:
                 raise HTTPException(
                     status_code=422,
-                    detail=(
-                        f"Pendencia do documento '{nome}' precisa ter no minimo "
-                        f"{PENDENCIA_INFO_MIN_LENGTH} caracteres."
-                    ),
+                    detail=f"Documento '{nome}' foi pendenciado. Informe pendencia_info.",
                 )
             novo_documento = Documento(
                 processo_id=processo_id,
@@ -3458,8 +4077,8 @@ def app_bulk_upsert_documentos(
         .order_by(Documento.categoria.asc(), Documento.nome.asc())
         .all()
     )
-    has_enviado_docs = any(doc.status_doc == "ENVIADO" for doc in documentos)
-    enviados_count = sum(1 for doc in documentos if doc.status_doc == "ENVIADO")
+    has_enviado_docs = any(_doc_is_done(doc.status_doc) for doc in documentos)
+    enviados_count = sum(1 for doc in documentos if _doc_is_done(doc.status_doc))
 
     sla_trigger: Optional[str] = None
     if role == ROLE_CORRETOR and has_enviado_docs:
@@ -3535,3 +4154,4 @@ def app_bulk_upsert_documentos(
         .all()
     )
     return documentos
+

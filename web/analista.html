@@ -409,6 +409,26 @@
         0 0 15px var(--tone-glow);
       animation: neonToneFlow var(--tone-speed) linear infinite, neonTonePulse 2.1s ease-in-out infinite;
     }
+    .status.status-pill.status-nao-aplica{
+      --tone-1: #e5e7eb;
+      --tone-2: #94a3b8;
+      --tone-3: #1f2937;
+      --tone-glow: rgba(148,163,184,.45);
+      --tone-text: #e5e7eb;
+      --tone-speed: 6s;
+      border-color: transparent !important;
+      color: var(--tone-text) !important;
+      background:
+        linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
+        linear-gradient(120deg, var(--tone-1), var(--tone-2), var(--tone-3), var(--tone-2), var(--tone-1)) border-box !important;
+      background-size:100% 100%, 230% 230% !important;
+      text-shadow: 0 0 8px var(--tone-glow);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.06),
+        0 0 0 1px rgba(15,23,42,.92),
+        0 0 15px var(--tone-glow);
+      animation: neonToneFlow var(--tone-speed) linear infinite, neonTonePulse 2s ease-in-out infinite;
+    }
     @media (prefers-reduced-motion: reduce){
       .pill,
       .sla,
@@ -617,10 +637,39 @@
       --tone-speed: 5.7s;
     }
 
+    .status.status-credit-pill.status-nao-aplica{
+      --tone-1: #e5e7eb;
+      --tone-2: #94a3b8;
+      --tone-3: #1f2937;
+      --tone-glow: rgba(148,163,184,.45);
+      --tone-text: #e5e7eb;
+      --tone-speed: 6s;
+    }
+
     .tiny{
       font-size: var(--fs-xs);
       color: var(--muted);
       line-height:1.25;
+    }
+
+    .tri-doc{
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+      align-items:center;
+      min-height:32px;
+    }
+    .tri-doc label{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      font-size:10px;
+      color:var(--text);
+      cursor:pointer;
+      background: rgba(15,23,42,.7);
+      border:1px solid rgba(148,163,184,.2);
+      border-radius:999px;
+      padding:4px 8px;
     }
 
     .divider{
@@ -1288,6 +1337,35 @@ DIVORCIADO: Certidão averbada.</td>
           </div>
 
           <div class="fg">
+            <label for="estagio-comercial">Estagio comercial</label>
+            <select id="estagio-comercial">
+              <option value="reserva">Reserva</option>
+              <option value="em_processo">Em Processo</option>
+              <option value="credito">Credito</option>
+              <option value="secretaria_vendas">Secretaria de Vendas</option>
+              <option value="assinatura_diretoria">Assinatura Diretoria</option>
+              <option value="autorizacao_diretoria">Autorizacao Diretoria</option>
+              <option value="envio_sienge">Envio Sienge</option>
+              <option value="venda_finalizada">Venda Finalizada</option>
+            </select>
+          </div>
+
+          <div class="fg">
+            <label for="etapa-repasse">Etapa repasse</label>
+            <select id="etapa-repasse">
+              <option value="">Sem repasse</option>
+              <option value="em_repasse">Em Repasse</option>
+              <option value="inicio_repasse">Inicio Repasse</option>
+              <option value="assinatura_autorizada">Assinatura Autorizada</option>
+            </select>
+          </div>
+
+          <div class="fg">
+            <label for="fila-atual">Fila atual</label>
+            <input id="fila-atual" type="text" value="Comercial" readonly>
+          </div>
+
+          <div class="fg">
             <label for="sla-corretor">SLA comercial (h)</label>
             <input id="sla-corretor" type="number" min="0" step="1" value="0" />
           </div>
@@ -1343,7 +1421,7 @@ DIVORCIADO: Certidão averbada.</td>
   const SLA_WARN = 24;
   const SLA_BAD  = 48;
   const REFRESH_SECONDS = 30;
-  const DOC_PENDENCIA_MIN_LEN = 8;
+  const DOC_PENDENCIA_MIN_LEN = 1;
 
   let countdown = REFRESH_SECONDS;
   $("refreshLabel").textContent = `${countdown}s`;
@@ -1386,6 +1464,39 @@ DIVORCIADO: Certidão averbada.</td>
       validado_agehab: "Validado Agehab",
     },
   };
+  const ESTAGIOS_REPASSE_UI = [
+    "assinatura_diretoria",
+    "autorizacao_diretoria",
+    "envio_sienge",
+    "venda_finalizada",
+  ];
+
+  function stageNeedsRepasse(stageUi){
+    return ESTAGIOS_REPASSE_UI.includes(toLower(stageUi));
+  }
+
+  function syncFilaAtualUi(){
+    const stageEl = $("estagio-comercial");
+    const repasseEl = $("etapa-repasse");
+    const filaEl = $("fila-atual");
+    if (!stageEl || !repasseEl || !filaEl) return;
+
+    const stageUi = toLower(stageEl.value);
+    const needsRepasse = stageNeedsRepasse(stageUi);
+    const repasseUi = toLower(repasseEl.value);
+
+    if (!needsRepasse) {
+      repasseEl.value = "";
+      repasseEl.disabled = true;
+    } else {
+      repasseEl.disabled = false;
+      if (!repasseUi) repasseEl.value = "em_repasse";
+    }
+
+    const hasRepasse = Boolean(toLower(repasseEl.value));
+    filaEl.value = (needsRepasse || hasRepasse) ? "Repasse" : "Comercial";
+  }
+  window.syncFilaAtualAnalise = syncFilaAtualUi;
 
   function pillClassFromStatus(v){
     const status = toLower(v);
@@ -1446,7 +1557,7 @@ DIVORCIADO: Certidão averbada.</td>
   // =========================
   function applySelectColor(sel){
     const val = toLower(sel.value);
-    sel.classList.remove("status-pendente","status-enviado");
+    sel.classList.remove("status-pendente","status-enviado","status-nao-aplica");
     sel.style.borderColor = "";
     sel.style.boxShadow = "";
     sel.style.background = "";
@@ -1456,6 +1567,8 @@ DIVORCIADO: Certidão averbada.</td>
       sel.classList.add("status-pendente");
     }else if(val==="enviado"){
       sel.classList.add("status-enviado");
+    }else if(val==="nao_aplica"){
+      sel.classList.add("status-nao-aplica");
     }
   }
 
@@ -1688,10 +1801,13 @@ DIVORCIADO: Certidão averbada.</td>
   $("btnSair").addEventListener("click", ()=> alert("Front-end: sair (mock)."));
 
   // ===== Right panel listeners =====
-  ["status-credito","status-geral","status-caixa","status-agehab","status-sinal","status-fiador"].forEach(id=>{
+  ["status-credito","status-geral","status-caixa","status-agehab","status-sinal","status-fiador","estagio-comercial","etapa-repasse"].forEach(id=>{
     $(id).addEventListener("change", ()=>{
       setRightPills();
       setSlaBadges();
+      if (id === "estagio-comercial" || id === "etapa-repasse") {
+        syncFilaAtualUi();
+      }
       if (id === "status-credito" && typeof window.syncAnalistaDocCreditoStatus === "function") {
         window.syncAnalistaDocCreditoStatus();
       }
@@ -1721,6 +1837,7 @@ DIVORCIADO: Certidão averbada.</td>
 
   setRightPills();
   setSlaBadges();
+  syncFilaAtualUi();
   updateSectionCounters();
   buildPendenciasResumo();
 
@@ -1898,7 +2015,8 @@ DIVORCIADO: Certidão averbada.</td>
 
         const currentDoc = String(current.status_doc || "").toUpperCase();
         const nextDoc = String(doc.status_doc || "").toUpperCase();
-        if (currentDoc !== "ENVIADO" && nextDoc === "ENVIADO") {
+        const doneSet = new Set(["ENVIADO", "APROVADO", "NAO_APLICA"]);
+        if (!doneSet.has(currentDoc) && doneSet.has(nextDoc)) {
           map.set(key, doc);
         }
       });
@@ -1960,6 +2078,26 @@ DIVORCIADO: Certidão averbada.</td>
       return "NAO_TEM";
     }
 
+    function backendFromUiEstagio(value) {
+      const v = norm(value);
+      if (v === "em_processo") return "EM_PROCESSO";
+      if (v === "credito") return "CREDITO";
+      if (v === "secretaria_vendas") return "SECRETARIA_VENDAS";
+      if (v === "assinatura_diretoria") return "ASSINATURA_DIRETORIA";
+      if (v === "autorizacao_diretoria") return "AUTORIZACAO_DIRETORIA";
+      if (v === "envio_sienge") return "ENVIO_SIENGE";
+      if (v === "venda_finalizada") return "VENDA_FINALIZADA";
+      return "RESERVA";
+    }
+
+    function backendFromUiRepasse(value) {
+      const v = norm(value);
+      if (v === "em_repasse") return "EM_REPASSE";
+      if (v === "inicio_repasse") return "INICIO_REPASSE";
+      if (v === "assinatura_autorizada") return "ASSINATURA_AUTORIZADA";
+      return null;
+    }
+
     function docCreditoFromUi(value) {
       const v = norm(value);
       if (v === "pendenciado") return "PENDENCIADO";
@@ -2009,8 +2147,31 @@ DIVORCIADO: Certidão averbada.</td>
       return "analise_credito";
     }
 
+    function uiFromBackendEstagio(value) {
+      const v = norm(value);
+      if (v === "em_processo") return "em_processo";
+      if (v === "credito") return "credito";
+      if (v === "secretaria_vendas") return "secretaria_vendas";
+      if (v === "assinatura_diretoria") return "assinatura_diretoria";
+      if (v === "autorizacao_diretoria") return "autorizacao_diretoria";
+      if (v === "envio_sienge") return "envio_sienge";
+      if (v === "venda_finalizada") return "venda_finalizada";
+      return "reserva";
+    }
+
+    function uiFromBackendRepasse(value) {
+      const v = norm(value);
+      if (v === "em_repasse") return "em_repasse";
+      if (v === "inicio_repasse") return "inicio_repasse";
+      if (v === "assinatura_autorizada") return "assinatura_autorizada";
+      return "";
+    }
+
     function toUiDocStatus(value) {
-      return String(value || "").toUpperCase() === "ENVIADO" ? "Enviado" : "Pendente";
+      const s = String(value || "").toUpperCase();
+      if (s === "ENVIADO" || s === "APROVADO") return "Enviado";
+      if (s === "NAO_APLICA") return "Nao_Aplica";
+      return "Pendente";
     }
 
     function backendCreditoToUi(value) {
@@ -2019,6 +2180,7 @@ DIVORCIADO: Certidão averbada.</td>
       if (s === "APROVADO") return "aprovado";
       if (s === "REPROVADO") return "reprovado";
       if (s === "PENDENCIADO") return "pendenciado";
+      if (s === "NAO_APLICA") return "nao_aplica";
       return "analise";
     }
 
@@ -2035,13 +2197,15 @@ DIVORCIADO: Certidão averbada.</td>
         "status-analise",
         "status-pendenciado",
         "status-aprovado",
-        "status-reprovado"
+        "status-reprovado",
+        "status-nao-aplica"
       );
       if (value === "aguardando_envio") select.classList.add("status-aguardando-envio");
       if (value === "analise") select.classList.add("status-analise");
       if (value === "pendenciado") select.classList.add("status-pendenciado");
       if (value === "aprovado") select.classList.add("status-aprovado");
       if (value === "reprovado") select.classList.add("status-reprovado");
+      if (value === "nao_aplica") select.classList.add("status-nao-aplica");
     }
 
     function ensureCreditoColumns() {
@@ -2083,12 +2247,19 @@ DIVORCIADO: Certidão averbada.</td>
             '<option value="pendenciado">Pendente</option>',
             '<option value="aprovado">Aprovado</option>',
             '<option value="reprovado">Reprovado</option>',
+            '<option value="nao_aplica">Nao se aplica</option>',
           ].join("");
           td.appendChild(select);
           tr.appendChild(td);
 
           const docSelect = tr.querySelector("select.status.status-pill[data-doc][data-id]");
           if (docSelect && !docSelect.dataset.creditoBound) {
+            if (!Array.from(docSelect.options || []).some((opt) => norm(opt.value || opt.textContent) === "nao_aplica")) {
+              const opt = document.createElement("option");
+              opt.value = "Nao_Aplica";
+              opt.textContent = "Nao se aplica";
+              docSelect.appendChild(opt);
+            }
             docSelect.dataset.creditoBound = "1";
             docSelect.addEventListener("change", () => {
               syncDocCreditoStatus();
@@ -2104,10 +2275,13 @@ DIVORCIADO: Certidão averbada.</td>
       const previousDocStatus = String(previous.status_doc || "").toUpperCase();
       const previousCredito = String(previous.status_credito || "").toUpperCase();
       const previousPendenciaInfo = String(previous.pendencia_info || "").trim();
-      const becamePending = previousDocStatus === "ENVIADO" && statusDocBackend === "PENDENTE";
+      const becamePending = previousDocStatus !== "PENDENTE" && statusDocBackend === "PENDENTE";
       const processoCreditoDoc = docCreditoFromUi(byId("status-credito")?.value || "em_analise");
 
-      if (statusDocBackend === "ENVIADO") {
+      if (statusDocBackend === "NAO_APLICA") {
+        return "NAO_APLICA";
+      }
+      if (statusDocBackend === "ENVIADO" || statusDocBackend === "APROVADO") {
         return (processoCreditoDoc === "APROVADO" || processoCreditoDoc === "REPROVADO")
           ? processoCreditoDoc
           : "ANALISE";
@@ -2122,7 +2296,10 @@ DIVORCIADO: Certidão averbada.</td>
       const creditoSelect = getCreditoSelectFromDoc(row.select);
       if (!creditoSelect) return;
 
-      const statusDocBackend = norm(row.select.value) === "enviado" ? "ENVIADO" : "PENDENTE";
+      const statusDocUi = norm(row.select.value).replace(/\s+/g, "_");
+      const statusDocBackend = statusDocUi === "enviado"
+        ? "ENVIADO"
+        : (statusDocUi === "nao_aplica" ? "NAO_APLICA" : "PENDENTE");
       const backendValue = backendStatus
         ? String(backendStatus || "").toUpperCase()
         : deriveDocCreditoStatus(row, statusDocBackend);
@@ -2172,6 +2349,59 @@ DIVORCIADO: Certidão averbada.</td>
         field.readOnly = true;
         field.disabled = true;
         field.title = "SLA calculado automaticamente pelo backend.";
+      });
+    }
+
+    function mountTriDocControls() {
+      const docSelects = Array.from(document.querySelectorAll('select.status.status-pill[data-doc][data-id]'));
+      docSelects.forEach((sel) => {
+        if (sel.dataset.triMounted === "1") return;
+        sel.dataset.triMounted = "1";
+
+        if (!Array.from(sel.options || []).some((opt) => norm(opt.value || opt.textContent) === "nao_aplica")) {
+          const opt = document.createElement("option");
+          opt.value = "Nao_Aplica";
+          opt.textContent = "Nao se aplica";
+          sel.appendChild(opt);
+        }
+
+        const wrap = document.createElement("div");
+        wrap.className = "tri-doc";
+        const choices = [
+          { value: "Pendente", label: "Pendente" },
+          { value: "Enviado", label: "Aprovado" },
+          { value: "Nao_Aplica", label: "Nao se aplica" },
+        ];
+
+        choices.forEach((choice) => {
+          const label = document.createElement("label");
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          input.value = choice.value;
+          input.addEventListener("change", () => {
+            if (!input.checked) return;
+            wrap.querySelectorAll("input[type='checkbox']").forEach((other) => {
+              if (other !== input) other.checked = false;
+            });
+            sel.value = choice.value;
+            sel.dispatchEvent(new Event("change", { bubbles: true }));
+          });
+          label.appendChild(input);
+          label.appendChild(document.createTextNode(choice.label));
+          wrap.appendChild(label);
+        });
+
+        const sync = () => {
+          const current = norm(sel.value).replace(/\s+/g, "_");
+          wrap.querySelectorAll("input[type='checkbox']").forEach((chk) => {
+            chk.checked = norm(chk.value).replace(/\s+/g, "_") === current;
+          });
+        };
+        sel.addEventListener("change", sync);
+        sel.style.display = "none";
+        sel.parentElement?.appendChild(wrap);
+        sel._syncTri = sync;
+        sync();
       });
     }
 
@@ -2244,11 +2474,14 @@ DIVORCIADO: Certidão averbada.</td>
       if (byId("status-agehab")) byId("status-agehab").value = uiFromBackendAgehab(processo.status_agehab);
       if (byId("status-sinal")) byId("status-sinal").value = norm(processo.status_sinal) || "nao_tem";
       if (byId("status-fiador")) byId("status-fiador").value = norm(processo.status_fiador) || "nao_tem";
+      if (byId("estagio-comercial")) byId("estagio-comercial").value = uiFromBackendEstagio(processo.estagio_comercial);
+      if (byId("etapa-repasse")) byId("etapa-repasse").value = uiFromBackendRepasse(processo.etapa_repasse);
       if (byId("cca-responsavel")) byId("cca-responsavel").value = norm(processo.cca_responsavel);
 
       if (byId("sla-corretor")) byId("sla-corretor").value = toHoursFromBackend(processo.sla_corretor_horas, processo.sla_corretor_dias);
       if (byId("sla-credito")) byId("sla-credito").value = toHoursFromBackend(processo.sla_analista_horas, processo.sla_credito_dias);
       if (byId("observacao")) byId("observacao").value = processo.observacao || "";
+      if (typeof window.syncFilaAtualAnalise === "function") window.syncFilaAtualAnalise();
 
       getDocRows().forEach((row) => {
         const key = docLookupKey(row.categoria, row.nome, row.docId);
@@ -2257,6 +2490,7 @@ DIVORCIADO: Certidão averbada.</td>
           row.select.value = toUiDocStatus(found.status_doc);
         }
         if (typeof applySelectColor === "function") applySelectColor(row.select);
+        if (typeof row.select._syncTri === "function") row.select._syncTri();
       });
       syncDocSnapshot(docs);
       syncDocCreditoStatus(docs);
@@ -2274,7 +2508,7 @@ DIVORCIADO: Certidão averbada.</td>
 
     async function saveAll() {
       if (!processoId) {
-        alert("Abra a análise por um processo vindo da fila CCA.");
+        alert("Abra a analise por um processo vindo da fila do analista.");
         return;
       }
 
@@ -2284,6 +2518,8 @@ DIVORCIADO: Certidão averbada.</td>
       const statusAgehab = byId("status-agehab")?.value || "analise_credito";
       const statusSinal = byId("status-sinal")?.value || "nao_tem";
       const statusFiador = byId("status-fiador")?.value || "nao_tem";
+      const estagioComercial = byId("estagio-comercial")?.value || "reserva";
+      const etapaRepasse = byId("etapa-repasse")?.value || "";
       const ccaResponsavel = (byId("cca-responsavel")?.value || "").trim().toLowerCase() || null;
       const observacao = (byId("observacao")?.value || "").trim() || null;
 
@@ -2297,8 +2533,8 @@ DIVORCIADO: Certidão averbada.</td>
         statusSinal === "pendente" ||
         statusFiador === "pendente";
 
-      if (temPendencia && (!observacao || observacao.length < 8)) {
-        alert("Para registrar pendencia, preencha observacao com pelo menos 8 caracteres.");
+      if (temPendencia && !observacao) {
+        alert("Para registrar pendencia, preencha observacao.");
         return;
       }
 
@@ -2309,24 +2545,31 @@ DIVORCIADO: Certidão averbada.</td>
         status_agehab: backendFromUiAgehab(statusAgehab),
         status_sinal: backendFromUiSinal(statusSinal),
         status_fiador: backendFromUiFiador(statusFiador),
+        estagio_comercial: backendFromUiEstagio(estagioComercial),
+        etapa_repasse: backendFromUiRepasse(etapaRepasse),
         cca_responsavel: ccaResponsavel,
         observacao,
       };
 
       const documentos = [];
       for (const row of getDocRows()) {
-        const statusDoc = norm(row.select.value) === "enviado" ? "ENVIADO" : "PENDENTE";
+        const statusDocUi = norm(row.select.value).replace(/\s+/g, "_");
+        const statusDoc = statusDocUi === "enviado"
+          ? "ENVIADO"
+          : (statusDocUi === "nao_aplica" ? "NAO_APLICA" : "PENDENTE");
         const key = docLookupKey(row.categoria, row.nome, row.docId);
         const previous = docSnapshot.get(key) || {};
         const previousDocStatus = String(previous.status_doc || "").toUpperCase();
         const previousCredito = String(previous.status_credito || "").toUpperCase();
         const previousPendenciaInfo = String(previous.pendencia_info || "").trim();
-        const becamePending = previousDocStatus === "ENVIADO" && statusDoc === "PENDENTE";
+        const becamePending = previousDocStatus !== "PENDENTE" && statusDoc === "PENDENTE";
         const processoCreditoDoc = docCreditoFromUi(statusCredito);
         let statusCreditoDoc = "AGUARDANDO_ENVIO";
         let pendenciaInfo = null;
 
-        if (statusDoc === "ENVIADO") {
+        if (statusDoc === "NAO_APLICA") {
+          statusCreditoDoc = "NAO_APLICA";
+        } else if (statusDoc === "ENVIADO") {
           statusCreditoDoc = (processoCreditoDoc === "APROVADO" || processoCreditoDoc === "REPROVADO")
             ? processoCreditoDoc
             : "ANALISE";
@@ -2339,7 +2582,7 @@ DIVORCIADO: Certidão averbada.</td>
         if (statusCreditoDoc === "PENDENCIADO") {
           if (becamePending) {
             const prompted = window.prompt(
-              `Informe a pendencia do documento "${row.nome}" (minimo ${DOC_PENDENCIA_MIN_LEN} caracteres):`,
+              `Informe a pendencia do documento "${row.nome}":`,
               previousPendenciaInfo
             );
             if (prompted === null) {
@@ -2348,7 +2591,7 @@ DIVORCIADO: Certidão averbada.</td>
             }
             const cleaned = String(prompted || "").trim().replace(/\s+/g, " ");
             if (cleaned.length < DOC_PENDENCIA_MIN_LEN) {
-              alert(`Pendencia do documento "${row.nome}" precisa ter no minimo ${DOC_PENDENCIA_MIN_LEN} caracteres.`);
+              alert(`Pendencia do documento "${row.nome}" nao pode ficar vazia.`);
               return;
             }
             pendenciaInfo = cleaned;
@@ -2379,10 +2622,9 @@ DIVORCIADO: Certidão averbada.</td>
         syncDocSnapshot(savedDocs);
         syncDocCreditoStatus(savedDocs);
 
+        if (typeof window.syncFilaAtualAnalise === "function") window.syncFilaAtualAnalise();
         if (typeof buildPendenciasResumo === "function") buildPendenciasResumo();
-        alert("Dados salvos com sucesso. Redirecionando para login.");
-        await logout();
-        return;
+        alert("Dados salvos com sucesso.");
       } catch (error) {
         alert(`Erro ao salvar: ${error.message}`);
       }
@@ -2394,6 +2636,7 @@ DIVORCIADO: Certidão averbada.</td>
     }
 
     ensureCreditoColumns();
+    mountTriDocControls();
     window.syncAnalistaDocCreditoStatus = syncDocCreditoStatus;
     syncDocCreditoStatus();
 
@@ -2415,4 +2658,5 @@ DIVORCIADO: Certidão averbada.</td>
 </script>
 </body>
 </html>
+
 
