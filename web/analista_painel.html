@@ -55,6 +55,7 @@
     display:flex;
     flex-direction:column;
     gap:12px;
+    overflow:auto;
   }
 
   .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -122,54 +123,6 @@
   }
   @media (max-width: 1200px){ .filters{grid-template-columns: 1fr 1fr 1fr} }
   @media (max-width: 760px){ .filters{grid-template-columns: 1fr} }
-
-  .importSection{
-    display:flex;
-    gap:12px;
-    align-items:stretch;
-    border:1px solid rgba(148,163,184,.14);
-    border-radius:14px;
-    background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
-    padding:10px;
-  }
-  .importFields{
-    display:grid;
-    gap:8px;
-    flex:1;
-  }
-  .importRow{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-    align-items:center;
-  }
-  .importHint{
-    color:var(--muted);
-    font-size:11px;
-  }
-  .importMeter{
-    width:14px;
-    min-width:14px;
-    border-radius:999px;
-    border:1px solid rgba(148,163,184,.22);
-    background: rgba(2,6,23,.7);
-    overflow:hidden;
-    position:relative;
-  }
-  .importFill{
-    position:absolute;
-    left:0;
-    right:0;
-    bottom:0;
-    height:0%;
-    background: linear-gradient(180deg, rgba(34,197,94,.95), rgba(16,185,129,.95));
-    transition:height .25s ease;
-  }
-  .importMsg{
-    color:var(--muted);
-    font-size:11px;
-    min-height:16px;
-  }
 
   .field{display:flex;flex-direction:column;gap:6px}
   .field label{font-size:11px;color:var(--muted)}
@@ -533,6 +486,7 @@
     <div class="rightTop">
       <span class="chip"><span class="pulseDot"></span>Auto refresh: <strong id="refreshLabel">30s</strong></span>
       <span class="chip">SLA alerta: <strong id="slaRuleLabel">>=48h</strong></span>
+      <a class="btn" href="/app/analista/importacao">Importacao</a>
     </div>
   </div>
 
@@ -590,25 +544,6 @@
       <button class="btn primary" id="btnFiltrar">Filtrar</button>
     </div>
   </div>
-
-  <section class="importSection" aria-label="Importacao por planilha">
-    <div class="importFields">
-      <div class="importRow">
-        <input id="fileImport" type="file" accept=".csv,.xlsx" />
-        <button class="btn primary" id="btnImportar" type="button">Importar Planilha</button>
-      </div>
-      <div class="importRow">
-        <input id="metaMensal" type="number" min="0" step="1" placeholder="Meta mensal do gestor" />
-        <button class="btn" id="btnSalvarMeta" type="button">Salvar Meta</button>
-      </div>
-      <div class="importHint" id="metaHint">Meta mensal definida pelo analista.</div>
-      <div class="importHint">Colunas obrigatorias: nome_cliente, data_cadastro, estagio, empreendimento, corretor, imobiliaria.</div>
-      <div class="importMsg" id="importMsg">Aguardando arquivo...</div>
-    </div>
-    <div class="importMeter" title="Progresso da importacao">
-      <div class="importFill" id="importFill"></div>
-    </div>
-  </section>
 
   <div class="insights" id="insights"></div>
 
@@ -696,17 +631,10 @@
   let loading = false;
   let history = [];
   let ccasLoaded = false;
-  let metaLoaded = false;
   let lastRefreshAt = 0;
 
   const $ = (id) => document.getElementById(id);
   const norm = (s) => String(s || "").trim().toLowerCase();
-  const setImportProgress = (percent) => {
-    const fill = $("importFill");
-    if (!fill) return;
-    const safe = Math.max(0, Math.min(100, Number(percent || 0)));
-    fill.style.height = `${safe}%`;
-  };
 
   $("refreshLabel").textContent = `${REFRESH_SECONDS}s`;
   $("slaRuleLabel").textContent = `>=${SLA_BAD}h`;
@@ -728,53 +656,6 @@
       throw new Error(data.detail || "Falha ao carregar dados");
     }
     return data;
-  }
-
-  async function uploadPlanilha(file) {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", `${API_BASE}/processos/importar`, true);
-      xhr.withCredentials = true;
-
-      xhr.upload.onprogress = (event) => {
-        if (!event.lengthComputable) return;
-        const pct = Math.round((event.loaded / event.total) * 100);
-        setImportProgress(pct);
-      };
-
-      xhr.onerror = () => reject(new Error("Falha de rede durante a importacao."));
-      xhr.onload = () => {
-        let data = {};
-        try { data = JSON.parse(xhr.responseText || "{}"); } catch (_) {}
-        if (xhr.status === 401) {
-          window.location.href = "/login";
-          reject(new Error("Nao autenticado"));
-          return;
-        }
-        if (xhr.status < 200 || xhr.status >= 300) {
-          reject(new Error(data.detail || "Falha ao importar planilha."));
-          return;
-        }
-        resolve(data);
-      };
-
-      const formData = new FormData();
-      formData.append("file", file);
-      xhr.send(formData);
-    });
-  }
-
-  async function loadMetaMensal() {
-    const metaInput = $("metaMensal");
-    const metaHint = $("metaHint");
-    if (!metaInput) return;
-    const data = await api("/gestor/meta");
-    const meta = Number(data?.meta ?? 0);
-    metaInput.value = String(Number.isFinite(meta) && meta >= 0 ? Math.round(meta) : 0);
-    if (metaHint) {
-      metaHint.textContent = `Meta mensal atual: ${metaInput.value || "0"} (definida pelo analista).`;
-    }
-    metaLoaded = true;
   }
 
   function esc(value){
@@ -1131,9 +1012,6 @@
       if (!ccasLoaded) {
         await loadCcaFilter();
       }
-      if (!metaLoaded) {
-        await loadMetaMensal();
-      }
       await loadData();
       applyFilters();
       lastRefreshAt = Date.now();
@@ -1174,61 +1052,6 @@
   });
   ["ccaFilter","stG","stC"].forEach(id=>{
     $(id).addEventListener("change", applyFilters);
-  });
-
-  $("btnSalvarMeta").addEventListener("click", async () => {
-    const metaInput = $("metaMensal");
-    const metaHint = $("metaHint");
-    const raw = String(metaInput?.value || "").trim();
-    const parsed = Number(raw);
-    if (!Number.isFinite(parsed) || parsed < 0) {
-      if (metaHint) metaHint.textContent = "Informe uma meta valida (numero inteiro >= 0).";
-      return;
-    }
-    const meta = Math.round(parsed);
-    try {
-      const data = await api("/gestor/meta", {
-        method: "PUT",
-        body: JSON.stringify({ meta }),
-      });
-      if (metaInput) metaInput.value = String(Number(data?.meta ?? meta));
-      if (metaHint) metaHint.textContent = `Meta mensal salva: ${metaInput?.value || meta} (definida pelo analista).`;
-    } catch (error) {
-      if (metaHint) metaHint.textContent = `Erro ao salvar meta: ${error.message}`;
-    }
-  });
-
-  $("btnImportar").addEventListener("click", async () => {
-    const fileEl = $("fileImport");
-    const msgEl = $("importMsg");
-    const btn = $("btnImportar");
-    const file = fileEl?.files?.[0];
-    if (!file) {
-      if (msgEl) msgEl.textContent = "Selecione um arquivo .csv ou .xlsx para importar.";
-      return;
-    }
-
-    btn.disabled = true;
-    setImportProgress(0);
-    if (msgEl) msgEl.textContent = "Importando planilha...";
-    try {
-      const data = await uploadPlanilha(file);
-      const total = Number(data?.total_linhas || 0);
-      const importados = Number(data?.importados || 0);
-      const ignorados = Number(data?.ignorados_existentes || 0);
-      const invalidados = Number(data?.invalidados || 0);
-      const finalPct = total > 0 ? Math.round((importados / total) * 100) : 100;
-      setImportProgress(finalPct);
-      if (msgEl) {
-        msgEl.textContent = `Importacao concluida: ${importados} importado(s), ${ignorados} ignorado(s), ${invalidados} invalido(s), total ${total} linha(s) processada(s).`;
-      }
-      await refreshDataAndRender(true);
-    } catch (error) {
-      if (msgEl) msgEl.textContent = `Erro na importacao: ${error.message}`;
-      setImportProgress(0);
-    } finally {
-      btn.disabled = false;
-    }
   });
 
   document.addEventListener("visibilitychange", () => {
