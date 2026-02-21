@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Acompanhamento Kanban | Analista</title>
+  <title>Repasse Kanban | Analista</title>
   <style>
     :root {
       --bg: #020617;
@@ -180,7 +180,7 @@
       height: 100%;
       overflow: auto;
       display: grid;
-      grid-template-columns: repeat(7, minmax(172px, 1fr));
+      grid-template-columns: repeat(3, minmax(240px, 1fr));
       gap: 8px;
       align-items: start;
     }
@@ -334,7 +334,7 @@
 
     @media (max-width: 1500px) {
       .board {
-        grid-template-columns: repeat(7, minmax(160px, 1fr));
+        grid-template-columns: repeat(3, minmax(220px, 1fr));
       }
     }
 
@@ -343,7 +343,7 @@
         grid-template-columns: 1fr 1fr;
       }
       .board {
-        grid-template-columns: repeat(7, minmax(200px, 1fr));
+        grid-template-columns: repeat(3, minmax(220px, 1fr));
       }
       .column {
         max-height: calc(100vh - 280px);
@@ -357,12 +357,12 @@
   <div class="wrap">
     <section class="topbar">
       <div class="title">
-        <h1>Acompanhamento de Credito (Kanban)</h1>
-        <p>Arraste para a proxima fila comercial ou retorne direto para Processo. Atualizacao em tempo real.</p>
+        <h1>Acompanhamento de Repasse (Kanban)</h1>
+        <p>Arraste para avancar no fluxo de repasse: Em Repasse, Inicio de Repasse e Assinatura Caixa.</p>
       </div>
       <div class="actions">
         <a class="btn" href="/app/analista">Voltar painel</a>
-        <a class="btn" href="/app/analista/repasse">Repasse</a>
+        <a class="btn" href="/app/analista/acompanhamento">Acompanhamento</a>
         <a class="btn" href="/app/analista/importacao">Importacao</a>
       </div>
     </section>
@@ -370,7 +370,7 @@
     <section class="meta">
       <span class="chip">Total no Kanban: <strong id="totalCount">0</strong></span>
       <span class="chip">Auto refresh: <strong id="refreshLabel">60s</strong></span>
-      <span class="chip">Regra: <strong>proxima coluna ou retorno para Processo</strong></span>
+      <span class="chip">Regra: <strong>proxima coluna ou retorno para Em Repasse</strong></span>
     </section>
 
     <section class="filters">
@@ -558,19 +558,23 @@
     const REFRESH_SECONDS = 60;
 
     const COLUMNS = [
-      { key: "em_processo", title: "Processo", backend: "EM_PROCESSO" },
-      { key: "credito", title: "Credito", backend: "CREDITO" },
-      { key: "secretaria_vendas", title: "Secretaria de Vendas", backend: "SECRETARIA_VENDAS" },
-      { key: "assinatura_diretoria", title: "Assinatura Diretoria", backend: "ASSINATURA_DIRETORIA" },
-      { key: "autorizacao_diretoria", title: "Aprovacao Diretoria", backend: "AUTORIZACAO_DIRETORIA" },
-      { key: "envio_sienge", title: "Envio Sienge", backend: "ENVIO_SIENGE" },
-      { key: "venda_finalizada", title: "Venda Finalizada", backend: "VENDA_FINALIZADA" },
+      { key: "em_repasse", title: "Em Repasse" },
+      { key: "inicio_repasse", title: "Inicio de Repasse" },
+      { key: "assinatura_caixa", title: "Assinatura Caixa" },
     ];
+
+    const REPASSE_ESTAGIOS = new Set([
+      "assinatura_diretoria",
+      "autorizacao_diretoria",
+      "envio_sienge",
+      "venda_finalizada",
+    ]);
 
     const COL_INDEX = Object.fromEntries(COLUMNS.map((c, i) => [c.key, i]));
 
     const $ = (id) => document.getElementById(id);
     const norm = (v) => String(v || "").trim().toLowerCase();
+    const keyOf = (v) => norm(v).replaceAll(" ", "_");
 
     let DATA = [];
     let filtered = [];
@@ -593,26 +597,9 @@
         .replaceAll("'", "&#39;");
     }
 
-    function toStageKey(raw) {
-      const key = norm(raw).replaceAll(" ", "_");
-      if (key === "reserva" || key === "processo" || key === "em_processo") return "em_processo";
-      if (key === "credito") return "credito";
-      if (key === "secretaria_de_vendas" || key === "secretaria_vendas") return "secretaria_vendas";
-      if (key === "assinatura_diretoria") return "assinatura_diretoria";
-      if (key === "aprovacao_diretoria" || key === "autorizacao_diretoria") return "autorizacao_diretoria";
-      if (key === "envio_sienge") return "envio_sienge";
-      if (key === "venda_finalizada") return "venda_finalizada";
-      return "em_processo";
-    }
-
-    function toBackendStage(stageKey) {
-      const col = COLUMNS.find((c) => c.key === stageKey);
-      return col ? col.backend : "EM_PROCESSO";
-    }
-
     function stageLabel(stageKey) {
       const col = COLUMNS.find((c) => c.key === stageKey);
-      return col ? col.title : "Processo";
+      return col ? col.title : "Em Repasse";
     }
 
     function formatDate(raw) {
@@ -620,6 +607,38 @@
       const d = new Date(raw);
       if (Number.isNaN(d.getTime())) return "-";
       return d.toLocaleDateString("pt-BR");
+    }
+
+    function toRepasseStageKey(item) {
+      const statusCaixa = keyOf(item.status_cca);
+      if (statusCaixa === "assinatura_caixa") return "assinatura_caixa";
+
+      const etapaRepasse = keyOf(item.etapa_repasse);
+      if (etapaRepasse === "inicio_repasse" || etapaRepasse === "assinatura_autorizada") {
+        return "inicio_repasse";
+      }
+      if (etapaRepasse === "em_repasse") return "em_repasse";
+
+      return "em_repasse";
+    }
+
+    function isRepasseItem(item) {
+      const fila = keyOf(item.fila_atual);
+      const etapaRepasse = keyOf(item.etapa_repasse);
+      const statusCaixa = keyOf(item.status_cca);
+      const estagioComercial = keyOf(item.estagio_comercial || item.status_geral);
+      return (
+        fila === "repasse" ||
+        Boolean(etapaRepasse) ||
+        statusCaixa === "assinatura_caixa" ||
+        REPASSE_ESTAGIOS.has(estagioComercial)
+      );
+    }
+
+    function payloadForStage(stageKey) {
+      if (stageKey === "em_repasse") return { etapa_repasse: "EM_REPASSE" };
+      if (stageKey === "inicio_repasse") return { etapa_repasse: "INICIO_REPASSE" };
+      return { status_cca: "ASSINATURA_CAIXA" };
     }
 
     async function api(path, options = {}) {
@@ -658,7 +677,10 @@
         cliente: item.cliente_nome || "-",
         obra: item.obra || "-",
         corretor: item.corretor || "-",
-        stage: toStageKey(item.estagio_comercial || item.status_geral),
+        estagioComercial: item.estagio_comercial || "-",
+        etapaRepasse: item.etapa_repasse || "-",
+        statusCaixa: item.status_cca || "-",
+        stage: toRepasseStageKey(item),
         dataCadastro: item.data_cadastro_origem || item.created_at || null,
         moving: false,
       };
@@ -687,6 +709,8 @@
           </div>
           <div class="meta-line"><span>Empreendimento</span><b>${esc(row.obra)}</b></div>
           <div class="meta-line"><span>Corretor</span><b>${esc(row.corretor)}</b></div>
+          <div class="meta-line"><span>Estagio comercial</span><b>${esc(row.estagioComercial)}</b></div>
+          <div class="meta-line"><span>Status caixa</span><b>${esc(row.statusCaixa)}</b></div>
           <div class="meta-line"><span>Cadastro</span><b>${esc(formatDate(row.dataCadastro))}</b></div>
         </div>
       `;
@@ -723,19 +747,25 @@
       renderBoard();
     }
 
-    async function moveToNextStage(processoId, targetStage) {
+    async function moveToStage(processoId, targetStage) {
       const row = DATA.find((r) => r.id === processoId);
       if (!row) return;
 
       const fromStage = row.stage;
       if (fromStage === targetStage) return;
 
+      if (fromStage === "assinatura_caixa") {
+        setMsg("Assinatura Caixa finalizada nao permite retorno.", "err");
+        applyFilters();
+        return;
+      }
+
       const fromIndex = COL_INDEX[fromStage];
       const toIndex = COL_INDEX[targetStage];
       const isNextStep = toIndex === fromIndex + 1;
-      const isReturnToProcesso = targetStage === "em_processo" && fromStage !== "em_processo";
-      if (!isNextStep && !isReturnToProcesso) {
-        setMsg("Movimento permitido: proxima coluna ou retorno direto para Processo.", "err");
+      const isReturnToStart = targetStage === "em_repasse" && fromStage !== "em_repasse";
+      if (!isNextStep && !isReturnToStart) {
+        setMsg("Movimento permitido: proxima coluna ou retorno para Em Repasse.", "err");
         applyFilters();
         return;
       }
@@ -748,9 +778,12 @@
       try {
         const updated = await api(`/processos/${encodeURIComponent(processoId)}`, {
           method: "PATCH",
-          body: JSON.stringify({ estagio_comercial: toBackendStage(targetStage) }),
+          body: JSON.stringify(payloadForStage(targetStage)),
         });
-        row.stage = toStageKey(updated.estagio_comercial || targetStage);
+        row.estagioComercial = updated.estagio_comercial || row.estagioComercial;
+        row.etapaRepasse = updated.etapa_repasse || row.etapaRepasse;
+        row.statusCaixa = updated.status_cca || row.statusCaixa;
+        row.stage = toRepasseStageKey(updated);
         row.moving = false;
         setMsg(`Cliente movido para ${stageLabel(row.stage)}.`, "ok");
       } catch (error) {
@@ -800,14 +833,14 @@
           }
           if (!payload || !payload.id) return;
           const targetStage = zone.dataset.drop;
-          moveToNextStage(payload.id, targetStage).catch(() => null);
+          moveToStage(payload.id, targetStage).catch(() => null);
         });
       });
     }
 
     async function loadData() {
       const rows = await fetchProcessosPaged();
-      DATA = rows.map(fromBackend);
+      DATA = rows.filter(isRepasseItem).map(fromBackend);
     }
 
     async function refresh(force = false) {
@@ -820,7 +853,7 @@
         lastRefreshAt = Date.now();
         setMsg("", "");
       } catch (error) {
-        setMsg(`Erro ao carregar kanban: ${error.message}`, "err");
+        setMsg(`Erro ao carregar kanban de repasse: ${error.message}`, "err");
       } finally {
         loading = false;
       }
