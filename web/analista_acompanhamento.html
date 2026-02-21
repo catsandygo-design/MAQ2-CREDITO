@@ -1,0 +1,849 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Acompanhamento Kanban | Analista</title>
+  <style>
+    :root {
+      --bg: #020617;
+      --bg-soft: #0b1228;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --line: rgba(148, 163, 184, 0.18);
+      --accent: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(900px 650px at 20% 0%, rgba(31, 41, 55, 0.65) 0%, rgba(2, 6, 23, 1) 60%),
+        linear-gradient(180deg, #020617, #01040f);
+    }
+
+    #bhCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      opacity: .72;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      max-width: 1840px;
+      margin: 0 auto;
+      padding: 14px;
+      display: grid;
+      grid-template-rows: auto auto auto 1fr;
+      gap: 10px;
+    }
+
+    .topbar {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: .02em;
+    }
+
+    .title p {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 9px 12px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .btn.primary {
+      border-color: rgba(34, 197, 94, .55);
+      background: rgba(34, 197, 94, .14);
+    }
+
+    .meta {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .chip strong {
+      color: var(--text);
+    }
+
+    .filters {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+      padding: 10px;
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr auto auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .field {
+      display: grid;
+      gap: 5px;
+    }
+
+    .field label {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .field input {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(2, 6, 23, .65);
+      color: var(--text);
+      padding: 10px 11px;
+      outline: none;
+    }
+
+    .msg {
+      min-height: 18px;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 0 2px;
+    }
+
+    .msg.ok { color: #86efac; }
+    .msg.err { color: #fca5a5; }
+
+    .board-shell {
+      min-height: 0;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .board {
+      min-height: 0;
+      height: 100%;
+      overflow: auto;
+      display: grid;
+      grid-template-columns: repeat(7, minmax(260px, 1fr));
+      gap: 10px;
+      align-items: start;
+    }
+
+    .column {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(7, 12, 28, .8);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 420px;
+      max-height: calc(100vh - 240px);
+    }
+
+    .col-head {
+      padding: 10px;
+      border-bottom: 1px solid rgba(148, 163, 184, .12);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .col-title {
+      margin: 0;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .col-count {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, .25);
+      padding: 3px 8px;
+      font-size: 11px;
+      color: var(--muted);
+      background: rgba(2, 6, 23, .6);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .cards {
+      min-height: 0;
+      overflow: auto;
+      padding: 8px;
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+
+    .cards.drag-over {
+      background: rgba(34, 197, 94, .08);
+      box-shadow: inset 0 0 0 1px rgba(34, 197, 94, .35);
+    }
+
+    .card {
+      border: 1px solid rgba(148, 163, 184, .2);
+      border-radius: 12px;
+      background: rgba(15, 23, 42, .85);
+      padding: 9px;
+      display: grid;
+      gap: 5px;
+      cursor: grab;
+      transition: transform .12s ease, border-color .12s ease, opacity .12s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(56, 189, 248, .42);
+      transform: translateY(-1px);
+    }
+
+    .card.dragging {
+      opacity: .45;
+      transform: scale(.98);
+    }
+
+    .card.updating {
+      cursor: progress;
+      opacity: .65;
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .name {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .name a {
+      color: var(--text);
+      text-decoration: none;
+      border-bottom: 1px dashed rgba(148, 163, 184, .3);
+    }
+
+    .name a:hover {
+      border-bottom-color: rgba(34, 197, 94, .55);
+    }
+
+    .stage {
+      border-radius: 999px;
+      padding: 3px 7px;
+      font-size: 10px;
+      border: 1px solid rgba(148, 163, 184, .25);
+      color: #cbd5e1;
+      background: rgba(2, 6, 23, .65);
+      white-space: nowrap;
+    }
+
+    .meta-line {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .empty {
+      border: 1px dashed rgba(148, 163, 184, .24);
+      border-radius: 10px;
+      padding: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .board::-webkit-scrollbar,
+    .cards::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    .board::-webkit-scrollbar-thumb,
+    .cards::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, .26);
+      border-radius: 999px;
+      border: 2px solid rgba(2, 6, 23, .55);
+    }
+
+    @media (max-width: 1100px) {
+      .filters {
+        grid-template-columns: 1fr 1fr;
+      }
+      .column {
+        max-height: calc(100vh - 300px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="bhCanvas" aria-hidden="true"></canvas>
+
+  <div class="wrap">
+    <section class="topbar">
+      <div class="title">
+        <h1>Acompanhamento de Credito (Kanban)</h1>
+        <p>Arraste o cliente para a proxima fila comercial. Atualizacao em tempo real no processo.</p>
+      </div>
+      <div class="actions">
+        <a class="btn" href="/app/analista">Voltar painel</a>
+        <a class="btn" href="/app/analista/importacao">Importacao</a>
+      </div>
+    </section>
+
+    <section class="meta">
+      <span class="chip">Total no Kanban: <strong id="totalCount">0</strong></span>
+      <span class="chip">Auto refresh: <strong id="refreshLabel">60s</strong></span>
+      <span class="chip">Regra: <strong>arrastar para a proxima coluna</strong></span>
+    </section>
+
+    <section class="filters">
+      <div class="field">
+        <label>Buscar cliente/empreendimento/corretor</label>
+        <input id="q" placeholder="Ex: Douglas, AGL30, Gabriela" />
+      </div>
+      <div class="field">
+        <label>Empreendimento</label>
+        <input id="emp" placeholder="Ex: AGL30" />
+      </div>
+      <div class="field">
+        <label>Corretor</label>
+        <input id="cor" placeholder="Ex: Gabriela" />
+      </div>
+      <button class="btn primary" id="btnFiltrar" type="button">Filtrar</button>
+      <button class="btn" id="btnLimpar" type="button">Limpar</button>
+      <div class="msg" id="msg"></div>
+    </section>
+
+    <section class="board-shell">
+      <div class="board" id="board"></div>
+    </section>
+  </div>
+
+  <script>
+    (function initBlackHoleBg(){
+      const canvas = document.getElementById("bhCanvas");
+      if (!canvas) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+      let rafId = 0;
+      let renderer = null;
+      let mesh = null;
+      let material = null;
+      let geometry = null;
+      let onResize = null;
+
+      const vertexShader = `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = vec4(position, 1.0);
+        }
+      `;
+
+      const fragmentShader = `
+        precision highp float;
+        uniform float iTime;
+        uniform vec2 iResolution;
+
+        float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
+        float noise(vec2 p){
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(hash(i), hash(i + vec2(1.0,0.0)), f.x), mix(hash(i + vec2(0.0,1.0)), hash(i + vec2(1.0,1.0)), f.x), f.y);
+        }
+        float fbm(vec2 p){
+          float v = 0.0;
+          float a = 0.5;
+          for (int i = 0; i < 5; i++) { v += a * noise(p); p *= 2.0; a *= 0.5; }
+          return v;
+        }
+        void main(){
+          vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution.xy) / min(iResolution.y, iResolution.x);
+          float r = length(uv);
+          float angle_raw = atan(uv.y, uv.x);
+          float bgNebula = fbm(uv * 2.5 + iTime * 0.03);
+          vec3 bgColor = mix(vec3(0.0), vec3(0.02, 0.03, 0.06), bgNebula);
+          float vignette = smoothstep(1.2, 0.3, r);
+
+          float suction = iTime * 0.12;
+          vec2 starUV = vec2(r + suction * 0.4, angle_raw + r * 2.5 + iTime * 0.1);
+          vec3 starColor = vec3(0.0);
+          vec2 starGrid = starUV * 70.0;
+          vec2 cell = floor(starGrid);
+          float starSeed = hash(cell);
+          if (starSeed > 0.995) {
+            vec2 cellOffset = fract(starGrid) - 0.5;
+            float starDist = length(cellOffset);
+            float starCore = smoothstep(0.25, 0.0, starDist);
+            float twinkle = sin(iTime * 3.0 + starSeed * 40.0) * 0.5 + 0.5;
+            float maskStars = smoothstep(0.25, 0.5, r);
+            vec3 starBase = vec3(0.85, 0.9, 1.0);
+            starColor = starBase * twinkle * starCore * maskStars;
+          }
+
+          float angle = angle_raw + iTime * 0.2;
+          float horizon = 0.16;
+          float bending = 0.16 / (r + 0.01);
+          float pr = length(uv * (1.0 - bending));
+          float plasma = fbm(vec2(pr * 6.0, angle * 3.0 - iTime * 0.05));
+          float detail = pow(fbm(vec2(pr * 16.0, angle * 9.0 - iTime * 0.1)), 3.0) * 4.0;
+          float diskMask = smoothstep(0.7, 0.25, pr) * smoothstep(horizon - 0.05, horizon + 0.09, pr);
+
+          vec3 fire = vec3(1.0, 0.45, 0.12);
+          vec3 white = vec3(1.0, 0.95, 0.9);
+          vec3 color = bgColor * vignette;
+          color += fire * diskMask * (plasma + detail * 0.8);
+          color += white * detail * diskMask * 0.4;
+
+          float photonRing = smoothstep(0.012, 0.0, abs(r - horizon));
+          color += white * photonRing * 1.4;
+
+          float distToHorizon = max(abs(r - horizon), 0.012);
+          float glow = clamp(0.012 / distToHorizon, 0.0, 2.5);
+          color += fire * glow * 0.5;
+
+          float chroma = smoothstep(0.02, 0.0, abs(r - horizon));
+          color.r += chroma * 0.18;
+          color.b += chroma * -0.05;
+          if (r < horizon) color = vec3(0.0);
+
+          color += starColor;
+          color = pow(color, vec3(0.95));
+          gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
+        }
+      `;
+
+      async function boot(){
+        let THREE = null;
+        try {
+          THREE = await import("https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.module.js");
+        } catch (error) {
+          console.warn("Efeito de fundo indisponivel:", error);
+          return;
+        }
+
+        const uniforms = {
+          iTime: { value: 0 },
+          iResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+        };
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight, false);
+
+        geometry = new THREE.PlaneGeometry(2, 2);
+        material = new THREE.ShaderMaterial({ uniforms, vertexShader, fragmentShader });
+        mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+
+        const loop = (time) => {
+          if (document.hidden) {
+            rafId = requestAnimationFrame(loop);
+            return;
+          }
+          uniforms.iTime.value = time * 0.001;
+          renderer.render(scene, camera);
+          rafId = requestAnimationFrame(loop);
+        };
+        rafId = requestAnimationFrame(loop);
+
+        onResize = () => {
+          const w = window.innerWidth;
+          const h = window.innerHeight;
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+          renderer.setSize(w, h, false);
+          uniforms.iResolution.value.set(w, h);
+        };
+        window.addEventListener("resize", onResize, { passive: true });
+      }
+
+      boot();
+
+      window.addEventListener("beforeunload", () => {
+        if (rafId) cancelAnimationFrame(rafId);
+        if (onResize) window.removeEventListener("resize", onResize);
+        if (mesh && mesh.parent) mesh.parent.remove(mesh);
+        if (geometry) geometry.dispose();
+        if (material) material.dispose();
+        if (renderer) renderer.dispose();
+      });
+    })();
+  </script>
+
+  <script>
+    const API_BASE = "/app/api";
+    const PAGE_SIZE = 120;
+    const MAX_PAGES = 20;
+    const REFRESH_SECONDS = 60;
+
+    const COLUMNS = [
+      { key: "em_processo", title: "Processo", backend: "EM_PROCESSO" },
+      { key: "credito", title: "Credito", backend: "CREDITO" },
+      { key: "secretaria_vendas", title: "Secretaria de Vendas", backend: "SECRETARIA_VENDAS" },
+      { key: "assinatura_diretoria", title: "Assinatura Diretoria", backend: "ASSINATURA_DIRETORIA" },
+      { key: "autorizacao_diretoria", title: "Aprovacao Diretoria", backend: "AUTORIZACAO_DIRETORIA" },
+      { key: "envio_sienge", title: "Envio Sienge", backend: "ENVIO_SIENGE" },
+      { key: "venda_finalizada", title: "Venda Finalizada", backend: "VENDA_FINALIZADA" },
+    ];
+
+    const COL_INDEX = Object.fromEntries(COLUMNS.map((c, i) => [c.key, i]));
+
+    const $ = (id) => document.getElementById(id);
+    const norm = (v) => String(v || "").trim().toLowerCase();
+
+    let DATA = [];
+    let filtered = [];
+    let loading = false;
+    let countdown = REFRESH_SECONDS;
+    let lastRefreshAt = 0;
+
+    function setMsg(text, tone = "") {
+      const el = $("msg");
+      el.textContent = text || "";
+      el.className = `msg ${tone}`.trim();
+    }
+
+    function esc(v) {
+      return String(v ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function toStageKey(raw) {
+      const key = norm(raw).replaceAll(" ", "_");
+      if (key === "reserva" || key === "processo" || key === "em_processo") return "em_processo";
+      if (key === "credito") return "credito";
+      if (key === "secretaria_de_vendas" || key === "secretaria_vendas") return "secretaria_vendas";
+      if (key === "assinatura_diretoria") return "assinatura_diretoria";
+      if (key === "aprovacao_diretoria" || key === "autorizacao_diretoria") return "autorizacao_diretoria";
+      if (key === "envio_sienge") return "envio_sienge";
+      if (key === "venda_finalizada") return "venda_finalizada";
+      return "em_processo";
+    }
+
+    function toBackendStage(stageKey) {
+      const col = COLUMNS.find((c) => c.key === stageKey);
+      return col ? col.backend : "EM_PROCESSO";
+    }
+
+    function stageLabel(stageKey) {
+      const col = COLUMNS.find((c) => c.key === stageKey);
+      return col ? col.title : "Processo";
+    }
+
+    function formatDate(raw) {
+      if (!raw) return "-";
+      const d = new Date(raw);
+      if (Number.isNaN(d.getTime())) return "-";
+      return d.toLocaleDateString("pt-BR");
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(`${API_BASE}${path}`, {
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options,
+      });
+
+      if (response.status === 401) {
+        window.location.href = "/login";
+        throw new Error("Nao autenticado");
+      }
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.detail || "Falha ao carregar dados");
+      }
+      return data;
+    }
+
+    async function fetchProcessosPaged() {
+      const rows = [];
+      for (let page = 0, offset = 0; page < MAX_PAGES; page += 1, offset += PAGE_SIZE) {
+        const chunk = await api(`/processos?limit=${PAGE_SIZE}&offset=${offset}`);
+        if (!Array.isArray(chunk) || !chunk.length) break;
+        rows.push(...chunk);
+        if (chunk.length < PAGE_SIZE) break;
+      }
+      return rows;
+    }
+
+    function fromBackend(item) {
+      return {
+        id: String(item.processo_id || ""),
+        cliente: item.cliente_nome || "-",
+        obra: item.obra || "-",
+        corretor: item.corretor || "-",
+        stage: toStageKey(item.estagio_comercial || item.status_geral),
+        dataCadastro: item.data_cadastro_origem || item.created_at || null,
+        moving: false,
+      };
+    }
+
+    function columnSkeleton() {
+      const board = $("board");
+      board.innerHTML = COLUMNS.map((c) => `
+        <article class="column" data-col="${c.key}">
+          <header class="col-head">
+            <h3 class="col-title">${c.title}</h3>
+            <span class="col-count" id="count-${c.key}">0</span>
+          </header>
+          <div class="cards" id="cards-${c.key}" data-drop="${c.key}"></div>
+        </article>
+      `).join("");
+    }
+
+    function cardTemplate(row) {
+      const href = `/app/analise?processo_id=${encodeURIComponent(row.id)}`;
+      return `
+        <div class="card ${row.moving ? "updating" : ""}" draggable="${row.moving ? "false" : "true"}" data-id="${esc(row.id)}" data-stage="${esc(row.stage)}">
+          <div class="card-top">
+            <p class="name"><a href="${href}" title="Abrir analise">${esc(row.cliente)}</a></p>
+            <span class="stage">${esc(stageLabel(row.stage))}</span>
+          </div>
+          <div class="meta-line"><span>Empreendimento</span><b>${esc(row.obra)}</b></div>
+          <div class="meta-line"><span>Corretor</span><b>${esc(row.corretor)}</b></div>
+          <div class="meta-line"><span>Cadastro</span><b>${esc(formatDate(row.dataCadastro))}</b></div>
+        </div>
+      `;
+    }
+
+    function renderBoard() {
+      COLUMNS.forEach((col) => {
+        const list = filtered.filter((r) => r.stage === col.key);
+        const body = $(`cards-${col.key}`);
+        $(`count-${col.key}`).textContent = String(list.length);
+        if (!list.length) {
+          body.innerHTML = '<div class="empty">Sem clientes nesta etapa.</div>';
+          return;
+        }
+        body.innerHTML = list.map(cardTemplate).join("");
+      });
+
+      $("totalCount").textContent = String(filtered.length);
+      bindDragEvents();
+    }
+
+    function applyFilters() {
+      const q = norm($("q").value);
+      const emp = norm($("emp").value);
+      const cor = norm($("cor").value);
+
+      filtered = DATA.filter((row) => {
+        const hitQ = !q || [row.cliente, row.obra, row.corretor].some((v) => norm(v).includes(q));
+        const hitEmp = !emp || norm(row.obra).includes(emp);
+        const hitCor = !cor || norm(row.corretor).includes(cor);
+        return hitQ && hitEmp && hitCor;
+      });
+
+      renderBoard();
+    }
+
+    async function moveToNextStage(processoId, targetStage) {
+      const row = DATA.find((r) => r.id === processoId);
+      if (!row) return;
+
+      const fromStage = row.stage;
+      if (fromStage === targetStage) return;
+
+      const fromIndex = COL_INDEX[fromStage];
+      const toIndex = COL_INDEX[targetStage];
+      if (toIndex !== fromIndex + 1) {
+        setMsg("Mova o cliente para a proxima coluna do fluxo.", "err");
+        applyFilters();
+        return;
+      }
+
+      row.stage = targetStage;
+      row.moving = true;
+      applyFilters();
+      setMsg(`Salvando movimentacao para ${stageLabel(targetStage)}...`);
+
+      try {
+        const updated = await api(`/processos/${encodeURIComponent(processoId)}`, {
+          method: "PATCH",
+          body: JSON.stringify({ estagio_comercial: toBackendStage(targetStage) }),
+        });
+        row.stage = toStageKey(updated.estagio_comercial || targetStage);
+        row.moving = false;
+        setMsg(`Cliente movido para ${stageLabel(row.stage)}.`, "ok");
+      } catch (error) {
+        row.stage = fromStage;
+        row.moving = false;
+        setMsg(`Falha ao mover cliente: ${error.message}`, "err");
+      }
+
+      applyFilters();
+    }
+
+    function bindDragEvents() {
+      document.querySelectorAll(".card[draggable='true']").forEach((card) => {
+        card.addEventListener("dragstart", (ev) => {
+          card.classList.add("dragging");
+          ev.dataTransfer.effectAllowed = "move";
+          ev.dataTransfer.setData("text/plain", JSON.stringify({
+            id: card.dataset.id,
+            stage: card.dataset.stage,
+          }));
+        });
+
+        card.addEventListener("dragend", () => {
+          card.classList.remove("dragging");
+          document.querySelectorAll(".cards.drag-over").forEach((zone) => zone.classList.remove("drag-over"));
+        });
+      });
+
+      document.querySelectorAll(".cards[data-drop]").forEach((zone) => {
+        zone.addEventListener("dragover", (ev) => {
+          ev.preventDefault();
+          zone.classList.add("drag-over");
+        });
+
+        zone.addEventListener("dragleave", () => {
+          zone.classList.remove("drag-over");
+        });
+
+        zone.addEventListener("drop", (ev) => {
+          ev.preventDefault();
+          zone.classList.remove("drag-over");
+          let payload = null;
+          try {
+            payload = JSON.parse(ev.dataTransfer.getData("text/plain") || "{}");
+          } catch (_) {
+            payload = null;
+          }
+          if (!payload || !payload.id) return;
+          const targetStage = zone.dataset.drop;
+          moveToNextStage(payload.id, targetStage).catch(() => null);
+        });
+      });
+    }
+
+    async function loadData() {
+      const rows = await fetchProcessosPaged();
+      DATA = rows.map(fromBackend);
+    }
+
+    async function refresh(force = false) {
+      if (loading) return;
+      if (!force && document.hidden) return;
+      loading = true;
+      try {
+        await loadData();
+        applyFilters();
+        lastRefreshAt = Date.now();
+        setMsg("", "");
+      } catch (error) {
+        setMsg(`Erro ao carregar kanban: ${error.message}`, "err");
+      } finally {
+        loading = false;
+      }
+    }
+
+    function tick() {
+      if (document.hidden) {
+        $("refreshLabel").textContent = "pausado";
+        return;
+      }
+      countdown -= 1;
+      if (countdown <= 0) {
+        countdown = REFRESH_SECONDS;
+        refresh().catch(() => null);
+      }
+      $("refreshLabel").textContent = `${countdown}s`;
+    }
+
+    $("btnFiltrar").addEventListener("click", applyFilters);
+    $("btnLimpar").addEventListener("click", () => {
+      $("q").value = "";
+      $("emp").value = "";
+      $("cor").value = "";
+      applyFilters();
+      setMsg("", "");
+    });
+    ["q", "emp", "cor"].forEach((id) => {
+      $(id).addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") applyFilters();
+      });
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) return;
+      $("refreshLabel").textContent = `${countdown}s`;
+      if (Date.now() - lastRefreshAt >= REFRESH_SECONDS * 1000) {
+        countdown = REFRESH_SECONDS;
+        refresh(true).catch(() => null);
+      }
+    });
+
+    columnSkeleton();
+    refresh(true).catch(() => null);
+    setInterval(tick, 1000);
+  </script>
+</body>
+</html>

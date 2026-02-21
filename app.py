@@ -597,11 +597,14 @@ def _process_estagio_comercial(value: Optional[str], fallback: str = "RESERVA") 
     token = _normalize_text_key(value)
     aliases = {
         "reserva": "RESERVA",
+        "processo": "EM_PROCESSO",
         "em_processo": "EM_PROCESSO",
         "credito": "CREDITO",
         "secretaria_vendas": "SECRETARIA_VENDAS",
         "secretaria_de_vendas": "SECRETARIA_VENDAS",
         "assinatura_diretoria": "ASSINATURA_DIRETORIA",
+        "aprovacao_diretoria": "AUTORIZACAO_DIRETORIA",
+        "aprovacao_da_diretoria": "AUTORIZACAO_DIRETORIA",
         "autorizacao_diretoria": "AUTORIZACAO_DIRETORIA",
         "envio_sienge": "ENVIO_SIENGE",
         "venda_finalizada": "VENDA_FINALIZADA",
@@ -2309,6 +2312,19 @@ def app_analista_page(request: Request):
         return RedirectResponse(url=target, status_code=302)
 
     return _html_page("analista_painel.html")
+
+
+@app.get("/app/analista/acompanhamento")
+def app_analista_acompanhamento_page(request: Request):
+    session = _read_session(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=302)
+    if bool(session.get("must_change_password")):
+        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+    role = _normalize_role(str(session.get("role", "")))
+    if role != ROLE_ANALISTA:
+        return RedirectResponse(url=_home_for_role(role), status_code=302)
+    return _html_page("analista_acompanhamento.html")
 
 
 @app.get("/app/analise")
