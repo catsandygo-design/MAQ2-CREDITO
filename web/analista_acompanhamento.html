@@ -47,36 +47,36 @@
       position: relative;
       z-index: 1;
       height: 100%;
-      max-width: 1840px;
+      max-width: 100%;
       margin: 0 auto;
-      padding: 14px;
+      padding: 10px;
       display: grid;
       grid-template-rows: auto auto auto 1fr;
-      gap: 10px;
+      gap: 8px;
     }
 
     .topbar {
       border: 1px solid var(--line);
       border-radius: 16px;
       background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-      padding: 10px 12px;
+      padding: 8px 10px;
       display: flex;
       justify-content: space-between;
-      gap: 10px;
+      gap: 8px;
       align-items: center;
       flex-wrap: wrap;
     }
 
     .title h1 {
       margin: 0;
-      font-size: 18px;
+      font-size: 16px;
       letter-spacing: .02em;
     }
 
     .title p {
       margin: 2px 0 0;
       color: var(--muted);
-      font-size: 12px;
+      font-size: 11px;
     }
 
     .actions {
@@ -91,7 +91,8 @@
       background: rgba(255, 255, 255, 0.04);
       color: var(--text);
       border-radius: 12px;
-      padding: 9px 12px;
+      padding: 7px 10px;
+      font-size: 12px;
       font-weight: 700;
       text-decoration: none;
       cursor: pointer;
@@ -113,8 +114,8 @@
       border: 1px solid var(--line);
       background: rgba(255, 255, 255, 0.03);
       border-radius: 999px;
-      padding: 6px 10px;
-      font-size: 12px;
+      padding: 4px 8px;
+      font-size: 11px;
       color: var(--muted);
     }
 
@@ -126,10 +127,10 @@
       border: 1px solid var(--line);
       border-radius: 14px;
       background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
-      padding: 10px;
+      padding: 8px;
       display: grid;
       grid-template-columns: 1.4fr 1fr 1fr auto auto;
-      gap: 8px;
+      gap: 6px;
       align-items: end;
     }
 
@@ -139,7 +140,7 @@
     }
 
     .field label {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--muted);
     }
 
@@ -148,13 +149,14 @@
       border-radius: 12px;
       background: rgba(2, 6, 23, .65);
       color: var(--text);
-      padding: 10px 11px;
+      padding: 8px 9px;
       outline: none;
+      font-size: 12px;
     }
 
     .msg {
       min-height: 18px;
-      font-size: 12px;
+      font-size: 11px;
       color: var(--muted);
       padding: 0 2px;
     }
@@ -167,10 +169,10 @@
       border: 1px solid var(--line);
       border-radius: 16px;
       background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
-      padding: 10px;
+      padding: 8px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
 
     .board {
@@ -178,8 +180,8 @@
       height: 100%;
       overflow: auto;
       display: grid;
-      grid-template-columns: repeat(7, minmax(260px, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(7, minmax(172px, 1fr));
+      gap: 8px;
       align-items: start;
     }
 
@@ -189,31 +191,31 @@
       background: rgba(7, 12, 28, .8);
       display: grid;
       grid-template-rows: auto 1fr;
-      min-height: 420px;
-      max-height: calc(100vh - 240px);
+      min-height: 340px;
+      max-height: calc(100vh - 210px);
     }
 
     .col-head {
-      padding: 10px;
+      padding: 8px;
       border-bottom: 1px solid rgba(148, 163, 184, .12);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
 
     .col-title {
       margin: 0;
-      font-size: 12px;
+      font-size: 11px;
       text-transform: uppercase;
-      letter-spacing: .08em;
+      letter-spacing: .06em;
     }
 
     .col-count {
       border-radius: 999px;
       border: 1px solid rgba(148, 163, 184, .25);
-      padding: 3px 8px;
-      font-size: 11px;
+      padding: 2px 7px;
+      font-size: 10px;
       color: var(--muted);
       background: rgba(2, 6, 23, .6);
       font-variant-numeric: tabular-nums;
@@ -222,9 +224,9 @@
     .cards {
       min-height: 0;
       overflow: auto;
-      padding: 8px;
+      padding: 6px;
       display: grid;
-      gap: 8px;
+      gap: 6px;
       align-content: start;
     }
 
@@ -237,9 +239,9 @@
       border: 1px solid rgba(148, 163, 184, .2);
       border-radius: 12px;
       background: rgba(15, 23, 42, .85);
-      padding: 9px;
+      padding: 7px;
       display: grid;
-      gap: 5px;
+      gap: 4px;
       cursor: grab;
       transition: transform .12s ease, border-color .12s ease, opacity .12s ease;
     }
@@ -268,7 +270,7 @@
 
     .name {
       margin: 0;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 800;
       line-height: 1.2;
     }
@@ -285,8 +287,8 @@
 
     .stage {
       border-radius: 999px;
-      padding: 3px 7px;
-      font-size: 10px;
+      padding: 2px 6px;
+      font-size: 9px;
       border: 1px solid rgba(148, 163, 184, .25);
       color: #cbd5e1;
       background: rgba(2, 6, 23, .65);
@@ -294,19 +296,26 @@
     }
 
     .meta-line {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--muted);
       display: flex;
       justify-content: space-between;
-      gap: 8px;
+      gap: 6px;
+    }
+
+    .meta-line b {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 62%;
     }
 
     .empty {
       border: 1px dashed rgba(148, 163, 184, .24);
       border-radius: 10px;
-      padding: 10px;
+      padding: 8px;
       color: var(--muted);
-      font-size: 12px;
+      font-size: 11px;
       text-align: center;
     }
 
@@ -323,12 +332,21 @@
       border: 2px solid rgba(2, 6, 23, .55);
     }
 
-    @media (max-width: 1100px) {
+    @media (max-width: 1500px) {
+      .board {
+        grid-template-columns: repeat(7, minmax(160px, 1fr));
+      }
+    }
+
+    @media (max-width: 1200px) {
       .filters {
         grid-template-columns: 1fr 1fr;
       }
+      .board {
+        grid-template-columns: repeat(7, minmax(200px, 1fr));
+      }
       .column {
-        max-height: calc(100vh - 300px);
+        max-height: calc(100vh - 280px);
       }
     }
   </style>
@@ -340,7 +358,7 @@
     <section class="topbar">
       <div class="title">
         <h1>Acompanhamento de Credito (Kanban)</h1>
-        <p>Arraste o cliente para a proxima fila comercial. Atualizacao em tempo real no processo.</p>
+        <p>Arraste para a proxima fila comercial ou retorne direto para Processo. Atualizacao em tempo real.</p>
       </div>
       <div class="actions">
         <a class="btn" href="/app/analista">Voltar painel</a>
@@ -351,7 +369,7 @@
     <section class="meta">
       <span class="chip">Total no Kanban: <strong id="totalCount">0</strong></span>
       <span class="chip">Auto refresh: <strong id="refreshLabel">60s</strong></span>
-      <span class="chip">Regra: <strong>arrastar para a proxima coluna</strong></span>
+      <span class="chip">Regra: <strong>proxima coluna ou retorno para Processo</strong></span>
     </section>
 
     <section class="filters">
@@ -713,8 +731,10 @@
 
       const fromIndex = COL_INDEX[fromStage];
       const toIndex = COL_INDEX[targetStage];
-      if (toIndex !== fromIndex + 1) {
-        setMsg("Mova o cliente para a proxima coluna do fluxo.", "err");
+      const isNextStep = toIndex === fromIndex + 1;
+      const isReturnToProcesso = targetStage === "em_processo" && fromStage !== "em_processo";
+      if (!isNextStep && !isReturnToProcesso) {
+        setMsg("Movimento permitido: proxima coluna ou retorno direto para Processo.", "err");
         applyFilters();
         return;
       }
