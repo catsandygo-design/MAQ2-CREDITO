@@ -41,6 +41,10 @@ try:
 except ValueError:
     GESTOR_META_MENSAL = 0
 META_MENSAL_RUNTIME_KEY = "gestor_meta_mensal"
+USERS_SEED_MODE_RUNTIME_KEY = "users_seed_mode"
+USERS_SEED_MODE_FULL = "full"
+USERS_SEED_MODE_ADMIN_ONLY = "admin_only"
+RESET_ADMIN_USERNAME = "douglasadm"
 ROLE_CORRETOR = "corretor"
 ROLE_CCA = "cca"
 ROLE_ANALISTA = "analista"
@@ -1364,6 +1368,12 @@ class AdminResetPasswordPayload(BaseModel):
     force_change_password: bool = True
 
 
+class AdminDeleteRegistroPayload(BaseModel):
+    entidade: str
+    registro_id: uuid.UUID
+    motivo: Optional[str] = None
+
+
 class AppUserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
@@ -1575,10 +1585,19 @@ def _ensure_seed_users(db: Session, force: bool = False) -> None:
     if SEED_USERS_READY and not force:
         return
 
+    seed_mode_raw = (_get_runtime_meta(db, USERS_SEED_MODE_RUNTIME_KEY) or USERS_SEED_MODE_FULL).strip().lower()
+    seed_mode = seed_mode_raw if seed_mode_raw in {USERS_SEED_MODE_FULL, USERS_SEED_MODE_ADMIN_ONLY} else USERS_SEED_MODE_FULL
+
     seeds = []
-    for username, account in APP_USERS.items():
-        seeds.append((username, account["password"], _normalize_role(account["role"])))
-    admin_seed_username = _normalize_username(APP_ADMIN_USER)
+    if seed_mode == USERS_SEED_MODE_ADMIN_ONLY:
+        admin_username = _normalize_username(RESET_ADMIN_USERNAME) or _normalize_username(APP_ADMIN_USER)
+        admin_password = (APP_ADMIN_PASSWORD or "").strip() or "Troque#Admin123"
+        seeds.append((admin_username, admin_password, ROLE_ADMIN))
+        admin_seed_username = admin_username
+    else:
+        for username, account in APP_USERS.items():
+            seeds.append((username, account["password"], _normalize_role(account["role"])))
+        admin_seed_username = _normalize_username(APP_ADMIN_USER)
 
     created = 0
     changed = 0
@@ -2831,6 +2850,218 @@ def admin_list_system_logs(
         if normalized_username:
             query = query.filter(func.lower(func.trim(SistemaLog.actor_username)) == normalized_username)
     return query.order_by(SistemaLog.created_at.desc()).limit(limit).all()
+
+
+def _normalize_maintenance_entity(value: Optional[str]) -> str:
+    raw = (value or "").strip().lower().replace("-", "_").replace(" ", "_")
+    aliases = {
+        "cliente": "cliente",
+        "clientes": "cliente",
+        "processo": "processo",
+        "processos": "processo",
+        "documento": "documento",
+        "documentos": "documento",
+        "usuario": "usuario",
+        "usuarios": "usuario",
+        "app_user": "usuario",
+        "app_users": "usuario",
+        "empreendimento": "empreendimento",
+        "empreendimentos": "empreendimento",
+        "processo_evento": "processo_evento",
+        "processo_eventos": "processo_evento",
+        "evento": "processo_evento",
+        "eventos": "processo_evento",
+        "sistema_log": "sistema_log",
+        "sistema_logs": "sistema_log",
+        "log": "sistema_log",
+        "logs": "sistema_log",
+    }
+    return aliases.get(raw, "")
+
+
+@app.post("/app/api/admin/maintenance/delete-registro")
+def admin_delete_registro(
+    payload: AdminDeleteRegistroPayload,
+    session: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    entidade = _normalize_maintenance_entity(payload.entidade)
+    if not entidade:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Entidade invalida. Use: cliente, processo, documento, usuario, "
+                "empreendimento, processo_evento ou sistema_log."
+            ),
+        )
+
+    actor_username = _normalize_username(str(session.get("username", "")))
+    actor_role = _normalize_role(str(session.get("role", "")))
+    entity_map: dict[str, Any] = {
+        "cliente": Cliente,
+        "processo": Processo,
+        "documento": Documento,
+        "usuario": AppUser,
+        "empreendimento": Empreendimento,
+        "processo_evento": ProcessoEvento,
+        "sistema_log": SistemaLog,
+    }
+    model = entity_map[entidade]
+    registro = db.get(model, payload.registro_id)
+    if not registro:
+        raise HTTPException(status_code=404, detail="Registro nao encontrado")
+
+    if entidade == "usuario":
+        actor_user_id = str(session.get("user_id", ""))
+        if actor_user_id and actor_user_id == str(registro.id):
+            raise HTTPException(status_code=422, detail="Admin nao pode excluir a propria conta")
+        registro_username = _normalize_username(getattr(registro, "username", ""))
+        if registro_username in {_normalize_username(RESET_ADMIN_USERNAME), _normalize_username(APP_ADMIN_USER)}:
+            raise HTTPException(status_code=422, detail="Usuario administrador principal nao pode ser excluido")
+
+    identificador = str(payload.registro_id)
+    resumo = None
+    if hasattr(registro, "username"):
+        resumo = f"username={getattr(registro, 'username', '')}"
+    elif hasattr(registro, "nome"):
+        resumo = f"nome={getattr(registro, 'nome', '')}"
+    elif hasattr(registro, "event_type"):
+        resumo = f"event_type={getattr(registro, 'event_type', '')}"
+    elif hasattr(registro, "acao"):
+        resumo = f"acao={getattr(registro, 'acao', '')}"
+
+    if entidade != "sistema_log":
+        details = f"entidade={entidade}; registro_id={identificador}"
+        if resumo:
+            details += f"; {resumo}"
+        if payload.motivo:
+            details += f"; motivo={payload.motivo.strip()[:400]}"
+        _record_system_log(
+            db,
+            actor_username=actor_username,
+            actor_role=actor_role,
+            tela="admin",
+            acao="REGISTRO_EXCLUIDO_DEFINITIVO",
+            entidade_tipo=entidade,
+            entidade_id=identificador,
+            details=details,
+        )
+
+    if entidade == "usuario":
+        _drop_sessions_for_user(registro.id)
+    db.delete(registro)
+    db.commit()
+    _invalidate_process_list_cache()
+
+    return {
+        "ok": True,
+        "entidade": entidade,
+        "registro_id": identificador,
+    }
+
+
+@app.post("/app/api/admin/maintenance/purge-historicos")
+def admin_purge_historicos(
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    eventos_total = int(db.query(func.count(ProcessoEvento.id)).scalar() or 0)
+    logs_total = int(db.query(func.count(SistemaLog.id)).scalar() or 0)
+
+    db.query(ProcessoEvento).delete(synchronize_session=False)
+    db.query(SistemaLog).delete(synchronize_session=False)
+    db.commit()
+    _invalidate_process_list_cache()
+
+    return {
+        "ok": True,
+        "processo_eventos_removidos": eventos_total,
+        "sistema_logs_removidos": logs_total,
+    }
+
+
+@app.post("/app/api/admin/maintenance/reset-sistema")
+def admin_reset_sistema(
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    global SEED_USERS_READY
+
+    clientes_total = int(db.query(func.count(Cliente.id)).scalar() or 0)
+    processos_total = int(db.query(func.count(Processo.id)).scalar() or 0)
+    documentos_total = int(db.query(func.count(Documento.id)).scalar() or 0)
+    empreendimentos_total = int(db.query(func.count(Empreendimento.id)).scalar() or 0)
+    eventos_total = int(db.query(func.count(ProcessoEvento.id)).scalar() or 0)
+    logs_total = int(db.query(func.count(SistemaLog.id)).scalar() or 0)
+    usuarios_total = int(db.query(func.count(AppUser.id)).scalar() or 0)
+    runtime_meta_total = 0
+    runtime_meta_exists = bool(db.execute(text("SELECT to_regclass('public.app_runtime_meta')")).scalar())
+    if runtime_meta_exists:
+        runtime_meta_total = int(db.execute(text("SELECT COUNT(*) FROM app_runtime_meta")).scalar() or 0)
+
+    db.query(Documento).delete(synchronize_session=False)
+    db.query(ProcessoEvento).delete(synchronize_session=False)
+    db.query(Processo).delete(synchronize_session=False)
+    db.query(Cliente).delete(synchronize_session=False)
+    db.query(Empreendimento).delete(synchronize_session=False)
+    db.query(SistemaLog).delete(synchronize_session=False)
+    if runtime_meta_exists:
+        db.execute(text("DELETE FROM app_runtime_meta"))
+
+    admin_username = _normalize_username(RESET_ADMIN_USERNAME) or _normalize_username(APP_ADMIN_USER)
+    admin_password = (APP_ADMIN_PASSWORD or "").strip() or "Troque#Admin123"
+    admin_user = db.query(AppUser).filter(func.lower(AppUser.username) == admin_username).first()
+    admin_criado = False
+
+    if not admin_user:
+        admin_user = AppUser(
+            username=admin_username,
+            role=ROLE_ADMIN,
+            is_active=True,
+            must_change_password=False,
+        )
+        _set_user_password(admin_user, admin_password, must_change_password=False)
+        db.add(admin_user)
+        db.flush()
+        admin_criado = True
+    else:
+        admin_user.username = admin_username
+        admin_user.role = ROLE_ADMIN
+        admin_user.is_active = True
+        # No reset geral, o usuario preservado volta para a senha admin oficial do ambiente.
+        _set_user_password(admin_user, admin_password, must_change_password=False)
+    admin_user.must_change_password = False
+    admin_user.last_login_at = None
+
+    usuarios_removidos = int(
+        db.query(AppUser)
+        .filter(func.lower(AppUser.username) != admin_username)
+        .delete(synchronize_session=False)
+    )
+
+    _set_runtime_meta(db, META_MENSAL_RUNTIME_KEY, "0")
+    _set_runtime_meta(db, USERS_SEED_MODE_RUNTIME_KEY, USERS_SEED_MODE_ADMIN_ONLY)
+
+    db.commit()
+    _invalidate_process_list_cache()
+    ACTIVE_SESSIONS.clear()
+    SEED_USERS_READY = False
+
+    return {
+        "ok": True,
+        "cliente_registros_removidos": clientes_total,
+        "processos_removidos": processos_total,
+        "documentos_removidos": documentos_total,
+        "empreendimentos_removidos": empreendimentos_total,
+        "processo_eventos_removidos": eventos_total,
+        "sistema_logs_removidos": logs_total,
+        "runtime_meta_removidos": runtime_meta_total,
+        "usuarios_removidos": usuarios_removidos,
+        "usuarios_anteriores": usuarios_total,
+        "usuario_preservado": admin_username,
+        "usuario_preservado_criado": admin_criado,
+        "relogin_obrigatorio": True,
+    }
 
 
 @app.get("/health")

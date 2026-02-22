@@ -145,6 +145,22 @@
       align-items:end;
     }
     @media (max-width:900px){.grid-emp{grid-template-columns:1fr}}
+    .grid-delete{
+      display:grid;
+      grid-template-columns:1fr 1.2fr 1.4fr auto;
+      gap:8px;
+      align-items:end;
+    }
+    @media (max-width:900px){.grid-delete{grid-template-columns:1fr}}
+    .danger-note{
+      margin-top:8px;
+      padding:9px 10px;
+      border-radius:10px;
+      border:1px solid rgba(239,68,68,.4);
+      background:rgba(127,29,29,.16);
+      color:#fecaca;
+      font-size:calc(11px * var(--font-scale));
+    }
     @keyframes rowEnter {
       from { opacity: .0; transform: translateY(3px); }
       to { opacity: 1; transform: translateY(0); }
@@ -159,10 +175,12 @@
       <div class="top">
         <div class="title">
           <h1>Painel de Manutencao (Admin)</h1>
-          <p>Cadastro de funcionarios, reset de senha, bloqueio de acesso e empreendimentos.</p>
+          <p>Cadastro de funcionarios, manutencao de dados e exclusao definitiva para limpeza de banco.</p>
         </div>
         <div class="actions">
           <button class="btn" id="btnRefresh">Atualizar</button>
+          <button class="btn danger" id="btnPurgeHistoricos">Deletar historicos</button>
+          <button class="btn danger" id="btnResetSistema">Apagar banco total</button>
           <button class="btn" id="btnTrocarSenha">Trocar minha senha</button>
           <button class="btn danger" id="btnSair">Sair</button>
         </div>
@@ -226,6 +244,41 @@
             <tr><td colspan="3" class="tiny">Carregando empreendimentos...</td></tr>
           </tbody>
         </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="body">
+        <form id="deleteForm" class="grid-delete">
+          <div class="field">
+            <label for="delEntity">Entidade</label>
+            <select id="delEntity" required>
+              <option value="cliente">Cliente</option>
+              <option value="processo">Processo</option>
+              <option value="documento">Documento</option>
+              <option value="usuario">Usuario</option>
+              <option value="empreendimento">Empreendimento</option>
+              <option value="processo_evento">Evento de processo</option>
+              <option value="sistema_log">Log do sistema</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="delId">ID do registro (UUID)</label>
+            <input id="delId" required placeholder="Ex.: 00000000-0000-0000-0000-000000000000" />
+          </div>
+          <div class="field">
+            <label for="delReason">Motivo (opcional)</label>
+            <input id="delReason" placeholder="Ex.: dado duplicado/importacao incorreta" />
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn danger" type="submit">Excluir definitivo</button>
+          </div>
+        </form>
+        <div class="danger-note">
+          Exclusao definitiva: remove o registro da tabela e nao tem desfazer.
+        </div>
+        <div id="feedbackDelete" class="feedback" aria-live="polite"></div>
       </div>
     </section>
 
@@ -473,11 +526,16 @@
   <script>
     const feedback = document.getElementById("feedback");
     const feedbackEmp = document.getElementById("feedbackEmp");
+    const feedbackDelete = document.getElementById("feedbackDelete");
     const tbody = document.getElementById("tbodyUsers");
     const tbodyEmp = document.getElementById("tbodyEmp");
     const tbodyLogs = document.getElementById("tbodyLogs");
     const createForm = document.getElementById("createForm");
     const empForm = document.getElementById("empForm");
+    const deleteForm = document.getElementById("deleteForm");
+    const delEntityInput = document.getElementById("delEntity");
+    const delIdInput = document.getElementById("delId");
+    const delReasonInput = document.getElementById("delReason");
     let currentUser = null;
     let users = [];
     let empreendimentos = [];
@@ -515,6 +573,11 @@
     function setFeedbackEmp(message, isError = false) {
       feedbackEmp.textContent = message || "";
       feedbackEmp.classList.toggle("error", Boolean(isError));
+    }
+
+    function setFeedbackDelete(message, isError = false) {
+      feedbackDelete.textContent = message || "";
+      feedbackDelete.classList.toggle("error", Boolean(isError));
     }
 
     function esc(value) {
@@ -839,6 +902,53 @@
       }
     });
 
+    deleteForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setFeedbackDelete("");
+      const entidade = delEntityInput.value;
+      const registroId = delIdInput.value.trim();
+      const motivo = delReasonInput.value.trim();
+
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(registroId)) {
+        setFeedbackDelete("Informe um UUID valido no campo ID.", true);
+        return;
+      }
+
+      const confirmacao = confirm(
+        `Excluir definitivamente ${entidade} #${registroId.slice(0, 8)} do banco de dados?`
+      );
+      if (!confirmacao) return;
+
+      const prova = prompt("Digite EXCLUIR para confirmar:");
+      if (String(prova || "").trim().toUpperCase() !== "EXCLUIR") {
+        setFeedbackDelete("Confirmacao invalida. Exclusao cancelada.", true);
+        return;
+      }
+
+      try {
+        await api("/app/api/admin/maintenance/delete-registro", {
+          method: "POST",
+          body: JSON.stringify({
+            entidade,
+            registro_id: registroId,
+            motivo: motivo || null,
+          }),
+        });
+        setFeedbackDelete(`Registro removido: ${entidade} (${registroId.slice(0, 8)}...).`);
+        delIdInput.value = "";
+        delReasonInput.value = "";
+        if (entidade === "usuario") {
+          await loadUsers();
+        }
+        if (entidade === "empreendimento") {
+          await loadEmpreendimentos();
+        }
+        await loadLogs();
+      } catch (error) {
+        setFeedbackDelete(error.message, true);
+      }
+    });
+
     document.getElementById("btnRefresh").addEventListener("click", async () => {
       try {
         await loadUsers();
@@ -852,6 +962,52 @@
     document.getElementById("btnRefreshLogs").addEventListener("click", async () => {
       try {
         await loadLogs();
+      } catch (error) {
+        setFeedback(error.message, true);
+      }
+    });
+
+    document.getElementById("btnPurgeHistoricos").addEventListener("click", async () => {
+      const confirmacao = confirm(
+        "Deseja deletar historicos definitivamente? Esta acao remove logs do sistema e eventos de processo."
+      );
+      if (!confirmacao) return;
+      try {
+        const result = await api("/app/api/admin/maintenance/purge-historicos", { method: "POST" });
+        setFeedback(
+          `Historicos removidos. Eventos: ${result.processo_eventos_removidos || 0} | Logs: ${result.sistema_logs_removidos || 0}`
+        );
+        await loadLogs();
+      } catch (error) {
+        setFeedback(error.message, true);
+      }
+    });
+
+    document.getElementById("btnResetSistema").addEventListener("click", async () => {
+      const confirmacao = confirm(
+        "Apagar banco total vai remover clientes, processos, documentos, empreendimentos, logs e usuarios. Apenas douglasadm sera mantido."
+      );
+      if (!confirmacao) return;
+      const prova = prompt("Digite APAGAR TUDO para confirmar a limpeza total:");
+      if (String(prova || "").trim().toUpperCase() !== "APAGAR TUDO") {
+        setFeedback("Confirmacao invalida. Reset cancelado.", true);
+        return;
+      }
+      try {
+        const result = await api("/app/api/admin/maintenance/reset-sistema", { method: "POST" });
+        alert(
+          `Reset concluido.\n` +
+          `Clientes removidos: ${result.cliente_registros_removidos || 0}\n` +
+          `Processos removidos: ${result.processos_removidos || 0}\n` +
+          `Documentos removidos: ${result.documentos_removidos || 0}\n` +
+          `Empreendimentos removidos: ${result.empreendimentos_removidos || 0}\n` +
+          `Eventos removidos: ${result.processo_eventos_removidos || 0}\n` +
+          `Logs removidos: ${result.sistema_logs_removidos || 0}\n` +
+          `Metadados removidos: ${result.runtime_meta_removidos || 0}\n` +
+          `Usuarios removidos: ${result.usuarios_removidos || 0}\n` +
+          `Usuario preservado: ${result.usuario_preservado || "douglasadm"}`
+        );
+        window.location.href = "/login";
       } catch (error) {
         setFeedback(error.message, true);
       }
