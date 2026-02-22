@@ -531,6 +531,7 @@
     <div class="rightTop">
       <span class="chip"><span class="pulseDot"></span>Auto refresh: <strong id="refreshLabel">30s</strong></span>
       <span class="chip">SLA alerta: <strong id="slaRuleLabel">>=48h</strong></span>
+      <a class="btn" id="btnHubCredito" href="/app/gestor-credito" style="display:none;">Voltar Hub Credito</a>
       <a class="btn primary" href="/app/analista/acompanhamento">Acompanhamento</a>
       <a class="btn" href="/app/analista/repasse">Repasse</a>
       <a class="btn" href="/app/analista/importacao">Importacao</a>
@@ -1309,6 +1310,33 @@
     }
   }
 
+  async function loadMeAndToggleHubButton(){
+    try {
+      const res = await fetch("/auth/me", { credentials: "same-origin" });
+      if (res.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+      const me = await res.json().catch(() => ({}));
+      const role = norm(me.role);
+      const btnHub = $("btnHubCredito");
+      if (!btnHub) return;
+      if (role === "gestor_credito" || role === "gestor") {
+        btnHub.style.display = "inline-flex";
+        btnHub.textContent = "Voltar Hub Credito";
+        btnHub.href = "/app/gestor-credito";
+      } else if (role === "admin") {
+        btnHub.style.display = "inline-flex";
+        btnHub.textContent = "Voltar Admin";
+        btnHub.href = "/app/admin";
+      } else {
+        btnHub.style.display = "none";
+      }
+    } catch (_) {
+      // silencioso: pagina continua carregando mesmo sem esse hint visual
+    }
+  }
+
   let countdown = REFRESH_SECONDS;
   function tick(){
     if (document.hidden) {
@@ -1356,6 +1384,7 @@
     }
   });
 
+  loadMeAndToggleHubButton().catch(()=>null);
   refreshDataAndRender(true).catch(()=>null);
   setInterval(tick, 1000);
 </script>
