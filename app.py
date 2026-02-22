@@ -3102,16 +3102,33 @@ def app_gestor_dashboard(
     sla_cca_count = 0
     processo_ids = [processo.id for processo, _ in rows]
     pendencias_docs_por_processo: dict[uuid.UUID, int] = {}
+    docs_por_processo: dict[uuid.UUID, list[dict[str, str]]] = {}
     if processo_ids:
-        pendencias_docs_rows = (
-            db.query(Documento.processo_id, func.count(Documento.id))
-            .filter(Documento.processo_id.in_(processo_ids), Documento.status_credito == "PENDENCIADO")
-            .group_by(Documento.processo_id)
+        docs_rows = (
+            db.query(
+                Documento.processo_id,
+                Documento.categoria,
+                Documento.nome,
+                Documento.status_credito,
+                Documento.pendencia_info,
+            )
+            .filter(Documento.processo_id.in_(processo_ids))
             .all()
         )
-        pendencias_docs_por_processo = {
-            processo_id: int(total_docs or 0) for processo_id, total_docs in pendencias_docs_rows
-        }
+        for processo_id, categoria, nome, status_credito, pendencia_info in docs_rows:
+            status_doc = _status_token(status_credito) or "AGUARDANDO_ENVIO"
+            if processo_id not in docs_por_processo:
+                docs_por_processo[processo_id] = []
+            docs_por_processo[processo_id].append(
+                {
+                    "categoria": str(categoria or "").strip(),
+                    "nome": str(nome or "").strip(),
+                    "status": status_doc,
+                    "descricao": str(pendencia_info or "").strip(),
+                }
+            )
+            if status_doc in {"PENDENCIADO", "REPROVADO"}:
+                pendencias_docs_por_processo[processo_id] = pendencias_docs_por_processo.get(processo_id, 0) + 1
 
     for processo, cliente in rows:
         estagio = _process_estagio_comercial(getattr(processo, "estagio_comercial", None))
@@ -3130,6 +3147,37 @@ def app_gestor_dashboard(
         pendencias_docs = int(pendencias_docs_por_processo.get(processo.id, 0))
         tem_pendencia_status = _processo_has_pendencia(processo)
         tem_pendencia = tem_pendencia_status or pendencias_docs > 0
+        documentos = docs_por_processo.get(processo.id, [])
+        docs_total = len(documentos)
+        docs_tem_aprovado = any(doc.get("status") == "APROVADO" for doc in documentos)
+        docs_todos_aguardando = docs_total > 0 and all(
+            doc.get("status") in {"AGUARDANDO_ENVIO", "ANALISE"} for doc in documentos
+        )
+        docs_nao_aprovados = [doc for doc in documentos if doc.get("status") != "APROVADO"]
+        docs_tooltip_lines: list[str] = []
+        if docs_total == 0 or docs_todos_aguardando:
+            docs_tooltip = "Documentos: nao foi enviado doc."
+        else:
+            docs_para_listar = docs_nao_aprovados if docs_tem_aprovado else [
+                doc for doc in docs_nao_aprovados if doc.get("status") in {"PENDENCIADO", "REPROVADO"}
+            ]
+            if not docs_para_listar:
+                docs_tooltip = "Documentos: todos aprovados."
+            else:
+                for doc in docs_para_listar:
+                    desc = str(doc.get("descricao") or "").strip()
+                    desc_upper = desc.upper()
+                    for prefix in ("PENDENTE -", "PENDENTE:", "BLOQUEADO -", "BLOQUEADO:"):
+                        if desc_upper.startswith(prefix):
+                            desc = desc[len(prefix):].strip(" -:")
+                            break
+                    nome_doc = str(doc.get("nome") or "-")
+                    status_doc = str(doc.get("status") or "-")
+                    if desc:
+                        docs_tooltip_lines.append(f"- {nome_doc} [{status_doc}]: {desc}")
+                    else:
+                        docs_tooltip_lines.append(f"- {nome_doc} [{status_doc}]")
+                docs_tooltip = "Documentos com pendencia:\n" + "\n".join(docs_tooltip_lines)
         sinal_ok = status_sinal in {"NAO_TEM", "PAGO"}
         fiador_ok = status_fiador in {"NAO_TEM", "FINALIZADO"}
         caixa_ok = status_cca in {"CONFORME", "ASSINATURA_CAIXA", "FINALIZADO"}
@@ -3161,6 +3209,9 @@ def app_gestor_dashboard(
             "pendencias_documentos": pendencias_docs,
             "tem_pendencia_status": tem_pendencia_status,
             "tem_pendencia": tem_pendencia,
+            "docs_total": docs_total,
+            "docs_todos_aguardando": docs_todos_aguardando,
+            "docs_pendentes_tooltip": docs_tooltip,
             "nao_contar_mes": nao_contar_mes,
             "pronto_para_repassar": pronto_para_repassar,
         }

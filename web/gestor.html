@@ -1224,7 +1224,11 @@
             if (item?.nao_contar_mes) {
                 detalhes.push("Marcado para nao contar no mes.");
             }
-            return `${mapaNome[tipo]} atual: ${normalizeStatusLabel(valor, tipo === "repasse" ? "Sem Repasse" : "-")}. ${detalhes.join(" ")}`.trim();
+            const docsTooltip = String(item?.docs_pendentes_tooltip || "").trim();
+            if (docsTooltip) {
+                detalhes.push(docsTooltip);
+            }
+            return `${mapaNome[tipo]} atual: ${normalizeStatusLabel(valor, tipo === "repasse" ? "Sem Repasse" : "-")}.\n${detalhes.join("\n")}`.trim();
         }
 
         function renderStatusCell(item, tipo) {
