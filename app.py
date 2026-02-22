@@ -657,8 +657,15 @@ def _can_set_assinatura_autorizada(processo: "Processo") -> bool:
 def _sync_estagio_repasse_rules(processo: "Processo", now: Optional[datetime] = None) -> None:
     stage = _process_estagio_comercial(getattr(processo, "estagio_comercial", None))
     processo.estagio_comercial = stage
-    if stage in ESTAGIOS_REPASSE_COMERCIAL and not _process_etapa_repasse(getattr(processo, "etapa_repasse", None)):
-        processo.etapa_repasse = "EM_REPASSE"
+    etapa_repasse = _process_etapa_repasse(getattr(processo, "etapa_repasse", None))
+    if stage in ESTAGIOS_REPASSE_COMERCIAL:
+        if not etapa_repasse:
+            processo.etapa_repasse = "EM_REPASSE"
+    else:
+        # Se voltou para estagio comercial anterior ao repasse, sai da trilha de repasse.
+        # Mantemos etapa apenas quando assinatura de caixa ja foi concluida.
+        if etapa_repasse and _status_token(getattr(processo, "status_cca", None)) != "ASSINATURA_CAIXA":
+            processo.etapa_repasse = None
 
     if stage == "RESERVA":
         processo.status_geral = "NOVO"

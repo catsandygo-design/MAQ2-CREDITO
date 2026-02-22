@@ -58,7 +58,8 @@
     .topbar {
       border: 1px solid var(--line);
       border-radius: 16px;
-      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      background: linear-gradient(180deg, rgba(2,6,23,.92), rgba(2,6,23,.84));
+      backdrop-filter: blur(8px);
       padding: 7px 9px;
       display: flex;
       justify-content: space-between;
@@ -111,6 +112,11 @@
       overflow-x: auto;
       overflow-y: hidden;
       padding-bottom: 1px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 6px;
+      background: linear-gradient(180deg, rgba(2,6,23,.90), rgba(2,6,23,.82));
+      backdrop-filter: blur(6px);
     }
 
     .chip {
@@ -132,7 +138,8 @@
     .filters {
       border: 1px solid var(--line);
       border-radius: 14px;
-      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+      background: linear-gradient(180deg, rgba(2,6,23,.90), rgba(2,6,23,.82));
+      backdrop-filter: blur(6px);
       padding: 7px;
       display: grid;
       grid-template-columns: 1.5fr 1fr 1fr auto auto;
@@ -153,7 +160,7 @@
     .field input {
       border: 1px solid var(--line);
       border-radius: 12px;
-      background: rgba(2, 6, 23, .65);
+      background: rgba(2, 6, 23, .78);
       color: var(--text);
       padding: 7px 9px;
       outline: none;
@@ -186,9 +193,10 @@
       height: 100%;
       overflow: auto;
       display: grid;
-      grid-template-columns: repeat(7, minmax(185px, 1fr));
+      grid-template-columns: repeat(7, minmax(225px, 1fr));
       gap: 8px;
       align-items: stretch;
+      scrollbar-gutter: stable;
     }
 
     .column {
@@ -230,10 +238,11 @@
     .cards {
       min-height: 0;
       overflow: auto;
-      padding: 6px;
+      padding: 6px 10px 6px 6px;
       display: grid;
       gap: 6px;
       align-content: start;
+      scrollbar-gutter: stable both-edges;
     }
 
     .cards.drag-over {
@@ -245,7 +254,7 @@
       border: 1px solid rgba(148, 163, 184, .2);
       border-radius: 12px;
       background: rgba(15, 23, 42, .85);
-      padding: 7px;
+      padding: 8px;
       display: grid;
       gap: 4px;
       cursor: grab;
@@ -304,16 +313,25 @@
     .meta-line {
       font-size: 10px;
       color: var(--muted);
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 6px;
+      align-items: baseline;
     }
 
-    .meta-line b {
+    .meta-line span {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      max-width: 62%;
+    }
+
+    .meta-line b {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: none;
+      justify-self: end;
     }
 
     .empty {
@@ -340,7 +358,7 @@
 
     @media (max-width: 1500px) {
       .board {
-        grid-template-columns: repeat(7, minmax(170px, 1fr));
+        grid-template-columns: repeat(7, minmax(210px, 1fr));
       }
     }
 
@@ -349,7 +367,7 @@
         grid-template-columns: 1fr 1fr;
       }
       .board {
-        grid-template-columns: repeat(7, minmax(195px, 1fr));
+        grid-template-columns: repeat(7, minmax(220px, 1fr));
       }
     }
   </style>
