@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gestor de Credito | Hub Operacional</title>
+  <style>
+    :root{
+      --font-scale:1;
+      --bg:#020617;
+      --bg-soft:#061027;
+      --line:rgba(148,163,184,.24);
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+      --ok:#22c55e;
+      --warn:#facc15;
+      --bad:#fb7185;
+      --info:#38bdf8;
+      --shadow:0 22px 40px rgba(15,23,42,.95);
+    }
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-size:calc(12px * var(--font-scale));
+      color:var(--text);
+      background: radial-gradient(circle at top, #1f2937 0, #020617 45%, #020617 100%);
+      padding:14px 10px 26px;
+      overflow-x:hidden;
+    }
+    #bhCanvas{
+      position:fixed;
+      inset:0;
+      width:100%;
+      height:100%;
+      z-index:0;
+      pointer-events:none;
+      opacity:.72;
+    }
+    .wrapper{
+      max-width:1680px;
+      margin:0 auto;
+      position:relative;
+      z-index:2;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .card{
+      background:
+        radial-gradient(circle at top left, rgba(56,189,248,.10), transparent 55%),
+        radial-gradient(circle at bottom right, rgba(34,197,94,.09), transparent 60%),
+        var(--bg-soft);
+      border:1px solid rgba(148,163,184,.30);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+      padding:12px;
+      position:relative;
+      overflow:hidden;
+    }
+    .card > *{position:relative;z-index:2}
+    .top{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .title h1{
+      margin:0;
+      font-size:calc(1.45rem * var(--font-scale));
+      letter-spacing:.2px;
+    }
+    .title p{
+      margin:4px 0 0;
+      color:var(--muted);
+      font-size:calc(.88rem * var(--font-scale));
+      line-height:1.3;
+    }
+    .actions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.26);
+      background:rgba(15,23,42,.84);
+      color:var(--text);
+      padding:7px 11px;
+      font-size:calc(.78rem * var(--font-scale));
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .dot{
+      width:8px;height:8px;border-radius:999px;background:#22c55e;
+      box-shadow:0 0 10px rgba(34,197,94,.85);
+    }
+    .btn{
+      border:1px solid rgba(148,163,184,.30);
+      border-radius:999px;
+      padding:8px 13px;
+      font-size:calc(.76rem * var(--font-scale));
+      font-weight:800;
+      letter-spacing:.05em;
+      text-transform:uppercase;
+      background:rgba(15,23,42,.82);
+      color:#e2e8f0;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      transition:transform .08s ease, filter .12s ease, box-shadow .12s ease;
+    }
+    .btn:hover{
+      transform:translateY(-1px);
+      filter:brightness(1.05);
+    }
+    .btn.primary{
+      border-color:rgba(34,197,94,.72);
+      background:radial-gradient(circle at top left, #22c55e, #16a34a);
+      color:#04110b;
+      box-shadow:0 0 0 1px rgba(15,23,42,.9), 0 0 12px rgba(34,197,94,.55);
+    }
+    .btn.ghost{
+      border-color:rgba(56,189,248,.45);
+      background:rgba(14,29,55,.88);
+      color:#c7edff;
+    }
+    .btn.danger{
+      border-color:rgba(251,113,133,.55);
+      background:rgba(127,29,29,.35);
+      color:#ffe4e6;
+    }
+    .kpi-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));
+      gap:8px;
+    }
+    .kpi{
+      border-radius:14px;
+      border:1px solid rgba(56,189,248,.24);
+      background:linear-gradient(160deg, rgba(3,19,40,.95), rgba(2,6,23,.90));
+      padding:11px 10px 9px;
+      min-height:130px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+    }
+    .kpi .k-label{
+      font-size:calc(.68rem * var(--font-scale));
+      letter-spacing:.05em;
+      text-transform:uppercase;
+      color:#93c5fd;
+      font-weight:800;
+      min-height:1.6em;
+      display:flex;
+      align-items:center;
+    }
+    .kpi .k-value{
+      font-size:calc(1.9rem * var(--font-scale));
+      font-weight:900;
+      line-height:1;
+      margin:5px 0 4px;
+    }
+    .kpi .k-sub{
+      font-size:calc(.68rem * var(--font-scale));
+      color:var(--muted);
+      line-height:1.35;
+      min-height:2.2em;
+    }
+    .tone-ok{color:var(--ok)}
+    .tone-warn{color:var(--warn)}
+    .tone-bad{color:var(--bad)}
+    .tone-info{color:var(--info)}
+
+    .access-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));
+      gap:10px;
+    }
+    .access-item{
+      border:1px solid rgba(148,163,184,.24);
+      border-radius:14px;
+      padding:12px;
+      background:linear-gradient(160deg, rgba(3,19,40,.9), rgba(2,6,23,.82));
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-height:170px;
+    }
+    .access-item h2{
+      margin:0;
+      font-size:calc(1.04rem * var(--font-scale));
+    }
+    .access-item p{
+      margin:0;
+      color:var(--muted);
+      font-size:calc(.8rem * var(--font-scale));
+      line-height:1.4;
+    }
+    .badge-row{
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+    }
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      padding:3px 9px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.26);
+      background:rgba(255,255,255,.02);
+      font-size:calc(.68rem * var(--font-scale));
+      color:#cbd5e1;
+      white-space:nowrap;
+    }
+
+    .lists-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));
+      gap:10px;
+    }
+    .list-box{
+      border:1px solid rgba(148,163,184,.22);
+      border-radius:14px;
+      background:rgba(2,10,24,.82);
+      overflow:hidden;
+    }
+    .list-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:9px 10px;
+      border-bottom:1px solid rgba(148,163,184,.16);
+      background:rgba(15,23,42,.65);
+    }
+    .list-head h3{
+      margin:0;
+      font-size:calc(.9rem * var(--font-scale));
+    }
+    .list-count{
+      font-size:calc(.72rem * var(--font-scale));
+      color:var(--muted);
+      font-weight:700;
+    }
+    .list-body{
+      max-height:300px;
+      overflow:auto;
+      padding:8px 10px 10px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .item{
+      border:1px dashed rgba(148,163,184,.24);
+      border-radius:10px;
+      padding:8px;
+      background:rgba(255,255,255,.01);
+    }
+    .item .name{
+      font-size:calc(.86rem * var(--font-scale));
+      font-weight:800;
+      color:#e2e8f0;
+      line-height:1.25;
+    }
+    .item .meta{
+      margin-top:4px;
+      color:var(--muted);
+      font-size:calc(.72rem * var(--font-scale));
+      line-height:1.35;
+    }
+    .empty{
+      padding:16px 8px;
+      text-align:center;
+      color:var(--muted);
+      font-size:calc(.8rem * var(--font-scale));
+    }
+
+    @media (max-width:1180px){
+      :root{--font-scale:.95}
+    }
+    @media (max-width:860px){
+      :root{--font-scale:.9}
+      .top{align-items:flex-start}
+      .actions{justify-content:flex-start}
+    }
+  </style>
+</head>
+<body>
+  <canvas id="bhCanvas" aria-hidden="true"></canvas>
+  <div class="wrapper">
+    <section class="card">
+      <div class="top">
+        <div class="title">
+          <h1>Hub do Gestor de Credito</h1>
+          <p>Painel interino para navegar entre Credito e Gestor Comercial, com visao consolidada de operacao.</p>
+        </div>
+        <div class="actions">
+          <span class="chip"><span class="dot"></span>Auto refresh: <strong id="refreshLabel">30s</strong></span>
+          <span class="chip">Atualizado: <strong id="updatedAt">-</strong></span>
+          <a class="btn ghost" href="/app/analista">Tela Credito</a>
+          <a class="btn ghost" href="/app/gestor">Gestor Comercial</a>
+          <button class="btn danger" id="btnSair" type="button">Sair</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="kpi-grid">
+        <article class="kpi">
+          <div class="k-label">Processos Ativos</div>
+          <div class="k-value tone-info" id="kpi-total">0</div>
+          <div class="k-sub">Total considerado no mes (exclui marcados como nao contar).</div>
+        </article>
+        <article class="kpi">
+          <div class="k-label">Credito</div>
+          <div class="k-value tone-info" id="kpi-credito">0</div>
+          <div class="k-sub">Todos os clientes que nao estao em processo.</div>
+        </article>
+        <article class="kpi">
+          <div class="k-label">Comercial</div>
+          <div class="k-value tone-warn" id="kpi-comercial">0</div>
+          <div class="k-sub">Clientes em processo no fluxo comercial.</div>
+        </article>
+        <article class="kpi">
+          <div class="k-label">Repasse</div>
+          <div class="k-value tone-info" id="kpi-repasse">0</div>
+          <div class="k-sub">Clientes em estagios de repasse.</div>
+        </article>
+        <article class="kpi">
+          <div class="k-label">Assinados</div>
+          <div class="k-value tone-ok" id="kpi-assinados">0</div>
+          <div class="k-sub">Clientes repassados com assinatura caixa/finalizado.</div>
+        </article>
+        <article class="kpi">
+          <div class="k-label">Prontos para Repassar</div>
+          <div class="k-value tone-ok" id="kpi-prontos">0</div>
+          <div class="k-sub">Venda finalizada + caixa/agehab/sinal/fiador em conformidade.</div>
+        </article>
+        <article class="kpi">
+          <div class="k-label">Perdas do Mes</div>
+          <div class="k-value tone-bad" id="kpi-perdas">0</div>
+          <div class="k-sub">Cancelado e distrato no mes vigente.</div>
+        </article>
+        <article class="kpi">
+          <div class="k-label">Meta / Real / Previsao</div>
+          <div class="k-value tone-warn" id="kpi-meta">0 / 0 / 0</div>
+          <div class="k-sub" id="kpi-meta-sub">Media necessaria: 0/dia.</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="access-grid">
+        <article class="access-item">
+          <h2>Tela de Credito</h2>
+          <p>Acesso interino ao painel operacional do credito para acompanhar fila, prioridade e status de documentos.</p>
+          <div class="badge-row">
+            <span class="badge">Kanban comercial</span>
+            <span class="badge">Fila de processos</span>
+            <span class="badge">Repasse</span>
+            <span class="badge">Checklist</span>
+          </div>
+          <div><a class="btn primary" href="/app/analista">Abrir Credito</a></div>
+        </article>
+        <article class="access-item">
+          <h2>Tela do Gestor Comercial</h2>
+          <p>Dashboard comercial com KPIs taticos, perdas do mes, projecao e volume por imobiliaria.</p>
+          <div class="badge-row">
+            <span class="badge">KPI comercial</span>
+            <span class="badge">SLA medio</span>
+            <span class="badge">Meta mensal</span>
+            <span class="badge">Fases</span>
+          </div>
+          <div><a class="btn primary" href="/app/gestor">Abrir Gestor Comercial</a></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="lists-grid">
+        <article class="list-box">
+          <div class="list-head">
+            <h3>Provaveis de Cair</h3>
+            <span class="list-count" id="count-cair">0</span>
+          </div>
+          <div class="list-body" id="list-cair"></div>
+        </article>
+        <article class="list-box">
+          <div class="list-head">
+            <h3>Pendencias / Perdas</h3>
+            <span class="list-count" id="count-perdas">0</span>
+          </div>
+          <div class="list-body" id="list-perdas"></div>
+        </article>
+        <article class="list-box">
+          <div class="list-head">
+            <h3>Prontos para Repassar</h3>
+            <span class="list-count" id="count-prontos">0</span>
+          </div>
+          <div class="list-body" id="list-prontos"></div>
+        </article>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function initBlackHoleBg(){
+      const canvas = document.getElementById("bhCanvas");
+      if (!canvas) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+      let rafId = 0;
+      let renderer = null;
+      let mesh = null;
+      let material = null;
+      let geometry = null;
+      let onResize = null;
+
+      const vertexShader = `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = vec4(position, 1.0);
+        }
+      `;
+
+      const fragmentShader = `
+        precision highp float;
+        uniform float iTime;
+        uniform vec2 iResolution;
+        float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+        float noise(vec2 p) {
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          f = f * f * (3.0 - 2.0 * f);
+          return mix(
+            mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+            mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
+            f.y
+          );
+        }
+        float fbm(vec2 p) {
+          float v = 0.0;
+          float a = 0.5;
+          for (int i = 0; i < 5; i++) {
+            v += a * noise(p);
+            p *= 2.0;
+            a *= 0.5;
+          }
+          return v;
+        }
+        void main() {
+          vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution.xy) / min(iResolution.y, iResolution.x);
+          float r = length(uv);
+          float angle_raw = atan(uv.y, uv.x);
+          float bgNebula = fbm(uv * 2.5 + iTime * 0.03);
+          vec3 bgColor = mix(vec3(0.0), vec3(0.02, 0.03, 0.06), bgNebula);
+          float vignette = smoothstep(1.2, 0.3, r);
+          float suction = iTime * 0.12;
+          vec2 starUV = vec2(r + suction * 0.4, angle_raw + r * 2.5 + iTime * 0.1);
+          vec3 starColor = vec3(0.0);
+          vec2 starGrid = starUV * 70.0;
+          vec2 cell = floor(starGrid);
+          float starSeed = hash(cell);
+          if (starSeed > 0.995) {
+            vec2 cellOffset = fract(starGrid) - 0.5;
+            float starDist = length(cellOffset);
+            float starCore = smoothstep(0.25, 0.0, starDist);
+            float twinkle = sin(iTime * 3.0 + starSeed * 40.0) * 0.5 + 0.5;
+            float maskStars = smoothstep(0.25, 0.5, r);
+            vec3 starBase = vec3(0.85, 0.9, 1.0);
+            starColor = starBase * twinkle * starCore * maskStars;
+          }
+          float angle = angle_raw + iTime * 0.2;
+          float horizon = 0.16;
+          float bending = 0.16 / (r + 0.01);
+          float pr = length(uv * (1.0 - bending));
+          float plasma = fbm(vec2(pr * 6.0, angle * 3.0 - iTime * 0.05));
+          float detail = pow(fbm(vec2(pr * 16.0, angle * 9.0 - iTime * 0.1)), 3.0) * 4.0;
+          float diskMask = smoothstep(0.7, 0.25, pr) * smoothstep(horizon - 0.05, horizon + 0.09, pr);
+          vec3 fire = vec3(1.0, 0.45, 0.12);
+          vec3 white = vec3(1.0, 0.95, 0.9);
+          vec3 color = bgColor * vignette;
+          color += fire * diskMask * (plasma + detail * 0.8);
+          color += white * detail * diskMask * 0.4;
+          float photonRing = smoothstep(0.012, 0.0, abs(r - horizon));
+          color += white * photonRing * 1.4;
+          float distToHorizon = max(abs(r - horizon), 0.012);
+          float glow = 0.012 / distToHorizon;
+          glow = clamp(glow, 0.0, 2.5);
+          color += fire * glow * 0.5;
+          float chroma = smoothstep(0.02, 0.0, abs(r - horizon));
+          color.r += chroma * 0.18;
+          color.b += chroma * -0.05;
+          if (r < horizon) color = vec3(0.0);
+          color += starColor;
+          color = pow(color, vec3(0.95));
+          gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
+        }
+      `;
+
+      async function boot(){
+        let THREE = null;
+        try {
+          THREE = await import("https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.module.js");
+        } catch (error) {
+          console.warn("Efeito de fundo indisponivel:", error);
+          return;
+        }
+        const uniforms = {
+          iTime: { value: 0 },
+          iResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+        };
+        const scene = new THREE.Scene();
+        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+        renderer = new THREE.WebGLRenderer({
+          canvas,
+          antialias: true,
+          alpha: true,
+          powerPreference: "high-performance",
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight, false);
+        geometry = new THREE.PlaneGeometry(2, 2);
+        material = new THREE.ShaderMaterial({ uniforms, vertexShader, fragmentShader });
+        mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+        const loop = (time) => {
+          if (document.hidden) {
+            rafId = requestAnimationFrame(loop);
+            return;
+          }
+          uniforms.iTime.value = time * 0.001;
+          renderer.render(scene, camera);
+          rafId = requestAnimationFrame(loop);
+        };
+        rafId = requestAnimationFrame(loop);
+        onResize = () => {
+          const w = window.innerWidth;
+          const h = window.innerHeight;
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+          renderer.setSize(w, h, false);
+          uniforms.iResolution.value.set(w, h);
+        };
+        window.addEventListener("resize", onResize, { passive: true });
+      }
+      boot();
+      window.addEventListener("beforeunload", () => {
+        if (rafId) cancelAnimationFrame(rafId);
+        if (onResize) window.removeEventListener("resize", onResize);
+        if (mesh?.parent) mesh.parent.remove(mesh);
+        geometry?.dispose?.();
+        material?.dispose?.();
+        renderer?.dispose?.();
+      });
+    })();
+  </script>
+
+  <script>
+    const API_BASE = "/app/api";
+    const REFRESH_SECONDS = 30;
+    let countdown = REFRESH_SECONDS;
+    let dashboardData = null;
+    let lastRefreshAt = 0;
+    let loading = false;
+
+    function esc(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function byId(id) {
+      return document.getElementById(id);
+    }
+
+    function fmtDate(dateObj) {
+      if (!(dateObj instanceof Date) || Number.isNaN(dateObj.getTime())) return "-";
+      return dateObj.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    }
+
+    function norm(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+
+    function statusLabel(value) {
+      const raw = String(value || "").trim();
+      if (!raw) return "-";
+      return raw
+        .toLowerCase()
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+        .replace(/\bCca\b/g, "CCA")
+        .replace(/\bAgehab\b/g, "Agehab");
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(`${API_BASE}${path}`, {
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options,
+      });
+      if (response.status === 401) {
+        window.location.href = "/login";
+        throw new Error("Nao autenticado");
+      }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || "Falha de comunicacao");
+      return data;
+    }
+
+    function renderSimpleList(targetId, countId, items, emptyText) {
+      const box = byId(targetId);
+      const count = byId(countId);
+      if (!box || !count) return;
+      const rows = Array.isArray(items) ? items.slice(0, 10) : [];
+      count.textContent = `${rows.length}`;
+      if (!rows.length) {
+        box.innerHTML = `<div class="empty">${esc(emptyText)}</div>`;
+        return;
+      }
+      box.innerHTML = rows.map((item) => {
+        const cliente = esc(item?.cliente_nome || "-");
+        const obra = esc(item?.obra || "-");
+        const corretor = esc(item?.corretor || "-");
+        const comercial = esc(statusLabel(item?.estagio_comercial));
+        const repasse = esc(statusLabel(item?.etapa_repasse || "Sem repasse"));
+        return `
+          <article class="item">
+            <div class="name">${cliente}</div>
+            <div class="meta">Obra: ${obra} | Corretor: ${corretor}</div>
+            <div class="meta">Comercial: ${comercial} | Repasse: ${repasse}</div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function renderKpis(data) {
+      byId("kpi-total").textContent = Number(data?.total ?? 0);
+      byId("kpi-credito").textContent = Number(data?.total_credito ?? 0);
+      byId("kpi-comercial").textContent = Number(data?.total_comercial ?? 0);
+      byId("kpi-repasse").textContent = Number(data?.total_repasse ?? 0);
+      byId("kpi-assinados").textContent = Number(data?.assinados ?? data?.total_assinados ?? 0);
+      byId("kpi-prontos").textContent = Number(data?.conformidade_ok ?? 0);
+      byId("kpi-perdas").textContent = Number(data?.com_pendencias ?? data?.perdas_mes ?? 0);
+      const meta = Number(data?.meta ?? 0);
+      const real = Number(data?.real ?? 0);
+      const previsao = Number(data?.previsao ?? 0);
+      byId("kpi-meta").textContent = `${meta} / ${real} / ${previsao}`;
+      byId("kpi-meta-sub").textContent = `Media necessaria: ${Number(data?.media_necessaria_dia ?? 0).toFixed(2)}/dia.`;
+    }
+
+    function renderLists(data) {
+      const fases = data?.clientes_por_fase || {};
+      renderSimpleList("list-cair", "count-cair", fases.passiveis_cair || [], "Nenhum cliente em risco no momento.");
+      renderSimpleList("list-perdas", "count-perdas", fases.com_pendencias || [], "Nenhuma perda registrada no mes.");
+      renderSimpleList("list-prontos", "count-prontos", fases.conformidade_ok || [], "Nenhum cliente pronto para repasse.");
+    }
+
+    async function loadMe() {
+      const response = await fetch("/auth/me", { credentials: "same-origin" });
+      if (response.status === 401) {
+        window.location.href = "/login";
+        throw new Error("Nao autenticado");
+      }
+      const me = await response.json().catch(() => ({}));
+      if (norm(me.role) !== "gestor" && norm(me.role) !== "gestor_credito" && norm(me.role) !== "admin") {
+        window.location.href = me.home || "/app";
+        throw new Error("Sem permissao");
+      }
+    }
+
+    async function loadDashboard(force = false) {
+      if (loading) return;
+      if (!force && document.hidden) return;
+      loading = true;
+      try {
+        dashboardData = await api("/gestor/dashboard");
+        renderKpis(dashboardData);
+        renderLists(dashboardData);
+        lastRefreshAt = Date.now();
+        byId("updatedAt").textContent = fmtDate(new Date());
+      } catch (error) {
+        console.error(error);
+      } finally {
+        loading = false;
+      }
+    }
+
+    function tick() {
+      if (document.hidden) {
+        byId("refreshLabel").textContent = "pausado";
+        return;
+      }
+      countdown -= 1;
+      if (countdown <= 0) {
+        countdown = REFRESH_SECONDS;
+        loadDashboard().catch(() => null);
+      }
+      byId("refreshLabel").textContent = `${countdown}s`;
+    }
+
+    byId("btnSair").addEventListener("click", async () => {
+      await fetch("/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => null);
+      window.location.href = "/login";
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) return;
+      byId("refreshLabel").textContent = `${countdown}s`;
+      if (Date.now() - lastRefreshAt >= REFRESH_SECONDS * 1000) {
+        countdown = REFRESH_SECONDS;
+        loadDashboard(true).catch(() => null);
+      }
+    });
+
+    (async () => {
+      try {
+        await loadMe();
+        await loadDashboard(true);
+      } catch (error) {
+        console.error(error);
+      }
+    })();
+    setInterval(tick, 1000);
+  </script>
+</body>
+</html>

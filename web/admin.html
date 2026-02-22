@@ -205,6 +205,7 @@
               <option value="corretor">Corretor</option>
               <option value="cca">CCA</option>
               <option value="gestor">Gestor</option>
+              <option value="gestor_credito">Gestor Credito</option>
               <option value="admin">Admin</option>
             </select>
           </div>
@@ -619,8 +620,17 @@
     }
 
     function roleOptions(selected) {
-      const roles = ["analista", "corretor", "cca", "gestor", "admin"];
-      return roles.map((role) => `<option value="${role}" ${selected === role ? "selected" : ""}>${role}</option>`).join("");
+      const roles = [
+        { value: "analista", label: "analista" },
+        { value: "corretor", label: "corretor" },
+        { value: "cca", label: "cca" },
+        { value: "gestor", label: "gestor" },
+        { value: "gestor_credito", label: "gestor credito" },
+        { value: "admin", label: "admin" },
+      ];
+      return roles
+        .map((role) => `<option value="${role.value}" ${selected === role.value ? "selected" : ""}>${role.label}</option>`)
+        .join("");
     }
 
     function renderUsers() {

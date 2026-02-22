@@ -50,8 +50,9 @@ ROLE_CCA = "cca"
 ROLE_ANALISTA = "analista"
 ROLE_ADMIN = "admin"
 ROLE_GESTOR = "gestor"
+ROLE_GESTOR_CREDITO = "gestor_credito"
 
-VALID_ROLES = {ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN, ROLE_GESTOR}
+VALID_ROLES = {ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN, ROLE_GESTOR, ROLE_GESTOR_CREDITO}
 
 APP_CCA_USER = os.getenv("APP_CCA_USER", os.getenv("APP_LOGIN_USER", "cca"))
 APP_CCA_PASSWORD = os.getenv("APP_CCA_PASSWORD", os.getenv("APP_LOGIN_PASSWORD", "Troque#Cca123"))
@@ -63,6 +64,8 @@ APP_ADMIN_USER = os.getenv("APP_ADMIN_USER", "douglasadm")
 APP_ADMIN_PASSWORD = os.getenv("APP_ADMIN_PASSWORD", "Troque#Admin123")
 APP_GESTOR_USER = os.getenv("APP_GESTOR_USER", "gestor")
 APP_GESTOR_PASSWORD = os.getenv("APP_GESTOR_PASSWORD", "Troque#Gestor123")
+APP_GESTOR_CREDITO_USER = os.getenv("APP_GESTOR_CREDITO_USER", "")
+APP_GESTOR_CREDITO_PASSWORD = os.getenv("APP_GESTOR_CREDITO_PASSWORD", "")
 
 PASSWORD_HASH_ITERATIONS = int(os.getenv("PASSWORD_HASH_ITERATIONS", "200000"))
 PASSWORD_MIN_LENGTH = int(os.getenv("PASSWORD_MIN_LENGTH", "10"))
@@ -96,6 +99,7 @@ def _build_app_users() -> dict[str, dict[str, str]]:
         (APP_ANALISTA_USER, APP_ANALISTA_PASSWORD, ROLE_ANALISTA),
         (APP_ADMIN_USER, APP_ADMIN_PASSWORD, ROLE_ADMIN),
         (APP_GESTOR_USER, APP_GESTOR_PASSWORD, ROLE_GESTOR),
+        (APP_GESTOR_CREDITO_USER, APP_GESTOR_CREDITO_PASSWORD, ROLE_GESTOR_CREDITO),
     ]
     if ENABLE_LEGACY_DEMO_USERS:
         configs.extend(
@@ -206,14 +210,16 @@ def _db_error_hint(exc: SQLAlchemyError) -> str:
 
 
 def _warn_default_credentials() -> None:
-    defaults = {
-        _normalize_username(APP_CORRETOR_USER): ("corretor", "Troque#Corretor123"),
-        _normalize_username(APP_CCA_USER): ("cca", "Troque#Cca123"),
-        _normalize_username(APP_ANALISTA_USER): ("analista", "Troque#Analista123"),
-        _normalize_username(APP_ADMIN_USER): ("admin", "Troque#Admin123"),
-        _normalize_username(APP_GESTOR_USER): ("gestor", "Troque#Gestor123"),
-    }
-    for username, (role, expected_password) in defaults.items():
+    defaults = [
+        (_normalize_username(APP_CORRETOR_USER), "corretor", "Troque#Corretor123"),
+        (_normalize_username(APP_CCA_USER), "cca", "Troque#Cca123"),
+        (_normalize_username(APP_ANALISTA_USER), "analista", "Troque#Analista123"),
+        (_normalize_username(APP_ADMIN_USER), "admin", "Troque#Admin123"),
+        (_normalize_username(APP_GESTOR_USER), "gestor", "Troque#Gestor123"),
+    ]
+    for username, role, expected_password in defaults:
+        if not username:
+            continue
         configured = APP_USERS.get(username, {}).get("password")
         if configured == expected_password:
             logger.warning("Credencial padrao em uso para perfil '%s'. Troque a senha no ambiente.", role)
@@ -279,6 +285,8 @@ def _home_for_role(role: Optional[str]) -> str:
         return "/app/admin"
     if role_key == ROLE_GESTOR:
         return "/app/gestor"
+    if role_key == ROLE_GESTOR_CREDITO:
+        return "/app/gestor-credito"
     if role_key == ROLE_ANALISTA:
         return "/app/analista"
     if role_key == ROLE_CCA:
@@ -2356,7 +2364,7 @@ def app_analista_page(request: Request):
     if bool(session.get("must_change_password")):
         return RedirectResponse(url="/app/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
-    if role != ROLE_ANALISTA:
+    if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
 
     processo_id = (request.query_params.get("processo_id") or "").strip()
@@ -2375,7 +2383,7 @@ def app_analista_acompanhamento_page(request: Request):
     if bool(session.get("must_change_password")):
         return RedirectResponse(url="/app/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
-    if role != ROLE_ANALISTA:
+    if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
     return _html_page("analista_acompanhamento.html")
 
@@ -2388,7 +2396,7 @@ def app_analista_repasse_page(request: Request):
     if bool(session.get("must_change_password")):
         return RedirectResponse(url="/app/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
-    if role != ROLE_ANALISTA:
+    if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
     return _html_page("analista_repasse.html")
 
@@ -2401,7 +2409,7 @@ def app_analise_page(request: Request):
     if bool(session.get("must_change_password")):
         return RedirectResponse(url="/app/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
-    if role != ROLE_ANALISTA:
+    if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
     return _html_page("analista.html")
 
@@ -2414,9 +2422,22 @@ def app_analista_importacao_page(request: Request):
     if bool(session.get("must_change_password")):
         return RedirectResponse(url="/app/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
-    if role != ROLE_ANALISTA:
+    if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
     return _html_page("analista_importacao.html")
+
+
+@app.get("/app/gestor-credito")
+def app_gestor_credito_page(request: Request):
+    session = _read_session(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=302)
+    if bool(session.get("must_change_password")):
+        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+    role = _normalize_role(str(session.get("role", "")))
+    if role not in {ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN}:
+        return RedirectResponse(url=_home_for_role(role), status_code=302)
+    return _html_page("gestor_credito.html")
 
 
 @app.get("/app/admin")
@@ -2440,7 +2461,7 @@ def app_gestor_page(request: Request):
     if bool(session.get("must_change_password")):
         return RedirectResponse(url="/app/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
-    if role not in {ROLE_GESTOR, ROLE_ADMIN}:
+    if role not in {ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
     return _html_page("gestor.html")
 
@@ -2729,7 +2750,7 @@ def admin_reset_password(
 
 @app.get("/app/api/ccas", response_model=list[str])
 def app_list_ccas(
-    _: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
+    _: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     rows = (
@@ -2743,7 +2764,7 @@ def app_list_ccas(
 
 @app.get("/app/api/empreendimentos", response_model=list[EmpreendimentoOut])
 def app_list_empreendimentos(
-    _: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
+    _: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     rows = (
@@ -3218,7 +3239,7 @@ def patch_documento(
 
 @app.get("/app/api/processos", response_model=list[ProcessoOverviewOut])
 def app_list_processos(
-    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
     db: Session = Depends(get_db),
     limit: Optional[int] = Query(default=120, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
@@ -3299,7 +3320,7 @@ def app_list_processos(
 
 @app.get("/app/api/gestor/dashboard")
 def app_gestor_dashboard(
-    _: dict[str, Any] = Depends(require_roles(ROLE_GESTOR, ROLE_ADMIN)),
+    _: dict[str, Any] = Depends(require_roles(ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     rows = db.query(Processo, Cliente).join(Cliente, Processo.cliente_id == Cliente.id).all()
@@ -3604,7 +3625,7 @@ def app_gestor_dashboard(
 
 @app.get("/app/api/gestor/meta", response_model=GestorMetaOut)
 def app_get_gestor_meta(
-    _: dict[str, Any] = Depends(require_roles(ROLE_GESTOR, ROLE_ANALISTA, ROLE_ADMIN)),
+    _: dict[str, Any] = Depends(require_roles(ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ANALISTA, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     meta, fonte = _resolve_gestor_meta_mensal(db)
@@ -3614,7 +3635,7 @@ def app_get_gestor_meta(
 @app.put("/app/api/gestor/meta", response_model=GestorMetaOut)
 def app_set_gestor_meta(
     payload: GestorMetaPayload,
-    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     meta_value = max(0, int(payload.meta or 0))
@@ -3637,7 +3658,7 @@ def app_set_gestor_meta(
 @app.post("/app/api/processos/intake")
 def app_create_intake(
     payload: ProcessoIntakeCreate,
-    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     username = _normalize_username(str(session.get("username", "")))
@@ -3698,7 +3719,7 @@ def app_create_intake(
 @app.post("/app/api/processos/importar", response_model=ImportPlanilhaOut)
 async def app_importar_processos_planilha(
     file: UploadFile = File(...),
-    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     filename = (file.filename or "").strip()
@@ -3886,7 +3907,7 @@ async def app_importar_processos_planilha(
 @app.get("/app/api/processos/{processo_id}/full", response_model=ProcessoFullOut)
 def app_get_processo_full(
     processo_id: uuid.UUID,
-    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     processo = db.get(Processo, processo_id)
@@ -3939,7 +3960,7 @@ def app_get_processo_full(
 @app.get("/app/api/processos/{processo_id}/eventos", response_model=list[ProcessoEventoOut])
 def app_list_processo_eventos(
     processo_id: uuid.UUID,
-    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
     db: Session = Depends(get_db),
     limit: int = Query(default=200, ge=1, le=1000),
 ):
@@ -3969,7 +3990,7 @@ def app_list_processo_eventos(
 
 @app.get("/app/api/metricas/processos", response_model=ProcessoMetricasOut)
 def app_get_metricas_processos(
-    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     role = _normalize_role(str(session.get("role", "")))
@@ -4058,7 +4079,7 @@ def app_get_metricas_processos(
 def app_patch_processo(
     processo_id: uuid.UUID,
     payload: ProcessoUpdate,
-    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO)),
     db: Session = Depends(get_db),
 ):
     processo = db.get(Processo, processo_id)
@@ -4425,7 +4446,7 @@ def app_patch_processo(
 def app_bulk_upsert_documentos(
     processo_id: uuid.UUID,
     payload: DocumentoBulkUpsert,
-    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     processo = db.get(Processo, processo_id)
@@ -4463,7 +4484,7 @@ def app_bulk_upsert_documentos(
     if not dedup_map:
         raise HTTPException(status_code=422, detail="Nenhum documento valido para salvar")
 
-    can_update_credit = role == ROLE_ANALISTA
+    can_update_credit = role in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO}
     existing_docs = (
         db.query(Documento)
         .filter(Documento.processo_id == processo_id)
