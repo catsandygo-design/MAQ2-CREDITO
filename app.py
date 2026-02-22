@@ -40,7 +40,12 @@ try:
     GESTOR_META_MENSAL = max(0, int(os.getenv("GESTOR_META_MENSAL", "0")))
 except ValueError:
     GESTOR_META_MENSAL = 0
+try:
+    GESTOR_META_SEMANAL = max(0, int(os.getenv("GESTOR_META_SEMANAL", "0")))
+except ValueError:
+    GESTOR_META_SEMANAL = 0
 META_MENSAL_RUNTIME_KEY = "gestor_meta_mensal"
+META_SEMANAL_RUNTIME_KEY = "gestor_meta_semanal"
 USERS_SEED_MODE_RUNTIME_KEY = "users_seed_mode"
 USERS_SEED_MODE_FULL = "full"
 USERS_SEED_MODE_ADMIN_ONLY = "admin_only"
@@ -1477,6 +1482,22 @@ class GestorMetaOut(BaseModel):
     fonte: str
 
 
+class GestorMetaPeriodoPayload(BaseModel):
+    ano: int
+    mes: int
+    meta_mensal: int
+    meta_semanal: int
+
+
+class GestorMetaPeriodoOut(BaseModel):
+    ano: int
+    mes: int
+    meta_mensal: int
+    meta_semanal: int
+    fonte_mensal: str
+    fonte_semanal: str
+
+
 class ProcessoFullOut(BaseModel):
     processo: ProcessoOut
     cliente: ClienteOut
@@ -1787,14 +1808,69 @@ def _get_runtime_meta(db: Session, key: str) -> Optional[str]:
     ).scalar()
 
 
+def _runtime_meta_non_negative_int(raw_value: Optional[str]) -> Optional[int]:
+    if raw_value is None:
+        return None
+    try:
+        return max(0, int(str(raw_value).strip() or "0"))
+    except ValueError:
+        return None
+
+
+def _current_meta_period() -> tuple[int, int]:
+    hoje = _utcnow().date()
+    return hoje.year, hoje.month
+
+
+def _normalize_meta_period(ano: Optional[int], mes: Optional[int]) -> tuple[int, int]:
+    current_ano, current_mes = _current_meta_period()
+    ano_val = int(ano if ano is not None else current_ano)
+    mes_val = int(mes if mes is not None else current_mes)
+    if mes_val < 1 or mes_val > 12:
+        raise HTTPException(status_code=422, detail="Mes invalido. Use valores de 1 a 12.")
+    if ano_val < 2000 or ano_val > 2100:
+        raise HTTPException(status_code=422, detail="Ano invalido. Use valores entre 2000 e 2100.")
+    return ano_val, mes_val
+
+
+def _build_meta_period_runtime_key(base_key: str, ano: int, mes: int) -> str:
+    return f"{base_key}:{ano:04d}-{mes:02d}"
+
+
+def _resolve_gestor_meta_periodo(db: Session, ano: Optional[int], mes: Optional[int]) -> tuple[int, int, str, str]:
+    ano_val, mes_val = _normalize_meta_period(ano, mes)
+    mensal_period_key = _build_meta_period_runtime_key(META_MENSAL_RUNTIME_KEY, ano_val, mes_val)
+    semanal_period_key = _build_meta_period_runtime_key(META_SEMANAL_RUNTIME_KEY, ano_val, mes_val)
+
+    meta_mensal = _runtime_meta_non_negative_int(_get_runtime_meta(db, mensal_period_key))
+    if meta_mensal is not None:
+        fonte_mensal = "runtime_periodo"
+    else:
+        meta_mensal = _runtime_meta_non_negative_int(_get_runtime_meta(db, META_MENSAL_RUNTIME_KEY))
+        if meta_mensal is not None:
+            fonte_mensal = "runtime_global"
+        else:
+            meta_mensal = GESTOR_META_MENSAL
+            fonte_mensal = "env"
+
+    meta_semanal = _runtime_meta_non_negative_int(_get_runtime_meta(db, semanal_period_key))
+    if meta_semanal is not None:
+        fonte_semanal = "runtime_periodo"
+    else:
+        meta_semanal = _runtime_meta_non_negative_int(_get_runtime_meta(db, META_SEMANAL_RUNTIME_KEY))
+        if meta_semanal is not None:
+            fonte_semanal = "runtime_global"
+        else:
+            meta_semanal = GESTOR_META_SEMANAL
+            fonte_semanal = "env"
+
+    return meta_mensal, meta_semanal, fonte_mensal, fonte_semanal
+
+
 def _resolve_gestor_meta_mensal(db: Session) -> tuple[int, str]:
-    runtime_value = _get_runtime_meta(db, META_MENSAL_RUNTIME_KEY)
-    if runtime_value is not None:
-        try:
-            return max(0, int(str(runtime_value).strip() or "0")), "runtime"
-        except ValueError:
-            pass
-    return GESTOR_META_MENSAL, "env"
+    ano, mes = _current_meta_period()
+    meta_mensal, _, fonte_mensal, _ = _resolve_gestor_meta_periodo(db, ano, mes)
+    return meta_mensal, fonte_mensal
 
 
 def _reconcile_active_sla_timers(db: Session, now: Optional[datetime] = None) -> int:
@@ -3554,7 +3630,12 @@ def app_gestor_dashboard(
     hoje = now.date()
     dias_no_mes = calendar.monthrange(hoje.year, hoje.month)[1]
     dias_decorridos = max(1, hoje.day)
-    meta, meta_source = _resolve_gestor_meta_mensal(db)
+    meta_periodo_ano, meta_periodo_mes = hoje.year, hoje.month
+    meta, meta_semanal, meta_source, meta_semanal_source = _resolve_gestor_meta_periodo(
+        db,
+        meta_periodo_ano,
+        meta_periodo_mes,
+    )
     real = total_assinados
     previsao = real + total
     dias_restantes = max(1, dias_no_mes - dias_decorridos)
@@ -3614,7 +3695,11 @@ def app_gestor_dashboard(
         "provaveis_cair": provaveis_cair,
         "total_assinados": total_assinados,
         "meta": meta,
+        "meta_semanal": meta_semanal,
         "meta_fonte": meta_source,
+        "meta_semanal_fonte": meta_semanal_source,
+        "meta_periodo_ano": meta_periodo_ano,
+        "meta_periodo_mes": meta_periodo_mes,
         "real": real,
         "previsao": previsao,
         "perdas_mes": perdas_mes,
@@ -3628,8 +3713,9 @@ def app_get_gestor_meta(
     _: dict[str, Any] = Depends(require_roles(ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ANALISTA, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
-    meta, fonte = _resolve_gestor_meta_mensal(db)
-    return GestorMetaOut(meta=meta, fonte=fonte)
+    ano, mes = _current_meta_period()
+    meta, _, fonte_mensal, _ = _resolve_gestor_meta_periodo(db, ano, mes)
+    return GestorMetaOut(meta=meta, fonte=fonte_mensal)
 
 
 @app.put("/app/api/gestor/meta", response_model=GestorMetaOut)
@@ -3638,7 +3724,10 @@ def app_set_gestor_meta(
     session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
+    ano, mes = _current_meta_period()
+    monthly_period_key = _build_meta_period_runtime_key(META_MENSAL_RUNTIME_KEY, ano, mes)
     meta_value = max(0, int(payload.meta or 0))
+    _set_runtime_meta(db, monthly_period_key, str(meta_value))
     _set_runtime_meta(db, META_MENSAL_RUNTIME_KEY, str(meta_value))
     _record_system_log(
         db,
@@ -3647,12 +3736,74 @@ def app_set_gestor_meta(
         tela="analista_painel",
         acao="META_GESTOR_ATUALIZADA",
         entidade_tipo="configuracao",
-        entidade_id=META_MENSAL_RUNTIME_KEY,
-        details=f"meta={meta_value}",
+        entidade_id=monthly_period_key,
+        details=f"meta={meta_value};periodo={ano:04d}-{mes:02d}",
     )
     db.commit()
-    meta, fonte = _resolve_gestor_meta_mensal(db)
+    meta, _, fonte, _ = _resolve_gestor_meta_periodo(db, ano, mes)
     return GestorMetaOut(meta=meta, fonte=fonte)
+
+
+@app.get("/app/api/gestor/meta-periodo", response_model=GestorMetaPeriodoOut)
+def app_get_gestor_meta_periodo(
+    ano: Optional[int] = Query(default=None),
+    mes: Optional[int] = Query(default=None),
+    _: dict[str, Any] = Depends(require_roles(ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ANALISTA, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    ano_val, mes_val = _normalize_meta_period(ano, mes)
+    meta_mensal, meta_semanal, fonte_mensal, fonte_semanal = _resolve_gestor_meta_periodo(db, ano_val, mes_val)
+    return GestorMetaPeriodoOut(
+        ano=ano_val,
+        mes=mes_val,
+        meta_mensal=meta_mensal,
+        meta_semanal=meta_semanal,
+        fonte_mensal=fonte_mensal,
+        fonte_semanal=fonte_semanal,
+    )
+
+
+@app.put("/app/api/gestor/meta-periodo", response_model=GestorMetaPeriodoOut)
+def app_set_gestor_meta_periodo(
+    payload: GestorMetaPeriodoPayload,
+    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    ano_val, mes_val = _normalize_meta_period(payload.ano, payload.mes)
+    meta_mensal = max(0, int(payload.meta_mensal or 0))
+    meta_semanal = max(0, int(payload.meta_semanal or 0))
+
+    monthly_period_key = _build_meta_period_runtime_key(META_MENSAL_RUNTIME_KEY, ano_val, mes_val)
+    weekly_period_key = _build_meta_period_runtime_key(META_SEMANAL_RUNTIME_KEY, ano_val, mes_val)
+    _set_runtime_meta(db, monthly_period_key, str(meta_mensal))
+    _set_runtime_meta(db, weekly_period_key, str(meta_semanal))
+
+    ano_atual, mes_atual = _current_meta_period()
+    if ano_val == ano_atual and mes_val == mes_atual:
+        _set_runtime_meta(db, META_MENSAL_RUNTIME_KEY, str(meta_mensal))
+        _set_runtime_meta(db, META_SEMANAL_RUNTIME_KEY, str(meta_semanal))
+
+    _record_system_log(
+        db,
+        actor_username=_normalize_username(str(session.get("username", ""))),
+        actor_role=_normalize_role(str(session.get("role", ""))),
+        tela="gestor_credito",
+        acao="META_GESTOR_PERIODO_ATUALIZADA",
+        entidade_tipo="configuracao",
+        entidade_id=f"{ano_val:04d}-{mes_val:02d}",
+        details=f"meta_mensal={meta_mensal};meta_semanal={meta_semanal}",
+    )
+
+    db.commit()
+    meta_mensal_out, meta_semanal_out, fonte_mensal, fonte_semanal = _resolve_gestor_meta_periodo(db, ano_val, mes_val)
+    return GestorMetaPeriodoOut(
+        ano=ano_val,
+        mes=mes_val,
+        meta_mensal=meta_mensal_out,
+        meta_semanal=meta_semanal_out,
+        fonte_mensal=fonte_mensal,
+        fonte_semanal=fonte_semanal,
+    )
 
 
 @app.post("/app/api/processos/intake")

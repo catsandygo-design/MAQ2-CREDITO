@@ -180,6 +180,64 @@
     .tone-bad{color:var(--bad)}
     .tone-info{color:var(--info)}
 
+    .meta-config{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .meta-config h2{
+      margin:0;
+      font-size:calc(1rem * var(--font-scale));
+    }
+    .meta-config p{
+      margin:2px 0 0;
+      color:var(--muted);
+      font-size:calc(.78rem * var(--font-scale));
+      line-height:1.35;
+    }
+    .meta-form{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));
+      gap:8px;
+      align-items:end;
+    }
+    .meta-field{
+      display:flex;
+      flex-direction:column;
+      gap:5px;
+    }
+    .meta-field span{
+      font-size:calc(.72rem * var(--font-scale));
+      color:#cbd5e1;
+      font-weight:700;
+      letter-spacing:.03em;
+      text-transform:uppercase;
+    }
+    .meta-field input,
+    .meta-field select{
+      width:100%;
+      border-radius:10px;
+      border:1px solid rgba(148,163,184,.30);
+      background:rgba(2,10,28,.88);
+      color:var(--text);
+      padding:9px 10px;
+      font-size:calc(.82rem * var(--font-scale));
+      outline:none;
+    }
+    .meta-field input:focus,
+    .meta-field select:focus{
+      border-color:rgba(56,189,248,.6);
+      box-shadow:0 0 0 1px rgba(56,189,248,.4);
+    }
+    .meta-note{
+      min-height:1.2em;
+      font-size:calc(.75rem * var(--font-scale));
+      color:#93c5fd;
+      line-height:1.35;
+    }
+    .meta-note.ok{color:#86efac}
+    .meta-note.err{color:#fda4af}
+
     .access-grid{
       display:grid;
       grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));
@@ -309,6 +367,35 @@
           <a class="btn ghost" href="/app/gestor">Gestor Comercial</a>
           <button class="btn danger" id="btnSair" type="button">Sair</button>
         </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="meta-config">
+        <div>
+          <h2>Cadastro de Metas por Periodo</h2>
+          <p>Defina as metas mensais e semanais por mes/ano. Ao virar o mes, o painel considera a meta configurada para o novo periodo.</p>
+        </div>
+        <div class="meta-form">
+          <label class="meta-field">
+            <span>Mes</span>
+            <select id="metaMes"></select>
+          </label>
+          <label class="meta-field">
+            <span>Ano</span>
+            <input id="metaAno" type="number" min="2000" max="2100" step="1" value="2026" />
+          </label>
+          <label class="meta-field">
+            <span>Meta mensal</span>
+            <input id="metaMensal" type="number" min="0" step="1" value="0" />
+          </label>
+          <label class="meta-field">
+            <span>Meta semanal</span>
+            <input id="metaSemanal" type="number" min="0" step="1" value="0" />
+          </label>
+          <button class="btn primary" id="btnSalvarMetaPeriodo" type="button">Salvar metas</button>
+        </div>
+        <div class="meta-note" id="metaPeriodoHint">Selecione mes e ano para carregar as metas do periodo.</div>
       </div>
     </section>
 
@@ -571,6 +658,23 @@
     let dashboardData = null;
     let lastRefreshAt = 0;
     let loading = false;
+    let metaPeriodoInicializado = false;
+    let loadingMetaPeriodo = false;
+
+    const MES_LABELS = [
+      "Jan",
+      "Fev",
+      "Mar",
+      "Abr",
+      "Mai",
+      "Jun",
+      "Jul",
+      "Ago",
+      "Set",
+      "Out",
+      "Nov",
+      "Dez",
+    ];
 
     function esc(value) {
       return String(value ?? "")
@@ -594,6 +698,15 @@
       return String(value || "").trim().toLowerCase();
     }
 
+    function toInt(value, fallback = 0) {
+      const parsed = Number.parseInt(String(value ?? "").trim(), 10);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    }
+
+    function monthLabel(mes) {
+      return MES_LABELS[Math.max(0, Number(mes || 1) - 1)] || "Mes";
+    }
+
     function statusLabel(value) {
       const raw = String(value || "").trim();
       if (!raw) return "-";
@@ -603,6 +716,40 @@
         .replace(/\b\w/g, (char) => char.toUpperCase())
         .replace(/\bCca\b/g, "CCA")
         .replace(/\bAgehab\b/g, "Agehab");
+    }
+
+    function setMetaHint(message, tone = "") {
+      const hint = byId("metaPeriodoHint");
+      if (!hint) return;
+      hint.classList.remove("ok", "err");
+      if (tone === "ok" || tone === "err") hint.classList.add(tone);
+      hint.textContent = message || "";
+    }
+
+    function ensureMetaPeriodoForm() {
+      const mesSelect = byId("metaMes");
+      const anoInput = byId("metaAno");
+      if (!mesSelect || mesSelect.options.length) return;
+      MES_LABELS.forEach((label, idx) => {
+        const option = document.createElement("option");
+        option.value = String(idx + 1);
+        option.textContent = `${label}`;
+        mesSelect.appendChild(option);
+      });
+      const now = new Date();
+      if (anoInput && !String(anoInput.value || "").trim()) {
+        anoInput.value = String(now.getFullYear());
+      }
+      mesSelect.value = String(now.getMonth() + 1);
+    }
+
+    function getPeriodoFromForm() {
+      const now = new Date();
+      const ano = toInt(byId("metaAno")?.value, now.getFullYear());
+      const mes = toInt(byId("metaMes")?.value, now.getMonth() + 1);
+      if (mes < 1 || mes > 12) throw new Error("Mes invalido. Use 1 a 12.");
+      if (ano < 2000 || ano > 2100) throw new Error("Ano invalido. Use de 2000 a 2100.");
+      return { ano, mes };
     }
 
     async function api(path, options = {}) {
@@ -618,6 +765,69 @@
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.detail || "Falha de comunicacao");
       return data;
+    }
+
+    async function loadMetaPeriodo(anoParam = null, mesParam = null) {
+      if (loadingMetaPeriodo) return null;
+      loadingMetaPeriodo = true;
+      try {
+        const periodoForm = getPeriodoFromForm();
+        const anoInformado = anoParam !== null && anoParam !== undefined && String(anoParam).trim() !== "";
+        const mesInformado = mesParam !== null && mesParam !== undefined && String(mesParam).trim() !== "";
+        const ano = anoInformado ? toInt(anoParam, periodoForm.ano) : periodoForm.ano;
+        const mes = mesInformado ? toInt(mesParam, periodoForm.mes) : periodoForm.mes;
+        const data = await api(`/gestor/meta-periodo?ano=${ano}&mes=${mes}`);
+        if (byId("metaAno")) byId("metaAno").value = String(data.ano);
+        if (byId("metaMes")) byId("metaMes").value = String(data.mes);
+        if (byId("metaMensal")) byId("metaMensal").value = String(Number(data.meta_mensal ?? 0));
+        if (byId("metaSemanal")) byId("metaSemanal").value = String(Number(data.meta_semanal ?? 0));
+        setMetaHint(
+          `Periodo ${monthLabel(data.mes)}/${data.ano}: mensal ${Number(data.meta_mensal ?? 0)} | semanal ${Number(data.meta_semanal ?? 0)}.`,
+          "ok",
+        );
+        return data;
+      } catch (error) {
+        setMetaHint(`Erro ao carregar metas: ${error.message}`, "err");
+        throw error;
+      } finally {
+        loadingMetaPeriodo = false;
+      }
+    }
+
+    async function saveMetaPeriodo() {
+      try {
+        const { ano, mes } = getPeriodoFromForm();
+        const metaMensal = Math.max(0, toInt(byId("metaMensal")?.value, 0));
+        const metaSemanal = Math.max(0, toInt(byId("metaSemanal")?.value, 0));
+        const data = await api("/gestor/meta-periodo", {
+          method: "PUT",
+          body: JSON.stringify({
+            ano,
+            mes,
+            meta_mensal: metaMensal,
+            meta_semanal: metaSemanal,
+          }),
+        });
+        if (byId("metaMensal")) byId("metaMensal").value = String(Number(data.meta_mensal ?? 0));
+        if (byId("metaSemanal")) byId("metaSemanal").value = String(Number(data.meta_semanal ?? 0));
+        setMetaHint(`Metas salvas para ${monthLabel(data.mes)}/${data.ano}.`, "ok");
+        await loadDashboard(true);
+      } catch (error) {
+        setMetaHint(`Erro ao salvar metas: ${error.message}`, "err");
+      }
+    }
+
+    function setupMetaPeriodoForm() {
+      ensureMetaPeriodoForm();
+      byId("metaMes")?.addEventListener("change", () => {
+        loadMetaPeriodo().catch(() => null);
+      });
+      byId("metaAno")?.addEventListener("change", () => {
+        loadMetaPeriodo().catch(() => null);
+      });
+      byId("btnSalvarMetaPeriodo")?.addEventListener("click", () => {
+        saveMetaPeriodo().catch(() => null);
+      });
     }
 
     function renderSimpleList(targetId, countId, items, emptyText) {
@@ -689,6 +899,15 @@
         dashboardData = await api("/gestor/dashboard");
         renderKpis(dashboardData);
         renderLists(dashboardData);
+        if (!metaPeriodoInicializado) {
+          const now = new Date();
+          const anoMeta = toInt(dashboardData?.meta_periodo_ano, now.getFullYear());
+          const mesMeta = toInt(dashboardData?.meta_periodo_mes, now.getMonth() + 1);
+          if (byId("metaAno")) byId("metaAno").value = String(anoMeta);
+          if (byId("metaMes")) byId("metaMes").value = String(mesMeta);
+          const carregado = await loadMetaPeriodo(anoMeta, mesMeta).then(() => true).catch(() => false);
+          metaPeriodoInicializado = carregado;
+        }
         lastRefreshAt = Date.now();
         byId("updatedAt").textContent = fmtDate(new Date());
       } catch (error) {
@@ -728,6 +947,7 @@
     (async () => {
       try {
         await loadMe();
+        setupMetaPeriodoForm();
         await loadDashboard(true);
       } catch (error) {
         console.error(error);
