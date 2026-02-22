@@ -1731,7 +1731,7 @@ DIVORCIADO: Certidão averbada.</td>
 
   function reasonFromPendenciaInfo(raw){
     const text = normalizeDocReasonText(raw);
-    return text.replace(/^(BLOQUEADO|PENDENTE)\s*[-:]\s*/i, "");
+    return text.replace(/^(BLOQUEADO|PENDENTE|REPROVADO)\s*[-:]\s*/i, "");
   }
 
   function getDocReasonInputFromSelect(sel){
@@ -1746,7 +1746,7 @@ DIVORCIADO: Certidão averbada.</td>
     const input = td.querySelector(".doc-reason-input");
     if(!wrap || !input) return;
     const status = toLower(sel.value);
-    const needReason = status === "pendente" || status === "bloqueado";
+    const needReason = status === "pendente" || status === "bloqueado" || status === "reprovado";
     wrap.style.display = needReason ? "flex" : "none";
     input.required = needReason;
     if(!needReason){
@@ -1764,8 +1764,8 @@ DIVORCIADO: Certidão averbada.</td>
         wrap = document.createElement("div");
         wrap.className = "doc-reason-wrap";
         wrap.innerHTML = `
-          <div class="doc-reason-label">Motivo (obrigatório para Pendente/Bloqueado)</div>
-          <textarea class="doc-reason-input" maxlength="500" placeholder="Descreva o motivo da pendência ou bloqueio."></textarea>
+          <div class="doc-reason-label">Motivo (obrigatório para Pendente/Reprovado/Bloqueado)</div>
+          <textarea class="doc-reason-input" maxlength="500" placeholder="Descreva o motivo da pendência, reprovação ou bloqueio."></textarea>
         `;
         td.appendChild(wrap);
       }
@@ -2496,8 +2496,14 @@ DIVORCIADO: Certidão averbada.</td>
           statusDoc = "ENVIADO";
           statusCreditoDoc = "APROVADO";
         } else if (statusDocUi === "reprovado") {
+          if (!motivo) {
+            alert(`Informe o motivo da reprovação no documento "${row.nome}".`);
+            row.reasonInput?.focus();
+            return;
+          }
           statusDoc = "ENVIADO";
           statusCreditoDoc = "REPROVADO";
+          pendenciaInfo = `REPROVADO - ${motivo}`;
         } else if (statusDocUi === "pendente") {
           if (!motivo) {
             alert(`Informe o motivo da pendencia no documento "${row.nome}".`);

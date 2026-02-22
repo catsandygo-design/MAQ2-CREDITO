@@ -3386,25 +3386,34 @@ def app_gestor_dashboard(
         tem_pendencia = tem_pendencia_status or pendencias_docs > 0
         documentos = docs_por_processo.get(processo.id, [])
         docs_total = len(documentos)
-        docs_tem_aprovado = any(doc.get("status") == "APROVADO" for doc in documentos)
         docs_todos_aguardando = docs_total > 0 and all(
             doc.get("status") in {"AGUARDANDO_ENVIO", "ANALISE", "NAO_APLICA"} for doc in documentos
         )
-        docs_nao_aprovados = [doc for doc in documentos if doc.get("status") not in {"APROVADO", "NAO_APLICA"}]
+        docs_com_pendencia = [doc for doc in documentos if doc.get("status") in {"PENDENCIADO", "REPROVADO"}]
         docs_tooltip_lines: list[str] = []
         if docs_total == 0 or docs_todos_aguardando:
             docs_tooltip = "Documentos: nao foi enviado doc."
         else:
-            docs_para_listar = docs_nao_aprovados if docs_tem_aprovado else [
-                doc for doc in docs_nao_aprovados if doc.get("status") in {"PENDENCIADO", "REPROVADO"}
-            ]
+            docs_para_listar = docs_com_pendencia
             if not docs_para_listar:
-                docs_tooltip = "Documentos: todos aprovados."
+                docs_todos_aprovados = all(doc.get("status") in {"APROVADO", "NAO_APLICA"} for doc in documentos)
+                docs_tooltip = (
+                    "Documentos: todos aprovados."
+                    if docs_todos_aprovados
+                    else "Documentos: sem pendencias registradas."
+                )
             else:
                 for doc in docs_para_listar:
                     desc = str(doc.get("descricao") or "").strip()
                     desc_upper = desc.upper()
-                    for prefix in ("PENDENTE -", "PENDENTE:", "BLOQUEADO -", "BLOQUEADO:"):
+                    for prefix in (
+                        "PENDENTE -",
+                        "PENDENTE:",
+                        "BLOQUEADO -",
+                        "BLOQUEADO:",
+                        "REPROVADO -",
+                        "REPROVADO:",
+                    ):
                         if desc_upper.startswith(prefix):
                             desc = desc[len(prefix):].strip(" -:")
                             break
@@ -4508,13 +4517,17 @@ def app_bulk_upsert_documentos(
             ):
                 documento.status_credito = "AGUARDANDO_ENVIO"
                 next_credit = "AGUARDANDO_ENVIO"
-            if next_credit == "PENDENCIADO":
+            if next_credit in {"PENDENCIADO", "REPROVADO"}:
                 if pendencia_info:
                     documento.pendencia_info = pendencia_info
-                elif role == ROLE_ANALISTA and (became_pending_doc or not old_pendencia_info):
+                elif role == ROLE_ANALISTA and (
+                    next_credit == "REPROVADO"
+                    or became_pending_doc
+                    or not old_pendencia_info
+                ):
                     raise HTTPException(
                         status_code=422,
-                        detail=(f"Documento '{nome}' foi pendenciado. Informe pendencia_info."),
+                        detail=(f"Documento '{nome}' foi {next_credit.lower()}. Informe pendencia_info."),
                     )
                 elif old_pendencia_info:
                     documento.pendencia_info = old_pendencia_info
@@ -4574,10 +4587,10 @@ def app_bulk_upsert_documentos(
                         status_code=422,
                         detail=f"Documento '{nome}' foi pendenciado. Informe pendencia_info.",
                     )
-            if credito_default_norm == "PENDENCIADO" and not pendencia_info:
+            if credito_default_norm in {"PENDENCIADO", "REPROVADO"} and not pendencia_info:
                 raise HTTPException(
                     status_code=422,
-                    detail=f"Documento '{nome}' foi pendenciado. Informe pendencia_info.",
+                    detail=f"Documento '{nome}' foi {credito_default_norm.lower()}. Informe pendencia_info.",
                 )
             novo_documento = Documento(
                 processo_id=processo_id,
@@ -4585,7 +4598,7 @@ def app_bulk_upsert_documentos(
                 nome=nome,
                 status_doc=status_doc_norm,
                 status_credito=credito_default_norm,
-                pendencia_info=pendencia_info if credito_default_norm == "PENDENCIADO" else None,
+                pendencia_info=pendencia_info if credito_default_norm in {"PENDENCIADO", "REPROVADO"} else None,
             )
             docs_by_key[(categoria, nome)] = novo_documento
             db.add(novo_documento)

@@ -1252,11 +1252,13 @@
             };
             const valor = mapaValor[tipo];
             const detalhes = [];
-            const docsTooltip = String(item?.docs_pendentes_tooltip || "").trim();
-            if (docsTooltip) {
-                detalhes.push(docsTooltip);
-            } else {
-                detalhes.push(getPendenciaResumo(item));
+            if (tipo !== "sinal") {
+                const docsTooltip = String(item?.docs_pendentes_tooltip || "").trim();
+                if (docsTooltip) {
+                    detalhes.push(docsTooltip);
+                } else {
+                    detalhes.push(getPendenciaResumo(item));
+                }
             }
             const dias = Number(item?.dias_em_aberto);
             if (tipo === "comercial" && String(valor || "").toUpperCase() === "EM_PROCESSO" && Number.isFinite(dias) && dias > 15) {
@@ -1266,6 +1268,8 @@
                 const valorSinal = Number(item?.valor_sinal);
                 if (Number.isFinite(valorSinal) && valorSinal > 0) {
                     detalhes.push(`Valor do sinal: ${valorSinal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.`);
+                } else {
+                    detalhes.push("Valor do sinal nao informado.");
                 }
             }
             if (item?.nao_contar_mes) {
