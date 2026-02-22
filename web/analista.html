@@ -382,26 +382,26 @@
       50%{filter:brightness(1.15)}
     }
     .status.status-pill.status-pendente{
-      --tone-1: #fca5a5;
-      --tone-2: #ef4444;
-      --tone-3: #7f1d1d;
-      --tone-glow: rgba(239,68,68,.62);
-      --tone-text: #fee2e2;
-      --tone-speed: 4.3s;
+      --tone-1: #fdba74;
+      --tone-2: #fb923c;
+      --tone-3: #c2410c;
+      --tone-glow: rgba(251,146,60,.62);
+      --tone-text: #ffedd5;
+      --tone-speed: 4.6s;
       border-color: transparent !important;
       color: var(--tone-text) !important;
       background:
         linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
-        linear-gradient(120deg, var(--tone-1), var(--tone-2), var(--tone-3), var(--tone-2), var(--tone-1)) border-box !important;
-      background-size:100% 100%, 230% 230% !important;
-      text-shadow: 0 0 8px var(--tone-glow);
+        linear-gradient(120deg, #ffedd5, var(--tone-1), var(--tone-2), #f97316, var(--tone-3), #f59e0b, #f97316, var(--tone-1), #ffedd5) border-box !important;
+      background-size:100% 100%, 260% 260% !important;
+      text-shadow: 0 0 9px var(--tone-glow);
       box-shadow:
         inset 0 0 0 1px rgba(255,255,255,.06),
         0 0 0 1px rgba(15,23,42,.92),
-        0 0 15px var(--tone-glow);
-      animation: neonToneFlow var(--tone-speed) linear infinite, neonTonePulse 1.85s ease-in-out infinite;
+        0 0 16px var(--tone-glow);
+      animation: neonToneFlow var(--tone-speed) linear infinite, neonTonePulse 1.75s ease-in-out infinite;
     }
-    .status.status-pill.status-enviado{
+    .status.status-pill.status-aprovado{
       --tone-1: #86efac;
       --tone-2: #22c55e;
       --tone-3: #14532d;
@@ -421,12 +421,53 @@
         0 0 15px var(--tone-glow);
       animation: neonToneFlow var(--tone-speed) linear infinite, neonTonePulse 2.1s ease-in-out infinite;
     }
+    .status.status-pill.status-reprovado{
+      --tone-1: #fca5a5;
+      --tone-2: #ef4444;
+      --tone-3: #7f1d1d;
+      --tone-glow: rgba(239,68,68,.62);
+      --tone-text: #fee2e2;
+      --tone-speed: 4.2s;
+      border-color: transparent !important;
+      color: var(--tone-text) !important;
+      background:
+        linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
+        linear-gradient(120deg, var(--tone-1), var(--tone-2), var(--tone-3), var(--tone-2), var(--tone-1)) border-box !important;
+      background-size:100% 100%, 230% 230% !important;
+      text-shadow: 0 0 8px var(--tone-glow);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.06),
+        0 0 0 1px rgba(15,23,42,.92),
+        0 0 15px var(--tone-glow);
+      animation: neonToneFlow var(--tone-speed) linear infinite, neonTonePulse 1.85s ease-in-out infinite;
+    }
+    .status.status-pill.status-bloqueado{
+      --tone-1: #000000;
+      --tone-2: #111827;
+      --tone-3: #1f2937;
+      --tone-glow: rgba(2,6,23,.85);
+      --tone-text: #e5e7eb;
+      --tone-speed: 6.2s;
+      border-color: transparent !important;
+      color: var(--tone-text) !important;
+      background:
+        linear-gradient(160deg, rgba(2,6,23,.98), rgba(0,0,0,.96)) padding-box,
+        linear-gradient(120deg, #475569, #111827, #000000, #111827, #334155) border-box !important;
+      background-size:100% 100%, 220% 220% !important;
+      text-shadow: 0 0 6px rgba(148,163,184,.18);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.03),
+        0 0 0 1px rgba(2,6,23,.95),
+        0 0 13px var(--tone-glow);
+      animation: neonToneFlow var(--tone-speed) linear infinite, neonTonePulse 2.2s ease-in-out infinite;
+    }
     @media (prefers-reduced-motion: reduce){
       .pill,
       .sla,
       .status.status-pill.status-pendente,
-      .status.status-pill.status-enviado,
-      .status.status-credit-pill{
+      .status.status-pill.status-aprovado,
+      .status.status-pill.status-reprovado,
+      .status.status-pill.status-bloqueado{
         animation: none;
       }
     }
@@ -554,105 +595,10 @@
       background: rgba(2,6,23,.55);
     }
 
-    .status-doc-col,
-    .status-cred-col{
-      width:15%;
-      padding-left:6px !important;
-      padding-right:6px !important;
-      white-space:nowrap;
-    }
-
-    .status.status-credit-pill{
-      --tone-1: #bae6fd;
-      --tone-2: #60a5fa;
-      --tone-3: #1e40af;
-      --tone-glow: rgba(96,165,250,.5);
-      --tone-text: #dbeafe;
-      --tone-speed: 6.3s;
-      border-color: transparent !important;
-      color: var(--tone-text) !important;
-      text-shadow: 0 0 8px var(--tone-glow);
-      background:
-        linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
-        linear-gradient(120deg, var(--tone-1), var(--tone-2), var(--tone-3), var(--tone-2), var(--tone-1)) border-box !important;
-      background-size:100% 100%, 230% 230% !important;
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,.06),
-        0 0 0 1px rgba(15,23,42,.92),
-        0 0 14px var(--tone-glow);
-      animation: neonToneFlow var(--tone-speed) linear infinite, neonTonePulse 1.95s ease-in-out infinite;
-      appearance:none;
-      -webkit-appearance:none;
-      pointer-events:none;
-      cursor:default;
-    }
-
-    .status.status-credit-pill:disabled{
-      opacity:1;
-      -webkit-text-fill-color: var(--tone-text);
-    }
-
-    .status.status-credit-pill.status-aguardando-envio{
-      --tone-1: #bae6fd;
-      --tone-2: #60a5fa;
-      --tone-3: #1e40af;
-      --tone-glow: rgba(96,165,250,.5);
-      --tone-text: #dbeafe;
-      --tone-speed: 6.4s;
-    }
-
-    .status.status-credit-pill.status-analise{
-      --tone-1: #fde68a;
-      --tone-2: #f59e0b;
-      --tone-3: #78350f;
-      --tone-glow: rgba(245,158,11,.58);
-      --tone-text: #fef3c7;
-      --tone-speed: 5s;
-    }
-
-    .status.status-credit-pill.status-pendenciado,
-    .status.status-credit-pill.status-reprovado{
-      --tone-1: #fca5a5;
-      --tone-2: #ef4444;
-      --tone-3: #7f1d1d;
-      --tone-glow: rgba(239,68,68,.62);
-      --tone-text: #fee2e2;
-      --tone-speed: 4.3s;
-    }
-
-    .status.status-credit-pill.status-aprovado{
-      --tone-1: #86efac;
-      --tone-2: #22c55e;
-      --tone-3: #14532d;
-      --tone-glow: rgba(34,197,94,.56);
-      --tone-text: #dcfce7;
-      --tone-speed: 5.7s;
-    }
-
     .tiny{
       font-size: var(--fs-xs);
       color: var(--muted);
       line-height:1.25;
-    }
-
-    .tri-doc{
-      display:flex;
-      gap:6px;
-      flex-wrap:wrap;
-      align-items:center;
-      min-height:32px;
-    }
-    .tri-doc label{
-      display:inline-flex;
-      align-items:center;
-      gap:4px;
-      font-size:10px;
-      color:var(--text);
-      cursor:pointer;
-      background: rgba(15,23,42,.7);
-      border:1px solid rgba(148,163,184,.2);
-      border-radius:999px;
-      padding:4px 8px;
     }
 
     .divider{
@@ -737,10 +683,10 @@
       <div class="panel-header">
         <div class="panel-title">
           <h2>Checklist (Conferência de Documentos)</h2>
-          <p>Marque o status de cada item (Pendente/Enviado). Esta tela é a base do retorno do analista e do status do processo.</p>
+          <p>Marque o status de cada item (Pendente/Aprovado/Reprovado/Bloqueado). Esta tela é a base do retorno do analista.</p>
         </div>
         <div class="inline">
-          <button class="btn" id="btnMarcarTudoEnviado">Marcar tudo como Enviado</button>
+          <button class="btn" id="btnMarcarTudoAprovado">Marcar tudo como Aprovado</button>
           <button class="btn" id="btnMarcarTudoPendente">Marcar tudo como Pendente</button>
         </div>
       </div>
@@ -770,12 +716,12 @@
           </div>
           <div class="fg">
             <label for="obra">Empreendimento</label>
-            <input id="obra" type="text" placeholder="AGL30, AGL32, FSA10..." readonly data-info-only="1">
+            <input id="obra" type="text" placeholder="AGL30, AGL32, FSA10...">
           </div>
 
           <div class="fg">
             <label for="perfil-renda">Perfil de renda</label>
-            <select id="perfil-renda" disabled data-info-only="1">
+            <select id="perfil-renda">
               <option value="clt">CLT / Formal</option>
               <option value="informal">Informal / Autônomo</option>
               <option value="aposentado">Aposentado / Pensionista</option>
@@ -785,7 +731,7 @@
 
           <div class="fg">
             <label for="estado-civil-proponente">Estado civil (proponente)</label>
-            <select id="estado-civil-proponente" disabled data-info-only="1">
+            <select id="estado-civil-proponente">
               <option value="solteiro">Solteiro(a)</option>
               <option value="casado">Casado(a)</option>
               <option value="divorciado">Divorciado(a)</option>
@@ -796,7 +742,7 @@
 
           <div class="fg">
             <label for="tipo-dependente">Tipo de dependente</label>
-            <select id="tipo-dependente" disabled data-info-only="1">
+            <select id="tipo-dependente">
               <option value="filho-menor">Filho menor</option>
               <option value="filho-maior">Filho maior</option>
               <option value="tio-tia">Tio/Tia</option>
@@ -814,10 +760,10 @@
           </div>
         </div>
 
-        <div class="form-grid" aria-label="Regras em checkboxes">
+        <div class="form-grid" aria-label="Regras do processo">
           <div class="fg">
             <label>FGTS / CTPS</label>
-            <select id="cotista-3-anos" disabled data-info-only="1">
+            <select id="cotista-3-anos">
               <option value="nao">Cliente com +3 anos (não)</option>
               <option value="sim">Cliente com +3 anos (sim)</option>
             </select>
@@ -825,7 +771,7 @@
 
           <div class="fg" id="irpf-informal-group" style="display:none">
             <label>IRPF para renda informal</label>
-            <select id="irpf-informal" disabled data-info-only="1">
+            <select id="irpf-informal">
               <option value="nao">Não vai usar IRPF</option>
               <option value="sim">Vai usar IRPF + recibo</option>
             </select>
@@ -833,7 +779,7 @@
 
           <div class="fg" id="conjuge-renda-group" style="display:none">
             <label>Renda do cônjuge</label>
-            <select id="conjuge-tem-renda" disabled data-info-only="1">
+            <select id="conjuge-tem-renda">
               <option value="nao">Cônjuge sem renda</option>
               <option value="sim">Cônjuge com renda</option>
             </select>
@@ -841,7 +787,7 @@
 
           <div class="fg">
             <label>CCA (Caixa)</label>
-            <select id="cca-gerou" disabled data-info-only="1">
+            <select id="cca-gerou">
               <option value="nao">CCA não gerou formulários</option>
               <option value="sim">CCA gerou formulários</option>
             </select>
@@ -860,7 +806,7 @@
               <div class="s">Base do dossiê do proponente (identidade, estado civil, residência, etc.).</div>
             </div>
             <div class="right">
-              <span class="pill neutral" id="pill-proponente">0/0 enviados</span>
+              <span class="pill neutral" id="pill-proponente">0/0 aprovados</span>
             </div>
           </div>
           <table class="doc-table">
@@ -878,7 +824,7 @@
 CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fé pública (dentro da validade) do proponente.</td>
                 <td>
                   <select class="status status-pill" data-doc="proponente" data-id="idcpf">
-                    <option>Pendente</option><option>Enviado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
@@ -887,7 +833,7 @@ CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fé
                 <td class="doc-desc" id="desc-estado-civil">Certidão de nascimento.</td>
                 <td>
                   <select class="status status-pill" data-doc="proponente" data-id="estadocivil">
-                    <option>Pendente</option><option>Enviado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
@@ -898,7 +844,7 @@ Comprovante aberto; não precisa estar no nome do cliente.
 Água, luz, telefone, internet, celular, cartão de crédito.</td>
                 <td>
                   <select class="status status-pill" data-doc="proponente" data-id="residencia">
-                    <option>Pendente</option><option>Enviado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
@@ -910,7 +856,7 @@ Declaração completa do ano atual + recibo de entrega + DARF pago (se houver).
 ⚠️ Somente se perfil = INFORMAL e IRPF para informal = SIM.</td>
                 <td>
                   <select class="status status-pill" data-doc="proponente" data-id="irpf">
-                    <option>Pendente</option><option>Enviado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
@@ -922,7 +868,7 @@ App FGTS / site Caixa / agência.
 Militar/soldado: anexar também 3 últimos extratos bancários da conta salário.</td>
                 <td>
                   <select class="status status-pill" data-doc="proponente" data-id="fgts">
-                    <option>Pendente</option><option>Enviado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
@@ -933,7 +879,7 @@ Militar/soldado: anexar também 3 últimos extratos bancários da conta salário
 Carteira Digital (todas infos) ou CTPS física: qualificação, contratos e anotações.</td>
                 <td>
                   <select class="status status-pill" data-doc="proponente" data-id="ctps">
-                    <option>Pendente</option><option>Enviado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
@@ -949,7 +895,7 @@ Carteira Digital (todas infos) ou CTPS física: qualificação, contratos e anot
               <div class="s">Aparece quando o tipo de dependente for "Filho menor".</div>
             </div>
             <div class="right">
-              <span class="pill neutral" id="pill-dep-menor">0/0 enviados</span>
+              <span class="pill neutral" id="pill-dep-menor">0/0 aprovados</span>
             </div>
           </div>
           <table class="doc-table">
@@ -960,7 +906,7 @@ Carteira Digital (todas infos) ou CTPS física: qualificação, contratos e anot
                 <td class="doc-desc">Guarda/adoção: anexar termos respectivos.</td>
                 <td>
                   <select class="status status-pill" data-doc="depmenor" data-id="certidao-menor">
-                    <option>Pendente</option><option>Enviado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
@@ -976,7 +922,7 @@ Carteira Digital (todas infos) ou CTPS física: qualificação, contratos e anot
               <div class="s">Aparece quando o dependente não for "Filho menor".</div>
             </div>
             <div class="right">
-              <span class="pill neutral" id="pill-dep-maior">0/0 enviados</span>
+              <span class="pill neutral" id="pill-dep-maior">0/0 aprovados</span>
             </div>
           </div>
           <table class="doc-table">
@@ -988,7 +934,7 @@ Carteira Digital (todas infos) ou CTPS física: qualificação, contratos e anot
 CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fé pública (dentro da validade) do dependente.</td>
                 <td>
                   <select class="status status-pill" data-doc="depmaior" data-id="idcpf-dep">
-                    <option>Pendente</option><option>Enviado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
@@ -1001,7 +947,7 @@ VIÚVO: Certidão de casamento e óbito
 DIVORCIADO: Certidão averbada.</td>
                 <td>
                   <select class="status status-pill" data-doc="depmaior" data-id="estadocivil-dep">
-                    <option>Pendente</option><option>Enviado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
@@ -1010,7 +956,7 @@ DIVORCIADO: Certidão averbada.</td>
                 <td class="doc-desc">Declaração conforme regras Caixa, vinculando dependente ao proponente.</td>
                 <td>
                   <select class="status status-pill" data-doc="depmaior" data-id="parentesco">
-                    <option>Pendente</option><option>Enviado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
@@ -1025,7 +971,7 @@ DIVORCIADO: Certidão averbada.</td>
               <div class="t">Renda formal (CLT / vínculo)</div>
               <div class="s">Aparece quando perfil de renda = CLT.</div>
             </div>
-            <div class="right"><span class="pill neutral" id="pill-renda-clt">0/0 enviados</span></div>
+            <div class="right"><span class="pill neutral" id="pill-renda-clt">0/0 aprovados</span></div>
           </div>
           <table class="doc-table">
             <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
@@ -1033,17 +979,17 @@ DIVORCIADO: Certidão averbada.</td>
               <tr>
                 <td class="doc-name">Holerites</td>
                 <td class="doc-desc">3 últimos holerites/contracheques (nome/CNPJ/cargo/admissão/bruto).</td>
-                <td><select class="status status-pill" data-doc="rendaclt" data-id="holerite"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="rendaclt" data-id="holerite"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Renda variável</td>
                 <td class="doc-desc">Comissões/HE/adicional: holerites suficientes para média conforme Caixa.</td>
-                <td><select class="status status-pill" data-doc="rendaclt" data-id="variavel"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="rendaclt" data-id="variavel"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Carta do empregador</td>
                 <td class="doc-desc">Quando exigido: carta/declaração informando vínculo, salário e função.</td>
-                <td><select class="status status-pill" data-doc="rendaclt" data-id="carta"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="rendaclt" data-id="carta"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
             </tbody>
           </table>
@@ -1056,7 +1002,7 @@ DIVORCIADO: Certidão averbada.</td>
               <div class="t">Renda informal (autônomo / liberal)</div>
               <div class="s">Aparece quando perfil de renda = INFORMAL.</div>
             </div>
-            <div class="right"><span class="pill neutral" id="pill-renda-informal">0/0 enviados</span></div>
+            <div class="right"><span class="pill neutral" id="pill-renda-informal">0/0 aprovados</span></div>
           </div>
           <table class="doc-table">
             <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
@@ -1064,7 +1010,7 @@ DIVORCIADO: Certidão averbada.</td>
               <tr>
                 <td class="doc-name">Extrato bancário</td>
                 <td class="doc-desc">3 últimos meses (preferir mês fechado). Aceita PDF/impresso e bancos digitais.</td>
-                <td><select class="status status-pill" data-doc="rendainf" data-id="extrato"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="rendainf" data-id="extrato"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
             </tbody>
           </table>
@@ -1077,7 +1023,7 @@ DIVORCIADO: Certidão averbada.</td>
               <div class="t">Aposentados / Pensionistas</div>
               <div class="s">Aparece quando perfil de renda = APOSENTADO.</div>
             </div>
-            <div class="right"><span class="pill neutral" id="pill-aposentado">0/0 enviados</span></div>
+            <div class="right"><span class="pill neutral" id="pill-aposentado">0/0 aprovados</span></div>
           </div>
           <table class="doc-table">
             <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
@@ -1085,7 +1031,7 @@ DIVORCIADO: Certidão averbada.</td>
               <tr>
                 <td class="doc-name">Extrato do benefício</td>
                 <td class="doc-desc">Último extrato (Meu INSS / Dataprev).</td>
-                <td><select class="status status-pill" data-doc="apos" data-id="beneficio"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="apos" data-id="beneficio"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
             </tbody>
           </table>
@@ -1098,7 +1044,7 @@ DIVORCIADO: Certidão averbada.</td>
               <div class="t">Domésticos / contratação por CPF</div>
               <div class="s">Aparece quando perfil de renda = DOMÉSTICO.</div>
             </div>
-            <div class="right"><span class="pill neutral" id="pill-domestico">0/0 enviados</span></div>
+            <div class="right"><span class="pill neutral" id="pill-domestico">0/0 aprovados</span></div>
           </div>
           <table class="doc-table">
             <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
@@ -1106,7 +1052,7 @@ DIVORCIADO: Certidão averbada.</td>
               <tr>
                 <td class="doc-name">eSocial</td>
                 <td class="doc-desc">3 últimos comprovantes do eSocial.</td>
-                <td><select class="status status-pill" data-doc="dom" data-id="esocial"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="dom" data-id="esocial"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
             </tbody>
           </table>
@@ -1119,7 +1065,7 @@ DIVORCIADO: Certidão averbada.</td>
               <div class="t">Documentos Caixa</div>
               <div class="s">Extras (Cheque Azul/Cartão) aparecem se "CCA gerou formulários" = SIM.</div>
             </div>
-            <div class="right"><span class="pill neutral" id="pill-caixa">0/0 enviados</span></div>
+            <div class="right"><span class="pill neutral" id="pill-caixa">0/0 aprovados</span></div>
           </div>
           <table class="doc-table">
             <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
@@ -1127,38 +1073,38 @@ DIVORCIADO: Certidão averbada.</td>
               <tr>
                 <td class="doc-name">DAMP</td>
                 <td class="doc-desc">Preenchida e assinada digitalmente. Físico só com aprovação do crédito.</td>
-                <td><select class="status status-pill" data-doc="caixa" data-id="damp"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="caixa" data-id="damp"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Ficha de cadastro Caixa</td>
                 <td class="doc-desc">Preenchida (endereço igual ao cadastro). Assinada digitalmente; físico com aprovação.</td>
-                <td><select class="status status-pill" data-doc="caixa" data-id="ficha"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="caixa" data-id="ficha"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Abertura de conta</td>
                 <td class="doc-desc">Assinada digitalmente; físico precisa aprovação do crédito.</td>
-                <td><select class="status status-pill" data-doc="caixa" data-id="abertura"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="caixa" data-id="abertura"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">MO</td>
                 <td class="doc-desc">Assinatura correta (2ª página). Casal: assinatura de ambos.</td>
-                <td><select class="status status-pill" data-doc="caixa" data-id="mo"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="caixa" data-id="mo"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
 
               <tr id="row-cheque-azul" style="display:none;">
                 <td class="doc-name">Formulário Cheque Azul</td>
                 <td class="doc-desc">Formulário de contratação (assinatura digital). Físico somente com aprovação.</td>
-                <td><select class="status status-pill" data-doc="caixa" data-id="chequeazul"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="caixa" data-id="chequeazul"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
               <tr id="row-form-cartao" style="display:none;">
                 <td class="doc-name">Formulário Cartão</td>
                 <td class="doc-desc">Formulário do cartão Caixa com campos obrigatórios e assinatura digital.</td>
-                <td><select class="status status-pill" data-doc="caixa" data-id="formcartao"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="caixa" data-id="formcartao"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
               <tr id="row-prop-cartao" style="display:none;">
                 <td class="doc-name">Proposta Cartão</td>
                 <td class="doc-desc">Proposta comercial vinculada ao cliente e assinada digitalmente.</td>
-                <td><select class="status status-pill" data-doc="caixa" data-id="propcartao"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="caixa" data-id="propcartao"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
             </tbody>
           </table>
@@ -1171,7 +1117,7 @@ DIVORCIADO: Certidão averbada.</td>
               <div class="t">Documentos Agehab</div>
               <div class="s">Padrões Agehab: assinaturas via GOV.BR ou Clicksign (quando aplicável).</div>
             </div>
-            <div class="right"><span class="pill neutral" id="pill-agehab">0/0 enviados</span></div>
+            <div class="right"><span class="pill neutral" id="pill-agehab">0/0 aprovados</span></div>
           </div>
           <table class="doc-table">
             <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
@@ -1179,32 +1125,32 @@ DIVORCIADO: Certidão averbada.</td>
               <tr>
                 <td class="doc-name">Declaração de endereço</td>
                 <td class="doc-desc">Quando necessário. Assinada via GOV.BR ou Clicksign.</td>
-                <td><select class="status status-pill" data-doc="agehab" data-id="decl-end"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="agehab" data-id="decl-end"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Declaração renda informal</td>
                 <td class="doc-desc">Assinada pelo dependente via GOV.BR/Clicksign (modelo Agehab).</td>
-                <td><select class="status status-pill" data-doc="agehab" data-id="decl-renda"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="agehab" data-id="decl-renda"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Declaração de não renda</td>
                 <td class="doc-desc">Para dependentes sem renda. Assinada via GOV.BR/Clicksign.</td>
-                <td><select class="status status-pill" data-doc="agehab" data-id="decl-naorenda"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="agehab" data-id="decl-naorenda"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Vínculo ≥ 3 anos</td>
                 <td class="doc-desc">Docs com fé pública comprovando vínculo mínimo na cidade do Cheque Moradia.</td>
-                <td><select class="status status-pill" data-doc="agehab" data-id="vinculo"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="agehab" data-id="vinculo"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Checklist Agehab</td>
                 <td class="doc-desc">Preenchido e assinado GOV.BR (ou próprio punho conforme orientação).</td>
-                <td><select class="status status-pill" data-doc="agehab" data-id="check"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="agehab" data-id="check"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Ficha Agehab</td>
                 <td class="doc-desc">Preenchida pelo Assistente de Crédito; assinada GOV.BR (ou próprio punho).</td>
-                <td><select class="status status-pill" data-doc="agehab" data-id="ficha"><option>Pendente</option><option>Enviado</option></select></td>
+                <td><select class="status status-pill" data-doc="agehab" data-id="ficha"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
               </tr>
             </tbody>
           </table>
@@ -1222,7 +1168,7 @@ DIVORCIADO: Certidão averbada.</td>
       <div class="panel-header">
         <div class="panel-title">
           <h2>Retorno do Analista</h2>
-          <p>Atualize status geral / Caixa / Agehab + registre observações. Isso alimenta o painel da fila e mantém SLA correto.</p>
+          <p>Atualize Caixa, Agehab, sinal e fiador + registre observações para manter o fluxo do repasse atualizado.</p>
         </div>
         <div class="inline">
           <button class="btn" id="btnSalvarRight">Salvar</button>
@@ -1234,41 +1180,17 @@ DIVORCIADO: Certidão averbada.</td>
         <div class="alertRow" id="slaAlert">
           <div class="left" style="gap:10px">
             <span class="pill neutral">Status</span>
-            <span class="pill" id="pillCredito">Credito: Em analise</span>
-            <span class="pill" id="pillGeral">Geral: Novo</span>
             <span class="pill" id="pillCaixa">Caixa: Analise Credito</span>
             <span class="pill" id="pillAgehab">Agehab: Analise Credito</span>
+            <span class="pill" id="pillSinal">Sinal: Nao tem</span>
+            <span class="pill" id="pillFiador">Fiador: Nao tem</span>
           </div>
           <div class="right">
-            <span class="sla ok" id="slaCor">SLA Comercial: 0h</span>
             <span class="sla ok" id="slaCred">SLA Credito: 0h</span>
           </div>
         </div>
 
         <div class="form-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
-          <div class="fg">
-            <label for="status-credito">Status credito</label>
-            <select id="status-credito">
-              <option value="em_analise">Em analise</option>
-              <option value="pendenciado">Pendente</option>
-              <option value="aprovado">Aprovado</option>
-              <option value="reprovado">Reprovado</option>
-            </select>
-          </div>
-
-          <div class="fg">
-            <label for="status-geral">Status geral</label>
-            <select id="status-geral">
-              <option value="novo">Novo</option>
-              <option value="em_andamento">Em andamento</option>
-              <option value="pendenciado">Pendenciado</option>
-              <option value="aprovado">Aprovado</option>
-              <option value="reprovado">Reprovado</option>
-              <option value="distrato">Distrato</option>
-              <option value="cancelado">Cancelado</option>
-            </select>
-          </div>
-
           <div class="fg">
             <label for="cca-responsavel">CCA</label>
             <select id="cca-responsavel">
@@ -1321,40 +1243,6 @@ DIVORCIADO: Certidão averbada.</td>
           </div>
 
           <div class="fg">
-            <label for="estagio-comercial">Estagio comercial</label>
-            <select id="estagio-comercial">
-              <option value="reserva">Reserva</option>
-              <option value="em_processo">Em Processo</option>
-              <option value="credito">Credito</option>
-              <option value="secretaria_vendas">Secretaria de Vendas</option>
-              <option value="assinatura_diretoria">Assinatura Diretoria</option>
-              <option value="autorizacao_diretoria">Aprovacao Diretoria</option>
-              <option value="envio_sienge">Envio Sienge</option>
-              <option value="venda_finalizada">Venda Finalizada</option>
-            </select>
-          </div>
-
-          <div class="fg">
-            <label for="etapa-repasse">Etapa repasse</label>
-            <select id="etapa-repasse">
-              <option value="">Sem repasse</option>
-              <option value="em_repasse">Em Repasse</option>
-              <option value="inicio_repasse">Inicio Repasse</option>
-              <option value="assinatura_autorizada">Assinatura Autorizada</option>
-            </select>
-          </div>
-
-          <div class="fg">
-            <label for="fila-atual">Fila atual</label>
-            <input id="fila-atual" type="text" value="Comercial" readonly>
-          </div>
-
-          <div class="fg">
-            <label for="sla-corretor">SLA comercial (h)</label>
-            <input id="sla-corretor" type="number" min="0" step="1" value="0" />
-          </div>
-
-          <div class="fg">
             <label for="sla-credito">SLA credito (h)</label>
             <input id="sla-credito" type="number" min="0" step="1" value="0" />
           </div>
@@ -1382,7 +1270,7 @@ DIVORCIADO: Certidão averbada.</td>
         <div class="divider"></div>
 
         <div class="inline" style="justify-content:space-between;">
-          <div class="tiny" id="prioHint">"Prioridade alta" automatica: geral = pendenciado e SLA credito >= 48h.</div>
+          <div class="tiny" id="prioHint">Prioridade alta automatica: SLA credito >= 48h.</div>
           <div class="inline">
             <button class="btn" id="btnLimparObs">Limpar obs.</button>
             <button class="btn primary" id="btnSalvarTudo">Salvar tudo</button>
@@ -1595,7 +1483,6 @@ DIVORCIADO: Certidão averbada.</td>
   const SLA_WARN = 24;
   const SLA_BAD  = 48;
   const REFRESH_SECONDS = 30;
-  const DOC_PENDENCIA_MIN_LEN = 1;
 
   let countdown = REFRESH_SECONDS;
   $("refreshLabel").textContent = `${countdown}s`;
@@ -1604,21 +1491,6 @@ DIVORCIADO: Certidão averbada.</td>
   // Visual pills (right panel)
   // =========================
   const STATUS_LABELS = {
-    credito: {
-      em_analise: "Em analise",
-      pendenciado: "Pendente",
-      aprovado: "Aprovado",
-      reprovado: "Reprovado",
-    },
-    geral: {
-      novo: "Novo",
-      em_andamento: "Em andamento",
-      pendenciado: "Pendenciado",
-      aprovado: "Aprovado",
-      reprovado: "Reprovado",
-      distrato: "Distrato",
-      cancelado: "Cancelado",
-    },
     caixa: {
       analise_credito: "Analise Credito",
       pendente_credito: "Pendente Credito",
@@ -1637,40 +1509,17 @@ DIVORCIADO: Certidão averbada.</td>
       pendente_agehab: "Pendente Agehab",
       validado_agehab: "Validado Agehab",
     },
+    sinal: {
+      nao_tem: "Nao tem",
+      pendente: "Pendente",
+      pago: "Pago",
+    },
+    fiador: {
+      nao_tem: "Nao tem",
+      pendente: "Pendente",
+      finalizado: "Finalizado",
+    },
   };
-  const ESTAGIOS_REPASSE_UI = [
-    "assinatura_diretoria",
-    "autorizacao_diretoria",
-    "envio_sienge",
-    "venda_finalizada",
-  ];
-
-  function stageNeedsRepasse(stageUi){
-    return ESTAGIOS_REPASSE_UI.includes(toLower(stageUi));
-  }
-
-  function syncFilaAtualUi(){
-    const stageEl = $("estagio-comercial");
-    const repasseEl = $("etapa-repasse");
-    const filaEl = $("fila-atual");
-    if (!stageEl || !repasseEl || !filaEl) return;
-
-    const stageUi = toLower(stageEl.value);
-    const needsRepasse = stageNeedsRepasse(stageUi);
-    const repasseUi = toLower(repasseEl.value);
-
-    if (!needsRepasse) {
-      repasseEl.value = "";
-      repasseEl.disabled = true;
-    } else {
-      repasseEl.disabled = false;
-      if (!repasseUi) repasseEl.value = "em_repasse";
-    }
-
-    const hasRepasse = Boolean(toLower(repasseEl.value));
-    filaEl.value = (needsRepasse || hasRepasse) ? "Repasse" : "Comercial";
-  }
-  window.syncFilaAtualAnalise = syncFilaAtualUi;
 
   function pillClassFromStatus(v){
     const status = toLower(v);
@@ -1686,20 +1535,20 @@ DIVORCIADO: Certidão averbada.</td>
   }
 
   function setRightPills(){
-    const credito = $("status-credito").value;
-    const geral = $("status-geral").value;
     const caixa = $("status-caixa").value;
     const agehab = $("status-agehab").value;
+    const sinal = $("status-sinal").value;
+    const fiador = $("status-fiador").value;
 
-    $("pillCredito").className = `pill ${pillClassFromStatus(credito)}`;
-    $("pillGeral").className = `pill ${pillClassFromStatus(geral)}`;
     $("pillCaixa").className = `pill ${pillClassFromStatus(caixa)}`;
     $("pillAgehab").className = `pill ${pillClassFromStatus(agehab)}`;
+    $("pillSinal").className = `pill ${pillClassFromStatus(sinal)}`;
+    $("pillFiador").className = `pill ${pillClassFromStatus(fiador)}`;
 
-    $("pillCredito").textContent = `Credito: ${mapLabel("credito", credito)}`;
-    $("pillGeral").textContent = `Geral: ${mapLabel("geral", geral)}`;
     $("pillCaixa").textContent = `Caixa: ${mapLabel("caixa", caixa)}`;
     $("pillAgehab").textContent = `Agehab: ${mapLabel("agehab", agehab)}`;
+    $("pillSinal").textContent = `Sinal: ${mapLabel("sinal", sinal)}`;
+    $("pillFiador").textContent = `Fiador: ${mapLabel("fiador", fiador)}`;
   }
 
   function slaClass(hours){
@@ -1709,20 +1558,16 @@ DIVORCIADO: Certidão averbada.</td>
     return "ok";
   }
   function setSlaBadges(){
-    const cor = Number($("sla-corretor").value||0);
     const cred = Number($("sla-credito").value||0);
 
-    $("slaCor").className = `sla ${slaClass(cor)}`;
     $("slaCred").className = `sla ${slaClass(cred)}`;
-
-    $("slaCor").textContent = `SLA Comercial: ${cor}h`;
     $("slaCred").textContent = `SLA Credito: ${cred}h`;
 
-    const high = ($("status-geral").value==="pendenciado" && cred >= SLA_BAD);
+    const high = cred >= SLA_BAD;
     if(high){
-      $("prioHint").innerHTML = `<span class="prio"><span class="dot"></span>PRIORIDADE ALTA</span> geral = pendenciado + SLA credito >= ${SLA_BAD}h`;
+      $("prioHint").innerHTML = `<span class="prio"><span class="dot"></span>PRIORIDADE ALTA</span> SLA credito >= ${SLA_BAD}h`;
     }else{
-      $("prioHint").textContent = `"Prioridade alta" automatica: geral = pendenciado e SLA credito >= ${SLA_BAD}h.`;
+      $("prioHint").textContent = `Prioridade alta automatica: SLA credito >= ${SLA_BAD}h.`;
     }
   }
 
@@ -1731,7 +1576,7 @@ DIVORCIADO: Certidão averbada.</td>
   // =========================
   function applySelectColor(sel){
     const val = toLower(sel.value);
-    sel.classList.remove("status-pendente","status-enviado");
+    sel.classList.remove("status-pendente","status-aprovado","status-reprovado","status-bloqueado");
     sel.style.borderColor = "";
     sel.style.boxShadow = "";
     sel.style.background = "";
@@ -1739,8 +1584,12 @@ DIVORCIADO: Certidão averbada.</td>
 
     if(val==="pendente"){
       sel.classList.add("status-pendente");
-    }else if(val==="enviado"){
-      sel.classList.add("status-enviado");
+    }else if(val==="aprovado"){
+      sel.classList.add("status-aprovado");
+    }else if(val==="reprovado"){
+      sel.classList.add("status-reprovado");
+    }else if(val==="bloqueado"){
+      sel.classList.add("status-bloqueado");
     }
   }
 
@@ -1843,16 +1692,16 @@ DIVORCIADO: Certidão averbada.</td>
   function countSection(docKey){
     const rows = document.querySelectorAll(`[data-doc="${docKey}"]`);
     const total = rows.length;
-    const sent = Array.from(rows).filter(s=> toLower(s.value)==="enviado").length;
-    return {total, sent};
+    const approved = Array.from(rows).filter(s=> toLower(s.value)==="aprovado").length;
+    return {total, approved};
   }
 
   function setPillCount(pillId, docKey){
     const pill = $(pillId);
     if(!pill) return;
-    const {total, sent} = countSection(docKey);
-    pill.textContent = `${sent}/${total} enviados`;
-    pill.className = `pill ${sent===total && total>0 ? "ok" : total===0 ? "neutral" : "warn"}`;
+    const {total, approved} = countSection(docKey);
+    pill.textContent = `${approved}/${total} aprovados`;
+    pill.className = `pill ${approved===total && total>0 ? "ok" : total===0 ? "neutral" : "warn"}`;
   }
 
   function updateSectionCounters(){
@@ -1894,11 +1743,13 @@ DIVORCIADO: Certidão averbada.</td>
         .filter(sel=> sel.offsetParent !== null); // ignora se seção inteira escondida
 
       const pend = selects
-        .filter(sel=> toLower(sel.value)==="pendente")
+        .filter(sel=> ["pendente","reprovado","bloqueado"].includes(toLower(sel.value)))
         .map(sel=>{
           const tr = sel.closest("tr");
           const name = tr ? (tr.querySelector(".doc-name")?.textContent || "Documento") : "Documento";
-          return name.trim();
+          const status = toLower(sel.value);
+          const statusLabel = status === "reprovado" ? "Reprovado" : (status === "bloqueado" ? "Bloqueado" : "Pendente");
+          return `${name.trim()} (${statusLabel})`;
         });
 
       if(pend.length){
@@ -1910,7 +1761,7 @@ DIVORCIADO: Certidão averbada.</td>
 
     $("resumoPendencias").value = lines.length
       ? lines.join("\n").trim()
-      : "Nenhuma pendência marcada. (Tudo Enviado nas seções visíveis.)";
+      : "Nenhuma pendência marcada. (Tudo Aprovado nas seções visíveis.)";
   }
 
   // ===== Bulk actions =====
@@ -1950,7 +1801,7 @@ DIVORCIADO: Certidão averbada.</td>
   }
 
   // ===== Buttons =====
-  $("btnMarcarTudoEnviado").addEventListener("click", ()=> marcarTudo("Enviado"));
+  $("btnMarcarTudoAprovado").addEventListener("click", ()=> marcarTudo("Aprovado"));
   $("btnMarcarTudoPendente").addEventListener("click", ()=> marcarTudo("Pendente"));
 
   $("btnCopiarResumo").addEventListener("click", async ()=>{
@@ -1973,19 +1824,13 @@ DIVORCIADO: Certidão averbada.</td>
   $("btnSair").addEventListener("click", ()=> alert("Front-end: sair (mock)."));
 
   // ===== Right panel listeners =====
-  ["status-credito","status-geral","status-caixa","status-agehab","status-sinal","status-fiador","estagio-comercial","etapa-repasse"].forEach(id=>{
+  ["status-caixa","status-agehab","status-sinal","status-fiador","cca-responsavel"].forEach(id=>{
     $(id).addEventListener("change", ()=>{
       setRightPills();
       setSlaBadges();
-      if (id === "estagio-comercial" || id === "etapa-repasse") {
-        syncFilaAtualUi();
-      }
-      if (id === "status-credito" && typeof window.syncAnalistaDocCreditoStatus === "function") {
-        window.syncAnalistaDocCreditoStatus();
-      }
     });
   });
-  ["sla-corretor","sla-credito"].forEach(id=>{
+  ["sla-credito"].forEach(id=>{
     $(id).addEventListener("input", setSlaBadges);
   });
 
@@ -2009,7 +1854,6 @@ DIVORCIADO: Certidão averbada.</td>
 
   setRightPills();
   setSlaBadges();
-  syncFilaAtualUi();
   updateSectionCounters();
   buildPendenciasResumo();
 
@@ -2020,7 +1864,6 @@ DIVORCIADO: Certidão averbada.</td>
     const API_BASE = "/app/api";
     const url = new URL(window.location.href);
     const processoId = url.searchParams.get("processo_id");
-    const docSnapshot = new Map();
 
     function norm(value) {
       return String(value || "").trim().toLowerCase();
@@ -2149,20 +1992,6 @@ DIVORCIADO: Certidão averbada.</td>
       return `${cat}|${id || normalizeName(nome)}`;
     }
 
-    function syncDocSnapshot(documentos) {
-      const mapDocs = buildDocMap(documentos || []);
-      docSnapshot.clear();
-      getDocRows().forEach((row) => {
-        const key = docLookupKey(row.categoria, row.nome, row.docId);
-        const found = mapDocs.get(key);
-        docSnapshot.set(key, {
-          status_doc: String(found?.status_doc || "PENDENTE").toUpperCase(),
-          status_credito: String(found?.status_credito || "AGUARDANDO_ENVIO").toUpperCase(),
-          pendencia_info: String(found?.pendencia_info || "").trim(),
-        });
-      });
-    }
-
     function buildDocMap(docs) {
       const map = new Map();
       (docs || []).forEach((doc) => {
@@ -2193,25 +2022,6 @@ DIVORCIADO: Certidão averbada.</td>
         }
       });
       return map;
-    }
-
-    function backendFromUiCredito(value) {
-      const v = norm(value);
-      if (v === "pendenciado") return "PENDENCIADO";
-      if (v === "aprovado") return "APROVADO";
-      if (v === "reprovado") return "REPROVADO";
-      return "EM_ANALISE";
-    }
-
-    function backendFromUiGeral(value) {
-      const v = norm(value);
-      if (v === "em_andamento") return "EM_ANDAMENTO";
-      if (v === "pendenciado") return "PENDENCIADO";
-      if (v === "aprovado") return "APROVADO";
-      if (v === "reprovado") return "REPROVADO";
-      if (v === "distrato") return "DISTRATO";
-      if (v === "cancelado") return "CANCELADO";
-      return "NOVO";
     }
 
     function backendFromUiCaixa(value) {
@@ -2250,53 +2060,6 @@ DIVORCIADO: Certidão averbada.</td>
       return "NAO_TEM";
     }
 
-    function backendFromUiEstagio(value) {
-      const v = norm(value);
-      if (v === "em_processo") return "EM_PROCESSO";
-      if (v === "credito") return "CREDITO";
-      if (v === "secretaria_vendas") return "SECRETARIA_VENDAS";
-      if (v === "assinatura_diretoria") return "ASSINATURA_DIRETORIA";
-      if (v === "autorizacao_diretoria") return "AUTORIZACAO_DIRETORIA";
-      if (v === "envio_sienge") return "ENVIO_SIENGE";
-      if (v === "venda_finalizada") return "VENDA_FINALIZADA";
-      return "RESERVA";
-    }
-
-    function backendFromUiRepasse(value) {
-      const v = norm(value);
-      if (v === "em_repasse") return "EM_REPASSE";
-      if (v === "inicio_repasse") return "INICIO_REPASSE";
-      if (v === "assinatura_autorizada") return "ASSINATURA_AUTORIZADA";
-      return null;
-    }
-
-    function docCreditoFromUi(value) {
-      const v = norm(value);
-      if (v === "pendenciado") return "PENDENCIADO";
-      if (v === "aprovado") return "APROVADO";
-      if (v === "reprovado") return "REPROVADO";
-      return "ANALISE";
-    }
-
-    function uiFromBackendCredito(value) {
-      const v = norm(value);
-      if (v === "pendenciado" || v === "pendente") return "pendenciado";
-      if (v === "aprovado") return "aprovado";
-      if (v === "reprovado") return "reprovado";
-      return "em_analise";
-    }
-
-    function uiFromBackendGeral(value) {
-      const v = norm(value);
-      if (v === "em_andamento" || v === "em_analise") return "em_andamento";
-      if (v === "pendenciado" || v === "pendente") return "pendenciado";
-      if (v === "aprovado") return "aprovado";
-      if (v === "reprovado") return "reprovado";
-      if (v === "distrato") return "distrato";
-      if (v === "cancelado") return "cancelado";
-      return "novo";
-    }
-
     function uiFromBackendCaixa(value) {
       const v = norm(value);
       if (v === "pendente_credito" || v === "pendente") return "pendente_credito";
@@ -2319,170 +2082,14 @@ DIVORCIADO: Certidão averbada.</td>
       return "analise_credito";
     }
 
-    function uiFromBackendEstagio(value) {
-      const v = norm(value);
-      if (v === "em_processo") return "em_processo";
-      if (v === "credito") return "credito";
-      if (v === "secretaria_vendas") return "secretaria_vendas";
-      if (v === "assinatura_diretoria") return "assinatura_diretoria";
-      if (v === "autorizacao_diretoria") return "autorizacao_diretoria";
-      if (v === "envio_sienge") return "envio_sienge";
-      if (v === "venda_finalizada") return "venda_finalizada";
-      return "reserva";
-    }
-
-    function uiFromBackendRepasse(value) {
-      const v = norm(value);
-      if (v === "em_repasse") return "em_repasse";
-      if (v === "inicio_repasse") return "inicio_repasse";
-      if (v === "assinatura_autorizada") return "assinatura_autorizada";
-      return "";
-    }
-
-    function toUiDocStatus(value) {
-      const s = String(value || "").toUpperCase();
-      if (s === "ENVIADO" || s === "APROVADO") return "Enviado";
-      if (s === "NAO_APLICA") return "Enviado";
+    function uiDocStatusFromBackend(doc) {
+      const credito = String(doc?.status_credito || "").toUpperCase();
+      const statusDoc = String(doc?.status_doc || "").toUpperCase();
+      if (credito === "APROVADO") return "Aprovado";
+      if (credito === "REPROVADO") return "Reprovado";
+      if (credito === "PENDENCIADO") return "Bloqueado";
+      if (statusDoc === "ENVIADO" || statusDoc === "APROVADO") return "Aprovado";
       return "Pendente";
-    }
-
-    function backendCreditoToUi(value) {
-      const s = String(value || "").toUpperCase();
-      if (s === "AGUARDANDO_ENVIO") return "aguardando_envio";
-      if (s === "APROVADO") return "aprovado";
-      if (s === "REPROVADO") return "reprovado";
-      if (s === "PENDENCIADO") return "pendenciado";
-      if (s === "NAO_APLICA") return "aprovado";
-      return "analise";
-    }
-
-    function getCreditoSelectFromDoc(docSelect) {
-      const row = docSelect?.closest("tr");
-      return row ? row.querySelector('select[data-role="credito"]') : null;
-    }
-
-    function applyCreditoSelectColor(select) {
-      if (!select) return;
-      const value = norm(select.value).replace(/\s+/g, "_");
-      select.classList.remove(
-        "status-aguardando-envio",
-        "status-analise",
-        "status-pendenciado",
-        "status-aprovado",
-        "status-reprovado"
-      );
-      if (value === "aguardando_envio") select.classList.add("status-aguardando-envio");
-      if (value === "analise") select.classList.add("status-analise");
-      if (value === "pendenciado") select.classList.add("status-pendenciado");
-      if (value === "aprovado") select.classList.add("status-aprovado");
-      if (value === "reprovado") select.classList.add("status-reprovado");
-    }
-
-    function ensureCreditoColumns() {
-      document.querySelectorAll("table.doc-table").forEach((table) => {
-        const headRow = table.querySelector("thead tr");
-        if (headRow) {
-          const headCells = Array.from(headRow.querySelectorAll("th"));
-          if (!headRow.querySelector("th.status-cred-col")) {
-            const th = document.createElement("th");
-            th.className = "status-cred-col";
-            th.textContent = "Status Credito";
-            th.style.width = "15%";
-            headRow.appendChild(th);
-          }
-          if (headCells.length >= 3) {
-            headCells[0].style.width = "24%";
-            headCells[1].style.width = "46%";
-            headCells[2].style.width = "15%";
-            headCells[2].classList.add("status-doc-col");
-          }
-        }
-
-        table.querySelectorAll("tbody tr").forEach((tr) => {
-          const docCell = tr.querySelector("td:nth-child(3)");
-          if (docCell) docCell.classList.add("status-doc-col");
-          if (tr.querySelector("td.status-cred-col")) return;
-
-          const td = document.createElement("td");
-          td.className = "status-cred-col";
-
-          const select = document.createElement("select");
-          select.className = "status status-credit-pill";
-          select.setAttribute("data-role", "credito");
-          select.disabled = true;
-          select.title = "Atualizado pelo analista.";
-          select.innerHTML = [
-            '<option value="aguardando_envio">Aguardando</option>',
-            '<option value="analise">Em Analise</option>',
-            '<option value="pendenciado">Pendente</option>',
-            '<option value="aprovado">Aprovado</option>',
-            '<option value="reprovado">Reprovado</option>',
-          ].join("");
-          td.appendChild(select);
-          tr.appendChild(td);
-
-          const docSelect = tr.querySelector("select.status.status-pill[data-doc][data-id]");
-          if (docSelect && !docSelect.dataset.creditoBound) {
-            docSelect.dataset.creditoBound = "1";
-            docSelect.addEventListener("change", () => {
-              syncDocCreditoStatus();
-            });
-          }
-        });
-      });
-    }
-
-    function deriveDocCreditoStatus(row, statusDocBackend) {
-      const key = docLookupKey(row.categoria, row.nome, row.docId);
-      const previous = docSnapshot.get(key) || {};
-      const previousDocStatus = String(previous.status_doc || "").toUpperCase();
-      const previousCredito = String(previous.status_credito || "").toUpperCase();
-      const previousPendenciaInfo = String(previous.pendencia_info || "").trim();
-      const becamePending = previousDocStatus !== "PENDENTE" && statusDocBackend === "PENDENTE";
-      const processoCreditoDoc = docCreditoFromUi(byId("status-credito")?.value || "em_analise");
-
-      if (statusDocBackend === "ENVIADO" || statusDocBackend === "APROVADO") {
-        return (processoCreditoDoc === "APROVADO" || processoCreditoDoc === "REPROVADO")
-          ? processoCreditoDoc
-          : "ANALISE";
-      }
-      if (becamePending || (previousCredito === "PENDENCIADO" && previousPendenciaInfo)) {
-        return "PENDENCIADO";
-      }
-      return "AGUARDANDO_ENVIO";
-    }
-
-    function setCreditoCell(row, backendStatus) {
-      const creditoSelect = getCreditoSelectFromDoc(row.select);
-      if (!creditoSelect) return;
-
-      const statusDocUi = norm(row.select.value).replace(/\s+/g, "_");
-      const statusDocBackend = statusDocUi === "enviado"
-        ? "ENVIADO"
-        : "PENDENTE";
-      const backendValue = backendStatus
-        ? String(backendStatus || "").toUpperCase()
-        : deriveDocCreditoStatus(row, statusDocBackend);
-
-      creditoSelect.value = backendCreditoToUi(backendValue);
-      applyCreditoSelectColor(creditoSelect);
-
-      const key = docLookupKey(row.categoria, row.nome, row.docId);
-      const pendenciaInfo = String(docSnapshot.get(key)?.pendencia_info || "").trim();
-      creditoSelect.title = pendenciaInfo ? `Pendencia: ${pendenciaInfo}` : "Atualizado pelo analista.";
-    }
-
-    function syncDocCreditoStatus(docsFromBackend = null) {
-      const backendMap = docsFromBackend ? buildDocMap(docsFromBackend) : null;
-      getDocRows().forEach((row) => {
-        if (backendMap) {
-          const key = docLookupKey(row.categoria, row.nome, row.docId);
-          const found = backendMap.get(key);
-          setCreditoCell(row, found?.status_credito || null);
-          return;
-        }
-        setCreditoCell(row, null);
-      });
     }
 
     function toHoursFromDays(days) {
@@ -2503,57 +2110,12 @@ DIVORCIADO: Certidão averbada.</td>
     }
 
     function lockSlaInputs() {
-      ["sla-corretor", "sla-credito"].forEach((id) => {
+      ["sla-credito"].forEach((id) => {
         const field = byId(id);
         if (!field) return;
         field.readOnly = true;
         field.disabled = true;
         field.title = "SLA calculado automaticamente pelo backend.";
-      });
-    }
-
-    function mountTriDocControls() {
-      const docSelects = Array.from(document.querySelectorAll('select.status.status-pill[data-doc][data-id]'));
-      docSelects.forEach((sel) => {
-        if (sel.dataset.triMounted === "1") return;
-        sel.dataset.triMounted = "1";
-
-        const wrap = document.createElement("div");
-        wrap.className = "tri-doc";
-        const choices = [
-          { value: "Pendente", label: "Pendente" },
-          { value: "Enviado", label: "Aprovado" },
-        ];
-
-        choices.forEach((choice) => {
-          const label = document.createElement("label");
-          const input = document.createElement("input");
-          input.type = "checkbox";
-          input.value = choice.value;
-          input.addEventListener("change", () => {
-            if (!input.checked) return;
-            wrap.querySelectorAll("input[type='checkbox']").forEach((other) => {
-              if (other !== input) other.checked = false;
-            });
-            sel.value = choice.value;
-            sel.dispatchEvent(new Event("change", { bubbles: true }));
-          });
-          label.appendChild(input);
-          label.appendChild(document.createTextNode(choice.label));
-          wrap.appendChild(label);
-        });
-
-        const sync = () => {
-          const current = norm(sel.value).replace(/\s+/g, "_");
-          wrap.querySelectorAll("input[type='checkbox']").forEach((chk) => {
-            chk.checked = norm(chk.value).replace(/\s+/g, "_") === current;
-          });
-        };
-        sel.addEventListener("change", sync);
-        sel.style.display = "none";
-        sel.parentElement?.appendChild(wrap);
-        sel._syncTri = sync;
-        sync();
       });
     }
 
@@ -2617,35 +2179,27 @@ DIVORCIADO: Certidão averbada.</td>
       if (byId("nome-cliente")) byId("nome-cliente").value = cliente.nome || "";
       if (byId("corretor")) byId("corretor").value = cliente.corretor || "";
       if (byId("obra")) byId("obra").value = cliente.obra || "";
+      if (byId("imobiliaria")) byId("imobiliaria").value = cliente.imobiliaria || "";
 
       await loadCcaOptions(processo.cca_responsavel || "");
 
-      if (byId("status-credito")) byId("status-credito").value = uiFromBackendCredito(processo.status_credito);
-      if (byId("status-geral")) byId("status-geral").value = uiFromBackendGeral(processo.status_geral);
       if (byId("status-caixa")) byId("status-caixa").value = uiFromBackendCaixa(processo.status_cca);
       if (byId("status-agehab")) byId("status-agehab").value = uiFromBackendAgehab(processo.status_agehab);
       if (byId("status-sinal")) byId("status-sinal").value = norm(processo.status_sinal) || "nao_tem";
       if (byId("status-fiador")) byId("status-fiador").value = norm(processo.status_fiador) || "nao_tem";
-      if (byId("estagio-comercial")) byId("estagio-comercial").value = uiFromBackendEstagio(processo.estagio_comercial);
-      if (byId("etapa-repasse")) byId("etapa-repasse").value = uiFromBackendRepasse(processo.etapa_repasse);
       if (byId("cca-responsavel")) byId("cca-responsavel").value = norm(processo.cca_responsavel);
 
-      if (byId("sla-corretor")) byId("sla-corretor").value = toHoursFromBackend(processo.sla_corretor_horas, processo.sla_corretor_dias);
       if (byId("sla-credito")) byId("sla-credito").value = toHoursFromBackend(processo.sla_analista_horas, processo.sla_credito_dias);
       if (byId("observacao")) byId("observacao").value = processo.observacao || "";
-      if (typeof window.syncFilaAtualAnalise === "function") window.syncFilaAtualAnalise();
 
       getDocRows().forEach((row) => {
         const key = docLookupKey(row.categoria, row.nome, row.docId);
         const found = docMap.get(key);
         if (found) {
-          row.select.value = toUiDocStatus(found.status_doc);
+          row.select.value = uiDocStatusFromBackend(found);
         }
         if (typeof applySelectColor === "function") applySelectColor(row.select);
-        if (typeof row.select._syncTri === "function") row.select._syncTri();
       });
-      syncDocSnapshot(docs);
-      syncDocCreditoStatus(docs);
 
       if (typeof atualizarDependente === "function") atualizarDependente();
       if (typeof atualizarConjuge === "function") atualizarConjuge();
@@ -2664,20 +2218,14 @@ DIVORCIADO: Certidão averbada.</td>
         return;
       }
 
-      const statusCredito = byId("status-credito")?.value || "em_analise";
-      const statusGeral = byId("status-geral")?.value || "novo";
       const statusCaixa = byId("status-caixa")?.value || "analise_credito";
       const statusAgehab = byId("status-agehab")?.value || "analise_credito";
       const statusSinal = byId("status-sinal")?.value || "nao_tem";
       const statusFiador = byId("status-fiador")?.value || "nao_tem";
-      const estagioComercial = byId("estagio-comercial")?.value || "reserva";
-      const etapaRepasse = byId("etapa-repasse")?.value || "";
       const ccaResponsavel = (byId("cca-responsavel")?.value || "").trim().toLowerCase() || null;
       const observacao = (byId("observacao")?.value || "").trim() || null;
 
       const temPendencia =
-        statusCredito === "pendenciado" ||
-        statusGeral === "pendenciado" ||
         statusCaixa === "pendente_credito" ||
         statusCaixa === "pendente_cca" ||
         statusAgehab === "pendente_credito" ||
@@ -2691,63 +2239,34 @@ DIVORCIADO: Certidão averbada.</td>
       }
 
       const payloadProcesso = {
-        status_credito: backendFromUiCredito(statusCredito),
-        status_geral: backendFromUiGeral(statusGeral),
         status_cca: backendFromUiCaixa(statusCaixa),
         status_agehab: backendFromUiAgehab(statusAgehab),
         status_sinal: backendFromUiSinal(statusSinal),
         status_fiador: backendFromUiFiador(statusFiador),
-        estagio_comercial: backendFromUiEstagio(estagioComercial),
-        etapa_repasse: backendFromUiRepasse(etapaRepasse),
         cca_responsavel: ccaResponsavel,
         observacao,
       };
 
       const documentos = [];
       for (const row of getDocRows()) {
-        const statusDocUi = norm(row.select.value).replace(/\s+/g, "_");
-        const statusDoc = statusDocUi === "enviado"
-          ? "ENVIADO"
-          : "PENDENTE";
-        const key = docLookupKey(row.categoria, row.nome, row.docId);
-        const previous = docSnapshot.get(key) || {};
-        const previousDocStatus = String(previous.status_doc || "").toUpperCase();
-        const previousCredito = String(previous.status_credito || "").toUpperCase();
-        const previousPendenciaInfo = String(previous.pendencia_info || "").trim();
-        const becamePending = previousDocStatus !== "PENDENTE" && statusDoc === "PENDENTE";
-        const processoCreditoDoc = docCreditoFromUi(statusCredito);
+        const statusDocUi = norm(row.select.value);
+        let statusDoc = "PENDENTE";
         let statusCreditoDoc = "AGUARDANDO_ENVIO";
         let pendenciaInfo = null;
 
-        if (statusDoc === "ENVIADO") {
-          statusCreditoDoc = (processoCreditoDoc === "APROVADO" || processoCreditoDoc === "REPROVADO")
-            ? processoCreditoDoc
-            : "ANALISE";
-        } else if (becamePending || (previousCredito === "PENDENCIADO" && previousPendenciaInfo)) {
+        if (statusDocUi === "aprovado") {
+          statusDoc = "ENVIADO";
+          statusCreditoDoc = "APROVADO";
+        } else if (statusDocUi === "reprovado") {
+          statusDoc = "ENVIADO";
+          statusCreditoDoc = "REPROVADO";
+        } else if (statusDocUi === "bloqueado") {
+          statusDoc = "PENDENTE";
           statusCreditoDoc = "PENDENCIADO";
+          pendenciaInfo = "Bloqueado no checklist pelo analista.";
         } else {
+          statusDoc = "PENDENTE";
           statusCreditoDoc = "AGUARDANDO_ENVIO";
-        }
-
-        if (statusCreditoDoc === "PENDENCIADO") {
-          if (becamePending) {
-            const prompted = window.prompt(
-              `Informe a pendencia do documento "${row.nome}":`,
-              previousPendenciaInfo
-            );
-            if (prompted === null) {
-              alert("Salvar cancelado. Pendencia de documento precisa de informacao.");
-              return;
-            }
-            const cleaned = String(prompted || "").trim().replace(/\s+/g, " ");
-            if (cleaned.length < DOC_PENDENCIA_MIN_LEN) {
-              alert(`Pendencia do documento "${row.nome}" nao pode ficar vazia.`);
-              return;
-            }
-            pendenciaInfo = cleaned;
-          } else if (previousCredito === "PENDENCIADO" && previousPendenciaInfo) {
-            pendenciaInfo = previousPendenciaInfo;
-          }
         }
 
         documentos.push({
@@ -2769,10 +2288,17 @@ DIVORCIADO: Certidão averbada.</td>
           method: "PUT",
           body: JSON.stringify({ documentos }),
         });
-        syncDocSnapshot(savedDocs);
-        syncDocCreditoStatus(savedDocs);
-
-        if (typeof window.syncFilaAtualAnalise === "function") window.syncFilaAtualAnalise();
+        const savedMap = buildDocMap(savedDocs || []);
+        getDocRows().forEach((row) => {
+          const key = docLookupKey(row.categoria, row.nome, row.docId);
+          const found = savedMap.get(key);
+          if (found) {
+            row.select.value = uiDocStatusFromBackend(found);
+          }
+          if (typeof applySelectColor === "function") applySelectColor(row.select);
+        });
+        if (typeof setRightPills === "function") setRightPills();
+        if (typeof setSlaBadges === "function") setSlaBadges();
         if (typeof buildPendenciasResumo === "function") buildPendenciasResumo();
         alert("Dados salvos com sucesso.");
       } catch (error) {
@@ -2784,11 +2310,6 @@ DIVORCIADO: Certidão averbada.</td>
       await fetch("/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => null);
       window.location.href = "/login";
     }
-
-    ensureCreditoColumns();
-    mountTriDocControls();
-    window.syncAnalistaDocCreditoStatus = syncDocCreditoStatus;
-    syncDocCreditoStatus();
 
     rebindButton("btnSalvarTopo", saveAll);
     rebindButton("btnSalvarRight", saveAll);
