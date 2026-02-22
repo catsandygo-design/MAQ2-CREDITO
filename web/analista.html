@@ -461,9 +461,30 @@
         0 0 13px var(--tone-glow);
       animation: neonToneFlow var(--tone-speed) linear infinite, neonTonePulse 2.2s ease-in-out infinite;
     }
+    .status.status-pill.status-aguardando{
+      --tone-1: #bfdbfe;
+      --tone-2: #38bdf8;
+      --tone-3: #0c4a6e;
+      --tone-glow: rgba(56,189,248,.52);
+      --tone-text: #e0f2fe;
+      --tone-speed: 5.9s;
+      border-color: transparent !important;
+      color: var(--tone-text) !important;
+      background:
+        linear-gradient(160deg, rgba(15,23,42,.95), rgba(2,6,23,.86)) padding-box,
+        linear-gradient(120deg, var(--tone-1), var(--tone-2), #0891b2, var(--tone-3), #0369a1, var(--tone-1)) border-box !important;
+      background-size:100% 100%, 240% 240% !important;
+      text-shadow: 0 0 8px var(--tone-glow);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.06),
+        0 0 0 1px rgba(15,23,42,.92),
+        0 0 15px var(--tone-glow);
+      animation: neonToneFlow var(--tone-speed) linear infinite, neonTonePulse 2s ease-in-out infinite;
+    }
     @media (prefers-reduced-motion: reduce){
       .pill,
       .sla,
+      .status.status-pill.status-aguardando,
       .status.status-pill.status-pendente,
       .status.status-pill.status-aprovado,
       .status.status-pill.status-reprovado,
@@ -595,6 +616,45 @@
       background: rgba(2,6,23,.55);
     }
 
+    .doc-status-cell{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      min-width:0;
+    }
+    .doc-reason-wrap{
+      display:none;
+      border:1px solid rgba(148,163,184,.18);
+      background: rgba(2,6,23,.42);
+      border-radius: 10px;
+      padding:8px;
+      gap:6px;
+      flex-direction:column;
+    }
+    .doc-reason-label{
+      font-size: var(--fs-xxs);
+      color: var(--muted);
+      font-weight:700;
+      letter-spacing:.2px;
+    }
+    .doc-reason-input{
+      width:100%;
+      min-height:58px;
+      resize:vertical;
+      border:1px solid rgba(148,163,184,.2);
+      background: rgba(2,6,23,.6);
+      color: var(--text);
+      border-radius: 10px;
+      padding:8px 9px;
+      font-size: var(--fs-xs);
+      line-height:1.3;
+    }
+    .doc-reason-input:focus{
+      outline:none;
+      border-color: rgba(34,197,94,.45);
+      box-shadow: 0 0 0 4px rgba(34,197,94,.08);
+    }
+
     .tiny{
       font-size: var(--fs-xs);
       color: var(--muted);
@@ -683,11 +743,11 @@
       <div class="panel-header">
         <div class="panel-title">
           <h2>Checklist (Conferência de Documentos)</h2>
-          <p>Marque o status de cada item (Pendente/Aprovado/Reprovado/Bloqueado). Esta tela é a base do retorno do analista.</p>
+          <p>Marque o status de cada item (Aguardando/Pendente/Aprovado/Reprovado/Bloqueado). Esta tela é a base do retorno do analista.</p>
         </div>
         <div class="inline">
           <button class="btn" id="btnMarcarTudoAprovado">Marcar tudo como Aprovado</button>
-          <button class="btn" id="btnMarcarTudoPendente">Marcar tudo como Pendente</button>
+          <button class="btn" id="btnMarcarTudoPendente">Marcar tudo como Aguardando</button>
         </div>
       </div>
 
@@ -1201,6 +1261,7 @@ DIVORCIADO: Certidão averbada.</td>
           <div class="fg">
             <label for="status-caixa">Status Caixa</label>
             <select id="status-caixa">
+              <option value="aguardando">Aguardando</option>
               <option value="analise_credito">Analise Credito</option>
               <option value="pendente_credito">Pendente Credito</option>
               <option value="analise_cca">Analise CCA</option>
@@ -1216,6 +1277,7 @@ DIVORCIADO: Certidão averbada.</td>
           <div class="fg">
             <label for="status-agehab">Status Agehab</label>
             <select id="status-agehab">
+              <option value="aguardando">Aguardando</option>
               <option value="analise_credito">Analise Credito</option>
               <option value="pendente_credito">Pendente Credito</option>
               <option value="envio_agehab">Envio Agehab</option>
@@ -1227,6 +1289,7 @@ DIVORCIADO: Certidão averbada.</td>
           <div class="fg">
             <label for="status-sinal">Status sinal</label>
             <select id="status-sinal">
+              <option value="aguardando">Aguardando</option>
               <option value="nao_tem">Nao tem</option>
               <option value="pendente">Pendente</option>
               <option value="pago">Pago</option>
@@ -1236,6 +1299,7 @@ DIVORCIADO: Certidão averbada.</td>
           <div class="fg">
             <label for="status-fiador">Status fiador</label>
             <select id="status-fiador">
+              <option value="aguardando">Aguardando</option>
               <option value="nao_tem">Nao tem</option>
               <option value="pendente">Pendente</option>
               <option value="finalizado">Finalizado</option>
@@ -1492,6 +1556,7 @@ DIVORCIADO: Certidão averbada.</td>
   // =========================
   const STATUS_LABELS = {
     caixa: {
+      aguardando: "Aguardando",
       analise_credito: "Analise Credito",
       pendente_credito: "Pendente Credito",
       analise_cca: "Analise CCA",
@@ -1503,6 +1568,7 @@ DIVORCIADO: Certidão averbada.</td>
       assinatura_caixa: "Finalizado",
     },
     agehab: {
+      aguardando: "Aguardando",
       analise_credito: "Analise Credito",
       pendente_credito: "Pendente Credito",
       envio_agehab: "Envio Agehab",
@@ -1510,11 +1576,13 @@ DIVORCIADO: Certidão averbada.</td>
       validado_agehab: "Validado Agehab",
     },
     sinal: {
+      aguardando: "Aguardando",
       nao_tem: "Nao tem",
       pendente: "Pendente",
       pago: "Pago",
     },
     fiador: {
+      aguardando: "Aguardando",
       nao_tem: "Nao tem",
       pendente: "Pendente",
       finalizado: "Finalizado",
@@ -1576,13 +1644,15 @@ DIVORCIADO: Certidão averbada.</td>
   // =========================
   function applySelectColor(sel){
     const val = toLower(sel.value);
-    sel.classList.remove("status-pendente","status-aprovado","status-reprovado","status-bloqueado");
+    sel.classList.remove("status-aguardando","status-pendente","status-aprovado","status-reprovado","status-bloqueado");
     sel.style.borderColor = "";
     sel.style.boxShadow = "";
     sel.style.background = "";
     sel.style.textShadow = "";
 
-    if(val==="pendente"){
+    if(val==="aguardando"){
+      sel.classList.add("status-aguardando");
+    }else if(val==="pendente"){
       sel.classList.add("status-pendente");
     }else if(val==="aprovado"){
       sel.classList.add("status-aprovado");
@@ -1593,11 +1663,78 @@ DIVORCIADO: Certidão averbada.</td>
     }
   }
 
+  function ensureDocStatusOptions(){
+    document.querySelectorAll("select.status.status-pill[data-doc][data-id]").forEach((sel)=>{
+      const hasAguardando = Array.from(sel.options).some((opt)=> toLower(opt.value || opt.textContent) === "aguardando");
+      if(hasAguardando) return;
+      const opt = document.createElement("option");
+      opt.value = "Aguardando";
+      opt.textContent = "Aguardando";
+      sel.insertBefore(opt, sel.firstChild);
+      if(toLower(sel.value) === "pendente"){
+        sel.value = "Aguardando";
+      }
+    });
+  }
+
+  function normalizeDocReasonText(value){
+    return (value || "").toString().replace(/\s+/g, " ").trim();
+  }
+
+  function reasonFromPendenciaInfo(raw){
+    const text = normalizeDocReasonText(raw);
+    return text.replace(/^(BLOQUEADO|PENDENTE)\s*[-:]\s*/i, "");
+  }
+
+  function getDocReasonInputFromSelect(sel){
+    const td = sel?.closest("td");
+    return td ? td.querySelector(".doc-reason-input") : null;
+  }
+
+  function toggleDocReasonField(sel){
+    const td = sel?.closest("td");
+    if(!td) return;
+    const wrap = td.querySelector(".doc-reason-wrap");
+    const input = td.querySelector(".doc-reason-input");
+    if(!wrap || !input) return;
+    const status = toLower(sel.value);
+    const needReason = status === "pendente" || status === "bloqueado";
+    wrap.style.display = needReason ? "flex" : "none";
+    input.required = needReason;
+    if(!needReason){
+      input.value = "";
+    }
+  }
+
+  function ensureDocReasonFields(){
+    document.querySelectorAll("select.status.status-pill[data-doc][data-id]").forEach((sel)=>{
+      const td = sel.closest("td");
+      if(!td) return;
+      td.classList.add("doc-status-cell");
+      let wrap = td.querySelector(".doc-reason-wrap");
+      if(!wrap){
+        wrap = document.createElement("div");
+        wrap.className = "doc-reason-wrap";
+        wrap.innerHTML = `
+          <div class="doc-reason-label">Motivo (obrigatório para Pendente/Bloqueado)</div>
+          <textarea class="doc-reason-input" maxlength="500" placeholder="Descreva o motivo da pendência ou bloqueio."></textarea>
+        `;
+        td.appendChild(wrap);
+      }
+      if(!sel.dataset.reasonBound){
+        sel.addEventListener("change", ()=> toggleDocReasonField(sel));
+        sel.dataset.reasonBound = "1";
+      }
+      toggleDocReasonField(sel);
+    });
+  }
+
   function initStatusSelects(){
     document.querySelectorAll(".status-pill").forEach(sel=>{
       applySelectColor(sel);
       sel.addEventListener("change", ()=>{
         applySelectColor(sel);
+        toggleDocReasonField(sel);
         updateSectionCounters();
         buildPendenciasResumo();
       });
@@ -1743,13 +1880,24 @@ DIVORCIADO: Certidão averbada.</td>
         .filter(sel=> sel.offsetParent !== null); // ignora se seção inteira escondida
 
       const pend = selects
-        .filter(sel=> ["pendente","reprovado","bloqueado"].includes(toLower(sel.value)))
+        .filter(sel=> ["aguardando","pendente","reprovado","bloqueado"].includes(toLower(sel.value)))
         .map(sel=>{
           const tr = sel.closest("tr");
           const name = tr ? (tr.querySelector(".doc-name")?.textContent || "Documento") : "Documento";
           const status = toLower(sel.value);
-          const statusLabel = status === "reprovado" ? "Reprovado" : (status === "bloqueado" ? "Bloqueado" : "Pendente");
-          return `${name.trim()} (${statusLabel})`;
+          const statusLabel =
+            status === "reprovado"
+              ? "Reprovado"
+              : status === "bloqueado"
+                ? "Bloqueado"
+                : status === "pendente"
+                  ? "Pendente"
+                  : "Aguardando";
+          const reasonInput = getDocReasonInputFromSelect(sel);
+          const reasonText = normalizeDocReasonText(reasonInput?.value || "");
+          return reasonText
+            ? `${name.trim()} (${statusLabel}) - Motivo: ${reasonText}`
+            : `${name.trim()} (${statusLabel})`;
         });
 
       if(pend.length){
@@ -1802,7 +1950,7 @@ DIVORCIADO: Certidão averbada.</td>
 
   // ===== Buttons =====
   $("btnMarcarTudoAprovado").addEventListener("click", ()=> marcarTudo("Aprovado"));
-  $("btnMarcarTudoPendente").addEventListener("click", ()=> marcarTudo("Pendente"));
+  $("btnMarcarTudoPendente").addEventListener("click", ()=> marcarTudo("Aguardando"));
 
   $("btnCopiarResumo").addEventListener("click", async ()=>{
     const ok = await copyText($("resumoPendencias").value || "");
@@ -1845,6 +1993,8 @@ DIVORCIADO: Certidão averbada.</td>
   // =========================
   // INIT
   // =========================
+  ensureDocStatusOptions();
+  ensureDocReasonFields();
   initStatusSelects();
   atualizarDependente();
   atualizarConjuge();
@@ -2026,6 +2176,7 @@ DIVORCIADO: Certidão averbada.</td>
 
     function backendFromUiCaixa(value) {
       const v = norm(value);
+      if (v === "aguardando") return "ANALISE_CREDITO";
       if (v === "pendente_credito") return "PENDENTE_CREDITO";
       if (v === "analise_cca") return "ANALISE_CCA";
       if (v === "pendente_cca") return "PENDENTE_CCA";
@@ -2039,6 +2190,7 @@ DIVORCIADO: Certidão averbada.</td>
 
     function backendFromUiAgehab(value) {
       const v = norm(value);
+      if (v === "aguardando") return "ANALISE_CREDITO";
       if (v === "pendente_credito") return "PENDENTE_CREDITO";
       if (v === "envio_agehab") return "ENVIO_AGEHAB";
       if (v === "pendente_agehab") return "PENDENTE_AGEHAB";
@@ -2048,6 +2200,7 @@ DIVORCIADO: Certidão averbada.</td>
 
     function backendFromUiSinal(value) {
       const v = norm(value);
+      if (v === "aguardando") return "PENDENTE";
       if (v === "pendente") return "PENDENTE";
       if (v === "pago") return "PAGO";
       return "NAO_TEM";
@@ -2055,6 +2208,7 @@ DIVORCIADO: Certidão averbada.</td>
 
     function backendFromUiFiador(value) {
       const v = norm(value);
+      if (v === "aguardando") return "PENDENTE";
       if (v === "pendente") return "PENDENTE";
       if (v === "finalizado") return "FINALIZADO";
       return "NAO_TEM";
@@ -2062,6 +2216,7 @@ DIVORCIADO: Certidão averbada.</td>
 
     function uiFromBackendCaixa(value) {
       const v = norm(value);
+      if (v === "analise_credito") return "aguardando";
       if (v === "pendente_credito" || v === "pendente") return "pendente_credito";
       if (v === "analise_cca") return "analise_cca";
       if (v === "pendente_cca") return "pendente_cca";
@@ -2070,26 +2225,31 @@ DIVORCIADO: Certidão averbada.</td>
       if (v === "tratando_produto") return "tratando_produto";
       if (v === "agendado") return "agendado";
       if (v === "assinatura_caixa" || v === "finalizado") return "assinatura_caixa";
-      return "analise_credito";
+      return "aguardando";
     }
 
     function uiFromBackendAgehab(value) {
       const v = norm(value);
+      if (v === "analise_credito") return "aguardando";
       if (v === "pendente_credito") return "pendente_credito";
       if (v === "envio_agehab" || v === "envio_agehag") return "envio_agehab";
       if (v === "pendente_agehab" || v === "pendente") return "pendente_agehab";
       if (v === "validado_agehab" || v === "aprovado") return "validado_agehab";
-      return "analise_credito";
+      return "aguardando";
     }
 
     function uiDocStatusFromBackend(doc) {
       const credito = String(doc?.status_credito || "").toUpperCase();
       const statusDoc = String(doc?.status_doc || "").toUpperCase();
+      const pendenciaInfo = String(doc?.pendencia_info || "");
       if (credito === "APROVADO") return "Aprovado";
       if (credito === "REPROVADO") return "Reprovado";
-      if (credito === "PENDENCIADO") return "Bloqueado";
+      if (credito === "PENDENCIADO") {
+        return /^BLOQUEADO\s*[-:]/i.test(pendenciaInfo) ? "Bloqueado" : "Pendente";
+      }
       if (statusDoc === "ENVIADO" || statusDoc === "APROVADO") return "Aprovado";
-      return "Pendente";
+      if (statusDoc === "PENDENTE" && credito === "AGUARDANDO_ENVIO") return "Aguardando";
+      return "Aguardando";
     }
 
     function toHoursFromDays(days) {
@@ -2122,11 +2282,13 @@ DIVORCIADO: Certidão averbada.</td>
     function getDocRows() {
       return Array.from(document.querySelectorAll("select.status.status-pill[data-doc][data-id]")).map((sel) => {
         const row = sel.closest("tr");
+        const reasonInput = getDocReasonInputFromSelect(sel);
         const rawName = row?.querySelector(".doc-name")?.textContent || sel.dataset.id || "Documento";
         const categoria = sel.dataset.doc || "geral";
         const docId = sel.dataset.id || inferDocId(categoria, rawName);
         return {
           select: sel,
+          reasonInput,
           categoria,
           docId,
           nome: canonicalDocName(categoria, rawName, docId),
@@ -2197,7 +2359,13 @@ DIVORCIADO: Certidão averbada.</td>
         const found = docMap.get(key);
         if (found) {
           row.select.value = uiDocStatusFromBackend(found);
+          if (row.reasonInput) {
+            row.reasonInput.value = reasonFromPendenciaInfo(found.pendencia_info);
+          }
+        } else if (row.reasonInput) {
+          row.reasonInput.value = "";
         }
+        if (typeof toggleDocReasonField === "function") toggleDocReasonField(row.select);
         if (typeof applySelectColor === "function") applySelectColor(row.select);
       });
 
@@ -2250,6 +2418,7 @@ DIVORCIADO: Certidão averbada.</td>
       const documentos = [];
       for (const row of getDocRows()) {
         const statusDocUi = norm(row.select.value);
+        const motivo = normalizeDocReasonText(row.reasonInput?.value || "");
         let statusDoc = "PENDENTE";
         let statusCreditoDoc = "AGUARDANDO_ENVIO";
         let pendenciaInfo = null;
@@ -2260,10 +2429,24 @@ DIVORCIADO: Certidão averbada.</td>
         } else if (statusDocUi === "reprovado") {
           statusDoc = "ENVIADO";
           statusCreditoDoc = "REPROVADO";
-        } else if (statusDocUi === "bloqueado") {
+        } else if (statusDocUi === "pendente") {
+          if (!motivo) {
+            alert(`Informe o motivo da pendencia no documento "${row.nome}".`);
+            row.reasonInput?.focus();
+            return;
+          }
           statusDoc = "PENDENTE";
           statusCreditoDoc = "PENDENCIADO";
-          pendenciaInfo = "Bloqueado no checklist pelo analista.";
+          pendenciaInfo = `PENDENTE - ${motivo}`;
+        } else if (statusDocUi === "bloqueado") {
+          if (!motivo) {
+            alert(`Informe o motivo do bloqueio no documento "${row.nome}".`);
+            row.reasonInput?.focus();
+            return;
+          }
+          statusDoc = "PENDENTE";
+          statusCreditoDoc = "PENDENCIADO";
+          pendenciaInfo = `BLOQUEADO - ${motivo}`;
         } else {
           statusDoc = "PENDENTE";
           statusCreditoDoc = "AGUARDANDO_ENVIO";
@@ -2294,7 +2477,13 @@ DIVORCIADO: Certidão averbada.</td>
           const found = savedMap.get(key);
           if (found) {
             row.select.value = uiDocStatusFromBackend(found);
+            if (row.reasonInput) {
+              row.reasonInput.value = reasonFromPendenciaInfo(found.pendencia_info);
+            }
+          } else if (row.reasonInput) {
+            row.reasonInput.value = "";
           }
+          if (typeof toggleDocReasonField === "function") toggleDocReasonField(row.select);
           if (typeof applySelectColor === "function") applySelectColor(row.select);
         });
         if (typeof setRightPills === "function") setRightPills();

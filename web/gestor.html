@@ -780,33 +780,33 @@
         let dashboardData = null;
         let currentKpiKey = null;
         const KPI_LABELS = {
-            assinados: "Assinado",
-            conformidade_ok: "Clientes no Comercial",
-            enviados_conformidade: "Clientes no Repasse",
-            em_analise: "Meta",
-            com_pendencias: "Real",
-            passiveis_cair: "Provaveis Cair",
-            nao_iniciado: "Previsao",
-            sla_comercial: "Fila Comercial",
-            sla_credito: "Fila Repasse",
-            sla_cca: "Assinados",
-            chegada: "Meta",
-            media_necessaria: "Previsao",
+            assinados: "Assinados",
+            conformidade_ok: "Conformidade OK",
+            enviados_conformidade: "Aguardando Conformidade",
+            em_analise: "Em Analise",
+            com_pendencias: "Com Pendencias",
+            passiveis_cair: "Provaveis de Cair",
+            nao_iniciado: "Nao Iniciado",
+            sla_comercial: "SLA Comercial",
+            sla_credito: "SLA Credito",
+            sla_cca: "SLA CCA",
+            chegada: "Chegadas 7 dias",
+            media_necessaria: "Media Necessaria",
         };
 
         const KPI_CARD_TEXT = {
-            "card-assinados": ["Assinado", "Etapa repasse = Assinatura Autorizada"],
-            "card-conformidade": ["Clientes no Comercial", "Estagios de Em Processo ate Secretaria de Vendas"],
-            "card-env-conf": ["Clientes no Repasse", "Estagios depois de Secretaria de Vendas"],
-            "card-analise": ["Meta", "Meta mensal definida"],
-            "card-pendencias": ["Real", "Vendas finalizadas"],
+            "card-assinados": ["Assinados", "Status Caixa finalizado"],
+            "card-conformidade": ["Conformidade OK", "Status Caixa = CONFORME"],
+            "card-env-conf": ["Aguardando Conformidade", "Status Caixa = AGUARDANDO_CONFORMIDADE"],
+            "card-analise": ["Em Analise", "Sem pendencia e sem status final"],
+            "card-pendencias": ["Com Pendencias", "Pendencias abertas no processo"],
             "card-cair": ["Provaveis de Cair", "Acima do prazo estimado"],
-            "card-nao-iniciado": ["Previsao", "Projecao mensal"],
-            "card-sla-comercial": ["Fila Comercial", "Lista clicavel de clientes"],
-            "card-sla-credito": ["Fila Repasse", "Lista clicavel de clientes"],
-            "card-sla-cca": ["Assinados (lista)", "Clientes com assinatura autorizada"],
-            "card-chegada": ["Meta (apoio)", "Meta mensal"],
-            "card-media-necessaria": ["Previsao (apoio)", "Real x previsao"],
+            "card-nao-iniciado": ["Nao Iniciado", "Reserva/Novo sem avancar"],
+            "card-sla-comercial": ["SLA Medio Comercial", "Media em horas"],
+            "card-sla-credito": ["SLA Medio Credito", "Media em horas"],
+            "card-sla-cca": ["SLA Medio CCA", "Media em horas"],
+            "card-chegada": ["Meta / Real / Previsao", "Acompanhamento do mes"],
+            "card-media-necessaria": ["Media Necessaria por Dia", "Para atingir a meta mensal"],
         };
 
         /* ---------- BURACO NEGRO ---------- */
@@ -1025,36 +1025,46 @@
 
         function renderKPIs(data) {
             document.getElementById("total-pill").textContent = `Total: ${data.total}`;
-            const totalAssinados = Number(data?.total_assinados ?? data?.assinados ?? 0);
-            const totalComercial = Number(data?.total_comercial ?? data?.conformidade_ok ?? 0);
-            const totalRepasse = Number(data?.total_repasse ?? data?.enviados_conformidade ?? 0);
+            const totalAssinados = Number(data?.total_assinados ?? 0);
+            const totalComercial = Number(data?.total_comercial ?? 0);
+            const totalRepasse = Number(data?.total_repasse ?? 0);
+            const conformidadeOk = Number(data?.conformidade_ok ?? 0);
+            const aguardandoConformidade = Number(data?.enviados_conformidade ?? 0);
+            const emAnalise = Number(data?.em_analise ?? 0);
+            const comPendencias = Number(data?.com_pendencias ?? 0);
+            const naoIniciado = Number(data?.nao_iniciado ?? 0);
             const provaveis = Number(data?.provaveis_cair ?? data?.passiveis_cair ?? 0);
-            const meta = Number(data?.meta ?? data?.em_analise ?? 0);
-            const real = Number(data?.real ?? data?.com_pendencias ?? 0);
-            const previsao = Number(data?.previsao ?? data?.nao_iniciado ?? 0);
+            const meta = Number(data?.meta ?? 0);
+            const real = Number(data?.real ?? 0);
+            const previsao = Number(data?.previsao ?? 0);
             const riskDays = Number(data?.dias_estimativa_queda || 15);
+            const slaComercial = Number(data?.sla_medio_comercial_horas ?? 0);
+            const slaCredito = Number(data?.sla_medio_credito_horas ?? 0);
+            const slaCca = Number(data?.sla_medio_cca_horas ?? 0);
+            const mediaNecessariaDia = Number(data?.media_necessaria_dia ?? 0);
+            const chegadas7d = Number(data?.chegadas_ultimos_7_dias ?? 0);
 
             document.getElementById("kpi-assinados").textContent = totalAssinados;
-            document.getElementById("kpi-conformidade").textContent = totalComercial;
-            document.getElementById("kpi-env-conf").textContent = totalRepasse;
+            document.getElementById("kpi-conformidade").textContent = conformidadeOk;
+            document.getElementById("kpi-env-conf").textContent = aguardandoConformidade;
             document.getElementById("kpi-cair").textContent = provaveis;
-            document.getElementById("kpi-analise").textContent = meta;
-            document.getElementById("kpi-pendencias").textContent = real;
-            document.getElementById("kpi-nao-iniciado").textContent = previsao;
+            document.getElementById("kpi-analise").textContent = emAnalise;
+            document.getElementById("kpi-pendencias").textContent = comPendencias;
+            document.getElementById("kpi-nao-iniciado").textContent = naoIniciado;
             document.getElementById("kpi-cair-sub").textContent = `>${riskDays} dias e sem repasse`;
 
-            document.getElementById("kpi-sla-comercial").textContent = totalComercial;
-            document.getElementById("kpi-sla-credito").textContent = totalRepasse;
-            document.getElementById("kpi-sla-cca").textContent = totalAssinados;
-            setKpiTone("card-sla-comercial", "kpi-info");
-            setKpiTone("card-sla-credito", "kpi-purple");
-            setKpiTone("card-sla-cca", "kpi-ok");
+            document.getElementById("kpi-sla-comercial").textContent = `${slaComercial}h`;
+            document.getElementById("kpi-sla-credito").textContent = `${slaCredito}h`;
+            document.getElementById("kpi-sla-cca").textContent = `${slaCca}h`;
+            setKpiTone("card-sla-comercial", slaToneClass(slaComercial));
+            setKpiTone("card-sla-credito", slaToneClass(slaCredito));
+            setKpiTone("card-sla-cca", slaToneClass(slaCca));
 
-            document.getElementById("kpi-chegada").textContent = meta;
-            document.getElementById("kpi-chegada-sub").textContent = "Meta mensal";
-            document.getElementById("kpi-media-necessaria").textContent = previsao;
-            document.getElementById("kpi-media-necessaria-sub").textContent = `Real: ${real} | Previsao do mes`;
-            setKpiTone("card-media-necessaria", previsao >= meta ? "kpi-ok" : "kpi-warn");
+            document.getElementById("kpi-chegada").textContent = `${meta} / ${real} / ${previsao}`;
+            document.getElementById("kpi-chegada-sub").textContent = `Meta / Real / Previsao | Chegadas 7d: ${chegadas7d}`;
+            document.getElementById("kpi-media-necessaria").textContent = `${mediaNecessariaDia.toFixed(2)}/dia`;
+            document.getElementById("kpi-media-necessaria-sub").textContent = `Comercial: ${totalComercial} | Repasse: ${totalRepasse}`;
+            setKpiTone("card-media-necessaria", real >= meta ? "kpi-ok" : "kpi-warn");
         }
 
         function applyKpiLabels() {
@@ -1109,7 +1119,7 @@
               <div class="fase-value">${escapeHtml(item.obra || "-")}</div>
             </div>
             <div>
-              <div class="fase-label">Estagio/Fila/Repasse</div>
+              <div class="fase-label">Comercial/Fila/Repasse</div>
               <div class="fase-value">${escapeHtml(status)}</div>
             </div>
           </div>
@@ -1124,7 +1134,7 @@
             if (!faseTitle || !faseMeta || !faseList) return;
 
             const clientes = Array.isArray(dashboardData?.clientes_estagios) ? dashboardData.clientes_estagios : [];
-            faseTitle.textContent = "Lista de clientes por estagio";
+            faseTitle.textContent = "Lista de clientes por comercial";
             faseMeta.textContent = `${clientes.length} cliente(s)`;
             if (!clientes.length) {
                 faseList.innerHTML = `<div class="fase-empty">Nenhum cliente para exibir.</div>`;
@@ -1146,7 +1156,7 @@
               <div class="fase-value">${escapeHtml(item.obra || "-")}</div>
             </div>
             <div>
-              <div class="fase-label">Estagio/Fila/Repasse</div>
+              <div class="fase-label">Comercial/Fila/Repasse</div>
               <div class="fase-value">${escapeHtml(`${item.estagio_comercial || "-"} | ${item.fila_atual || "-"} | ${item.etapa_repasse || "-"}`)}</div>
             </div>
           </div>
