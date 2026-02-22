@@ -60,11 +60,14 @@
       border-radius: 16px;
       background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
       padding: 8px 10px;
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
       gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
+      align-items: start;
+    }
+
+    .title {
+      min-width: 0;
     }
 
     .title h1 {
@@ -84,6 +87,9 @@
       gap: 8px;
       flex-wrap: wrap;
       align-items: center;
+      justify-content: flex-end;
+      max-width: 100%;
+      min-width: 0;
     }
 
     .btn {
@@ -339,6 +345,12 @@
     }
 
     @media (max-width: 1200px) {
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+      .actions {
+        justify-content: flex-start;
+      }
       .filters {
         grid-template-columns: 1fr 1fr;
       }
@@ -370,7 +382,7 @@
     <section class="meta">
       <span class="chip">Total no Kanban: <strong id="totalCount">0</strong></span>
       <span class="chip">Auto refresh: <strong id="refreshLabel">60s</strong></span>
-      <span class="chip">Regra: <strong>proxima coluna, retorno para Em Repasse ou encerramento</strong></span>
+      <span class="chip">Regra: <strong>proxima coluna, retorno para Inicio de Repasse ou encerramento</strong></span>
     </section>
 
     <section class="filters">
@@ -812,9 +824,9 @@
       const fromStage = row.stage;
       if (fromStage === targetStage) return;
 
-      const fromIsFinal = fromStage === "assinatura_caixa" || fromStage === "cancelado" || fromStage === "distrato";
-      if (fromIsFinal) {
-        setMsg("Status finalizado nao permite retorno.", "err");
+      const fromIsClosed = fromStage === "cancelado" || fromStage === "distrato";
+      if (fromIsClosed) {
+        setMsg("Status Cancelado/Distrato nao permite retorno.", "err");
         applyFilters();
         return;
       }
@@ -833,10 +845,22 @@
       const isCancelamento = targetStage === "cancelado" || targetStage === "distrato";
       const isNextStep = toIndex === fromIndex + 1;
       const isReturnToStart = targetStage === "em_repasse" && fromStage !== "em_repasse";
-      if (!isNextStep && !isReturnToStart && !isCancelamento) {
-        setMsg("Movimento permitido: proxima coluna, retorno para Em Repasse, Cancelado ou Distrato.", "err");
+      const isReturnToInicio = targetStage === "inicio_repasse" && fromStage !== "inicio_repasse";
+      if (!isNextStep && !isReturnToStart && !isReturnToInicio && !isCancelamento) {
+        setMsg("Movimento permitido: proxima coluna, retorno para Inicio de Repasse, Cancelado ou Distrato.", "err");
         applyFilters();
         return;
+      }
+
+      if (isCancelamento) {
+        const confirmou = window.confirm(
+          `Confirma mover o cliente \"${row.cliente}\" para ${stageLabel(targetStage)}?`
+        );
+        if (!confirmou) {
+          setMsg("Movimentacao cancelada pelo usuario.");
+          applyFilters();
+          return;
+        }
       }
 
       row.stage = targetStage;

@@ -61,11 +61,14 @@
       background: #040b1c;
       backdrop-filter: blur(8px);
       padding: 7px 9px;
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
       gap: 6px;
-      align-items: center;
-      flex-wrap: wrap;
+      align-items: start;
+    }
+
+    .title {
+      min-width: 0;
     }
 
     .title h1 {
@@ -85,6 +88,9 @@
       gap: 6px;
       flex-wrap: wrap;
       align-items: center;
+      justify-content: flex-end;
+      max-width: 100%;
+      min-width: 0;
     }
 
     .btn {
@@ -363,6 +369,12 @@
     }
 
     @media (max-width: 1200px) {
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+      .actions {
+        justify-content: flex-start;
+      }
       .filters {
         grid-template-columns: 1fr 1fr;
       }
