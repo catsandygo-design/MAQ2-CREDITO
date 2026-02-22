@@ -180,7 +180,7 @@
       height: 100%;
       overflow: auto;
       display: grid;
-      grid-template-columns: repeat(7, minmax(172px, 1fr));
+      grid-template-columns: repeat(8, minmax(210px, 1fr));
       gap: 8px;
       align-items: start;
     }
@@ -304,10 +304,9 @@
     }
 
     .meta-line b {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      max-width: 62%;
+      white-space: normal;
+      max-width: none;
+      text-align: right;
     }
 
     .empty {
@@ -334,7 +333,7 @@
 
     @media (max-width: 1500px) {
       .board {
-        grid-template-columns: repeat(7, minmax(160px, 1fr));
+        grid-template-columns: repeat(8, minmax(210px, 1fr));
       }
     }
 
@@ -343,7 +342,7 @@
         grid-template-columns: 1fr 1fr;
       }
       .board {
-        grid-template-columns: repeat(7, minmax(200px, 1fr));
+        grid-template-columns: repeat(8, minmax(210px, 1fr));
       }
       .column {
         max-height: calc(100vh - 280px);
@@ -558,6 +557,7 @@
     const REFRESH_SECONDS = 60;
 
     const COLUMNS = [
+      { key: "reserva", title: "Reserva", backend: "RESERVA" },
       { key: "em_processo", title: "Processo", backend: "EM_PROCESSO" },
       { key: "credito", title: "Credito", backend: "CREDITO" },
       { key: "secretaria_vendas", title: "Secretaria de Vendas", backend: "SECRETARIA_VENDAS" },
@@ -566,6 +566,13 @@
       { key: "envio_sienge", title: "Envio Sienge", backend: "ENVIO_SIENGE" },
       { key: "venda_finalizada", title: "Venda Finalizada", backend: "VENDA_FINALIZADA" },
     ];
+
+    const REPASSE_COMMERCIAL_KEYS = new Set([
+      "assinatura_diretoria",
+      "autorizacao_diretoria",
+      "envio_sienge",
+      "venda_finalizada",
+    ]);
 
     const COL_INDEX = Object.fromEntries(COLUMNS.map((c, i) => [c.key, i]));
 
@@ -595,14 +602,15 @@
 
     function toStageKey(raw) {
       const key = norm(raw).replaceAll(" ", "_");
-      if (key === "reserva" || key === "processo" || key === "em_processo") return "em_processo";
+      if (key === "reserva") return "reserva";
+      if (key === "processo" || key === "em_processo") return "em_processo";
       if (key === "credito") return "credito";
       if (key === "secretaria_de_vendas" || key === "secretaria_vendas") return "secretaria_vendas";
       if (key === "assinatura_diretoria") return "assinatura_diretoria";
       if (key === "aprovacao_diretoria" || key === "autorizacao_diretoria") return "autorizacao_diretoria";
       if (key === "envio_sienge") return "envio_sienge";
       if (key === "venda_finalizada") return "venda_finalizada";
-      return "em_processo";
+      return "reserva";
     }
 
     function toBackendStage(stageKey) {
@@ -612,7 +620,7 @@
 
     function stageLabel(stageKey) {
       const col = COLUMNS.find((c) => c.key === stageKey);
-      return col ? col.title : "Processo";
+      return col ? col.title : "Reserva";
     }
 
     function formatDate(raw) {
@@ -752,9 +760,14 @@
       setMsg(`Salvando movimentacao para ${stageLabel(targetStage)}...`);
 
       try {
+        const payload = { estagio_comercial: toBackendStage(targetStage) };
+        const enteredRepasse = !REPASSE_COMMERCIAL_KEYS.has(fromStage) && REPASSE_COMMERCIAL_KEYS.has(targetStage);
+        if (enteredRepasse) {
+          payload.etapa_repasse = "EM_REPASSE";
+        }
         const updated = await api(`/processos/${encodeURIComponent(processoId)}`, {
           method: "PATCH",
-          body: JSON.stringify({ estagio_comercial: toBackendStage(targetStage) }),
+          body: JSON.stringify(payload),
         });
         row.stage = toStageKey(updated.estagio_comercial || targetStage);
         row.moving = false;

@@ -3799,6 +3799,9 @@ def app_patch_processo(
                     new_value=next_stage,
                 )
             etapa_before = _process_etapa_repasse(processo.etapa_repasse)
+            entered_repasse = old_value not in ESTAGIOS_REPASSE_COMERCIAL and next_stage in ESTAGIOS_REPASSE_COMERCIAL
+            if entered_repasse:
+                processo.etapa_repasse = "EM_REPASSE"
             _sync_estagio_repasse_rules(processo, _utcnow())
             etapa_after = _process_etapa_repasse(processo.etapa_repasse)
             if etapa_before != etapa_after:

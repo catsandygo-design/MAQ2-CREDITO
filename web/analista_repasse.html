@@ -566,7 +566,6 @@
     ];
 
     const REPASSE_ESTAGIOS = new Set([
-      "secretaria_vendas",
       "assinatura_diretoria",
       "autorizacao_diretoria",
       "envio_sienge",
@@ -605,11 +604,19 @@
       return col ? col.title : "Em Repasse";
     }
 
-    function formatDate(raw) {
-      if (!raw) return "-";
-      const d = new Date(raw);
-      if (Number.isNaN(d.getTime())) return "-";
-      return d.toLocaleDateString("pt-BR");
+    function comercialStageLabel(raw) {
+      const key = keyOf(raw);
+      const map = {
+        reserva: "Reserva",
+        em_processo: "Em Processo",
+        credito: "Credito",
+        secretaria_vendas: "Secretaria Vendas",
+        assinatura_diretoria: "Assinatura Diretoria",
+        autorizacao_diretoria: "Aprovacao Diretoria",
+        envio_sienge: "Envio Sienge",
+        venda_finalizada: "Venda Finalizada",
+      };
+      return map[key] || String(raw || "-");
     }
 
     function toRepasseStageKey(item) {
@@ -734,7 +741,6 @@
         statusFiador: item.status_fiador || "-",
         statusGeral: item.status_geral || "-",
         stage: toRepasseStageKey(item),
-        dataCadastro: item.data_cadastro_origem || item.created_at || null,
         moving: false,
       };
     }
@@ -760,18 +766,16 @@
         <div class="card ${row.moving ? "updating" : ""}" draggable="${row.moving ? "false" : "true"}" data-id="${esc(row.id)}" data-stage="${esc(row.stage)}">
           <div class="card-top">
             <p class="name"><a href="${href}" title="Abrir analise">${esc(row.cliente)}</a></p>
-            <span class="stage">${esc(stageLabel(row.stage))}</span>
+            <span class="stage">${esc(comercialStageLabel(row.estagioComercial))}</span>
           </div>
           <div class="meta-line"><span>Empreendimento</span><b>${esc(row.obra)}</b></div>
           <div class="meta-line"><span>Corretor</span><b>${esc(row.corretor)}</b></div>
-          <div class="meta-line"><span>Estagio comercial</span><b>${esc(row.estagioComercial)}</b></div>
           <div class="meta-line"><span>Assinatura Caixa</span><b>${esc(assinatura)}</b></div>
           <div class="meta-line"><span>Status geral</span><b>${esc(row.statusGeral)}</b></div>
           <div class="meta-line"><span>Status caixa</span><b>${esc(row.statusCaixa)}</b></div>
           <div class="meta-line"><span>Status agehab</span><b>${esc(row.statusAgehab)}</b></div>
           <div class="meta-line"><span>Status sinal</span><b>${esc(row.statusSinal)}</b></div>
           <div class="meta-line"><span>Status fiador</span><b>${esc(row.statusFiador)}</b></div>
-          <div class="meta-line"><span>Cadastro</span><b>${esc(formatDate(row.dataCadastro))}</b></div>
         </div>
       `;
     }
