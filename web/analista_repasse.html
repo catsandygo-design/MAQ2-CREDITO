@@ -638,17 +638,11 @@
     }
 
     function isRepasseItem(item) {
-      const fila = keyOf(item.fila_atual);
-      const etapaRepasse = keyOf(item.etapa_repasse);
-      const statusCaixa = keyOf(item.status_cca);
       const statusGeral = keyOf(item.status_geral);
       const estagioComercial = keyOf(item.estagio_comercial || item.status_geral);
       return (
         statusGeral === "cancelado" ||
         statusGeral === "distrato" ||
-        fila === "repasse" ||
-        Boolean(etapaRepasse) ||
-        statusCaixa === "assinatura_caixa" ||
         REPASSE_ESTAGIOS.has(estagioComercial)
       );
     }

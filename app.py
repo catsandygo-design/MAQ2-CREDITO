@@ -3827,6 +3827,12 @@ def app_patch_processo(
             next_step = _process_etapa_repasse(value, fallback=None)
             if value is not None and str(value).strip() and not next_step:
                 raise HTTPException(status_code=422, detail="Etapa de repasse invalida.")
+            current_stage = _process_estagio_comercial(getattr(processo, "estagio_comercial", None))
+            if next_step in {"EM_REPASSE", "INICIO_REPASSE"} and current_stage not in ESTAGIOS_REPASSE_COMERCIAL:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Etapa de repasse so pode ser usada a partir de ASSINATURA_DIRETORIA.",
+                )
             if next_step == "ASSINATURA_AUTORIZADA" and not _can_set_assinatura_autorizada(processo):
                 raise HTTPException(
                     status_code=422,
