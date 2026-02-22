@@ -170,6 +170,14 @@
     border-color: rgba(34,197,94,.55);
     background: rgba(34,197,94,.10);
   }
+  .btn.danger{
+    border-color: rgba(239,68,68,.55);
+    background: rgba(239,68,68,.12);
+    color: #fee2e2;
+  }
+  .btn.danger:hover{
+    border-color: rgba(239,68,68,.75);
+  }
 
   .insights{
     display:flex;
@@ -232,7 +240,7 @@
     min-height:0;
   }
 
-  table{width:100%;min-width:1540px;border-collapse:collapse;table-layout:fixed}
+  table{width:100%;min-width:1420px;border-collapse:collapse;table-layout:fixed}
 
   thead th{
     text-align:left;
@@ -276,8 +284,15 @@
     display:inline-flex;
     align-items:center;
     gap:10px;
+    min-width: 0;
+    max-width: 100%;
   }
   .cliente a{
+    display:inline-block;
+    max-width: 240px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
     color: var(--text);
     text-decoration:none;
     padding: 2px 0;
@@ -288,7 +303,14 @@
     color: #fff;
   }
 
-  .empreendimento{font-size:10px;color: var(--muted);margin-top:3px}
+  .empreendimento{
+    font-size:10px;
+    color: var(--muted);
+    margin-top:3px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
   .muted{color:var(--muted)}
 
   .toolbar{
@@ -512,6 +534,7 @@
       <a class="btn primary" href="/app/analista/acompanhamento">Acompanhamento</a>
       <a class="btn" href="/app/analista/repasse">Repasse</a>
       <a class="btn" href="/app/analista/importacao">Importacao</a>
+      <button class="btn danger" id="btnSair" type="button">Sair</button>
     </div>
   </div>
 
@@ -539,7 +562,7 @@
     </div>
 
     <div class="field">
-      <label>Estagio comercial</label>
+      <label>Comercial</label>
       <select id="stG">
         <option value="">Todos</option>
         <option value="reserva">Reserva</option>
@@ -591,29 +614,29 @@
       <div class="scroll">
         <table>
           <colgroup>
-            <col style="width:23%">
-            <col style="width:11%">
-            <col style="width:7%">
-            <col style="width:9%">
-            <col style="width:9%">
-            <col style="width:9%">
-            <col style="width:9%">
-            <col style="width:7%">
-            <col style="width:7%">
-            <col style="width:5%">
-            <col style="width:4%">
+            <col style="width:16%">
+            <col style="width:10%">
+            <col style="width:6%">
+            <col style="width:10%">
+            <col style="width:10%">
+            <col style="width:10%">
+            <col style="width:10%">
+            <col style="width:8%">
+            <col style="width:8%">
+            <col style="width:6%">
+            <col style="width:6%">
           </colgroup>
           <thead>
             <tr>
               <th>Cliente</th>
               <th>Corretor</th>
               <th>CCA</th>
-              <th>Estagio</th>
+              <th>Comercial</th>
               <th>Repasse</th>
               <th>Status Caixa</th>
               <th>Status Agehab</th>
-              <th>Status Sinal</th>
-              <th>Status Fiador</th>
+              <th>Sinal</th>
+              <th>Fiador</th>
               <th>SLA Comercial</th>
               <th>SLA Credito</th>
             </tr>
@@ -1134,7 +1157,7 @@
       <div class="kpi"><div class="k">Total na fila</div><div class="v">${total}</div><div class="s">apos filtros</div></div>
       <div class="kpi good"><div class="k">Comercial</div><div class="v">${comercial}</div><div class="s">fila comercial</div></div>
       <div class="kpi warn"><div class="k">Repasse</div><div class="v">${repasse}</div><div class="s">fila repasse</div></div>
-      <div class="kpi good"><div class="k">Venda finalizada</div><div class="v">${finalizados}</div><div class="s">estagio comercial</div></div>
+      <div class="kpi good"><div class="k">Venda finalizada</div><div class="v">${finalizados}</div><div class="s">fila comercial</div></div>
       <div class="kpi good"><div class="k">Assinatura autorizada</div><div class="v">${assinados}</div><div class="s">etapa repasse</div></div>
       <div class="kpi bad"><div class="k">Prioridade alta</div><div class="v">${prios}</div><div class="s">comercial acima de 15 dias</div></div>
       <div class="kpi ${clsSla(avgSlaCor)}"><div class="k">SLA medio comercial</div><div class="v">${avgSlaCor}h</div><div class="s">media do filtro</div></div>
@@ -1317,6 +1340,12 @@
   ["ccaFilter","stG","stC"].forEach(id=>{
     $(id).addEventListener("change", applyFilters);
   });
+
+  async function logout(){
+    await fetch("/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => null);
+    window.location.href = "/login";
+  }
+  $("btnSair").addEventListener("click", logout);
 
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) return;
