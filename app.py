@@ -641,7 +641,17 @@ def _can_set_assinatura_autorizada(processo: "Processo") -> bool:
     stage = _process_estagio_comercial(getattr(processo, "estagio_comercial", None))
     sinal = _process_sinal_status(getattr(processo, "status_sinal", None))
     fiador = _process_fiador_status(getattr(processo, "status_fiador", None))
-    return stage == "VENDA_FINALIZADA" and sinal in {"NAO_TEM", "PAGO"} and fiador in {"NAO_TEM", "FINALIZADO"}
+    agehab = _process_agehab_status(getattr(processo, "status_agehab", None))
+    caixa = _process_caixa_status(getattr(processo, "status_cca", None))
+    geral = _process_geral_status(getattr(processo, "status_geral", None))
+    return (
+        stage == "VENDA_FINALIZADA"
+        and geral not in {"CANCELADO", "DISTRATO", "REPROVADO"}
+        and sinal in {"NAO_TEM", "PAGO"}
+        and fiador in {"NAO_TEM", "FINALIZADO"}
+        and agehab == "VALIDADO_AGEHAB"
+        and caixa in {"AGENDADO", "ASSINATURA_CAIXA"}
+    )
 
 
 def _sync_estagio_repasse_rules(processo: "Processo", now: Optional[datetime] = None) -> None:
@@ -654,9 +664,12 @@ def _sync_estagio_repasse_rules(processo: "Processo", now: Optional[datetime] = 
         processo.status_geral = "NOVO"
         processo.status_credito = "EM_ANALISE"
     elif stage == "VENDA_FINALIZADA":
-        processo.status_geral = "APROVADO"
-        processo.status_credito = "APROVADO"
-        processo.status_cca = "ASSINATURA_CAIXA"
+        # Venda finalizada no comercial nao implica assinatura de caixa.
+        # A assinatura depende da trilha de repasse e validacoes (sinal/fiador/agehab/cca).
+        if _status_token(processo.status_geral) in {"", "NOVO", "PENDENCIADO"}:
+            processo.status_geral = "EM_ANDAMENTO"
+        if _status_token(processo.status_credito) not in {"APROVADO", "REPROVADO"}:
+            processo.status_credito = "APROVADO"
     else:
         processo.status_geral = "EM_ANDAMENTO"
         if _status_token(processo.status_credito) == "REPROVADO":
@@ -3650,6 +3663,7 @@ def app_patch_processo(
     sla_trigger: Optional[str] = None
     old_sla_owner = _normalize_sla_owner(processo.sla_owner)
     estagio_changed = False
+    assinatura_caixa_requested = False
 
     for field, value in changes.items():
         if field == "status_credito":
@@ -3695,6 +3709,8 @@ def app_patch_processo(
             _validate_status_transition(field, processo.status_cca, status_cca)
             old_value = processo.status_cca
             processo.status_cca = status_cca
+            if status_cca == "ASSINATURA_CAIXA":
+                assinatura_caixa_requested = True
             if old_sla_owner == SLA_OWNER_CCA and status_cca == "PENDENTE_CCA":
                 sla_trigger = "cca_pendenciou"
             if old_value != status_cca:
@@ -3806,7 +3822,7 @@ def app_patch_processo(
                     status_code=422,
                     detail=(
                         "Nao pode avancar para ASSINATURA_AUTORIZADA. "
-                        "Exige estagio VENDA_FINALIZADA e validacao de sinal/fiador."
+                        "Exige estagio VENDA_FINALIZADA, sinal/fiador regular, Agehab validada e Caixa em AGENDADO."
                     ),
                 )
             old_value = _process_etapa_repasse(processo.etapa_repasse)
@@ -3864,6 +3880,33 @@ def app_patch_processo(
 
     if estagio_changed:
         _sync_estagio_repasse_rules(processo, _utcnow())
+
+    if assinatura_caixa_requested:
+        if not _can_set_assinatura_autorizada(processo):
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Nao pode avancar para ASSINATURA_CAIXA. "
+                    "Exige VENDA_FINALIZADA, sinal/fiador regular, Agehab validada e Caixa em AGENDADO."
+                ),
+            )
+        old_etapa = _process_etapa_repasse(processo.etapa_repasse)
+        if old_etapa != "ASSINATURA_AUTORIZADA":
+            processo.etapa_repasse = "ASSINATURA_AUTORIZADA"
+            _record_processo_event(
+                db,
+                processo_id=processo.id,
+                actor_username=actor_username,
+                actor_role=actor_role,
+                event_type="ETAPA_REPASSE_AUTO",
+                field_name="etapa_repasse",
+                old_value=old_etapa,
+                new_value="ASSINATURA_AUTORIZADA",
+                details="assinatura_caixa_confirmada",
+            )
+        if _status_token(processo.status_geral) not in {"CANCELADO", "DISTRATO"}:
+            processo.status_geral = "APROVADO"
+        processo.status_credito = "APROVADO"
 
     _apply_sla_rules(
         processo,

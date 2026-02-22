@@ -992,6 +992,11 @@
     };
   }
 
+  function isVisibleInAnalista(item){
+    const statusGeral = statusFromBackend(item.status_geral);
+    return statusGeral !== "cancelado" && statusGeral !== "distrato";
+  }
+
   async function fetchProcessosPaged() {
     const rows = [];
     for (let page = 0, offset = 0; page < MAX_PAGES; page += 1, offset += PAGE_SIZE) {
@@ -1005,7 +1010,7 @@
 
   async function loadData(){
     const processos = await fetchProcessosPaged();
-    DATA = processos.map(fromBackend);
+    DATA = processos.filter(isVisibleInAnalista).map(fromBackend);
   }
 
   async function loadCcaFilter(){

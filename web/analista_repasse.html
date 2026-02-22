@@ -180,7 +180,7 @@
       height: 100%;
       overflow: auto;
       display: grid;
-      grid-template-columns: repeat(3, minmax(240px, 1fr));
+      grid-template-columns: repeat(5, minmax(210px, 1fr));
       gap: 8px;
       align-items: start;
     }
@@ -334,7 +334,7 @@
 
     @media (max-width: 1500px) {
       .board {
-        grid-template-columns: repeat(3, minmax(220px, 1fr));
+        grid-template-columns: repeat(5, minmax(210px, 1fr));
       }
     }
 
@@ -343,7 +343,7 @@
         grid-template-columns: 1fr 1fr;
       }
       .board {
-        grid-template-columns: repeat(3, minmax(220px, 1fr));
+        grid-template-columns: repeat(5, minmax(210px, 1fr));
       }
       .column {
         max-height: calc(100vh - 280px);
@@ -358,7 +358,7 @@
     <section class="topbar">
       <div class="title">
         <h1>Acompanhamento de Repasse (Kanban)</h1>
-        <p>Arraste para avancar no fluxo de repasse: Em Repasse, Inicio de Repasse e Assinatura Caixa.</p>
+        <p>Fluxo paralelo ao comercial: assinatura na Caixa apenas quando pendencias de repasse estiverem sanadas.</p>
       </div>
       <div class="actions">
         <a class="btn" href="/app/analista">Voltar painel</a>
@@ -370,7 +370,7 @@
     <section class="meta">
       <span class="chip">Total no Kanban: <strong id="totalCount">0</strong></span>
       <span class="chip">Auto refresh: <strong id="refreshLabel">60s</strong></span>
-      <span class="chip">Regra: <strong>proxima coluna ou retorno para Em Repasse</strong></span>
+      <span class="chip">Regra: <strong>proxima coluna, retorno para Em Repasse ou encerramento</strong></span>
     </section>
 
     <section class="filters">
@@ -561,9 +561,12 @@
       { key: "em_repasse", title: "Em Repasse" },
       { key: "inicio_repasse", title: "Inicio de Repasse" },
       { key: "assinatura_caixa", title: "Assinatura Caixa" },
+      { key: "cancelado", title: "Cancelado" },
+      { key: "distrato", title: "Distrato" },
     ];
 
     const REPASSE_ESTAGIOS = new Set([
+      "secretaria_vendas",
       "assinatura_diretoria",
       "autorizacao_diretoria",
       "envio_sienge",
@@ -610,11 +613,16 @@
     }
 
     function toRepasseStageKey(item) {
+      const statusGeral = keyOf(item.status_geral);
+      if (statusGeral === "cancelado") return "cancelado";
+      if (statusGeral === "distrato") return "distrato";
+
       const statusCaixa = keyOf(item.status_cca);
       if (statusCaixa === "assinatura_caixa") return "assinatura_caixa";
 
       const etapaRepasse = keyOf(item.etapa_repasse);
-      if (etapaRepasse === "inicio_repasse" || etapaRepasse === "assinatura_autorizada") {
+      if (etapaRepasse === "assinatura_autorizada") return "assinatura_caixa";
+      if (etapaRepasse === "inicio_repasse") {
         return "inicio_repasse";
       }
       if (etapaRepasse === "em_repasse") return "em_repasse";
@@ -626,8 +634,11 @@
       const fila = keyOf(item.fila_atual);
       const etapaRepasse = keyOf(item.etapa_repasse);
       const statusCaixa = keyOf(item.status_cca);
+      const statusGeral = keyOf(item.status_geral);
       const estagioComercial = keyOf(item.estagio_comercial || item.status_geral);
       return (
+        statusGeral === "cancelado" ||
+        statusGeral === "distrato" ||
         fila === "repasse" ||
         Boolean(etapaRepasse) ||
         statusCaixa === "assinatura_caixa" ||
@@ -638,7 +649,45 @@
     function payloadForStage(stageKey) {
       if (stageKey === "em_repasse") return { etapa_repasse: "EM_REPASSE" };
       if (stageKey === "inicio_repasse") return { etapa_repasse: "INICIO_REPASSE" };
-      return { status_cca: "ASSINATURA_CAIXA" };
+      if (stageKey === "assinatura_caixa") {
+        return {
+          etapa_repasse: "ASSINATURA_AUTORIZADA",
+          status_cca: "ASSINATURA_CAIXA",
+        };
+      }
+      if (stageKey === "cancelado") return { status_geral: "CANCELADO" };
+      return { status_geral: "DISTRATO" };
+    }
+
+    function assinaturaBlockers(row) {
+      const blockers = [];
+      const estagio = keyOf(row.estagioComercial);
+      const statusCaixa = keyOf(row.statusCaixa);
+      const statusAgehab = keyOf(row.statusAgehab);
+      const statusSinal = keyOf(row.statusSinal);
+      const statusFiador = keyOf(row.statusFiador);
+      const statusGeral = keyOf(row.statusGeral);
+
+      if (estagio !== "venda_finalizada") {
+        blockers.push("estagio comercial ainda nao esta em Venda Finalizada");
+      }
+      if (!["nao_tem", "pago"].includes(statusSinal)) {
+        blockers.push("status sinal precisa estar em Nao tem ou Pago");
+      }
+      if (!["nao_tem", "finalizado"].includes(statusFiador)) {
+        blockers.push("status fiador precisa estar em Nao tem ou Finalizado");
+      }
+      if (statusAgehab !== "validado_agehab") {
+        blockers.push("Agehab precisa estar validada");
+      }
+      if (!["agendado", "assinatura_caixa"].includes(statusCaixa)) {
+        blockers.push("status Caixa precisa estar em Agendado");
+      }
+      if (["cancelado", "distrato", "reprovado"].includes(statusGeral)) {
+        blockers.push("processo em status final impeditivo");
+      }
+
+      return blockers;
     }
 
     async function api(path, options = {}) {
@@ -680,6 +729,10 @@
         estagioComercial: item.estagio_comercial || "-",
         etapaRepasse: item.etapa_repasse || "-",
         statusCaixa: item.status_cca || "-",
+        statusAgehab: item.status_agehab || "-",
+        statusSinal: item.status_sinal || "-",
+        statusFiador: item.status_fiador || "-",
+        statusGeral: item.status_geral || "-",
         stage: toRepasseStageKey(item),
         dataCadastro: item.data_cadastro_origem || item.created_at || null,
         moving: false,
@@ -701,6 +754,8 @@
 
     function cardTemplate(row) {
       const href = `/app/analise?processo_id=${encodeURIComponent(row.id)}`;
+      const blockers = assinaturaBlockers(row);
+      const assinatura = blockers.length ? `Bloqueado (${blockers.length})` : "Apto";
       return `
         <div class="card ${row.moving ? "updating" : ""}" draggable="${row.moving ? "false" : "true"}" data-id="${esc(row.id)}" data-stage="${esc(row.stage)}">
           <div class="card-top">
@@ -710,7 +765,12 @@
           <div class="meta-line"><span>Empreendimento</span><b>${esc(row.obra)}</b></div>
           <div class="meta-line"><span>Corretor</span><b>${esc(row.corretor)}</b></div>
           <div class="meta-line"><span>Estagio comercial</span><b>${esc(row.estagioComercial)}</b></div>
+          <div class="meta-line"><span>Assinatura Caixa</span><b>${esc(assinatura)}</b></div>
+          <div class="meta-line"><span>Status geral</span><b>${esc(row.statusGeral)}</b></div>
           <div class="meta-line"><span>Status caixa</span><b>${esc(row.statusCaixa)}</b></div>
+          <div class="meta-line"><span>Status agehab</span><b>${esc(row.statusAgehab)}</b></div>
+          <div class="meta-line"><span>Status sinal</span><b>${esc(row.statusSinal)}</b></div>
+          <div class="meta-line"><span>Status fiador</span><b>${esc(row.statusFiador)}</b></div>
           <div class="meta-line"><span>Cadastro</span><b>${esc(formatDate(row.dataCadastro))}</b></div>
         </div>
       `;
@@ -754,18 +814,29 @@
       const fromStage = row.stage;
       if (fromStage === targetStage) return;
 
-      if (fromStage === "assinatura_caixa") {
-        setMsg("Assinatura Caixa finalizada nao permite retorno.", "err");
+      const fromIsFinal = fromStage === "assinatura_caixa" || fromStage === "cancelado" || fromStage === "distrato";
+      if (fromIsFinal) {
+        setMsg("Status finalizado nao permite retorno.", "err");
         applyFilters();
         return;
       }
 
+      if (targetStage === "assinatura_caixa") {
+        const blockers = assinaturaBlockers(row);
+        if (blockers.length) {
+          setMsg(`Nao autorizado para Assinatura Caixa: ${blockers[0]}.`, "err");
+          applyFilters();
+          return;
+        }
+      }
+
       const fromIndex = COL_INDEX[fromStage];
       const toIndex = COL_INDEX[targetStage];
+      const isCancelamento = targetStage === "cancelado" || targetStage === "distrato";
       const isNextStep = toIndex === fromIndex + 1;
       const isReturnToStart = targetStage === "em_repasse" && fromStage !== "em_repasse";
-      if (!isNextStep && !isReturnToStart) {
-        setMsg("Movimento permitido: proxima coluna ou retorno para Em Repasse.", "err");
+      if (!isNextStep && !isReturnToStart && !isCancelamento) {
+        setMsg("Movimento permitido: proxima coluna, retorno para Em Repasse, Cancelado ou Distrato.", "err");
         applyFilters();
         return;
       }
@@ -783,6 +854,10 @@
         row.estagioComercial = updated.estagio_comercial || row.estagioComercial;
         row.etapaRepasse = updated.etapa_repasse || row.etapaRepasse;
         row.statusCaixa = updated.status_cca || row.statusCaixa;
+        row.statusAgehab = updated.status_agehab || row.statusAgehab;
+        row.statusSinal = updated.status_sinal || row.statusSinal;
+        row.statusFiador = updated.status_fiador || row.statusFiador;
+        row.statusGeral = updated.status_geral || row.statusGeral;
         row.stage = toRepasseStageKey(updated);
         row.moving = false;
         setMsg(`Cliente movido para ${stageLabel(row.stage)}.`, "ok");

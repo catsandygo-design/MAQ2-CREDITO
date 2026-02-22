@@ -659,9 +659,15 @@
         obra: item.obra || "-",
         corretor: item.corretor || "-",
         stage: toStageKey(item.estagio_comercial || item.status_geral),
+        statusGeral: norm(item.status_geral).replaceAll(" ", "_"),
         dataCadastro: item.data_cadastro_origem || item.created_at || null,
         moving: false,
       };
+    }
+
+    function isVisibleInAnalista(item) {
+      const statusGeral = norm(item.status_geral).replaceAll(" ", "_");
+      return statusGeral !== "cancelado" && statusGeral !== "distrato";
     }
 
     function columnSkeleton() {
@@ -807,7 +813,7 @@
 
     async function loadData() {
       const rows = await fetchProcessosPaged();
-      DATA = rows.map(fromBackend);
+      DATA = rows.filter(isVisibleInAnalista).map(fromBackend);
     }
 
     async function refresh(force = false) {
