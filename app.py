@@ -3100,6 +3100,18 @@ def app_gestor_dashboard(
     sla_credito_count = 0
     sla_cca_sum = 0
     sla_cca_count = 0
+    processo_ids = [processo.id for processo, _ in rows]
+    pendencias_docs_por_processo: dict[uuid.UUID, int] = {}
+    if processo_ids:
+        pendencias_docs_rows = (
+            db.query(Documento.processo_id, func.count(Documento.id))
+            .filter(Documento.processo_id.in_(processo_ids), Documento.status_credito == "PENDENCIADO")
+            .group_by(Documento.processo_id)
+            .all()
+        )
+        pendencias_docs_por_processo = {
+            processo_id: int(total_docs or 0) for processo_id, total_docs in pendencias_docs_rows
+        }
 
     for processo, cliente in rows:
         estagio = _process_estagio_comercial(getattr(processo, "estagio_comercial", None))
@@ -3115,6 +3127,9 @@ def app_gestor_dashboard(
         data_referencia = cliente.data_cadastro_origem or (created_at_utc.date() if created_at_utc else None)
         dias_em_aberto = (now.date() - data_referencia).days if data_referencia else None
         nao_contar_mes = bool(getattr(processo, "nao_contar_mes", False))
+        pendencias_docs = int(pendencias_docs_por_processo.get(processo.id, 0))
+        tem_pendencia_status = _processo_has_pendencia(processo)
+        tem_pendencia = tem_pendencia_status or pendencias_docs > 0
         sinal_ok = status_sinal in {"NAO_TEM", "PAGO"}
         fiador_ok = status_fiador in {"NAO_TEM", "FINALIZADO"}
         caixa_ok = status_cca in {"CONFORME", "ASSINATURA_CAIXA", "FINALIZADO"}
@@ -3143,6 +3158,9 @@ def app_gestor_dashboard(
             "status_fiador": processo.status_fiador,
             "dias_em_aberto": dias_em_aberto,
             "data_cadastro_origem": data_referencia.isoformat() if data_referencia else None,
+            "pendencias_documentos": pendencias_docs,
+            "tem_pendencia_status": tem_pendencia_status,
+            "tem_pendencia": tem_pendencia,
             "nao_contar_mes": nao_contar_mes,
             "pronto_para_repassar": pronto_para_repassar,
         }

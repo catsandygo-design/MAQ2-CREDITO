@@ -391,23 +391,52 @@
             border-top: 1px dashed rgba(148, 163, 184, .24);
             padding-top: 8px;
         }
+        .fase-list::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        .fase-list::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, .35);
+            border-radius: 999px;
+        }
+        .fase-list::-webkit-scrollbar-track {
+            background: rgba(2, 6, 23, .45);
+        }
+        .fase-header-row,
         .fase-item {
             display: grid;
-            grid-template-columns: minmax(180px, 1.2fr) minmax(140px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr);
+            grid-template-columns:
+                minmax(180px, 1.4fr)
+                minmax(130px, 1fr)
+                minmax(150px, 1.1fr)
+                repeat(6, minmax(115px, .9fr));
             gap: 10px;
+            min-width: 1160px;
+            align-items: center;
+        }
+        .fase-header-row {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(148, 163, 184, .24);
+            background: linear-gradient(180deg, rgba(2, 6, 23, .96), rgba(2, 6, 23, .86));
+        }
+        .fase-col-title {
+            color: var(--muted);
+            font-size: calc(.66rem * var(--font-scale));
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            font-weight: 800;
+            white-space: nowrap;
+            padding: 0 2px;
+        }
+        .fase-item {
             padding: 8px 0;
             border-bottom: 1px dashed rgba(148, 163, 184, .14);
-            align-items: center;
         }
         .fase-item:last-child {
             border-bottom: 0;
-        }
-        .fase-label {
-            color: var(--muted);
-            font-size: calc(.7rem * var(--font-scale));
-            text-transform: uppercase;
-            letter-spacing: .04em;
-            font-weight: 700;
         }
         .fase-value {
             color: var(--text);
@@ -416,6 +445,47 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+        .fase-status {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            min-height: 30px;
+            padding: 5px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, .3);
+            font-size: calc(.7rem * var(--font-scale));
+            font-weight: 800;
+            letter-spacing: .01em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: help;
+        }
+        .fase-status.tone-ok {
+            color: #dcfce7;
+            border-color: rgba(34, 197, 94, .72);
+            background: rgba(34, 197, 94, .18);
+            box-shadow: 0 0 0 1px rgba(34, 197, 94, .28), 0 0 10px rgba(34, 197, 94, .18);
+        }
+        .fase-status.tone-warn {
+            color: #fef3c7;
+            border-color: rgba(250, 204, 21, .72);
+            background: rgba(250, 204, 21, .16);
+            box-shadow: 0 0 0 1px rgba(250, 204, 21, .25), 0 0 10px rgba(250, 204, 21, .16);
+        }
+        .fase-status.tone-bad {
+            color: #fee2e2;
+            border-color: rgba(251, 113, 133, .75);
+            background: rgba(251, 113, 133, .16);
+            box-shadow: 0 0 0 1px rgba(251, 113, 133, .25), 0 0 10px rgba(251, 113, 133, .16);
+        }
+        .fase-status.tone-neutral {
+            color: #dbeafe;
+            border-color: rgba(56, 189, 248, .62);
+            background: rgba(56, 189, 248, .14);
+            box-shadow: 0 0 0 1px rgba(56, 189, 248, .2), 0 0 10px rgba(56, 189, 248, .14);
         }
         .fase-empty {
             color: var(--muted);
@@ -625,9 +695,6 @@
             .imob-grid {
                 grid-template-columns: 1fr;
             }
-            .fase-item {
-                grid-template-columns: 1fr 1fr;
-            }
         }
 
         @media (max-width: 680px) {
@@ -639,10 +706,6 @@
         @media (max-width: 480px) {
             .kpi-grid {
                 grid-template-columns: 1fr;
-            }
-            .fase-item {
-                grid-template-columns: 1fr;
-                gap: 6px;
             }
         }
     </style>
@@ -1079,6 +1142,137 @@
             });
         }
 
+        function normalizeStatusLabel(value, fallback = "-") {
+            const raw = String(value || "").trim();
+            if (!raw) return fallback;
+            return raw
+                .toLowerCase()
+                .replace(/_/g, " ")
+                .replace(/\b\w/g, (char) => char.toUpperCase())
+                .replace(/\bCca\b/g, "CCA")
+                .replace(/\bAgehab\b/g, "Agehab")
+                .replace(/\bSla\b/g, "SLA");
+        }
+
+        function statusTone(value) {
+            const token = String(value || "").trim().toUpperCase();
+            if (!token || token === "-" || token === "SEM_REPASSE") return "tone-neutral";
+            if (
+                token.includes("PENDENTE")
+                || token.includes("BLOQUEADO")
+                || token === "REPROVADO"
+                || token === "CANCELADO"
+                || token === "DISTRATO"
+            ) {
+                return "tone-bad";
+            }
+            if (
+                token === "CONFORME"
+                || token === "VALIDADO_AGEHAB"
+                || token === "PAGO"
+                || token === "FINALIZADO"
+                || token === "ASSINATURA_CAIXA"
+                || token === "ASSINATURA_AUTORIZADA"
+                || token === "VENDA_FINALIZADA"
+            ) {
+                return "tone-ok";
+            }
+            return "tone-warn";
+        }
+
+        function getPendenciaResumo(item) {
+            const pendencias = [];
+            const pendDocs = Number(item?.pendencias_documentos ?? 0);
+            const caixa = String(item?.status_cca || "").toUpperCase();
+            const agehab = String(item?.status_agehab || "").toUpperCase();
+            const sinal = String(item?.status_sinal || "").toUpperCase();
+            const fiador = String(item?.status_fiador || "").toUpperCase();
+
+            if (pendDocs > 0) pendencias.push(`${pendDocs} doc(s) pendente(s)`);
+            if (caixa.includes("PENDENTE")) pendencias.push("Caixa pendente");
+            if (agehab.includes("PENDENTE")) pendencias.push("Agehab pendente");
+            if (sinal === "PENDENTE") pendencias.push("Sinal pendente");
+            if (fiador === "PENDENTE") pendencias.push("Fiador pendente");
+
+            if (!pendencias.length) return "Sem pendencias registradas.";
+            return `Pendencias: ${pendencias.join(" | ")}.`;
+        }
+
+        function getStatusComment(item, tipo) {
+            const mapaValor = {
+                comercial: item?.estagio_comercial,
+                repasse: item?.etapa_repasse || "SEM_REPASSE",
+                caixa: item?.status_cca,
+                agehab: item?.status_agehab,
+                sinal: item?.status_sinal,
+                fiador: item?.status_fiador,
+            };
+            const mapaNome = {
+                comercial: "Comercial",
+                repasse: "Repasse",
+                caixa: "Caixa",
+                agehab: "Agehab",
+                sinal: "Sinal",
+                fiador: "Fiador",
+            };
+            const valor = mapaValor[tipo];
+            const detalhes = [getPendenciaResumo(item)];
+            const dias = Number(item?.dias_em_aberto);
+            if (tipo === "comercial" && String(valor || "").toUpperCase() === "EM_PROCESSO" && Number.isFinite(dias) && dias > 15) {
+                detalhes.push(`Risco de cair: ${dias} dias em processo.`);
+            }
+            if (item?.nao_contar_mes) {
+                detalhes.push("Marcado para nao contar no mes.");
+            }
+            return `${mapaNome[tipo]} atual: ${normalizeStatusLabel(valor, tipo === "repasse" ? "Sem Repasse" : "-")}. ${detalhes.join(" ")}`.trim();
+        }
+
+        function renderStatusCell(item, tipo) {
+            const mapaValor = {
+                comercial: item?.estagio_comercial,
+                repasse: item?.etapa_repasse || "SEM_REPASSE",
+                caixa: item?.status_cca,
+                agehab: item?.status_agehab,
+                sinal: item?.status_sinal,
+                fiador: item?.status_fiador,
+            };
+            const raw = mapaValor[tipo];
+            const label = normalizeStatusLabel(raw, tipo === "repasse" ? "Sem Repasse" : "-");
+            const tone = statusTone(raw);
+            const comment = getStatusComment(item, tipo);
+            return `<span class="fase-status ${tone}" title="${escapeHtml(comment)}">${escapeHtml(label)}</span>`;
+        }
+
+        function renderFaseTable(clientes) {
+            const header = `
+                <div class="fase-header-row">
+                    <div class="fase-col-title">Cliente</div>
+                    <div class="fase-col-title">Corretor</div>
+                    <div class="fase-col-title">Obra</div>
+                    <div class="fase-col-title">Comercial</div>
+                    <div class="fase-col-title">Repasse</div>
+                    <div class="fase-col-title">Caixa</div>
+                    <div class="fase-col-title">Agehab</div>
+                    <div class="fase-col-title">Sinal</div>
+                    <div class="fase-col-title">Fiador</div>
+                </div>
+            `;
+            const rows = clientes.map((item) => `
+                <div class="fase-item">
+                    <div class="fase-value" title="${escapeHtml(item?.cliente_nome || "-")}">${escapeHtml(item?.cliente_nome || "-")}</div>
+                    <div class="fase-value" title="${escapeHtml(item?.corretor || "-")}">${escapeHtml(item?.corretor || "-")}</div>
+                    <div class="fase-value" title="${escapeHtml(item?.obra || "-")}">${escapeHtml(item?.obra || "-")}</div>
+                    <div>${renderStatusCell(item, "comercial")}</div>
+                    <div>${renderStatusCell(item, "repasse")}</div>
+                    <div>${renderStatusCell(item, "caixa")}</div>
+                    <div>${renderStatusCell(item, "agehab")}</div>
+                    <div>${renderStatusCell(item, "sinal")}</div>
+                    <div>${renderStatusCell(item, "fiador")}</div>
+                </div>
+            `).join("");
+            return `${header}${rows}`;
+        }
+
         function renderFaseClientes(kpiKey) {
             const faseTitle = document.getElementById("fase-title");
             const faseMeta = document.getElementById("fase-meta");
@@ -1103,29 +1297,7 @@
                 return;
             }
 
-            faseList.innerHTML = clientes.map((item) => {
-                const status = `${item.estagio_comercial || item.status_geral || "-"} | ${item.fila_atual || "-"} | ${item.etapa_repasse || "-"}`;
-                return `
-          <div class="fase-item">
-            <div>
-              <div class="fase-label">Cliente</div>
-              <div class="fase-value">${escapeHtml(item.cliente_nome || "")}</div>
-            </div>
-            <div>
-              <div class="fase-label">Corretor</div>
-              <div class="fase-value">${escapeHtml(item.corretor || "-")}</div>
-            </div>
-            <div>
-              <div class="fase-label">Obra</div>
-              <div class="fase-value">${escapeHtml(item.obra || "-")}</div>
-            </div>
-            <div>
-              <div class="fase-label">Comercial/Fila/Repasse</div>
-              <div class="fase-value">${escapeHtml(status)}</div>
-            </div>
-          </div>
-        `;
-            }).join("");
+            faseList.innerHTML = renderFaseTable(clientes);
         }
 
         function renderListaEstagios() {
@@ -1142,26 +1314,7 @@
                 return;
             }
 
-            faseList.innerHTML = clientes.map((item) => `
-          <div class="fase-item">
-            <div>
-              <div class="fase-label">Cliente</div>
-              <div class="fase-value">${escapeHtml(item.cliente_nome || "")}</div>
-            </div>
-            <div>
-              <div class="fase-label">Corretor</div>
-              <div class="fase-value">${escapeHtml(item.corretor || "-")}</div>
-            </div>
-            <div>
-              <div class="fase-label">Obra</div>
-              <div class="fase-value">${escapeHtml(item.obra || "-")}</div>
-            </div>
-            <div>
-              <div class="fase-label">Comercial/Fila/Repasse</div>
-              <div class="fase-value">${escapeHtml(`${item.estagio_comercial || "-"} | ${item.fila_atual || "-"} | ${item.etapa_repasse || "-"}`)}</div>
-            </div>
-          </div>
-        `).join("");
+            faseList.innerHTML = renderFaseTable(clientes);
         }
 
         function bindKpiCards() {
