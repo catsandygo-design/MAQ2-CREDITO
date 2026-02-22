@@ -1073,6 +1073,7 @@ class Processo(Base):
     cca_responsavel: Mapped[Optional[str]] = mapped_column(String(120))
     pendente_fiador: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     pendente_sinal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    nao_contar_mes: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     sla_credito_dias: Mapped[Optional[int]] = mapped_column(Integer)
     sla_corretor_dias: Mapped[Optional[int]] = mapped_column(Integer)
     sla_cca_dias: Mapped[Optional[int]] = mapped_column(Integer)
@@ -1212,6 +1213,7 @@ class ProcessoUpdate(BaseModel):
     cca_responsavel: Optional[str] = None
     pendente_fiador: Optional[bool] = None
     pendente_sinal: Optional[bool] = None
+    nao_contar_mes: Optional[bool] = None
     sla_credito_dias: Optional[int] = None
     sla_corretor_dias: Optional[int] = None
     sla_cca_dias: Optional[int] = None
@@ -1234,6 +1236,7 @@ class ProcessoOut(BaseModel):
     cca_responsavel: Optional[str] = None
     pendente_fiador: bool
     pendente_sinal: bool
+    nao_contar_mes: bool
     sla_credito_dias: Optional[int] = None
     sla_corretor_dias: Optional[int] = None
     sla_cca_dias: Optional[int] = None
@@ -1411,6 +1414,7 @@ class ProcessoOverviewOut(BaseModel):
     cca_responsavel: Optional[str] = None
     pendente_fiador: bool
     pendente_sinal: bool
+    nao_contar_mes: bool
     sla_credito_dias: Optional[int] = None
     sla_corretor_dias: Optional[int] = None
     sla_cca_dias: Optional[int] = None
@@ -1843,6 +1847,7 @@ def _ensure_runtime_schema(db: Session) -> None:
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS estagio_comercial VARCHAR(40) DEFAULT 'RESERVA'",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS etapa_repasse VARCHAR(40)",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS cca_responsavel VARCHAR(120)",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS nao_contar_mes BOOLEAN DEFAULT FALSE",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_cca_dias INTEGER",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_owner VARCHAR(20) DEFAULT 'NONE'",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_active_since TIMESTAMPTZ",
@@ -1852,6 +1857,7 @@ def _ensure_runtime_schema(db: Session) -> None:
     ]
     for stmt in statements:
         db.execute(text(stmt))
+    db.execute(text("UPDATE processos SET nao_contar_mes = FALSE WHERE nao_contar_mes IS NULL"))
 
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_created_at ON processos (created_at DESC)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_cliente_id ON processos (cliente_id)"))
@@ -3033,6 +3039,7 @@ def app_list_processos(
                 cca_responsavel=processo.cca_responsavel,
                 pendente_fiador=processo.pendente_fiador,
                 pendente_sinal=processo.pendente_sinal,
+                nao_contar_mes=bool(getattr(processo, "nao_contar_mes", False)),
                 sla_credito_dias=sla_analista_horas // 24,
                 sla_corretor_dias=sla_corretor_horas // 24,
                 sla_cca_dias=sla_cca_horas // 24,
@@ -3060,22 +3067,25 @@ def app_gestor_dashboard(
 ):
     rows = db.query(Processo, Cliente).join(Cliente, Processo.cliente_id == Cliente.id).all()
     now = _utcnow()
-    total = len(rows)
+    total_bruto = len(rows)
+    total = 0
 
     total_comercial = 0
+    total_credito = 0
     total_repasse = 0
     total_assinados = 0
     provaveis_cair = 0
+    perdas_mes = 0
+    nao_contar_mes_total = 0
     chegadas_ultimos_7_dias = 0
 
     clientes_comercial: list[dict[str, Any]] = []
     clientes_repasse: list[dict[str, Any]] = []
     clientes_assinados: list[dict[str, Any]] = []
-    clientes_conformidade_ok: list[dict[str, Any]] = []
-    clientes_enviados_conformidade: list[dict[str, Any]] = []
-    clientes_em_analise: list[dict[str, Any]] = []
-    clientes_com_pendencias: list[dict[str, Any]] = []
-    clientes_nao_iniciado: list[dict[str, Any]] = []
+    clientes_prontos_repasse: list[dict[str, Any]] = []
+    clientes_credito: list[dict[str, Any]] = []
+    clientes_perdas_mes: list[dict[str, Any]] = []
+    clientes_excluidos_mes: list[dict[str, Any]] = []
     clientes_chegadas_7d: list[dict[str, Any]] = []
     clientes_provaveis_cair: list[dict[str, Any]] = []
     clientes_estagios: list[dict[str, Any]] = []
@@ -3097,12 +3107,24 @@ def app_gestor_dashboard(
         fila_atual = _fila_atual_from_processo(processo)
         status_geral = _status_token(getattr(processo, "status_geral", None))
         status_cca = _status_token(getattr(processo, "status_cca", None))
-        has_pendencia = _processo_has_pendencia(processo)
+        status_agehab = _status_token(getattr(processo, "status_agehab", None))
+        status_sinal = _status_token(getattr(processo, "status_sinal", None))
+        status_fiador = _status_token(getattr(processo, "status_fiador", None))
         created_at_utc = _as_utc(processo.created_at)
+        updated_at_utc = _as_utc(getattr(processo, "updated_at", None)) or created_at_utc
         data_referencia = cliente.data_cadastro_origem or (created_at_utc.date() if created_at_utc else None)
         dias_em_aberto = (now.date() - data_referencia).days if data_referencia else None
-        if data_referencia and data_referencia >= start_7d:
-            chegadas_ultimos_7_dias += 1
+        nao_contar_mes = bool(getattr(processo, "nao_contar_mes", False))
+        sinal_ok = status_sinal in {"NAO_TEM", "PAGO"}
+        fiador_ok = status_fiador in {"NAO_TEM", "FINALIZADO"}
+        caixa_ok = status_cca in {"CONFORME", "ASSINATURA_CAIXA", "FINALIZADO"}
+        pronto_para_repassar = (
+            estagio == "VENDA_FINALIZADA"
+            and status_agehab == "VALIDADO_AGEHAB"
+            and sinal_ok
+            and fiador_ok
+            and caixa_ok
+        )
 
         cliente_item = {
             "processo_id": str(processo.id),
@@ -3121,48 +3143,57 @@ def app_gestor_dashboard(
             "status_fiador": processo.status_fiador,
             "dias_em_aberto": dias_em_aberto,
             "data_cadastro_origem": data_referencia.isoformat() if data_referencia else None,
-            "tem_pendencia": has_pendencia,
+            "nao_contar_mes": nao_contar_mes,
+            "pronto_para_repassar": pronto_para_repassar,
         }
+
+        if nao_contar_mes:
+            nao_contar_mes_total += 1
+            clientes_excluidos_mes.append(cliente_item)
+            continue
+
+        total += 1
         clientes_estagios.append(cliente_item)
         if data_referencia and data_referencia >= start_7d:
+            chegadas_ultimos_7_dias += 1
             clientes_chegadas_7d.append(cliente_item)
 
-        if estagio in ESTAGIOS_DASH_COMERCIAL:
+        if estagio == "EM_PROCESSO":
             total_comercial += 1
             clientes_comercial.append(cliente_item)
             sla_comercial_sum += _compute_sla_hours(processo, SLA_OWNER_CORRETOR, now)
             sla_comercial_count += 1
-
-        if estagio in ESTAGIOS_REPASSE_COMERCIAL:
-            total_repasse += 1
-            clientes_repasse.append(cliente_item)
+        else:
+            total_credito += 1
+            clientes_credito.append(cliente_item)
             sla_credito_sum += _compute_sla_hours(processo, SLA_OWNER_ANALISTA, now)
             sla_credito_count += 1
             sla_cca_sum += _compute_sla_hours(processo, SLA_OWNER_CCA, now)
             sla_cca_count += 1
 
+        if estagio in ESTAGIOS_REPASSE_COMERCIAL:
+            total_repasse += 1
+            clientes_repasse.append(cliente_item)
+
         if status_cca in PROCESS_CCA_FINAL_STATUSES:
             total_assinados += 1
             clientes_assinados.append(cliente_item)
 
-        if status_cca == "CONFORME":
-            clientes_conformidade_ok.append(cliente_item)
+        if pronto_para_repassar:
+            clientes_prontos_repasse.append(cliente_item)
 
-        if status_cca == "AGUARDANDO_CONFORMIDADE":
-            clientes_enviados_conformidade.append(cliente_item)
-
-        if has_pendencia:
-            clientes_com_pendencias.append(cliente_item)
-        elif status_geral not in PROCESS_GERAL_FINAL_STATUSES and status_cca not in PROCESS_CCA_FINAL_STATUSES:
-            clientes_em_analise.append(cliente_item)
-
-        if estagio == "RESERVA" or status_geral == "NOVO":
-            clientes_nao_iniciado.append(cliente_item)
-
-        reached_repasse = estagio in ESTAGIOS_REPASSE_COMERCIAL
-        if not reached_repasse and dias_em_aberto is not None and dias_em_aberto > FALL_RISK_DAYS:
+        if estagio == "EM_PROCESSO" and dias_em_aberto is not None and dias_em_aberto > FALL_RISK_DAYS:
             provaveis_cair += 1
             clientes_provaveis_cair.append(cliente_item)
+
+        if (
+            status_geral in {"CANCELADO", "DISTRATO"}
+            and updated_at_utc is not None
+            and updated_at_utc.year == now.year
+            and updated_at_utc.month == now.month
+        ):
+            perdas_mes += 1
+            clientes_perdas_mes.append(cliente_item)
 
         imob_name = (getattr(cliente, "imobiliaria", None) or "Sem imobiliaria").strip() or "Sem imobiliaria"
         imob_map[imob_name] = imob_map.get(imob_name, 0) + 1
@@ -3188,7 +3219,7 @@ def app_gestor_dashboard(
     dias_decorridos = max(1, hoje.day)
     meta, meta_source = _resolve_gestor_meta_mensal(db)
     real = total_assinados
-    previsao = int(round((real / dias_decorridos) * dias_no_mes)) if real > 0 else 0
+    previsao = real + total
     dias_restantes = max(1, dias_no_mes - dias_decorridos)
     media_necessaria_dia = round(max(0, meta - real) / dias_restantes, 2)
 
@@ -3200,32 +3231,34 @@ def app_gestor_dashboard(
 
     clientes_por_fase: dict[str, list[dict[str, Any]]] = {
         "assinados": clientes_assinados,
-        "conformidade_ok": clientes_conformidade_ok,
-        "enviados_conformidade": clientes_enviados_conformidade,
-        "em_analise": clientes_em_analise,
-        "com_pendencias": clientes_com_pendencias,
+        "conformidade_ok": clientes_prontos_repasse,
+        "enviados_conformidade": clientes_comercial,
+        "em_analise": clientes_credito,
+        "com_pendencias": clientes_perdas_mes,
         "passiveis_cair": clientes_provaveis_cair,
-        "nao_iniciado": clientes_nao_iniciado,
+        "nao_iniciado": clientes_excluidos_mes,
         "sla_comercial": clientes_comercial,
-        "sla_credito": clientes_repasse,
-        "sla_cca": clientes_repasse,
-        "chegada": clientes_chegadas_7d,
-        "media_necessaria": clientes_repasse,
+        "sla_credito": clientes_credito,
+        "sla_cca": clientes_credito,
+        "chegada": clientes_assinados,
+        "media_necessaria": clientes_prontos_repasse,
         "comercial": clientes_comercial,
         "repasse": clientes_repasse,
         "realizados": clientes_assinados,
+        "perdas": clientes_perdas_mes,
     }
 
     return {
         "total": total,
+        "total_bruto": total_bruto,
         "assinados": total_assinados,
-        "conformidade_ok": len(clientes_conformidade_ok),
-        "enviados_conformidade": len(clientes_enviados_conformidade),
-        "em_analise": len(clientes_em_analise),
-        "com_pendencias": len(clientes_com_pendencias),
+        "conformidade_ok": len(clientes_prontos_repasse),
+        "enviados_conformidade": total_comercial,
+        "em_analise": total_credito,
+        "com_pendencias": perdas_mes,
         "passiveis_cair": provaveis_cair,
-        "nao_iniciado": len(clientes_nao_iniciado),
-        "processos_ativos": total_comercial + total_repasse,
+        "nao_iniciado": nao_contar_mes_total,
+        "processos_ativos": total,
         "sla_medio_comercial_horas": sla_medio_comercial_horas,
         "sla_medio_credito_horas": sla_medio_credito_horas,
         "sla_medio_cca_horas": sla_medio_cca_horas,
@@ -3240,12 +3273,15 @@ def app_gestor_dashboard(
         "imobiliarias": imobs,
         "total_comercial": total_comercial,
         "total_repasse": total_repasse,
+        "total_credito": total_credito,
         "provaveis_cair": provaveis_cair,
         "total_assinados": total_assinados,
         "meta": meta,
         "meta_fonte": meta_source,
         "real": real,
         "previsao": previsao,
+        "perdas_mes": perdas_mes,
+        "nao_contar_mes": nao_contar_mes_total,
         "clientes_estagios": clientes_estagios,
     }
 

@@ -654,6 +654,16 @@
       border-color: rgba(34,197,94,.45);
       box-shadow: 0 0 0 4px rgba(34,197,94,.08);
     }
+    input[type="checkbox"]{
+      appearance: auto;
+      width: 16px;
+      height: 16px;
+      padding: 0;
+      border-radius: 4px;
+      box-shadow: none;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
 
     .tiny{
       font-size: var(--fs-xs);
@@ -1309,6 +1319,13 @@ DIVORCIADO: Certidão averbada.</td>
           <div class="fg">
             <label for="sla-credito">SLA credito (h)</label>
             <input id="sla-credito" type="number" min="0" step="1" value="0" />
+          </div>
+          <div class="fg">
+            <label for="nao-contar-mes">Controle mensal</label>
+            <label style="display:flex;align-items:center;gap:8px;color:var(--text);font-size:var(--fs-sm);">
+              <input id="nao-contar-mes" type="checkbox" />
+              Nao contar para o mes
+            </label>
           </div>
         </div>
 
@@ -2350,6 +2367,7 @@ DIVORCIADO: Certidão averbada.</td>
       if (byId("status-sinal")) byId("status-sinal").value = norm(processo.status_sinal) || "nao_tem";
       if (byId("status-fiador")) byId("status-fiador").value = norm(processo.status_fiador) || "nao_tem";
       if (byId("cca-responsavel")) byId("cca-responsavel").value = norm(processo.cca_responsavel);
+      if (byId("nao-contar-mes")) byId("nao-contar-mes").checked = Boolean(processo.nao_contar_mes);
 
       if (byId("sla-credito")) byId("sla-credito").value = toHoursFromBackend(processo.sla_analista_horas, processo.sla_credito_dias);
       if (byId("observacao")) byId("observacao").value = processo.observacao || "";
@@ -2392,6 +2410,7 @@ DIVORCIADO: Certidão averbada.</td>
       const statusFiador = byId("status-fiador")?.value || "nao_tem";
       const ccaResponsavel = (byId("cca-responsavel")?.value || "").trim().toLowerCase() || null;
       const observacao = (byId("observacao")?.value || "").trim() || null;
+      const naoContarMes = Boolean(byId("nao-contar-mes")?.checked);
 
       const temPendencia =
         statusCaixa === "pendente_credito" ||
@@ -2412,6 +2431,7 @@ DIVORCIADO: Certidão averbada.</td>
         status_sinal: backendFromUiSinal(statusSinal),
         status_fiador: backendFromUiFiador(statusFiador),
         cca_responsavel: ccaResponsavel,
+        nao_contar_mes: naoContarMes,
         observacao,
       };
 

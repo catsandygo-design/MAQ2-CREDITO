@@ -780,28 +780,28 @@
         let dashboardData = null;
         let currentKpiKey = null;
         const KPI_LABELS = {
-            assinados: "Assinados",
-            conformidade_ok: "Conformidade OK",
-            enviados_conformidade: "Aguardando Conformidade",
-            em_analise: "Em Analise",
-            com_pendencias: "Com Pendencias",
+            assinados: "Clientes Repassados",
+            conformidade_ok: "Prontos para Repassar",
+            enviados_conformidade: "Comercial",
+            em_analise: "Credito",
+            com_pendencias: "Perdas do Mes",
             passiveis_cair: "Provaveis de Cair",
-            nao_iniciado: "Nao Iniciado",
+            nao_iniciado: "Nao Contar no Mes",
             sla_comercial: "SLA Comercial",
             sla_credito: "SLA Credito",
             sla_cca: "SLA CCA",
-            chegada: "Chegadas 7 dias",
+            chegada: "Meta / Real / Previsao",
             media_necessaria: "Media Necessaria",
         };
 
         const KPI_CARD_TEXT = {
-            "card-assinados": ["Assinados", "Status Caixa finalizado"],
-            "card-conformidade": ["Conformidade OK", "Status Caixa = CONFORME"],
-            "card-env-conf": ["Aguardando Conformidade", "Status Caixa = AGUARDANDO_CONFORMIDADE"],
-            "card-analise": ["Em Analise", "Sem pendencia e sem status final"],
-            "card-pendencias": ["Com Pendencias", "Pendencias abertas no processo"],
-            "card-cair": ["Provaveis de Cair", "Acima do prazo estimado"],
-            "card-nao-iniciado": ["Nao Iniciado", "Reserva/Novo sem avancar"],
+            "card-assinados": ["Clientes Repassados", "Assinados (status caixa finalizado)"],
+            "card-conformidade": ["Prontos para Repassar", "Venda finalizada + caixa/agehab/sinal/fiador OK"],
+            "card-env-conf": ["Comercial", "Clientes em processo"],
+            "card-analise": ["Credito", "Todos que nao estao em processo"],
+            "card-pendencias": ["Perdas do Mes", "Cancelado e distrato do mes vigente"],
+            "card-cair": ["Probabilidade de Cair", "Mais de 15 dias em processo"],
+            "card-nao-iniciado": ["Nao Contar no Mes", "Marcados para nao entrar no fechamento"],
             "card-sla-comercial": ["SLA Medio Comercial", "Media em horas"],
             "card-sla-credito": ["SLA Medio Credito", "Media em horas"],
             "card-sla-cca": ["SLA Medio CCA", "Media em horas"],
@@ -1028,11 +1028,11 @@
             const totalAssinados = Number(data?.total_assinados ?? 0);
             const totalComercial = Number(data?.total_comercial ?? 0);
             const totalRepasse = Number(data?.total_repasse ?? 0);
-            const conformidadeOk = Number(data?.conformidade_ok ?? 0);
-            const aguardandoConformidade = Number(data?.enviados_conformidade ?? 0);
-            const emAnalise = Number(data?.em_analise ?? 0);
-            const comPendencias = Number(data?.com_pendencias ?? 0);
-            const naoIniciado = Number(data?.nao_iniciado ?? 0);
+            const prontosRepasse = Number(data?.conformidade_ok ?? 0);
+            const comercial = Number(data?.enviados_conformidade ?? 0);
+            const credito = Number(data?.em_analise ?? 0);
+            const perdasMes = Number(data?.com_pendencias ?? data?.perdas_mes ?? 0);
+            const naoContarMes = Number(data?.nao_contar_mes ?? data?.nao_iniciado ?? 0);
             const provaveis = Number(data?.provaveis_cair ?? data?.passiveis_cair ?? 0);
             const meta = Number(data?.meta ?? 0);
             const real = Number(data?.real ?? 0);
@@ -1045,13 +1045,13 @@
             const chegadas7d = Number(data?.chegadas_ultimos_7_dias ?? 0);
 
             document.getElementById("kpi-assinados").textContent = totalAssinados;
-            document.getElementById("kpi-conformidade").textContent = conformidadeOk;
-            document.getElementById("kpi-env-conf").textContent = aguardandoConformidade;
+            document.getElementById("kpi-conformidade").textContent = prontosRepasse;
+            document.getElementById("kpi-env-conf").textContent = comercial;
             document.getElementById("kpi-cair").textContent = provaveis;
-            document.getElementById("kpi-analise").textContent = emAnalise;
-            document.getElementById("kpi-pendencias").textContent = comPendencias;
-            document.getElementById("kpi-nao-iniciado").textContent = naoIniciado;
-            document.getElementById("kpi-cair-sub").textContent = `>${riskDays} dias e sem repasse`;
+            document.getElementById("kpi-analise").textContent = credito;
+            document.getElementById("kpi-pendencias").textContent = perdasMes;
+            document.getElementById("kpi-nao-iniciado").textContent = naoContarMes;
+            document.getElementById("kpi-cair-sub").textContent = `>${riskDays} dias em processo`;
 
             document.getElementById("kpi-sla-comercial").textContent = `${slaComercial}h`;
             document.getElementById("kpi-sla-credito").textContent = `${slaCredito}h`;
@@ -1061,10 +1061,11 @@
             setKpiTone("card-sla-cca", slaToneClass(slaCca));
 
             document.getElementById("kpi-chegada").textContent = `${meta} / ${real} / ${previsao}`;
-            document.getElementById("kpi-chegada-sub").textContent = `Meta / Real / Previsao | Chegadas 7d: ${chegadas7d}`;
+            document.getElementById("kpi-chegada-sub").textContent = `Meta / Real / Previsao | Estagios: ${data.total} | Excluidos: ${naoContarMes}`;
             document.getElementById("kpi-media-necessaria").textContent = `${mediaNecessariaDia.toFixed(2)}/dia`;
-            document.getElementById("kpi-media-necessaria-sub").textContent = `Comercial: ${totalComercial} | Repasse: ${totalRepasse}`;
+            document.getElementById("kpi-media-necessaria-sub").textContent = `Comercial: ${totalComercial} | Credito: ${credito} | Prontos: ${prontosRepasse}`;
             setKpiTone("card-media-necessaria", real >= meta ? "kpi-ok" : "kpi-warn");
+            setKpiTone("card-pendencias", perdasMes > 0 ? "kpi-danger" : "kpi-ok");
         }
 
         function applyKpiLabels() {
