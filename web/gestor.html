@@ -212,6 +212,42 @@
             line-height: 1.3;
         }
 
+        .kpi-count.kpi-compare {
+            margin-top: 6px;
+            font-size: calc(.88rem * var(--font-scale));
+            line-height: 1.2;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            text-align: left;
+        }
+
+        .kpi-compare-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            padding: 3px 7px;
+            border-radius: 8px;
+            border: 1px solid rgba(148, 163, 184, .28);
+            background: rgba(2, 6, 23, .55);
+        }
+
+        .kpi-compare-row .lbl {
+            color: #cbd5e1;
+            font-weight: 700;
+            font-size: calc(.62rem * var(--font-scale));
+            letter-spacing: .04em;
+            text-transform: uppercase;
+        }
+
+        .kpi-compare-row .val {
+            color: #f8fafc;
+            font-weight: 900;
+            font-size: calc(.88rem * var(--font-scale));
+            letter-spacing: .02em;
+        }
+
         .kpi-mini {
             position: relative;
             margin-top: 7px;
@@ -760,6 +796,7 @@
                 <div class="actions">
                     <span class="pill" id="total-pill">Total: —</span>
                     <button class="btn" type="button" id="btn-refresh">⟳ Atualizar</button>
+                    <a class="btn" id="btn-back" href="/app">Voltar painel</a>
                     <button class="btn" type="button" id="btn-logout">Sair</button>
                 </div>
             </header>
@@ -843,6 +880,13 @@
                     <div class="kpi-sub" id="kpi-chegada-sub">Média e projeção</div>
                 </article>
 
+                <article class="kpi-card kpi-info" id="card-semana" data-kpi="repasses_semana">
+                    <div class="kpi-icon">📅</div>
+                    <div class="kpi-label">Meta Semanal</div>
+                    <div class="kpi-count" id="kpi-semana">—</div>
+                    <div class="kpi-sub" id="kpi-semana-sub">Repasses da semana (seg-sex)</div>
+                </article>
+
             <article class="kpi-card kpi-info" id="card-media-necessaria" data-kpi="media_necessaria">
                 <div class="kpi-icon">🎯</div>
                 <div class="kpi-label">Média Necessária</div>
@@ -889,6 +933,7 @@
             sla_credito: "SLA Credito",
             sla_cca: "SLA CCA",
             chegada: "Meta / Real / Previsao",
+            repasses_semana: "Meta semanal",
             media_necessaria: "Media Necessaria",
         };
 
@@ -903,7 +948,8 @@
             "card-sla-comercial": ["SLA Medio Comercial", "Media em horas"],
             "card-sla-credito": ["SLA Medio Credito", "Media em horas"],
             "card-sla-cca": ["SLA Medio CCA", "Media em horas"],
-            "card-chegada": ["Meta / Real / Previsao", "Acompanhamento do mes"],
+            "card-chegada": ["Meta mensal x Real x Previsao", "Acompanhamento do mes atual"],
+            "card-semana": ["Meta semanal x Real x Previsao", "Repasses contabilizados de segunda a sexta"],
             "card-media-necessaria": ["Media Necessaria por Dia", "Para atingir a meta mensal"],
         };
 
@@ -1121,6 +1167,28 @@
             card.classList.add(toneClass);
         }
 
+        function formatDateISOToBR(value) {
+            const raw = String(value || "").trim();
+            if (!raw) return "-";
+            const parts = raw.split("-");
+            if (parts.length !== 3) return raw;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        function renderMetaCompareCard(containerId, values) {
+            const el = document.getElementById(containerId);
+            if (!el) return;
+            const meta = Number(values?.meta ?? 0);
+            const real = Number(values?.real ?? 0);
+            const previsao = Number(values?.previsao ?? 0);
+            el.classList.add("kpi-compare");
+            el.innerHTML = `
+                <span class="kpi-compare-row"><span class="lbl">Meta</span><span class="val">${meta}</span></span>
+                <span class="kpi-compare-row"><span class="lbl">Real</span><span class="val">${real}</span></span>
+                <span class="kpi-compare-row"><span class="lbl">Prev</span><span class="val">${previsao}</span></span>
+            `;
+        }
+
         function renderKPIs(data) {
             document.getElementById("total-pill").textContent = `Total: ${data.total}`;
             const totalAssinados = Number(data?.total_assinados ?? 0);
@@ -1135,12 +1203,19 @@
             const meta = Number(data?.meta ?? 0);
             const real = Number(data?.real ?? 0);
             const previsao = Number(data?.previsao ?? 0);
+            const metaSemanal = Number(data?.meta_semanal ?? 0);
+            const realSemanal = Number(data?.real_semanal ?? 0);
+            const previsaoSemanal = Number(data?.previsao_semanal ?? 0);
+            const mediaNecessariaSemana = Number(data?.media_necessaria_semana_dia_util ?? 0);
+            const diasUteisDecorridosSemana = Number(data?.dias_uteis_decorridos_semana ?? 0);
+            const diasUteisRestantesSemana = Number(data?.dias_uteis_restantes_semana ?? 0);
+            const semanaInicio = formatDateISOToBR(data?.semana_inicio);
+            const semanaFimContagem = formatDateISOToBR(data?.semana_fim_contagem);
             const riskDays = Number(data?.dias_estimativa_queda || 15);
             const slaComercial = Number(data?.sla_medio_comercial_horas ?? 0);
             const slaCredito = Number(data?.sla_medio_credito_horas ?? 0);
             const slaCca = Number(data?.sla_medio_cca_horas ?? 0);
             const mediaNecessariaDia = Number(data?.media_necessaria_dia ?? 0);
-            const chegadas7d = Number(data?.chegadas_ultimos_7_dias ?? 0);
 
             document.getElementById("kpi-assinados").textContent = totalAssinados;
             document.getElementById("kpi-conformidade").textContent = prontosRepasse;
@@ -1158,11 +1233,17 @@
             setKpiTone("card-sla-credito", slaToneClass(slaCredito));
             setKpiTone("card-sla-cca", slaToneClass(slaCca));
 
-            document.getElementById("kpi-chegada").textContent = `${meta} / ${real} / ${previsao}`;
-            document.getElementById("kpi-chegada-sub").textContent = `Meta / Real / Previsao | Estagios: ${data.total} | Excluidos: ${naoContarMes}`;
+            renderMetaCompareCard("kpi-chegada", { meta, real, previsao });
+            document.getElementById("kpi-chegada-sub").textContent = `Meta mensal (${meta}) comparada com realizado (${real}) e previsao (${previsao}).`;
+
+            renderMetaCompareCard("kpi-semana", { meta: metaSemanal, real: realSemanal, previsao: previsaoSemanal });
+            document.getElementById("kpi-semana-sub").textContent = `Semana ${semanaInicio} a ${semanaFimContagem} (seg-sex) | Media necessaria: ${mediaNecessariaSemana.toFixed(2)}/dia util | Restantes: ${diasUteisRestantesSemana}`;
+
             document.getElementById("kpi-media-necessaria").textContent = `${mediaNecessariaDia.toFixed(2)}/dia`;
-            document.getElementById("kpi-media-necessaria-sub").textContent = `Comercial: ${totalComercial} | Credito: ${credito} | Prontos: ${prontosRepasse}`;
+            document.getElementById("kpi-media-necessaria-sub").textContent = `Comercial: ${totalComercial} | Credito: ${credito} | Prontos: ${prontosRepasse} | Uteis decorridos: ${diasUteisDecorridosSemana}`;
             setKpiTone("card-media-necessaria", real >= meta ? "kpi-ok" : "kpi-warn");
+            setKpiTone("card-chegada", real >= meta ? "kpi-ok" : "kpi-warn");
+            setKpiTone("card-semana", realSemanal >= metaSemanal ? "kpi-ok" : "kpi-warn");
             setKpiTone("card-pendencias", perdasMes > 0 ? "kpi-danger" : "kpi-ok");
         }
 
@@ -1482,6 +1563,22 @@
             try {
                 const res = await fetch("/auth/me", { credentials: "same-origin" });
                 if (res.status === 401) { window.location.href = "/login"; return; }
+                const me = await res.json().catch(() => ({}));
+                const role = String(me.role || "").trim().toLowerCase();
+                const btnBack = document.getElementById("btn-back");
+                if (btnBack) {
+                    btnBack.style.display = "inline-flex";
+                    btnBack.textContent = "Voltar painel";
+                    btnBack.href = "/app";
+                    if (role === "gestor_credito") {
+                        btnBack.textContent = "Voltar hub credito";
+                        btnBack.href = "/app/gestor-credito";
+                    } else if (role === "admin") {
+                        btnBack.href = "/app/admin";
+                    } else if (String(me.home || "").trim() && String(me.home || "").trim() !== "/app/gestor") {
+                        btnBack.href = String(me.home || "").trim();
+                    }
+                }
             } catch (_) { }
             loadDashboard();
         })();

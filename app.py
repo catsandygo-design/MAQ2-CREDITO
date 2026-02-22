@@ -3408,6 +3408,7 @@ def app_gestor_dashboard(
     total_credito = 0
     total_repasse = 0
     total_assinados = 0
+    total_assinados_semana = 0
     provaveis_cair = 0
     perdas_mes = 0
     nao_contar_mes_total = 0
@@ -3416,6 +3417,7 @@ def app_gestor_dashboard(
     clientes_comercial: list[dict[str, Any]] = []
     clientes_repasse: list[dict[str, Any]] = []
     clientes_assinados: list[dict[str, Any]] = []
+    clientes_assinados_semana: list[dict[str, Any]] = []
     clientes_prontos_repasse: list[dict[str, Any]] = []
     clientes_credito: list[dict[str, Any]] = []
     clientes_perdas_mes: list[dict[str, Any]] = []
@@ -3427,6 +3429,13 @@ def app_gestor_dashboard(
     imob_map: dict[str, int] = {}
     imob_corretores: dict[str, dict[str, int]] = {}
     start_7d = now.date() - timedelta(days=6)
+    semana_inicio = now.date() - timedelta(days=now.date().weekday())
+    semana_fim_util = semana_inicio + timedelta(days=4)
+    semana_fim_contagem = min(now.date(), semana_fim_util)
+    dias_uteis_decorridos_semana = 0
+    if semana_fim_contagem >= semana_inicio:
+        dias_uteis_decorridos_semana = min(5, (semana_fim_contagem - semana_inicio).days + 1)
+    dias_uteis_restantes_semana = max(0, 5 - dias_uteis_decorridos_semana)
 
     sla_comercial_sum = 0
     sla_comercial_count = 0
@@ -3591,6 +3600,11 @@ def app_gestor_dashboard(
         if status_cca in PROCESS_CCA_FINAL_STATUSES:
             total_assinados += 1
             clientes_assinados.append(cliente_item)
+            if updated_at_utc is not None:
+                dt_repasse = updated_at_utc.date()
+                if semana_inicio <= dt_repasse <= semana_fim_contagem and dt_repasse.weekday() < 5:
+                    total_assinados_semana += 1
+                    clientes_assinados_semana.append(cliente_item)
 
         if pronto_para_repassar:
             clientes_prontos_repasse.append(cliente_item)
@@ -3640,6 +3654,14 @@ def app_gestor_dashboard(
     previsao = real + total
     dias_restantes = max(1, dias_no_mes - dias_decorridos)
     media_necessaria_dia = round(max(0, meta - real) / dias_restantes, 2)
+    real_semanal = total_assinados_semana
+    media_semana_dia_util = round(real_semanal / max(1, dias_uteis_decorridos_semana), 2)
+    previsao_semanal = int(round(media_semana_dia_util * 5))
+    media_necessaria_semana_dia_util = (
+        round(max(0, meta_semanal - real_semanal) / dias_uteis_restantes_semana, 2)
+        if dias_uteis_restantes_semana > 0
+        else 0.0
+    )
 
     sla_medio_comercial_horas = round(sla_comercial_sum / sla_comercial_count) if sla_comercial_count else 0
     sla_medio_credito_horas = round(sla_credito_sum / sla_credito_count) if sla_credito_count else 0
@@ -3663,6 +3685,7 @@ def app_gestor_dashboard(
         "comercial": clientes_comercial,
         "repasse": clientes_repasse,
         "realizados": clientes_assinados,
+        "repasses_semana": clientes_assinados_semana,
         "perdas": clientes_perdas_mes,
     }
 
@@ -3702,6 +3725,14 @@ def app_gestor_dashboard(
         "meta_periodo_mes": meta_periodo_mes,
         "real": real,
         "previsao": previsao,
+        "real_semanal": real_semanal,
+        "previsao_semanal": previsao_semanal,
+        "media_necessaria_semana_dia_util": media_necessaria_semana_dia_util,
+        "dias_uteis_decorridos_semana": dias_uteis_decorridos_semana,
+        "dias_uteis_restantes_semana": dias_uteis_restantes_semana,
+        "semana_inicio": semana_inicio.isoformat(),
+        "semana_fim_util": semana_fim_util.isoformat(),
+        "semana_fim_contagem": semana_fim_contagem.isoformat(),
         "perdas_mes": perdas_mes,
         "nao_contar_mes": nao_contar_mes_total,
         "clientes_estagios": clientes_estagios,
