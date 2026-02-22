@@ -1305,6 +1305,10 @@ DIVORCIADO: Certidão averbada.</td>
               <option value="pago">Pago</option>
             </select>
           </div>
+          <div class="fg" id="valor-sinal-wrap" style="display:none;">
+            <label for="valor-sinal">Valor do sinal (R$)</label>
+            <input id="valor-sinal" type="number" min="0" step="0.01" placeholder="Ex.: 1500.00" />
+          </div>
 
           <div class="fg">
             <label for="status-fiador">Status fiador</label>
@@ -1619,11 +1623,36 @@ DIVORCIADO: Certidão averbada.</td>
     return STATUS_LABELS[area]?.[status] || v;
   }
 
+  function formatCurrencyBRL(value){
+    const n = Number(value);
+    if(!Number.isFinite(n) || n <= 0) return "";
+    return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
+  function shouldShowValorSinalField(statusSinal){
+    const status = toLower(statusSinal);
+    return status === "pendente" || status === "pago";
+  }
+
+  function toggleValorSinalField(){
+    const select = $("status-sinal");
+    const wrap = $("valor-sinal-wrap");
+    const input = $("valor-sinal");
+    if(!select || !wrap || !input) return;
+    const show = shouldShowValorSinalField(select.value);
+    wrap.style.display = show ? "flex" : "none";
+    if(!show){
+      input.value = "";
+    }
+  }
+
   function setRightPills(){
     const caixa = $("status-caixa").value;
     const agehab = $("status-agehab").value;
     const sinal = $("status-sinal").value;
     const fiador = $("status-fiador").value;
+    const valorSinal = Number($("valor-sinal")?.value || 0);
+    const valorSinalLabel = formatCurrencyBRL(valorSinal);
 
     $("pillCaixa").className = `pill ${pillClassFromStatus(caixa)}`;
     $("pillAgehab").className = `pill ${pillClassFromStatus(agehab)}`;
@@ -1632,7 +1661,9 @@ DIVORCIADO: Certidão averbada.</td>
 
     $("pillCaixa").textContent = `Caixa: ${mapLabel("caixa", caixa)}`;
     $("pillAgehab").textContent = `Agehab: ${mapLabel("agehab", agehab)}`;
-    $("pillSinal").textContent = `Sinal: ${mapLabel("sinal", sinal)}`;
+    $("pillSinal").textContent = valorSinalLabel
+      ? `Sinal: ${mapLabel("sinal", sinal)} (${valorSinalLabel})`
+      : `Sinal: ${mapLabel("sinal", sinal)}`;
     $("pillFiador").textContent = `Fiador: ${mapLabel("fiador", fiador)}`;
   }
 
@@ -1991,9 +2022,17 @@ DIVORCIADO: Certidão averbada.</td>
   // ===== Right panel listeners =====
   ["status-caixa","status-agehab","status-sinal","status-fiador","cca-responsavel"].forEach(id=>{
     $(id).addEventListener("change", ()=>{
+      if(id === "status-sinal"){
+        toggleValorSinalField();
+      }
       setRightPills();
       setSlaBadges();
     });
+  });
+  ["valor-sinal"].forEach(id=>{
+    const el = $(id);
+    if(!el) return;
+    el.addEventListener("input", setRightPills);
   });
   ["sla-credito"].forEach(id=>{
     $(id).addEventListener("input", setSlaBadges);
@@ -2018,6 +2057,7 @@ DIVORCIADO: Certidão averbada.</td>
   atualizarPerfilRenda();
   atualizarCtps();
   atualizarCca();
+  toggleValorSinalField();
 
   setRightPills();
   setSlaBadges();
@@ -2365,6 +2405,10 @@ DIVORCIADO: Certidão averbada.</td>
       if (byId("status-caixa")) byId("status-caixa").value = uiFromBackendCaixa(processo.status_cca);
       if (byId("status-agehab")) byId("status-agehab").value = uiFromBackendAgehab(processo.status_agehab);
       if (byId("status-sinal")) byId("status-sinal").value = norm(processo.status_sinal) || "nao_tem";
+      if (byId("valor-sinal")) {
+        const valorSinal = Number(processo.valor_sinal);
+        byId("valor-sinal").value = Number.isFinite(valorSinal) && valorSinal > 0 ? valorSinal.toFixed(2) : "";
+      }
       if (byId("status-fiador")) byId("status-fiador").value = norm(processo.status_fiador) || "nao_tem";
       if (byId("cca-responsavel")) byId("cca-responsavel").value = norm(processo.cca_responsavel);
       if (byId("nao-contar-mes")) byId("nao-contar-mes").checked = Boolean(processo.nao_contar_mes);
@@ -2393,6 +2437,7 @@ DIVORCIADO: Certidão averbada.</td>
       if (typeof atualizarCtps === "function") atualizarCtps();
       if (typeof atualizarCca === "function") atualizarCca();
       if (typeof setRightPills === "function") setRightPills();
+      if (typeof toggleValorSinalField === "function") toggleValorSinalField();
       if (typeof setSlaBadges === "function") setSlaBadges();
       if (typeof updateSectionCounters === "function") updateSectionCounters();
       if (typeof buildPendenciasResumo === "function") buildPendenciasResumo();
@@ -2407,6 +2452,9 @@ DIVORCIADO: Certidão averbada.</td>
       const statusCaixa = byId("status-caixa")?.value || "analise_credito";
       const statusAgehab = byId("status-agehab")?.value || "analise_credito";
       const statusSinal = byId("status-sinal")?.value || "nao_tem";
+      const valorSinalRaw = byId("valor-sinal")?.value;
+      const valorSinalParsed = Number(valorSinalRaw);
+      const valorSinal = Number.isFinite(valorSinalParsed) && valorSinalParsed > 0 ? Number(valorSinalParsed.toFixed(2)) : null;
       const statusFiador = byId("status-fiador")?.value || "nao_tem";
       const ccaResponsavel = (byId("cca-responsavel")?.value || "").trim().toLowerCase() || null;
       const observacao = (byId("observacao")?.value || "").trim() || null;
@@ -2429,6 +2477,7 @@ DIVORCIADO: Certidão averbada.</td>
         status_cca: backendFromUiCaixa(statusCaixa),
         status_agehab: backendFromUiAgehab(statusAgehab),
         status_sinal: backendFromUiSinal(statusSinal),
+        valor_sinal: statusSinal === "nao_tem" ? null : valorSinal,
         status_fiador: backendFromUiFiador(statusFiador),
         cca_responsavel: ccaResponsavel,
         nao_contar_mes: naoContarMes,

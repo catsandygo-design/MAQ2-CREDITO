@@ -462,6 +462,41 @@
             overflow: hidden;
             text-overflow: ellipsis;
             cursor: help;
+            position: relative;
+        }
+        .fase-status.has-tooltip:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 8px);
+            transform: translateX(-50%);
+            width: min(420px, 78vw);
+            max-height: 220px;
+            overflow: auto;
+            white-space: pre-line;
+            text-align: left;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(56, 189, 248, .55);
+            background: rgba(2, 6, 23, .96);
+            color: #e2e8f0;
+            font-size: calc(.68rem * var(--font-scale));
+            line-height: 1.35;
+            box-shadow: 0 10px 30px rgba(2, 6, 23, .85), 0 0 0 1px rgba(15, 23, 42, .9);
+            z-index: 30;
+            pointer-events: none;
+        }
+        .fase-status.has-tooltip:hover::before {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 2px);
+            transform: translateX(-50%);
+            border-width: 6px;
+            border-style: solid;
+            border-color: rgba(56, 189, 248, .55) transparent transparent transparent;
+            z-index: 31;
+            pointer-events: none;
         }
         .fase-status.tone-ok {
             color: #dcfce7;
@@ -1216,17 +1251,25 @@
                 fiador: "Fiador",
             };
             const valor = mapaValor[tipo];
-            const detalhes = [getPendenciaResumo(item)];
+            const detalhes = [];
+            const docsTooltip = String(item?.docs_pendentes_tooltip || "").trim();
+            if (docsTooltip) {
+                detalhes.push(docsTooltip);
+            } else {
+                detalhes.push(getPendenciaResumo(item));
+            }
             const dias = Number(item?.dias_em_aberto);
             if (tipo === "comercial" && String(valor || "").toUpperCase() === "EM_PROCESSO" && Number.isFinite(dias) && dias > 15) {
                 detalhes.push(`Risco de cair: ${dias} dias em processo.`);
             }
+            if (tipo === "sinal") {
+                const valorSinal = Number(item?.valor_sinal);
+                if (Number.isFinite(valorSinal) && valorSinal > 0) {
+                    detalhes.push(`Valor do sinal: ${valorSinal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.`);
+                }
+            }
             if (item?.nao_contar_mes) {
                 detalhes.push("Marcado para nao contar no mes.");
-            }
-            const docsTooltip = String(item?.docs_pendentes_tooltip || "").trim();
-            if (docsTooltip) {
-                detalhes.push(docsTooltip);
             }
             return `${mapaNome[tipo]} atual: ${normalizeStatusLabel(valor, tipo === "repasse" ? "Sem Repasse" : "-")}.\n${detalhes.join("\n")}`.trim();
         }
@@ -1244,7 +1287,7 @@
             const label = normalizeStatusLabel(raw, tipo === "repasse" ? "Sem Repasse" : "-");
             const tone = statusTone(raw);
             const comment = getStatusComment(item, tipo);
-            return `<span class="fase-status ${tone}" title="${escapeHtml(comment)}">${escapeHtml(label)}</span>`;
+            return `<span class="fase-status has-tooltip ${tone}" data-tip="${escapeHtml(comment)}" title="${escapeHtml(comment)}">${escapeHtml(label)}</span>`;
         }
 
         function renderFaseTable(clientes) {

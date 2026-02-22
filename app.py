@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, create_engine, text
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, create_engine, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
@@ -1067,6 +1067,7 @@ class Processo(Base):
     status_cca: Mapped[str] = mapped_column(String, nullable=False, default="ANALISE_CREDITO")
     status_agehab: Mapped[str] = mapped_column(String, nullable=False, default="ANALISE_CREDITO")
     status_sinal: Mapped[str] = mapped_column(String, nullable=False, default="NAO_TEM")
+    valor_sinal: Mapped[Optional[float]] = mapped_column(Float)
     status_fiador: Mapped[str] = mapped_column(String, nullable=False, default="NAO_TEM")
     estagio_comercial: Mapped[str] = mapped_column(String(40), nullable=False, default="RESERVA")
     etapa_repasse: Mapped[Optional[str]] = mapped_column(String(40))
@@ -1207,6 +1208,7 @@ class ProcessoUpdate(BaseModel):
     status_cca: Optional[str] = None
     status_agehab: Optional[str] = None
     status_sinal: Optional[str] = None
+    valor_sinal: Optional[float] = None
     status_fiador: Optional[str] = None
     estagio_comercial: Optional[str] = None
     etapa_repasse: Optional[str] = None
@@ -1229,6 +1231,7 @@ class ProcessoOut(BaseModel):
     status_cca: str
     status_agehab: str
     status_sinal: str
+    valor_sinal: Optional[float] = None
     status_fiador: str
     estagio_comercial: str
     etapa_repasse: Optional[str] = None
@@ -1407,6 +1410,7 @@ class ProcessoOverviewOut(BaseModel):
     status_cca: str
     status_agehab: str
     status_sinal: str
+    valor_sinal: Optional[float] = None
     status_fiador: str
     estagio_comercial: str
     etapa_repasse: Optional[str] = None
@@ -1843,6 +1847,7 @@ def _ensure_runtime_schema(db: Session) -> None:
     statements = [
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_credito VARCHAR(30) DEFAULT 'EM_ANALISE'",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_sinal VARCHAR(30) DEFAULT 'NAO_TEM'",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_sinal DOUBLE PRECISION",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_fiador VARCHAR(30) DEFAULT 'NAO_TEM'",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS estagio_comercial VARCHAR(40) DEFAULT 'RESERVA'",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS etapa_repasse VARCHAR(40)",
@@ -3032,6 +3037,7 @@ def app_list_processos(
                 status_cca=processo.status_cca,
                 status_agehab=processo.status_agehab,
                 status_sinal=processo.status_sinal,
+                valor_sinal=float(processo.valor_sinal) if getattr(processo, "valor_sinal", None) is not None else None,
                 status_fiador=processo.status_fiador,
                 estagio_comercial=_process_estagio_comercial(processo.estagio_comercial),
                 etapa_repasse=_process_etapa_repasse(processo.etapa_repasse),
@@ -3151,9 +3157,9 @@ def app_gestor_dashboard(
         docs_total = len(documentos)
         docs_tem_aprovado = any(doc.get("status") == "APROVADO" for doc in documentos)
         docs_todos_aguardando = docs_total > 0 and all(
-            doc.get("status") in {"AGUARDANDO_ENVIO", "ANALISE"} for doc in documentos
+            doc.get("status") in {"AGUARDANDO_ENVIO", "ANALISE", "NAO_APLICA"} for doc in documentos
         )
-        docs_nao_aprovados = [doc for doc in documentos if doc.get("status") != "APROVADO"]
+        docs_nao_aprovados = [doc for doc in documentos if doc.get("status") not in {"APROVADO", "NAO_APLICA"}]
         docs_tooltip_lines: list[str] = []
         if docs_total == 0 or docs_todos_aguardando:
             docs_tooltip = "Documentos: nao foi enviado doc."
@@ -3176,7 +3182,7 @@ def app_gestor_dashboard(
                     if desc:
                         docs_tooltip_lines.append(f"- {nome_doc} [{status_doc}]: {desc}")
                     else:
-                        docs_tooltip_lines.append(f"- {nome_doc} [{status_doc}]")
+                        docs_tooltip_lines.append(f"- {nome_doc} [{status_doc}]: sem descricao")
                 docs_tooltip = "Documentos com pendencia:\n" + "\n".join(docs_tooltip_lines)
         sinal_ok = status_sinal in {"NAO_TEM", "PAGO"}
         fiador_ok = status_fiador in {"NAO_TEM", "FINALIZADO"}
@@ -3203,6 +3209,7 @@ def app_gestor_dashboard(
             "status_cca": processo.status_cca,
             "status_agehab": processo.status_agehab,
             "status_sinal": processo.status_sinal,
+            "valor_sinal": float(processo.valor_sinal) if getattr(processo, "valor_sinal", None) is not None else None,
             "status_fiador": processo.status_fiador,
             "dias_em_aberto": dias_em_aberto,
             "data_cadastro_origem": data_referencia.isoformat() if data_referencia else None,
@@ -3911,6 +3918,20 @@ def app_patch_processo(
             old_value = processo.status_sinal
             processo.status_sinal = status_sinal
             processo.pendente_sinal = status_sinal == "PENDENTE"
+            if status_sinal == "NAO_TEM" and getattr(processo, "valor_sinal", None) is not None:
+                old_sinal_valor = processo.valor_sinal
+                processo.valor_sinal = None
+                _record_processo_event(
+                    db,
+                    processo_id=processo.id,
+                    actor_username=actor_username,
+                    actor_role=actor_role,
+                    event_type="PROCESSO_UPDATE",
+                    field_name="valor_sinal",
+                    old_value=old_sinal_valor,
+                    new_value=None,
+                    details="reset_automatico_status_sinal_nao_tem",
+                )
             if old_value != status_sinal:
                 event_type = "RETORNO_PENDENCIA" if _is_pendencia_status(field, old_value) and not _is_pendencia_status(field, status_sinal) else ("PENDENCIA" if _is_pendencia_status(field, status_sinal) else "STATUS_CHANGE")
                 _record_processo_event(
@@ -3922,6 +3943,29 @@ def app_patch_processo(
                     field_name=field,
                     old_value=old_value,
                     new_value=status_sinal,
+                )
+        elif field == "valor_sinal":
+            if value is None or str(value).strip() == "":
+                new_valor_sinal = None
+            else:
+                try:
+                    new_valor_sinal = round(float(value), 2)
+                except (TypeError, ValueError):
+                    raise HTTPException(status_code=422, detail="Valor de sinal invalido.")
+                if new_valor_sinal < 0:
+                    raise HTTPException(status_code=422, detail="Valor de sinal nao pode ser negativo.")
+            old_value = getattr(processo, "valor_sinal", None)
+            processo.valor_sinal = new_valor_sinal
+            if old_value != new_valor_sinal:
+                _record_processo_event(
+                    db,
+                    processo_id=processo.id,
+                    actor_username=actor_username,
+                    actor_role=actor_role,
+                    event_type="PROCESSO_UPDATE",
+                    field_name=field,
+                    old_value=old_value,
+                    new_value=new_valor_sinal,
                 )
         elif field == "status_fiador":
             status_fiador = _process_fiador_status(value)
