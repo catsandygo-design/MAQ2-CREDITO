@@ -636,15 +636,15 @@
       if (statusGeral === "cancelado") return "cancelado";
       if (statusGeral === "distrato") return "distrato";
 
-      const statusCaixa = keyOf(item.status_cca);
-      if (statusCaixa === "assinatura_caixa") return "assinatura_caixa";
-
       const etapaRepasse = keyOf(item.etapa_repasse);
       if (etapaRepasse === "assinatura_autorizada") return "assinatura_caixa";
       if (etapaRepasse === "inicio_repasse") {
         return "inicio_repasse";
       }
       if (etapaRepasse === "em_repasse") return "em_repasse";
+
+      const statusCaixa = keyOf(item.status_cca);
+      if (statusCaixa === "assinatura_caixa") return "assinatura_caixa";
 
       return "em_repasse";
     }
@@ -844,9 +844,8 @@
       const toIndex = COL_INDEX[targetStage];
       const isCancelamento = targetStage === "cancelado" || targetStage === "distrato";
       const isNextStep = toIndex === fromIndex + 1;
-      const isReturnToStart = targetStage === "em_repasse" && fromStage !== "em_repasse";
       const isReturnToInicio = targetStage === "inicio_repasse" && fromStage !== "inicio_repasse";
-      if (!isNextStep && !isReturnToStart && !isReturnToInicio && !isCancelamento) {
+      if (!isNextStep && !isReturnToInicio && !isCancelamento) {
         setMsg("Movimento permitido: proxima coluna, retorno para Inicio de Repasse, Cancelado ou Distrato.", "err");
         applyFilters();
         return;
@@ -874,7 +873,9 @@
           body: JSON.stringify(payloadForStage(targetStage)),
         });
         row.estagioComercial = updated.estagio_comercial || row.estagioComercial;
-        row.etapaRepasse = updated.etapa_repasse || row.etapaRepasse;
+        if (Object.prototype.hasOwnProperty.call(updated, "etapa_repasse")) {
+          row.etapaRepasse = updated.etapa_repasse || "-";
+        }
         row.statusCaixa = updated.status_cca || row.statusCaixa;
         row.statusAgehab = updated.status_agehab || row.statusAgehab;
         row.statusSinal = updated.status_sinal || row.statusSinal;

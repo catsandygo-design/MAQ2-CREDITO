@@ -941,6 +941,9 @@ def _validate_status_transition(field: str, current_value: Optional[str], next_v
         return
 
     if field == "status_geral" and current in PROCESS_GERAL_FINAL_STATUSES and nxt != current:
+        # Permite fechamento administrativo apos aprovacao/reprovacao.
+        if current in {"APROVADO", "REPROVADO"} and nxt in {"CANCELADO", "DISTRATO"}:
+            return
         raise HTTPException(status_code=422, detail="Processo finalizado nao permite reabertura de status geral.")
     if field == "status_cca" and current in PROCESS_CCA_FINAL_STATUSES and nxt != current:
         raise HTTPException(status_code=422, detail="Status Caixa finalizado nao permite reabertura.")
