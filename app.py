@@ -542,6 +542,7 @@ PROCESS_SINAL_STATUSES = {"NAO_TEM", "PENDENTE", "PAGO"}
 PROCESS_FIADOR_STATUSES = {"NAO_TEM", "PENDENTE", "FINALIZADO"}
 PROCESS_GERAL_FINAL_STATUSES = {"APROVADO", "REPROVADO", "DISTRATO", "CANCELADO"}
 PROCESS_CCA_FINAL_STATUSES = {"ASSINATURA_CAIXA", "FINALIZADO"}
+CAIXA_ASSINATURA_APTA_STATUSES = {"CONFORME", "TRATANDO_PRODUTO", "AGENDADO", "ASSINATURA_CAIXA", "FINALIZADO"}
 
 ESTAGIO_COMERCIAL_VALUES = [
     "RESERVA",
@@ -654,6 +655,10 @@ def _fila_atual_from_processo(processo: "Processo") -> str:
     return "COMERCIAL"
 
 
+def _is_caixa_apta_para_assinatura(status_cca: Optional[str]) -> bool:
+    return _status_token(status_cca) in CAIXA_ASSINATURA_APTA_STATUSES
+
+
 def _can_set_assinatura_autorizada(processo: "Processo") -> bool:
     stage = _process_estagio_comercial(getattr(processo, "estagio_comercial", None))
     sinal = _process_sinal_status(getattr(processo, "status_sinal", None))
@@ -667,7 +672,7 @@ def _can_set_assinatura_autorizada(processo: "Processo") -> bool:
         and sinal in {"NAO_TEM", "PAGO"}
         and fiador in {"NAO_TEM", "FINALIZADO"}
         and agehab == "VALIDADO_AGEHAB"
-        and caixa in {"AGENDADO", "ASSINATURA_CAIXA"}
+        and _is_caixa_apta_para_assinatura(caixa)
     )
 
 
@@ -3532,7 +3537,7 @@ def app_gestor_dashboard(
                 docs_tooltip = "Documentos com pendencia:\n" + "\n".join(docs_tooltip_lines)
         sinal_ok = status_sinal in {"NAO_TEM", "PAGO"}
         fiador_ok = status_fiador in {"NAO_TEM", "FINALIZADO"}
-        caixa_ok = status_cca in {"CONFORME", "ASSINATURA_CAIXA", "FINALIZADO"}
+        caixa_ok = _is_caixa_apta_para_assinatura(status_cca)
         pronto_para_repassar = (
             estagio == "VENDA_FINALIZADA"
             and status_agehab == "VALIDADO_AGEHAB"
@@ -4479,7 +4484,7 @@ def app_patch_processo(
                     status_code=422,
                     detail=(
                         "Nao pode avancar para ASSINATURA_AUTORIZADA. "
-                        "Exige estagio VENDA_FINALIZADA, sinal/fiador regular, Agehab validada e Caixa em AGENDADO."
+                        "Exige estagio VENDA_FINALIZADA, sinal/fiador regular, Agehab validada e Caixa em CONFORME ou acima."
                     ),
                 )
             old_value = _process_etapa_repasse(processo.etapa_repasse)
@@ -4544,7 +4549,7 @@ def app_patch_processo(
                 status_code=422,
                 detail=(
                     "Nao pode avancar para ASSINATURA_CAIXA. "
-                    "Exige VENDA_FINALIZADA, sinal/fiador regular, Agehab validada e Caixa em AGENDADO."
+                    "Exige VENDA_FINALIZADA, sinal/fiador regular, Agehab validada e Caixa em CONFORME ou acima."
                 ),
             )
         old_etapa = _process_etapa_repasse(processo.etapa_repasse)

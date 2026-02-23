@@ -693,8 +693,8 @@
       if (statusAgehab !== "validado_agehab") {
         blockers.push("Agehab precisa estar validada");
       }
-      if (!["agendado", "assinatura_caixa"].includes(statusCaixa)) {
-        blockers.push("status Caixa precisa estar em Agendado");
+      if (!["conforme", "tratando_produto", "agendado", "assinatura_caixa", "finalizado"].includes(statusCaixa)) {
+        blockers.push("status Caixa precisa estar em Conforme ou etapa posterior");
       }
       if (["cancelado", "distrato", "reprovado"].includes(statusGeral)) {
         blockers.push("processo em status final impeditivo");
