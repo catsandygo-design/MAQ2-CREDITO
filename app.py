@@ -536,6 +536,7 @@ PROCESS_CAIXA_STATUSES = {
     "TRATANDO_PRODUTO",
     "AGENDADO",
     "ASSINATURA_CAIXA",
+    "FINALIZADO",
 }
 PROCESS_AGEHAB_STATUSES = {"ANALISE_CREDITO", "PENDENTE_CREDITO", "ENVIO_AGEHAB", "PENDENTE_AGEHAB", "VALIDADO_AGEHAB"}
 PROCESS_SINAL_STATUSES = {"NAO_TEM", "PENDENTE", "PAGO"}
@@ -686,7 +687,7 @@ def _sync_estagio_repasse_rules(processo: "Processo", now: Optional[datetime] = 
     else:
         # Se voltou para estagio comercial anterior ao repasse, sai da trilha de repasse.
         # Mantemos etapa apenas quando assinatura de caixa ja foi concluida.
-        if etapa_repasse and _status_token(getattr(processo, "status_cca", None)) != "ASSINATURA_CAIXA":
+        if etapa_repasse and _status_token(getattr(processo, "status_cca", None)) not in PROCESS_CCA_FINAL_STATUSES:
             processo.etapa_repasse = None
 
     if stage == "RESERVA":
@@ -2100,7 +2101,7 @@ def _ensure_runtime_schema(db: Session) -> None:
             SET status_cca = CASE
                 WHEN UPPER(COALESCE(status_cca, '')) IN (
                     'ANALISE_CREDITO', 'PENDENTE_CREDITO', 'ANALISE_CCA', 'PENDENTE_CCA',
-                    'AGUARDANDO_CONFORMIDADE', 'CONFORME', 'TRATANDO_PRODUTO', 'AGENDADO', 'ASSINATURA_CAIXA'
+                    'AGUARDANDO_CONFORMIDADE', 'CONFORME', 'TRATANDO_PRODUTO', 'AGENDADO', 'ASSINATURA_CAIXA', 'FINALIZADO'
                 ) THEN UPPER(status_cca)
                 WHEN UPPER(COALESCE(status_cca, '')) IN ('EM_ANALISE', 'EM ANALISE', 'EMANALISE', 'ANALISE') THEN 'ANALISE_CREDITO'
                 WHEN UPPER(COALESCE(status_cca, '')) IN ('PENDENTE', 'PENDENCIADO') THEN 'PENDENTE_CREDITO'
@@ -2164,7 +2165,7 @@ def _ensure_runtime_schema(db: Session) -> None:
                 ) THEN UPPER(estagio_comercial)
                 WHEN UPPER(COALESCE(status_geral, '')) IN ('NOVO') THEN 'RESERVA'
                 WHEN UPPER(COALESCE(status_geral, '')) IN ('APROVADO') THEN 'VENDA_FINALIZADA'
-                WHEN UPPER(COALESCE(status_cca, '')) IN ('ASSINATURA_CAIXA') THEN 'VENDA_FINALIZADA'
+                WHEN UPPER(COALESCE(status_cca, '')) IN ('ASSINATURA_CAIXA', 'FINALIZADO') THEN 'VENDA_FINALIZADA'
                 ELSE 'EM_PROCESSO'
             END
             """
@@ -3451,6 +3452,8 @@ def app_gestor_dashboard(
     processo_ids = [processo.id for processo, _ in rows]
     pendencias_docs_por_processo: dict[uuid.UUID, int] = {}
     docs_por_processo: dict[uuid.UUID, list[dict[str, str]]] = {}
+    assinado_event_at_por_processo: dict[uuid.UUID, datetime] = {}
+    perda_event_at_por_processo: dict[uuid.UUID, datetime] = {}
     if processo_ids:
         docs_rows = (
             db.query(
@@ -3478,6 +3481,33 @@ def app_gestor_dashboard(
             if status_doc in {"PENDENCIADO", "REPROVADO"}:
                 pendencias_docs_por_processo[processo_id] = pendencias_docs_por_processo.get(processo_id, 0) + 1
 
+        eventos_status_rows = (
+            db.query(
+                ProcessoEvento.processo_id,
+                ProcessoEvento.field_name,
+                ProcessoEvento.new_value,
+                ProcessoEvento.created_at,
+            )
+            .filter(
+                ProcessoEvento.processo_id.in_(processo_ids),
+                ProcessoEvento.field_name.in_(["status_cca", "status_geral"]),
+            )
+            .all()
+        )
+        for processo_id, field_name, new_value, created_at in eventos_status_rows:
+            evento_time = _as_utc(created_at)
+            if evento_time is None:
+                continue
+            token = _status_token(new_value)
+            if field_name == "status_cca" and token in PROCESS_CCA_FINAL_STATUSES:
+                prev = assinado_event_at_por_processo.get(processo_id)
+                if prev is None or evento_time > prev:
+                    assinado_event_at_por_processo[processo_id] = evento_time
+            elif field_name == "status_geral" and token in {"CANCELADO", "DISTRATO"}:
+                prev = perda_event_at_por_processo.get(processo_id)
+                if prev is None or evento_time > prev:
+                    perda_event_at_por_processo[processo_id] = evento_time
+
     for processo, cliente in rows:
         estagio = _process_estagio_comercial(getattr(processo, "estagio_comercial", None))
         etapa_repasse = _process_etapa_repasse(getattr(processo, "etapa_repasse", None))
@@ -3489,6 +3519,8 @@ def app_gestor_dashboard(
         status_fiador = _status_token(getattr(processo, "status_fiador", None))
         created_at_utc = _as_utc(processo.created_at)
         updated_at_utc = _as_utc(getattr(processo, "updated_at", None)) or created_at_utc
+        assinado_event_at_utc = _as_utc(assinado_event_at_por_processo.get(processo.id))
+        perda_event_at_utc = _as_utc(perda_event_at_por_processo.get(processo.id))
         data_referencia = cliente.data_cadastro_origem or (created_at_utc.date() if created_at_utc else None)
         dias_em_aberto = (now.date() - data_referencia).days if data_referencia else None
         nao_contar_mes = bool(getattr(processo, "nao_contar_mes", False))
@@ -3605,8 +3637,9 @@ def app_gestor_dashboard(
         if status_cca in PROCESS_CCA_FINAL_STATUSES:
             total_assinados += 1
             clientes_assinados.append(cliente_item)
-            if updated_at_utc is not None:
-                dt_repasse = updated_at_utc.date()
+            assinado_data_ref = assinado_event_at_utc or updated_at_utc
+            if assinado_data_ref is not None:
+                dt_repasse = assinado_data_ref.date()
                 if semana_inicio <= dt_repasse <= semana_fim_contagem and dt_repasse.weekday() < 5:
                     total_assinados_semana += 1
                     clientes_assinados_semana.append(cliente_item)
@@ -3620,9 +3653,9 @@ def app_gestor_dashboard(
 
         if (
             status_geral in {"CANCELADO", "DISTRATO"}
-            and updated_at_utc is not None
-            and updated_at_utc.year == now.year
-            and updated_at_utc.month == now.month
+            and (perda_event_at_utc or updated_at_utc) is not None
+            and (perda_event_at_utc or updated_at_utc).year == now.year
+            and (perda_event_at_utc or updated_at_utc).month == now.month
         ):
             perdas_mes += 1
             clientes_perdas_mes.append(cliente_item)
@@ -4021,8 +4054,31 @@ async def app_importar_processos_planilha(
             continue
 
         empreendimento_raw = _normalize_empreendimento_nome(row.get("empreendimento"))
+        if not empreendimento_raw:
+            invalidados += 1
+            resultados.append(
+                ImportPlanilhaRowOut(
+                    linha=row_number,
+                    nome_cliente=nome,
+                    status="invalido",
+                    motivo="empreendimento obrigatorio",
+                )
+            )
+            continue
+
         empreendimento_resolvido = _resolve_empreendimento_nome(db, empreendimento_raw)
-        empreendimento = empreendimento_resolvido or empreendimento_raw or None
+        if not empreendimento_resolvido:
+            invalidados += 1
+            resultados.append(
+                ImportPlanilhaRowOut(
+                    linha=row_number,
+                    nome_cliente=nome,
+                    status="invalido",
+                    motivo=f"empreendimento nao oficial: {empreendimento_raw}",
+                )
+            )
+            continue
+        empreendimento = empreendimento_resolvido
 
         cliente = Cliente(
             nome=nome,
@@ -4276,6 +4332,9 @@ def app_patch_processo(
     actor_role = _normalize_role(str(session.get("role", "")))
     actor_username = _normalize_username(str(session.get("username", "")))
     changes = payload.model_dump(exclude_unset=True)
+    # Campos derivados de status nao devem ser alterados diretamente via API.
+    changes.pop("pendente_fiador", None)
+    changes.pop("pendente_sinal", None)
     sla_trigger: Optional[str] = None
     old_sla_owner = _normalize_sla_owner(processo.sla_owner)
     estagio_changed = False
