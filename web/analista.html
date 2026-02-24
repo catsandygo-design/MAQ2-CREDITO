@@ -788,6 +788,10 @@
             <label for="obra">Empreendimento</label>
             <input id="obra" type="text" placeholder="AGL30, AGL32, FSA10...">
           </div>
+          <div class="fg">
+            <label for="data-reserva">Data criacao da reserva</label>
+            <input id="data-reserva" type="text" placeholder="dd/mm/aaaa" readonly data-info-only="1">
+          </div>
 
           <div class="fg">
             <label for="perfil-renda">Perfil de renda</label>
@@ -2326,6 +2330,18 @@ DIVORCIADO: Certidão averbada.</td>
       return Math.ceil(n / 24);
     }
 
+    function formatDateBr(value) {
+      const raw = String(value || "").trim();
+      if (!raw) return "";
+      const simple = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (simple) {
+        return `${simple[3]}/${simple[2]}/${simple[1]}`;
+      }
+      const parsed = new Date(raw);
+      if (Number.isNaN(parsed.getTime())) return raw;
+      return parsed.toLocaleDateString("pt-BR");
+    }
+
     function lockSlaInputs() {
       ["sla-credito"].forEach((id) => {
         const field = byId(id);
@@ -2399,6 +2415,7 @@ DIVORCIADO: Certidão averbada.</td>
       if (byId("corretor")) byId("corretor").value = cliente.corretor || "";
       if (byId("obra")) byId("obra").value = cliente.obra || "";
       if (byId("imobiliaria")) byId("imobiliaria").value = cliente.imobiliaria || "";
+      if (byId("data-reserva")) byId("data-reserva").value = formatDateBr(cliente.data_reserva_origem);
 
       await loadCcaOptions(processo.cca_responsavel || "");
 
