@@ -951,9 +951,9 @@
   function classForStatus(value){
     const v = statusFromBackend(value);
     if (!v || v === "-") return "neutral";
-    if (["venda_finalizada", "assinatura_autorizada", "aprovado", "conforme", "validado_agehab", "pago", "finalizado"].includes(v)) return "ok";
+    if (["assinatura_autorizada", "aprovado", "conforme", "validado_agehab", "pago", "finalizado", "assinatura_caixa"].includes(v)) return "ok";
     if (["pendenciado", "reprovado", "cancelado", "distrato", "pendente_credito", "pendente_cca", "pendente_agehab", "pendente"].includes(v)) return "bad";
-    if (["novo", "nao_tem", "reserva", "sem_repasse", "comercial", "repasse"].includes(v)) return "neutral";
+    if (["novo", "nao_tem", "reserva", "sem_repasse", "comercial", "repasse", "venda_finalizada"].includes(v)) return "neutral";
     return "warn";
   }
 
@@ -1011,7 +1011,7 @@
       slaCor: readSlaHours(item, "sla_corretor_horas", "sla_corretor_dias"),
       slaCred: readSlaHours(item, "sla_analista_horas", "sla_credito_dias"),
       slaCca: readSlaHours(item, "sla_cca_horas", "sla_cca_dias"),
-      dataCadastroOrigem: item.data_cadastro_origem || null,
+      dataCadastroOrigem: item.data_reserva_origem || item.data_cadastro_origem || null,
       createdAt: item.created_at || null,
     };
   }
@@ -1093,7 +1093,7 @@
   }
 
   function isCelebrating(row){
-    return row.geral === "venda_finalizada" || row.repasse === "assinatura_autorizada";
+    return ["assinatura_caixa", "finalizado"].includes(row.statusCaixa);
   }
 
   function slaClass(hours){
@@ -1144,8 +1144,8 @@
 
     const comercial = count(r => filaByEstagio(r.geral) === "comercial");
     const repasse = count(r => filaByEstagio(r.geral) === "repasse");
-    const finalizados = count(r => r.geral === "venda_finalizada");
-    const assinados = count(r => r.repasse === "assinatura_autorizada");
+    const assinados = count(r => ["assinatura_caixa", "finalizado"].includes(r.statusCaixa));
+    const finalizados = assinados;
     const prios = count(r=> isHighPriority(r));
 
     const avg = (arr)=> arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length) : 0;
@@ -1158,8 +1158,8 @@
       <div class="kpi"><div class="k">Total na fila</div><div class="v">${total}</div><div class="s">apos filtros</div></div>
       <div class="kpi good"><div class="k">Comercial</div><div class="v">${comercial}</div><div class="s">fila comercial</div></div>
       <div class="kpi warn"><div class="k">Repasse</div><div class="v">${repasse}</div><div class="s">fila repasse</div></div>
-      <div class="kpi good"><div class="k">Venda finalizada</div><div class="v">${finalizados}</div><div class="s">fila comercial</div></div>
-      <div class="kpi good"><div class="k">Assinatura autorizada</div><div class="v">${assinados}</div><div class="s">etapa repasse</div></div>
+      <div class="kpi"><div class="k">Venda finalizada</div><div class="v">${finalizados}</div><div class="s">credito (contrato assinado)</div></div>
+      <div class="kpi good"><div class="k">Assinado caixa</div><div class="v">${assinados}</div><div class="s">credito finalizado</div></div>
       <div class="kpi bad"><div class="k">Prioridade alta</div><div class="v">${prios}</div><div class="s">comercial acima de 15 dias</div></div>
       <div class="kpi ${clsSla(avgSlaCor)}"><div class="k">SLA medio comercial</div><div class="v">${avgSlaCor}h</div><div class="s">media do filtro</div></div>
       <div class="kpi ${clsSla(avgSlaCred)} spark">
