@@ -9,7 +9,7 @@ import secrets
 import calendar
 import unicodedata
 from contextlib import asynccontextmanager
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlparse
@@ -86,7 +86,7 @@ try:
     FALL_RISK_DAYS = max(1, int(os.getenv("FALL_RISK_DAYS", "15")))
 except ValueError:
     FALL_RISK_DAYS = 15
-RUNTIME_SCHEMA_REVISION = "2026-02-20-fluxo-v2-import-estagios-v7"
+RUNTIME_SCHEMA_REVISION = "2026-02-24-sla-stop-rules-v2"
 PENDENCIA_INFO_MIN_LENGTH = 0
 PROCESS_LIST_CACHE: dict[str, dict[str, Any]] = {}
 SEED_USERS_READY = False
@@ -94,6 +94,16 @@ SEED_USERS_READY = False
 
 def _normalize_username(value: Optional[str]) -> str:
     return (value or "").strip().lower()
+
+
+def _normalize_corretor_nome_curto(value: Optional[str]) -> str:
+    cleaned = " ".join(str(value or "").strip().split())
+    if not cleaned:
+        return ""
+    partes = cleaned.split(" ")
+    if len(partes) > 2:
+        cleaned = " ".join(partes[:2])
+    return cleaned.lower()
 
 
 def _build_app_users() -> dict[str, dict[str, str]]:
@@ -571,6 +581,7 @@ ESTAGIOS_REPASSE_COMERCIAL = {
 }
 ESTAGIOS_DASH_COMERCIAL = {"EM_PROCESSO", "CREDITO", "SECRETARIA_VENDAS"}
 IMPORT_REQUIRED_COLUMNS = {
+    "reserva",
     "nome_cliente",
     "data_cadastro",
     "estagio",
@@ -579,13 +590,19 @@ IMPORT_REQUIRED_COLUMNS = {
     "imobiliaria",
 }
 IMPORT_COLUMN_ALIASES = {
+    "reserva": "reserva",
+    "data_reserva": "reserva",
+    "data_da_reserva": "reserva",
+    "data_criacao_reserva": "reserva",
     "nome": "nome_cliente",
     "cliente": "nome_cliente",
     "nome_cliente": "nome_cliente",
     "nome_do_cliente": "nome_cliente",
     "data": "data_cadastro",
+    "data_cad": "data_cadastro",
     "data_cadastro": "data_cadastro",
     "data_de_cadastro": "data_cadastro",
+    "status": "estagio",
     "estagio": "estagio",
     "empreendimento": "empreendimento",
     "obra": "empreendimento",
@@ -719,6 +736,104 @@ def _as_utc(value: Optional[datetime]) -> Optional[datetime]:
     return value.astimezone(timezone.utc)
 
 
+def _utc_start_of_day(value: Optional[date]) -> Optional[datetime]:
+    if not isinstance(value, date):
+        return None
+    return datetime.combine(value, time.min, tzinfo=timezone.utc)
+
+
+def _resolve_sla_clock_end(processo: "Processo", now: Optional[datetime] = None) -> datetime:
+    now_utc = _as_utc(now) or _utcnow()
+    if _is_processo_finalizado(processo):
+        finished_at = _as_utc(getattr(processo, "updated_at", None))
+        if finished_at is not None:
+            return finished_at if finished_at <= now_utc else now_utc
+    return now_utc
+
+
+def _resolve_sla_comercial_start(processo: "Processo") -> Optional[datetime]:
+    start_at = _as_utc(getattr(processo, "sla_comercial_inicio_at", None))
+    if start_at is not None:
+        return start_at
+
+    cliente = getattr(processo, "cliente", None)
+    if cliente is not None:
+        start_at = _utc_start_of_day(getattr(cliente, "data_cadastro_origem", None))
+        if start_at is not None:
+            return start_at
+        created_cliente = _as_utc(getattr(cliente, "created_at", None))
+        if created_cliente is not None:
+            return created_cliente
+
+    return _as_utc(getattr(processo, "created_at", None))
+
+
+def _resolve_sla_credito_start(processo: "Processo") -> Optional[datetime]:
+    return _as_utc(getattr(processo, "sla_credito_inicio_at", None))
+
+
+def _is_sla_comercial_closed(processo: "Processo") -> bool:
+    return _process_estagio_comercial(getattr(processo, "estagio_comercial", None)) == "VENDA_FINALIZADA"
+
+
+def _is_sla_credito_closed(processo: "Processo") -> bool:
+    return _status_token(getattr(processo, "status_cca", None)) in PROCESS_CCA_FINAL_STATUSES
+
+
+def _refresh_sla_fixed_markers(processo: "Processo", now: Optional[datetime] = None) -> None:
+    now_utc = _as_utc(now) or _utcnow()
+
+    comercial_closed = _is_sla_comercial_closed(processo)
+    comercial_fim = _as_utc(getattr(processo, "sla_comercial_fim_at", None))
+    if comercial_closed and comercial_fim is None:
+        processo.sla_comercial_fim_at = now_utc
+    elif (not comercial_closed) and comercial_fim is not None:
+        processo.sla_comercial_fim_at = None
+
+    credito_closed = _is_sla_credito_closed(processo)
+    credito_fim = _as_utc(getattr(processo, "sla_credito_fim_at", None))
+    if credito_closed and credito_fim is None:
+        processo.sla_credito_fim_at = now_utc
+    elif (not credito_closed) and credito_fim is not None:
+        processo.sla_credito_fim_at = None
+
+
+def _resolve_sla_fixed_end(processo: "Processo", owner: str, now: Optional[datetime] = None) -> datetime:
+    now_utc = _as_utc(now) or _utcnow()
+    owner_norm = _normalize_sla_owner(owner)
+    if owner_norm == SLA_OWNER_CORRETOR:
+        fim = _as_utc(getattr(processo, "sla_comercial_fim_at", None))
+        if fim is not None:
+            return fim if fim <= now_utc else now_utc
+        if _is_sla_comercial_closed(processo):
+            closed_at = _as_utc(getattr(processo, "updated_at", None)) or now_utc
+            return closed_at if closed_at <= now_utc else now_utc
+        return _resolve_sla_clock_end(processo, now_utc)
+    elif owner_norm == SLA_OWNER_ANALISTA:
+        fim = _as_utc(getattr(processo, "sla_credito_fim_at", None))
+        if fim is not None:
+            return fim if fim <= now_utc else now_utc
+        if _is_sla_credito_closed(processo):
+            closed_at = _as_utc(getattr(processo, "updated_at", None)) or now_utc
+            return closed_at if closed_at <= now_utc else now_utc
+        return _resolve_sla_clock_end(processo, now_utc)
+    return _resolve_sla_clock_end(processo, now_utc)
+
+
+def _elapsed_seconds_between(start_at: Optional[datetime], end_at: Optional[datetime]) -> int:
+    if start_at is None or end_at is None or end_at <= start_at:
+        return 0
+    return int((end_at - start_at).total_seconds())
+
+
+def _ensure_credito_sla_start(processo: "Processo", actor_role: Optional[str], now: Optional[datetime] = None) -> None:
+    if _normalize_role(actor_role) != ROLE_ANALISTA:
+        return
+    if _as_utc(getattr(processo, "sla_credito_inicio_at", None)) is not None:
+        return
+    processo.sla_credito_inicio_at = _as_utc(now) or _utcnow()
+
+
 def _seconds_from_value(value: Any) -> int:
     try:
         parsed = int(value or 0)
@@ -767,6 +882,15 @@ def _set_sla_seconds(processo: "Processo", owner: str, seconds: int) -> None:
 
 def _compute_sla_seconds(processo: "Processo", owner: str, now: Optional[datetime] = None) -> int:
     owner_norm = _normalize_sla_owner(owner)
+    if owner_norm == SLA_OWNER_CORRETOR:
+        start_at = _resolve_sla_comercial_start(processo)
+        end_at = _resolve_sla_fixed_end(processo, owner_norm, now)
+        return max(0, _elapsed_seconds_between(start_at, end_at))
+    if owner_norm == SLA_OWNER_ANALISTA:
+        start_at = _resolve_sla_credito_start(processo)
+        end_at = _resolve_sla_fixed_end(processo, owner_norm, now)
+        return max(0, _elapsed_seconds_between(start_at, end_at))
+
     total_seconds = _get_sla_seconds(processo, owner_norm)
     active_owner = _normalize_sla_owner(getattr(processo, "sla_owner", SLA_OWNER_NONE))
     if owner_norm != SLA_OWNER_NONE and owner_norm == active_owner:
@@ -974,6 +1098,21 @@ def _validate_status_transition(field: str, current_value: Optional[str], next_v
         raise HTTPException(status_code=422, detail="Status geral nao pode ir de NOVO direto para resultado final.")
 
 
+def _validate_estagio_comercial_transition(current_value: Optional[str], next_value: Optional[str]) -> None:
+    current = _process_estagio_comercial(current_value, fallback="")
+    nxt = _process_estagio_comercial(next_value, fallback="")
+    if not current or not nxt or current == nxt:
+        return
+    if current == "VENDA_FINALIZADA" and nxt != "VENDA_FINALIZADA":
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Apos VENDA_FINALIZADA o cliente nao pode voltar de estagio comercial. "
+                "Se houver desistencia, altere o status geral para DISTRATO."
+            ),
+        )
+
+
 def _stringify_audit_value(value: Any) -> Optional[str]:
     if value is None:
         return None
@@ -1074,6 +1213,7 @@ class Cliente(Base):
     corretor: Mapped[Optional[str]] = mapped_column(Text)
     obra: Mapped[Optional[str]] = mapped_column(Text)
     imobiliaria: Mapped[Optional[str]] = mapped_column(Text)
+    data_reserva_origem: Mapped[Optional[date]] = mapped_column(Date)
     data_cadastro_origem: Mapped[Optional[date]] = mapped_column(Date)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -1098,6 +1238,10 @@ class Processo(Base):
     pendente_fiador: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     pendente_sinal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     nao_contar_mes: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    sla_comercial_inicio_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    sla_credito_inicio_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    sla_comercial_fim_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    sla_credito_fim_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     sla_credito_dias: Mapped[Optional[int]] = mapped_column(Integer)
     sla_corretor_dias: Mapped[Optional[int]] = mapped_column(Integer)
     sla_cca_dias: Mapped[Optional[int]] = mapped_column(Integer)
@@ -1213,6 +1357,7 @@ class ClienteCreate(BaseModel):
     corretor: Optional[str] = None
     obra: Optional[str] = None
     imobiliaria: Optional[str] = None
+    data_reserva_origem: Optional[date] = None
     data_cadastro_origem: Optional[date] = None
 
 
@@ -1423,6 +1568,7 @@ class ProcessoIntakeCreate(BaseModel):
     corretor: Optional[str] = None
     obra: Optional[str] = None
     imobiliaria: Optional[str] = None
+    data_reserva_origem: Optional[date] = None
     data_cadastro_origem: Optional[date] = None
     estagio_comercial: Optional[str] = None
 
@@ -1459,6 +1605,7 @@ class ProcessoOverviewOut(BaseModel):
     sla_cca_seconds: Optional[int] = None
     sla_owner: Optional[str] = None
     sla_active_since: Optional[datetime] = None
+    data_reserva_origem: Optional[date] = None
     data_cadastro_origem: Optional[date] = None
     created_at: Optional[datetime] = None
 
@@ -1962,6 +2109,10 @@ def _ensure_runtime_schema(db: Session) -> None:
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS etapa_repasse VARCHAR(40)",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS cca_responsavel VARCHAR(120)",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS nao_contar_mes BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_comercial_inicio_at TIMESTAMPTZ",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_credito_inicio_at TIMESTAMPTZ",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_comercial_fim_at TIMESTAMPTZ",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_credito_fim_at TIMESTAMPTZ",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_cca_dias INTEGER",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_owner VARCHAR(20) DEFAULT 'NONE'",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_active_since TIMESTAMPTZ",
@@ -1993,6 +2144,7 @@ def _ensure_runtime_schema(db: Session) -> None:
     if clientes_table:
         db.execute(text("ALTER TABLE clientes DROP COLUMN IF EXISTS reserva"))
         db.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS imobiliaria TEXT"))
+        db.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS data_reserva_origem DATE"))
         db.execute(text("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS data_cadastro_origem DATE"))
         db.execute(
             text(
@@ -2182,6 +2334,118 @@ def _ensure_runtime_schema(db: Session) -> None:
                     THEN 'EM_REPASSE'
                 ELSE NULL
             END
+            """
+        )
+    )
+    if clientes_table:
+        db.execute(
+            text(
+                """
+                UPDATE processos p
+                SET sla_comercial_inicio_at = COALESCE(
+                    p.sla_comercial_inicio_at,
+                    (c.data_cadastro_origem::timestamp AT TIME ZONE 'UTC'),
+                    c.created_at,
+                    p.created_at
+                )
+                FROM clientes c
+                WHERE c.id = p.cliente_id
+                """
+            )
+        )
+    else:
+        db.execute(
+            text(
+                """
+                UPDATE processos
+                SET sla_comercial_inicio_at = COALESCE(sla_comercial_inicio_at, created_at)
+                """
+            )
+        )
+    db.execute(
+        text(
+            """
+            UPDATE processos p
+            SET sla_credito_inicio_at = ev.first_analise_at
+            FROM (
+                SELECT processo_id, MIN(created_at) AS first_analise_at
+                FROM processo_eventos
+                WHERE UPPER(COALESCE(actor_role, '')) = 'ANALISTA'
+                  AND UPPER(COALESCE(event_type, '')) NOT IN ('PROCESSO_CRIADO', 'PROCESSO_IMPORTADO_PLANILHA', 'SLA_OWNER_CHANGE')
+                GROUP BY processo_id
+            ) ev
+            WHERE p.id = ev.processo_id
+              AND p.sla_credito_inicio_at IS NULL
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            UPDATE processos p
+            SET sla_comercial_fim_at = ev.first_venda_finalizada_at
+            FROM (
+                SELECT processo_id, MIN(created_at) AS first_venda_finalizada_at
+                FROM processo_eventos
+                WHERE UPPER(COALESCE(field_name, '')) = 'ESTAGIO_COMERCIAL'
+                  AND UPPER(COALESCE(new_value, '')) = 'VENDA_FINALIZADA'
+                GROUP BY processo_id
+            ) ev
+            WHERE p.id = ev.processo_id
+              AND p.sla_comercial_fim_at IS NULL
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            UPDATE processos
+            SET sla_comercial_fim_at = COALESCE(sla_comercial_fim_at, updated_at)
+            WHERE UPPER(COALESCE(estagio_comercial, '')) = 'VENDA_FINALIZADA'
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            UPDATE processos
+            SET sla_comercial_fim_at = NULL
+            WHERE UPPER(COALESCE(estagio_comercial, '')) <> 'VENDA_FINALIZADA'
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            UPDATE processos p
+            SET sla_credito_fim_at = ev.first_assinatura_at
+            FROM (
+                SELECT processo_id, MIN(created_at) AS first_assinatura_at
+                FROM processo_eventos
+                WHERE UPPER(COALESCE(field_name, '')) = 'STATUS_CCA'
+                  AND UPPER(COALESCE(new_value, '')) IN ('ASSINATURA_CAIXA', 'FINALIZADO')
+                GROUP BY processo_id
+            ) ev
+            WHERE p.id = ev.processo_id
+              AND p.sla_credito_fim_at IS NULL
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            UPDATE processos
+            SET sla_credito_fim_at = COALESCE(sla_credito_fim_at, updated_at)
+            WHERE UPPER(COALESCE(status_cca, '')) IN ('ASSINATURA_CAIXA', 'FINALIZADO')
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            UPDATE processos
+            SET sla_credito_fim_at = NULL
+            WHERE UPPER(COALESCE(status_cca, '')) NOT IN ('ASSINATURA_CAIXA', 'FINALIZADO')
             """
         )
     )
@@ -3230,7 +3494,11 @@ def create_processo(
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente nao encontrado")
 
-    processo = Processo(cliente_id=payload.cliente_id)
+    processo = Processo(
+        cliente_id=payload.cliente_id,
+        sla_comercial_inicio_at=_utc_start_of_day(cliente.data_cadastro_origem) or _utcnow(),
+    )
+    _refresh_sla_fixed_markers(processo, _utcnow())
     _switch_sla_owner(processo, SLA_OWNER_ANALISTA, _utcnow())
     db.add(processo)
     db.commit()
@@ -3263,8 +3531,55 @@ def patch_processo(
     if not processo:
         raise HTTPException(status_code=404, detail="Processo nao encontrado")
 
-    for field, value in payload.model_dump(exclude_unset=True).items():
-        setattr(processo, field, value)
+    changes = payload.model_dump(exclude_unset=True)
+    estagio_changed = False
+    for field, value in changes.items():
+        if field == "status_credito":
+            status_credito = _process_credit_status(value)
+            _validate_status_transition(field, processo.status_credito, status_credito)
+            processo.status_credito = status_credito
+        elif field == "status_geral":
+            status_geral = _process_geral_status(value)
+            _validate_status_transition(field, processo.status_geral, status_geral)
+            processo.status_geral = status_geral
+        elif field == "status_cca":
+            status_cca = _process_caixa_status(value)
+            _validate_status_transition(field, processo.status_cca, status_cca)
+            processo.status_cca = status_cca
+        elif field == "status_agehab":
+            status_agehab = _process_agehab_status(value)
+            _validate_status_transition(field, processo.status_agehab, status_agehab)
+            processo.status_agehab = status_agehab
+        elif field == "status_sinal":
+            processo.status_sinal = _process_sinal_status(value)
+        elif field == "status_fiador":
+            processo.status_fiador = _process_fiador_status(value)
+        elif field == "estagio_comercial":
+            next_stage = _process_estagio_comercial(value, fallback="")
+            if not next_stage:
+                raise HTTPException(status_code=422, detail="Estagio comercial invalido.")
+            old_stage = _process_estagio_comercial(processo.estagio_comercial)
+            _validate_estagio_comercial_transition(old_stage, next_stage)
+            processo.estagio_comercial = next_stage
+            estagio_changed = old_stage != next_stage
+        elif field == "etapa_repasse":
+            next_step = _process_etapa_repasse(value, fallback=None)
+            if value is not None and str(value).strip() and not next_step:
+                raise HTTPException(status_code=422, detail="Etapa de repasse invalida.")
+            processo.etapa_repasse = next_step
+        elif field in {"sla_credito_dias", "sla_corretor_dias", "sla_cca_dias"}:
+            continue
+        else:
+            setattr(processo, field, value)
+
+    if estagio_changed:
+        _sync_estagio_repasse_rules(processo, _utcnow())
+    if changes:
+        _refresh_sla_fixed_markers(processo, _utcnow())
+        _apply_sla_rules(
+            processo,
+            has_enviado_docs=_process_has_enviado_docs(db, processo.id),
+        )
 
     db.commit()
     db.refresh(processo)
@@ -3391,6 +3706,7 @@ def app_list_processos(
                 sla_cca_seconds=sla_cca_seconds,
                 sla_owner=_normalize_sla_owner(processo.sla_owner),
                 sla_active_since=_as_utc(processo.sla_active_since),
+                data_reserva_origem=getattr(cliente, "data_reserva_origem", None),
                 data_cadastro_origem=getattr(cliente, "data_cadastro_origem", None),
                 created_at=processo.created_at,
             )
@@ -3521,7 +3837,11 @@ def app_gestor_dashboard(
         updated_at_utc = _as_utc(getattr(processo, "updated_at", None)) or created_at_utc
         assinado_event_at_utc = _as_utc(assinado_event_at_por_processo.get(processo.id))
         perda_event_at_utc = _as_utc(perda_event_at_por_processo.get(processo.id))
-        data_referencia = cliente.data_cadastro_origem or (created_at_utc.date() if created_at_utc else None)
+        data_referencia = (
+            getattr(cliente, "data_reserva_origem", None)
+            or cliente.data_cadastro_origem
+            or (created_at_utc.date() if created_at_utc else None)
+        )
         dias_em_aberto = (now.date() - data_referencia).days if data_referencia else None
         nao_contar_mes = bool(getattr(processo, "nao_contar_mes", False))
         pendencias_docs = int(pendencias_docs_por_processo.get(processo.id, 0))
@@ -3889,9 +4209,10 @@ def app_create_intake(
 
     cliente = Cliente(
         nome=payload.nome.strip(),
-        corretor=_normalize_username(payload.corretor) if payload.corretor else None,
+        corretor=_normalize_corretor_nome_curto(payload.corretor) if payload.corretor else None,
         obra=obra_nome,
         imobiliaria=(payload.imobiliaria or "").strip() or None,
+        data_reserva_origem=payload.data_reserva_origem,
         data_cadastro_origem=payload.data_cadastro_origem,
     )
     db.add(cliente)
@@ -3902,8 +4223,10 @@ def app_create_intake(
         cliente_id=cliente.id,
         estagio_comercial=estagio,
         etapa_repasse="EM_REPASSE" if estagio in ESTAGIOS_REPASSE_COMERCIAL else None,
+        sla_comercial_inicio_at=_utc_start_of_day(payload.data_cadastro_origem) or _utcnow(),
     )
     _sync_estagio_repasse_rules(processo, _utcnow())
+    _refresh_sla_fixed_markers(processo, _utcnow())
     _switch_sla_owner(processo, SLA_OWNER_ANALISTA, _utcnow())
     db.add(processo)
     db.commit()
@@ -3977,6 +4300,8 @@ async def app_importar_processos_planilha(
         nome = " ".join(str(row.get("nome_cliente") or "").strip().split())
         stage_raw = row.get("estagio")
         estagio = _process_estagio_comercial(stage_raw, fallback="")
+        reserva_raw = row.get("reserva")
+        data_reserva_origem = _parse_import_date(reserva_raw)
         cadastro_raw = row.get("data_cadastro")
         data_cadastro_origem = _parse_import_date(cadastro_raw)
 
@@ -4000,6 +4325,30 @@ async def app_importar_processos_planilha(
                     nome_cliente=nome,
                     status="invalido",
                     motivo=f"estagio invalido: {stage_raw}",
+                )
+            )
+            continue
+
+        if not str(reserva_raw or "").strip():
+            invalidados += 1
+            resultados.append(
+                ImportPlanilhaRowOut(
+                    linha=row_number,
+                    nome_cliente=nome,
+                    status="invalido",
+                    motivo="reserva obrigatoria",
+                )
+            )
+            continue
+
+        if data_reserva_origem is None:
+            invalidados += 1
+            resultados.append(
+                ImportPlanilhaRowOut(
+                    linha=row_number,
+                    nome_cliente=nome,
+                    status="invalido",
+                    motivo="reserva invalida",
                 )
             )
             continue
@@ -4082,9 +4431,10 @@ async def app_importar_processos_planilha(
 
         cliente = Cliente(
             nome=nome,
-            corretor=_normalize_username(str(row.get("corretor") or "")) or None,
+            corretor=_normalize_corretor_nome_curto(row.get("corretor")) or None,
             obra=empreendimento,
             imobiliaria=" ".join(str(row.get("imobiliaria") or "").strip().split()) or None,
+            data_reserva_origem=data_reserva_origem,
             data_cadastro_origem=data_cadastro_origem,
         )
         db.add(cliente)
@@ -4094,8 +4444,10 @@ async def app_importar_processos_planilha(
             cliente_id=cliente.id,
             estagio_comercial=estagio,
             etapa_repasse="EM_REPASSE" if estagio in ESTAGIOS_REPASSE_COMERCIAL else None,
+            sla_comercial_inicio_at=_utc_start_of_day(data_cadastro_origem) or _utcnow(),
         )
         _sync_estagio_repasse_rules(processo, _utcnow())
+        _refresh_sla_fixed_markers(processo, _utcnow())
         _switch_sla_owner(processo, SLA_OWNER_ANALISTA, _utcnow())
         db.add(processo)
         db.flush()
@@ -4497,6 +4849,7 @@ def app_patch_processo(
             if not next_stage:
                 raise HTTPException(status_code=422, detail="Estagio comercial invalido.")
             old_value = _process_estagio_comercial(processo.estagio_comercial)
+            _validate_estagio_comercial_transition(old_value, next_stage)
             processo.estagio_comercial = next_stage
             estagio_changed = old_value != next_stage
             if old_value != next_stage:
@@ -4628,6 +4981,10 @@ def app_patch_processo(
         if _status_token(processo.status_geral) not in {"CANCELADO", "DISTRATO"}:
             processo.status_geral = "APROVADO"
         processo.status_credito = "APROVADO"
+
+    if changes:
+        _ensure_credito_sla_start(processo, actor_role, _utcnow())
+        _refresh_sla_fixed_markers(processo, _utcnow())
 
     _apply_sla_rules(
         processo,
@@ -4923,6 +5280,10 @@ def app_bulk_upsert_documentos(
             new_value=processo.status_geral,
             details="ajuste_automatico_documentos",
         )
+
+    if dedup_map:
+        _ensure_credito_sla_start(processo, role, _utcnow())
+        _refresh_sla_fixed_markers(processo, _utcnow())
 
     _apply_sla_rules(processo, trigger=sla_trigger, has_enviado_docs=has_enviado_docs)
     new_sla_owner = _normalize_sla_owner(processo.sla_owner)
