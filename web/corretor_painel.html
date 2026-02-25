@@ -38,6 +38,52 @@
       radial-gradient(900px 650px at 20% 0%, rgba(31,41,55,.65) 0%, rgba(2,6,23,1) 60%),
       linear-gradient(180deg, var(--bg), var(--bg2));
   }
+  body.theme-corporate{
+    --bg:#eef3fa;
+    --bg2:#e8eef8;
+    --text:#0f172a;
+    --muted:#475569;
+    --accent:#0284c7;
+    --danger:#dc2626;
+    --warn:#d97706;
+    --led-ok:#16a34a;
+    --led-warn:#d97706;
+    --led-bad:#dc2626;
+    --led-neutral:#64748b;
+    --border:rgba(15,23,42,.16);
+    background: linear-gradient(180deg, var(--bg), var(--bg2));
+  }
+  body.theme-corporate #bhCanvas{display:none !important}
+  body.theme-corporate .card,
+  body.theme-corporate .filters,
+  body.theme-corporate .insights,
+  body.theme-corporate .scroll{
+    backdrop-filter:none;
+  }
+  body.theme-corporate .btn,
+  body.theme-corporate .chip,
+  body.theme-corporate .count{
+    background:#fff;
+    color:#0f172a;
+    border-color:rgba(15,23,42,.2);
+    box-shadow:none;
+  }
+  body.theme-corporate .btn.primary{
+    background:#e0f2fe;
+    color:#075985;
+    border-color:rgba(14,165,233,.4);
+  }
+  body.theme-corporate .btn.danger{
+    background:#fee2e2;
+    color:#991b1b;
+    border-color:rgba(239,68,68,.45);
+  }
+  body.theme-corporate input,
+  body.theme-corporate select{
+    background:#fff;
+    color:#0f172a;
+    border-color:rgba(15,23,42,.2);
+  }
 
   #bhCanvas{
     position: fixed;
@@ -390,8 +436,33 @@
   td.statusTd{overflow:hidden}
 </style>
 </head>
-<body>
+<body class="theme-corporate">
   <canvas id="bhCanvas" aria-hidden="true"></canvas>
+  <script>
+    window.__layoutPrefPromise = (async () => {
+      const fallback = { blackhole_enabled: false };
+      try {
+        const res = await fetch("/app/api/layout-preference", {
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          document.body.classList.add("theme-corporate");
+          document.body.classList.remove("theme-blackhole");
+          return fallback;
+        }
+        const data = await res.json().catch(() => ({}));
+        const enabled = Boolean(data && data.blackhole_enabled);
+        document.body.classList.toggle("theme-blackhole", enabled);
+        document.body.classList.toggle("theme-corporate", !enabled);
+        return { blackhole_enabled: enabled };
+      } catch (_) {
+        document.body.classList.add("theme-corporate");
+        document.body.classList.remove("theme-blackhole");
+        return fallback;
+      }
+    })();
+  </script>
   <div class="wrap">
     <div class="topbar">
       <div class="title">
@@ -496,9 +567,14 @@
   </div>
 
   <script>
-    (function initBlackHoleBg(){
+    (async function initBlackHoleBg(){
       const canvas = document.getElementById("bhCanvas");
       if (!canvas) return;
+      const pref = await (window.__layoutPrefPromise || Promise.resolve({ blackhole_enabled: false }));
+      if (!pref.blackhole_enabled) {
+        canvas.style.display = "none";
+        return;
+      }
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
       let rafId = 0;

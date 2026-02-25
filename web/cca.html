@@ -32,6 +32,42 @@
       color: var(--text);
       padding: 18px 12px 40px;
     }
+    body.theme-corporate {
+      --bg: #eef3fa;
+      --bg-soft: #ffffff;
+      --line: rgba(15, 23, 42, 0.15);
+      --text: #0f172a;
+      --muted: #475569;
+      --ok: #16a34a;
+      --warn: #d97706;
+      --bad: #dc2626;
+      --info: #0284c7;
+      --neutral: #64748b;
+      --shadow: 0 12px 24px rgba(15, 23, 42, 0.09);
+      background: linear-gradient(180deg, #f4f7fb, #e8eef8);
+    }
+    body.theme-corporate #bhCanvas { display: none !important; }
+    body.theme-corporate .card,
+    body.theme-corporate .summary-card,
+    body.theme-corporate table,
+    body.theme-corporate .table-wrap {
+      backdrop-filter: none;
+    }
+    body.theme-corporate .pill,
+    body.theme-corporate .btn {
+      background: #ffffff;
+      color: #0f172a;
+      border-color: rgba(15, 23, 42, 0.2);
+      box-shadow: none;
+      text-shadow: none;
+      animation: none;
+    }
+    body.theme-corporate input,
+    body.theme-corporate select {
+      background: #ffffff;
+      color: #0f172a;
+      border-color: rgba(15, 23, 42, 0.2);
+    }
     body.compact-mode { --font-scale: .94; }
     body.compact-tight { --font-scale: .88; }
 
@@ -553,8 +589,33 @@
     }
   </style>
 </head>
-<body>
+<body class="theme-corporate">
   <canvas id="bhCanvas" aria-hidden="true"></canvas>
+  <script>
+    window.__layoutPrefPromise = (async () => {
+      const fallback = { blackhole_enabled: false };
+      try {
+        const res = await fetch("/app/api/layout-preference", {
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          document.body.classList.add("theme-corporate");
+          document.body.classList.remove("theme-blackhole");
+          return fallback;
+        }
+        const data = await res.json().catch(() => ({}));
+        const enabled = Boolean(data && data.blackhole_enabled);
+        document.body.classList.toggle("theme-blackhole", enabled);
+        document.body.classList.toggle("theme-corporate", !enabled);
+        return { blackhole_enabled: enabled };
+      } catch (_) {
+        document.body.classList.add("theme-corporate");
+        document.body.classList.remove("theme-blackhole");
+        return fallback;
+      }
+    })();
+  </script>
   <main class="wrapper">
     <section class="card" aria-label="Painel do CCA">
       <header>
@@ -724,9 +785,14 @@
   </main>
 
   <script>
-    (function initBlackHoleBg(){
+    (async function initBlackHoleBg(){
       const canvas = document.getElementById("bhCanvas");
       if (!canvas) return;
+      const pref = await (window.__layoutPrefPromise || Promise.resolve({ blackhole_enabled: false }));
+      if (!pref.blackhole_enabled) {
+        canvas.style.display = "none";
+        return;
+      }
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
       let rafId = 0;

@@ -33,6 +33,50 @@
         linear-gradient(180deg, #020617, #01040f);
     }
 
+    body.theme-corporate {
+      --bg: #eef3fa;
+      --bg-soft: #f8fbff;
+      --text: #0f172a;
+      --muted: #475569;
+      --line: rgba(15, 23, 42, 0.14);
+      --accent: #0ea5e9;
+      --warn: #d97706;
+      --danger: #dc2626;
+      background: linear-gradient(180deg, #f4f7fb, #e9eff8);
+    }
+
+    body.theme-corporate #bhCanvas {
+      display: none !important;
+    }
+
+    body.theme-corporate .topbar,
+    body.theme-corporate .filters,
+    body.theme-corporate .board-shell,
+    body.theme-corporate .column,
+    body.theme-corporate .chip {
+      background: rgba(255, 255, 255, 0.94);
+      border-color: rgba(15, 23, 42, 0.14);
+      color: #0f172a;
+    }
+
+    body.theme-corporate .btn {
+      color: #0f172a;
+      background: #ffffff;
+      border-color: rgba(15, 23, 42, 0.18);
+    }
+
+    body.theme-corporate .btn.primary {
+      color: #075985;
+      background: #e0f2fe;
+      border-color: rgba(14, 165, 233, 0.45);
+    }
+
+    body.theme-corporate .field input {
+      color: #0f172a;
+      background: #ffffff;
+      border-color: rgba(15, 23, 42, 0.18);
+    }
+
     #bhCanvas {
       position: fixed;
       inset: 0;
@@ -363,8 +407,33 @@
     }
   </style>
 </head>
-<body>
+<body class="theme-corporate">
   <canvas id="bhCanvas" aria-hidden="true"></canvas>
+  <script>
+    window.__layoutPrefPromise = (async () => {
+      const fallback = { blackhole_enabled: false };
+      try {
+        const res = await fetch("/app/api/layout-preference", {
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          document.body.classList.add("theme-corporate");
+          document.body.classList.remove("theme-blackhole");
+          return fallback;
+        }
+        const data = await res.json().catch(() => ({}));
+        const enabled = Boolean(data && data.blackhole_enabled);
+        document.body.classList.toggle("theme-blackhole", enabled);
+        document.body.classList.toggle("theme-corporate", !enabled);
+        return { blackhole_enabled: enabled };
+      } catch (_) {
+        document.body.classList.add("theme-corporate");
+        document.body.classList.remove("theme-blackhole");
+        return fallback;
+      }
+    })();
+  </script>
 
   <div class="wrap">
     <section class="topbar">
@@ -409,9 +478,14 @@
   </div>
 
   <script>
-    (function initBlackHoleBg(){
+    (async function initBlackHoleBg(){
       const canvas = document.getElementById("bhCanvas");
       if (!canvas) return;
+      const pref = await (window.__layoutPrefPromise || Promise.resolve({ blackhole_enabled: false }));
+      if (!pref.blackhole_enabled) {
+        canvas.style.display = "none";
+        return;
+      }
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
       let rafId = 0;
@@ -550,7 +624,7 @@
         window.addEventListener("resize", onResize, { passive: true });
       }
 
-      boot();
+      await boot();
 
       window.addEventListener("beforeunload", () => {
         if (rafId) cancelAnimationFrame(rafId);

@@ -48,6 +48,25 @@
       color:var(--text);
     }
 
+    body.theme-corporate{
+      --bg:#eef3fa;
+      --bg-soft:#f8fbff;
+      --text:#0f172a;
+      --muted:#475569;
+      --border: rgba(15,23,42,.16);
+      --accent:#0ea5e9;
+      --accent-2:#0284c7;
+      --warn:#d97706;
+      --bad:#dc2626;
+      --ok:#16a34a;
+      --led-neutral:#64748b;
+      --card: linear-gradient(180deg, rgba(255,255,255,.94), rgba(255,255,255,.92));
+      --glass: rgba(255,255,255,.95);
+      background: linear-gradient(180deg, #f4f7fb, #e9eff8);
+    }
+
+    body.theme-corporate #bhCanvas{display:none !important}
+
     #bhCanvas{
       position: fixed;
       inset: 0;
@@ -723,8 +742,33 @@
   </style>
 </head>
 
-<body>
+<body class="theme-corporate">
 <canvas id="bhCanvas" aria-hidden="true"></canvas>
+<script>
+  window.__layoutPrefPromise = (async () => {
+    const fallback = { blackhole_enabled: false };
+    try {
+      const res = await fetch("/app/api/layout-preference", {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        document.body.classList.add("theme-corporate");
+        document.body.classList.remove("theme-blackhole");
+        return fallback;
+      }
+      const data = await res.json().catch(() => ({}));
+      const enabled = Boolean(data && data.blackhole_enabled);
+      document.body.classList.toggle("theme-blackhole", enabled);
+      document.body.classList.toggle("theme-corporate", !enabled);
+      return { blackhole_enabled: enabled };
+    } catch (_) {
+      document.body.classList.add("theme-corporate");
+      document.body.classList.remove("theme-blackhole");
+      return fallback;
+    }
+  })();
+</script>
 <div class="wrap">
 
   <!-- ===== Top ===== -->
@@ -1373,9 +1417,14 @@ DIVORCIADO: Certidão averbada.</td>
 </div>
 
 <script>
-  (function initBlackHoleBg(){
+  (async function initBlackHoleBg(){
     const canvas = document.getElementById("bhCanvas");
     if (!canvas) return;
+    const pref = await (window.__layoutPrefPromise || Promise.resolve({ blackhole_enabled: false }));
+    if (!pref.blackhole_enabled) {
+      canvas.style.display = "none";
+      return;
+    }
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let rafId = 0;
@@ -1549,7 +1598,7 @@ DIVORCIADO: Certidão averbada.</td>
       window.addEventListener("resize", onResize, { passive: true });
     }
 
-    boot();
+    await boot();
 
     window.addEventListener("beforeunload", () => {
       if (rafId) cancelAnimationFrame(rafId);

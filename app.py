@@ -46,6 +46,7 @@ except ValueError:
     GESTOR_META_SEMANAL = 0
 META_MENSAL_RUNTIME_KEY = "gestor_meta_mensal"
 META_SEMANAL_RUNTIME_KEY = "gestor_meta_semanal"
+LAYOUT_BLACKHOLE_RUNTIME_KEY = "layout_blackhole_enabled"
 USERS_SEED_MODE_RUNTIME_KEY = "users_seed_mode"
 USERS_SEED_MODE_FULL = "full"
 USERS_SEED_MODE_ADMIN_ONLY = "admin_only"
@@ -1538,6 +1539,15 @@ class AdminDeleteRegistroPayload(BaseModel):
     motivo: Optional[str] = None
 
 
+class LayoutPreferencePayload(BaseModel):
+    blackhole_enabled: bool = False
+
+
+class LayoutPreferenceOut(BaseModel):
+    blackhole_enabled: bool
+    fonte: str
+
+
 class AppUserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
@@ -1968,6 +1978,21 @@ def _runtime_meta_non_negative_int(raw_value: Optional[str]) -> Optional[int]:
         return max(0, int(str(raw_value).strip() or "0"))
     except ValueError:
         return None
+
+
+def _runtime_meta_bool(raw_value: Optional[str], default: bool = False) -> bool:
+    if raw_value is None:
+        return default
+    token = str(raw_value).strip().lower()
+    if token in {"1", "true", "yes", "on", "blackhole"}:
+        return True
+    if token in {"0", "false", "no", "off", "corporativo", "corporate"}:
+        return False
+    return default
+
+
+def _is_blackhole_layout_enabled(db: Session) -> bool:
+    return _runtime_meta_bool(_get_runtime_meta(db, LAYOUT_BLACKHOLE_RUNTIME_KEY), default=False)
 
 
 def _current_meta_period() -> tuple[int, int]:
@@ -3219,6 +3244,50 @@ def admin_list_system_logs(
     return query.order_by(SistemaLog.created_at.desc()).limit(limit).all()
 
 
+@app.get("/app/api/layout-preference", response_model=LayoutPreferenceOut)
+def app_get_layout_preference(
+    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    return LayoutPreferenceOut(
+        blackhole_enabled=_is_blackhole_layout_enabled(db),
+        fonte="runtime",
+    )
+
+
+@app.get("/app/api/admin/layout-preference", response_model=LayoutPreferenceOut)
+def admin_get_layout_preference(
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    return LayoutPreferenceOut(
+        blackhole_enabled=_is_blackhole_layout_enabled(db),
+        fonte="runtime",
+    )
+
+
+@app.put("/app/api/admin/layout-preference", response_model=LayoutPreferenceOut)
+def admin_set_layout_preference(
+    payload: LayoutPreferencePayload,
+    session: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    enabled = bool(payload.blackhole_enabled)
+    _set_runtime_meta(db, LAYOUT_BLACKHOLE_RUNTIME_KEY, "1" if enabled else "0")
+    _record_system_log(
+        db,
+        actor_username=_normalize_username(str(session.get("username", ""))),
+        actor_role=_normalize_role(str(session.get("role", ""))),
+        tela="admin",
+        acao="LAYOUT_PREFERENCIA_ATUALIZADA",
+        entidade_tipo="configuracao",
+        entidade_id=LAYOUT_BLACKHOLE_RUNTIME_KEY,
+        details=f"blackhole_enabled={enabled}",
+    )
+    db.commit()
+    return LayoutPreferenceOut(blackhole_enabled=enabled, fonte="runtime")
+
+
 def _normalize_maintenance_entity(value: Optional[str]) -> str:
     raw = (value or "").strip().lower().replace("-", "_").replace(" ", "_")
     aliases = {
@@ -3407,6 +3476,7 @@ def admin_reset_sistema(
     )
 
     _set_runtime_meta(db, META_MENSAL_RUNTIME_KEY, "0")
+    _set_runtime_meta(db, LAYOUT_BLACKHOLE_RUNTIME_KEY, "0")
     _set_runtime_meta(db, USERS_SEED_MODE_RUNTIME_KEY, USERS_SEED_MODE_ADMIN_ONLY)
 
     db.commit()
