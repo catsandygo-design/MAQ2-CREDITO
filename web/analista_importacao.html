@@ -218,14 +218,14 @@
 
     <section class="card" aria-label="Importacao de planilha">
       <div class="row">
-        <input id="fileImport" type="file" accept=".csv,.xlsx" />
+        <input id="fileImport" type="file" accept=".csv,.cvs,.xlsx" />
         <button class="btn primary" id="btnImportar" type="button">Importar Planilha</button>
         <div class="meter" title="Progresso da importacao">
           <div class="fill" id="importFill"></div>
         </div>
       </div>
-      <div class="hint">Colunas obrigatorias (ordem recomendada): reserva, data_cad, empreendimento, cliente, status, corretor, imobiliaria.</div>
-      <div class="hint">Aliases aceitos: data_cadastro, nome_cliente e estagio.</div>
+      <div class="hint">Colunas obrigatorias (ordem recomendada): Reserva, Data, Situação, Empreendimento, Cliente, Corretor, Imobiliária.</div>
+      <div class="hint">Tambem aceitos: data_cadastro, estagio, nome_cliente e situacao (com ou sem acento).</div>
       <div class="msg" id="importMsg">Aguardando arquivo...</div>
 
       <div class="result-wrap">
@@ -557,7 +557,7 @@
       const file = fileEl?.files?.[0];
 
       if (!file) {
-        msgEl.textContent = "Selecione um arquivo .csv ou .xlsx para importar.";
+        msgEl.textContent = "Selecione um arquivo .csv, .cvs ou .xlsx para importar.";
         msgEl.className = "msg err";
         return;
       }

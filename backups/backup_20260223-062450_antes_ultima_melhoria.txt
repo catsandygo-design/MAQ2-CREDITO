@@ -1,0 +1,4 @@
+﻿backup: backups/sistema_credito_backup_20260223-062450_antes_ultima_melhoria.zip
+date_utc: 2026-02-23T06:24:50.3645083-03:00
+head: c890b8ea3c3a6867bee9e4d6f29c1258905be1cf
+description: snapshot antes da ultima melhoria (solicitado pelo usuario).

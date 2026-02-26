@@ -101,10 +101,24 @@ def _normalize_corretor_nome_curto(value: Optional[str]) -> str:
     cleaned = " ".join(str(value or "").strip().split())
     if not cleaned:
         return ""
-    partes = cleaned.split(" ")
-    if len(partes) > 2:
-        cleaned = " ".join(partes[:2])
-    return cleaned.lower()
+
+    # Remove observacoes comuns no fim (ex.: " - CLT", " | Equipe", " / Time").
+    for separator in (" - ", " | ", " / "):
+        if separator in cleaned:
+            cleaned = cleaned.split(separator, 1)[0].strip()
+
+    # Remove sufixo entre parenteses quando vier no final.
+    if cleaned.endswith(")") and "(" in cleaned:
+        cleaned = cleaned[: cleaned.rfind("(")].strip()
+
+    partes = [parte for parte in cleaned.split(" ") if parte]
+    if not partes:
+        return ""
+    if len(partes) == 1:
+        return partes[0].lower()
+    if len(partes) == 2:
+        return f"{partes[0]} {partes[1]}".lower()
+    return f"{partes[0]} {partes[-1]}".lower()
 
 
 def _build_app_users() -> dict[str, dict[str, str]]:
@@ -604,12 +618,15 @@ IMPORT_COLUMN_ALIASES = {
     "data_cadastro": "data_cadastro",
     "data_de_cadastro": "data_cadastro",
     "status": "estagio",
+    "situacao": "estagio",
     "estagio": "estagio",
     "empreendimento": "empreendimento",
     "obra": "empreendimento",
     "corretor": "corretor",
     "imobiliaria": "imobiliaria",
 }
+CSV_IMPORT_ENCODINGS = ("utf-8-sig", "utf-8", "cp1252", "latin-1")
+CSV_IMPORT_DELIMITERS = (",", ";", "\t", "|")
 
 SLA_OWNER_NONE = "NONE"
 SLA_OWNER_CORRETOR = "CORRETOR"
@@ -1901,10 +1918,44 @@ def _canonicalize_import_rows(raw_rows: list[dict[str, Any]]) -> list[dict[str, 
     return rows
 
 
+def _decode_csv_import_content(content: bytes) -> str:
+    for encoding in CSV_IMPORT_ENCODINGS:
+        try:
+            return content.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return content.decode("utf-8", errors="replace")
+
+
+def _detect_csv_delimiter(text_value: str) -> str:
+    lines = [line for line in text_value.splitlines() if line.strip()]
+    if not lines:
+        return ","
+    sample = "\n".join(lines[: min(10, len(lines))])
+    try:
+        dialect = csv.Sniffer().sniff(sample, delimiters="".join(CSV_IMPORT_DELIMITERS))
+        if dialect and dialect.delimiter in CSV_IMPORT_DELIMITERS:
+            return dialect.delimiter
+    except csv.Error:
+        pass
+    header = lines[0]
+    counts = {delimiter: header.count(delimiter) for delimiter in CSV_IMPORT_DELIMITERS}
+    selected = max(counts, key=counts.get)
+    return selected if counts[selected] > 0 else ","
+
+
 def _parse_csv_import(content: bytes) -> list[dict[str, Any]]:
-    text_value = content.decode("utf-8-sig", errors="replace")
-    reader = csv.DictReader(io.StringIO(text_value))
-    return [dict(row) for row in reader if row is not None]
+    text_value = _decode_csv_import_content(content)
+    delimiter = _detect_csv_delimiter(text_value)
+    reader = csv.DictReader(io.StringIO(text_value), delimiter=delimiter)
+    rows: list[dict[str, Any]] = []
+    for row in reader:
+        if row is None:
+            continue
+        if all(not str(value or "").strip() for value in row.values()):
+            continue
+        rows.append(dict(row))
+    return rows
 
 
 def _parse_xlsx_import(content: bytes) -> list[dict[str, Any]]:
@@ -1936,11 +1987,11 @@ def _parse_xlsx_import(content: bytes) -> list[dict[str, Any]]:
 
 def _load_import_rows(filename: Optional[str], content: bytes) -> list[dict[str, Any]]:
     name = (filename or "").lower().strip()
-    if name.endswith(".csv"):
+    if name.endswith(".csv") or name.endswith(".cvs"):
         return _canonicalize_import_rows(_parse_csv_import(content))
     if name.endswith(".xlsx"):
         return _canonicalize_import_rows(_parse_xlsx_import(content))
-    raise HTTPException(status_code=422, detail="Formato nao suportado. Envie arquivo .csv ou .xlsx.")
+    raise HTTPException(status_code=422, detail="Formato nao suportado. Envie arquivo .csv/.cvs ou .xlsx.")
 
 
 def _set_runtime_meta(db: Session, key: str, value: str) -> None:
@@ -4467,37 +4518,14 @@ async def app_importar_processos_planilha(
                     linha=row_number,
                     nome_cliente=nome,
                     status="ignorado_existente",
-                    motivo="cliente ja existe na base",
+                    motivo="cliente ja existe na base; importacao ignorada (sem substituicao)",
                 )
             )
             continue
 
         empreendimento_raw = _normalize_empreendimento_nome(row.get("empreendimento"))
-        if not empreendimento_raw:
-            invalidados += 1
-            resultados.append(
-                ImportPlanilhaRowOut(
-                    linha=row_number,
-                    nome_cliente=nome,
-                    status="invalido",
-                    motivo="empreendimento obrigatorio",
-                )
-            )
-            continue
-
-        empreendimento_resolvido = _resolve_empreendimento_nome(db, empreendimento_raw)
-        if not empreendimento_resolvido:
-            invalidados += 1
-            resultados.append(
-                ImportPlanilhaRowOut(
-                    linha=row_number,
-                    nome_cliente=nome,
-                    status="invalido",
-                    motivo=f"empreendimento nao oficial: {empreendimento_raw}",
-                )
-            )
-            continue
-        empreendimento = empreendimento_resolvido
+        empreendimento_resolvido = _resolve_empreendimento_nome(db, empreendimento_raw) if empreendimento_raw else None
+        empreendimento = empreendimento_resolvido or empreendimento_raw or None
 
         cliente = Cliente(
             nome=nome,
