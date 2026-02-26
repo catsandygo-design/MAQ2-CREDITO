@@ -227,22 +227,14 @@
   }
 
   .insights{
-    display:flex;
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
     gap:10px;
-    overflow-x:auto;
-    overflow-y:hidden;
-    padding-bottom:2px;
-    scrollbar-width: thin;
-  }
-  .insights::-webkit-scrollbar{height:8px}
-  .insights::-webkit-scrollbar-track{background: rgba(2,6,23,.35)}
-  .insights::-webkit-scrollbar-thumb{
-    background: rgba(148,163,184,.25);
-    border-radius: 999px;
+    align-items:stretch;
   }
 
   .kpi{
-    flex: 0 0 205px;
+    min-width:0;
     border:1px solid rgba(148,163,184,.14);
     background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.02));
     border-radius: var(--radius);
@@ -251,7 +243,10 @@
     position: relative;
     overflow:hidden;
   }
-  .kpi.spark{flex-basis:245px}
+  .kpi.spark{grid-column: span 2}
+  @media (max-width: 980px){
+    .kpi.spark{grid-column: span 1}
+  }
   .kpi .k{font-size:11px;color:var(--muted)}
   .kpi .v{margin-top:4px;font-size:15px;font-weight:900;letter-spacing:.2px}
   .kpi .s{margin-top:2px;font-size:10px;color:var(--muted)}
@@ -287,7 +282,7 @@
     min-height:0;
   }
 
-  table{width:100%;min-width:1420px;border-collapse:collapse;table-layout:fixed}
+  table{width:100%;min-width:1120px;border-collapse:collapse;table-layout:fixed}
 
   thead th{
     text-align:left;
@@ -328,15 +323,16 @@
   .cliente{
     font-weight:900;
     font-size: 12px;
-    display:inline-flex;
-    align-items:center;
-    gap:10px;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:4px;
     min-width: 0;
     max-width: 100%;
   }
   .cliente a{
     display:inline-block;
-    max-width: 240px;
+    max-width: 100%;
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap;
@@ -347,13 +343,26 @@
   }
   .cliente a:hover{
     border-bottom-color: rgba(34,197,94,.55);
-    color: #fff;
+    color: var(--accent);
+  }
+  .rowBadges{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    flex-wrap:wrap;
   }
 
   .empreendimento{
     font-size:10px;
     color: var(--muted);
     margin-top:3px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .corretorLinha{
+    font-size:10px;
+    color: var(--muted);
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap;
@@ -500,6 +509,25 @@
     width:6px;height:6px;border-radius:999px;background: rgba(239,68,68,.95);
     box-shadow: 0 0 0 0 rgba(239,68,68,.25);
     animation: prioPulse 1.1s infinite;
+  }
+  .aviso-agehab{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding: 3px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    border: 1px solid rgba(14,165,233,.45);
+    color: #bae6fd;
+    background: rgba(14,165,233,.12);
+    letter-spacing:.15px;
+    white-space:nowrap;
+  }
+  body.theme-corporate .aviso-agehab{
+    border-color: rgba(2,132,199,.35);
+    color:#0c4a6e;
+    background:#e0f2fe;
   }
   @keyframes prioPulse{
     0%{box-shadow:0 0 0 0 rgba(239,68,68,.25)}
@@ -687,22 +715,18 @@
       <div class="scroll">
         <table>
           <colgroup>
-            <col style="width:16%">
-            <col style="width:10%">
-            <col style="width:6%">
-            <col style="width:10%">
-            <col style="width:10%">
-            <col style="width:10%">
-            <col style="width:10%">
+            <col style="width:30%">
             <col style="width:8%">
-            <col style="width:8%">
-            <col style="width:6%">
-            <col style="width:6%">
+            <col style="width:12%">
+            <col style="width:12%">
+            <col style="width:12%">
+            <col style="width:12%">
+            <col style="width:7%">
+            <col style="width:7%">
           </colgroup>
           <thead>
             <tr>
               <th>Cliente</th>
-              <th>Corretor</th>
               <th>CCA</th>
               <th>Comercial</th>
               <th>Repasse</th>
@@ -710,8 +734,6 @@
               <th>Status Agehab</th>
               <th>Sinal</th>
               <th>Fiador</th>
-              <th>SLA Comercial</th>
-              <th>SLA Credito</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -925,8 +947,11 @@
   const MAX_PAGES = 20;
 
   const UPDATE_PAGE_URL = (row) => `/app/analise?processo_id=${encodeURIComponent(row.processo_id)}`;
-  const TABLE_COLSPAN = 11;
+  const TABLE_COLSPAN = 8;
   const COMERCIAL_STAGES = new Set(["reserva", "em_processo", "credito", "secretaria_vendas"]);
+  const INSIGHT_COMERCIAL_STAGES = new Set(["em_processo", "venda_finalizada"]);
+  const INSIGHT_CREDITO_STAGES = new Set(["credito", "secretaria_vendas"]);
+  const INSIGHT_REPASSE_STAGES = new Set(["assinatura_diretoria", "autorizacao_diretoria", "envio_sienge", "venda_finalizada"]);
 
   const LABELS = {
     geral: {
@@ -946,6 +971,7 @@
       sem_repasse: "Sem Repasse",
     },
     statusCaixa: {
+      nao_iniciado: "Nao iniciado",
       analise_credito: "Analise Credito",
       pendente_credito: "Pendente Credito",
       analise_cca: "Analise CCA",
@@ -957,6 +983,7 @@
       assinatura_caixa: "Finalizado",
     },
     statusAgehab: {
+      nao_iniciado: "Nao iniciado",
       analise_credito: "Analise Credito",
       pendente_credito: "Pendente Credito",
       envio_agehab: "Envio Agehab",
@@ -1030,7 +1057,7 @@
     if (!v || v === "-") return "neutral";
     if (["assinatura_autorizada", "aprovado", "conforme", "validado_agehab", "pago", "finalizado", "assinatura_caixa"].includes(v)) return "ok";
     if (["pendenciado", "reprovado", "cancelado", "distrato", "pendente_credito", "pendente_cca", "pendente_agehab", "pendente"].includes(v)) return "bad";
-    if (["novo", "nao_tem", "reserva", "sem_repasse", "comercial", "repasse", "venda_finalizada"].includes(v)) return "neutral";
+    if (["novo", "nao_tem", "reserva", "sem_repasse", "comercial", "repasse", "venda_finalizada", "nao_iniciado"].includes(v)) return "neutral";
     return "warn";
   }
 
@@ -1072,6 +1099,9 @@
   }
 
   function fromBackend(item){
+    const semDocumento = Boolean(item?.sem_documento_enviado);
+    const statusCaixa = semDocumento ? "nao_iniciado" : statusFromBackend(item.status_cca || "analise_credito");
+    const statusAgehab = semDocumento ? "nao_iniciado" : statusFromBackend(item.status_agehab || "analise_credito");
     return {
       processo_id: item.processo_id,
       cliente: item.cliente_nome || "-",
@@ -1081,8 +1111,8 @@
       credito: statusFromBackend(item.status_credito),
       geral: statusFromBackend(item.estagio_comercial || item.status_geral),
       repasse: statusFromBackend(item.etapa_repasse || "sem_repasse"),
-      statusCaixa: statusFromBackend(item.status_cca || "analise_credito"),
-      statusAgehab: statusFromBackend(item.status_agehab || "analise_credito"),
+      statusCaixa,
+      statusAgehab,
       sinal: statusFromBackend(item.status_sinal || "nao_tem"),
       fiador: statusFromBackend(item.status_fiador || "nao_tem"),
       slaCor: readSlaHours(item, "sla_corretor_horas", "sla_corretor_dias"),
@@ -1090,6 +1120,8 @@
       slaCca: readSlaHours(item, "sla_cca_horas", "sla_cca_dias"),
       dataCadastroOrigem: item.data_reserva_origem || item.data_cadastro_origem || null,
       createdAt: item.created_at || null,
+      semDocumento,
+      avisoContratoAgehab: Boolean(item?.aviso_gerar_contrato_agehab),
     };
   }
 
@@ -1209,8 +1241,8 @@
   function trackHistory(rows){
     const count = (pred)=> rows.reduce((acc,r)=> acc + (pred(r)?1:0), 0);
     const total = rows.length;
-    const comercial = count(r => filaByEstagio(r.geral) === "comercial");
-    const repasse = count(r => filaByEstagio(r.geral) === "repasse");
+    const comercial = count(r => INSIGHT_COMERCIAL_STAGES.has(statusFromBackend(r.geral)));
+    const repasse = count(r => INSIGHT_REPASSE_STAGES.has(statusFromBackend(r.geral)));
     history.push({ t: Date.now(), total, comercial, repasse });
     if(history.length > HISTORY_MAX) history.shift();
   }
@@ -1219,11 +1251,12 @@
     const total = rows.length || 0;
     const count = (pred)=> rows.reduce((acc,r)=> acc + (pred(r)?1:0), 0);
 
-    const comercial = count(r => filaByEstagio(r.geral) === "comercial");
-    const repasse = count(r => filaByEstagio(r.geral) === "repasse");
-    const assinados = count(r => ["assinatura_caixa", "finalizado"].includes(r.statusCaixa));
-    const finalizados = assinados;
+    const comercial = count(r => INSIGHT_COMERCIAL_STAGES.has(statusFromBackend(r.geral)));
+    const credito = count(r => INSIGHT_CREDITO_STAGES.has(statusFromBackend(r.geral)));
+    const repasse = count(r => INSIGHT_REPASSE_STAGES.has(statusFromBackend(r.geral)));
+    const assinados = count(r => statusFromBackend(r.statusCaixa) === "assinatura_caixa");
     const prios = count(r=> isHighPriority(r));
+    const avisoAgehab = count(r => Boolean(r.avisoContratoAgehab));
 
     const avg = (arr)=> arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length) : 0;
     const avgSlaCor = Math.round(avg(rows.map(r=> Number(r.slaCor||0))));
@@ -1233,11 +1266,12 @@
 
     $("insights").innerHTML = `
       <div class="kpi"><div class="k">Total na fila</div><div class="v">${total}</div><div class="s">apos filtros</div></div>
-      <div class="kpi good"><div class="k">Comercial</div><div class="v">${comercial}</div><div class="s">fila comercial</div></div>
-      <div class="kpi warn"><div class="k">Repasse</div><div class="v">${repasse}</div><div class="s">fila repasse</div></div>
-      <div class="kpi"><div class="k">Venda finalizada</div><div class="v">${finalizados}</div><div class="s">credito (contrato assinado)</div></div>
-      <div class="kpi good"><div class="k">Assinado caixa</div><div class="v">${assinados}</div><div class="s">credito finalizado</div></div>
+      <div class="kpi good"><div class="k">Comercial</div><div class="v">${comercial}</div><div class="s">Em Processo + Venda Finalizada</div></div>
+      <div class="kpi"><div class="k">Credito</div><div class="v">${credito}</div><div class="s">Credito + Secretaria de Vendas</div></div>
+      <div class="kpi warn"><div class="k">Repasse</div><div class="v">${repasse}</div><div class="s">Assinatura Diretoria + Aprovacao Diretoria + Envio Sienge + Venda Finalizada</div></div>
+      <div class="kpi good"><div class="k">Assinados</div><div class="v">${assinados}</div><div class="s">Status Caixa = Assinatura Caixa</div></div>
       <div class="kpi bad"><div class="k">Prioridade alta</div><div class="v">${prios}</div><div class="s">comercial acima de 15 dias</div></div>
+      <div class="kpi warn"><div class="k">Aviso Agehab</div><div class="v">${avisoAgehab}</div><div class="s">espelho validado: gerar contrato</div></div>
       <div class="kpi ${clsSla(avgSlaCor)}"><div class="k">SLA medio comercial</div><div class="v">${avgSlaCor}h</div><div class="s">media do filtro</div></div>
       <div class="kpi ${clsSla(avgSlaCred)} spark">
         <div class="k">SLA medio credito</div>
@@ -1311,7 +1345,10 @@
       const [sTxt,sCls] = statusText("sinal", r.sinal);
       const [fTxt,fCls] = statusText("fiador", r.fiador);
 
-      const prio = isHighPriority(r) ? prioBadge() : "";
+      const badges = [];
+      if (isHighPriority(r)) badges.push(prioBadge());
+      if (r.avisoContratoAgehab) badges.push('<span class="aviso-agehab">Espelho validado: gerar contrato Agehab</span>');
+      const badgesHtml = badges.length ? `<div class="rowBadges">${badges.join("")}</div>` : "";
       const url = UPDATE_PAGE_URL(r);
 
       return `
@@ -1319,11 +1356,11 @@
           <td>
             <div class="cliente">
               <a href="${url}" title="Abrir atualizacao">${esc(r.cliente)}</a>
-              ${prio}
             </div>
             <div class="empreendimento">${esc(r.emp)}</div>
+            <div class="corretorLinha">${esc(r.corretor)}</div>
+            ${badgesHtml}
           </td>
-          <td style="font-weight:800">${esc(r.corretor)}</td>
           <td>${esc(r.cca)}</td>
           <td class="statusTd">${pill(gTxt, gCls, moving, celebrating)}</td>
           <td class="statusTd">${pill(rTxt, rCls, moving, celebrating)}</td>
@@ -1331,8 +1368,6 @@
           <td class="statusTd">${pill(aTxt, aCls, moving, celebrating)}</td>
           <td class="statusTd">${pill(sTxt, sCls, moving, celebrating)}</td>
           <td class="statusTd">${pill(fTxt, fCls, moving, celebrating)}</td>
-          <td style="text-align:center">${slaBadge(r.slaCor)}</td>
-          <td style="text-align:center">${slaBadge(r.slaCred)}</td>
         </tr>
       `;
     }).join("");
@@ -1467,3 +1502,6 @@
 </script>
 </body>
 </html>
+
+
+

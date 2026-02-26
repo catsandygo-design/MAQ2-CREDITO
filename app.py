@@ -1635,6 +1635,10 @@ class ProcessoOverviewOut(BaseModel):
     data_reserva_origem: Optional[date] = None
     data_cadastro_origem: Optional[date] = None
     created_at: Optional[datetime] = None
+    docs_total: int = 0
+    docs_recebidos: int = 0
+    sem_documento_enviado: bool = True
+    aviso_gerar_contrato_agehab: bool = False
 
 
 class ImportPlanilhaRowOut(BaseModel):
@@ -3786,8 +3790,32 @@ def app_list_processos(
 
     rows = query.all()
     now = _utcnow()
+    docs_stats: dict[uuid.UUID, dict[str, int]] = {}
+    processo_ids = [processo.id for processo, _ in rows]
+    if processo_ids:
+        docs_rows = (
+            db.query(Documento.processo_id, Documento.status_doc)
+            .filter(Documento.processo_id.in_(processo_ids))
+            .all()
+        )
+        for processo_id, status_doc in docs_rows:
+            stats = docs_stats.setdefault(processo_id, {"docs_total": 0, "docs_recebidos": 0})
+            stats["docs_total"] += 1
+            if _doc_is_done(status_doc):
+                stats["docs_recebidos"] += 1
+
     output: list[ProcessoOverviewOut] = []
     for processo, cliente in rows:
+        stats = docs_stats.get(processo.id, {"docs_total": 0, "docs_recebidos": 0})
+        docs_total = int(stats.get("docs_total", 0))
+        docs_recebidos = int(stats.get("docs_recebidos", 0))
+        sem_documento_enviado = docs_recebidos <= 0
+        status_cca_norm = _process_caixa_status(processo.status_cca)
+        status_agehab_norm = _process_agehab_status(processo.status_agehab)
+        espelho_validado = status_cca_norm in {"CONFORME", "TRATANDO_PRODUTO", "AGENDADO", "ASSINATURA_CAIXA", "FINALIZADO"}
+        agehab_contrato_pendente = status_agehab_norm in {"ANALISE_CREDITO", "PENDENTE_CREDITO"}
+        aviso_gerar_contrato_agehab = espelho_validado and agehab_contrato_pendente
+
         sla_analista_seconds = _compute_sla_seconds(processo, SLA_OWNER_ANALISTA, now)
         sla_corretor_seconds = _compute_sla_seconds(processo, SLA_OWNER_CORRETOR, now)
         sla_cca_seconds = _compute_sla_seconds(processo, SLA_OWNER_CCA, now)
@@ -3830,6 +3858,10 @@ def app_list_processos(
                 data_reserva_origem=getattr(cliente, "data_reserva_origem", None),
                 data_cadastro_origem=getattr(cliente, "data_cadastro_origem", None),
                 created_at=processo.created_at,
+                docs_total=docs_total,
+                docs_recebidos=docs_recebidos,
+                sem_documento_enviado=sem_documento_enviado,
+                aviso_gerar_contrato_agehab=aviso_gerar_contrato_agehab,
             )
         )
 
