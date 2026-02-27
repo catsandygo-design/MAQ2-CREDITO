@@ -88,6 +88,14 @@
       background: #f8fafc;
       border-color: rgba(15, 23, 42, 0.16);
     }
+    body.theme-corporate .card.finalizado {
+      background: #ecfdf5;
+      border-color: rgba(22, 163, 74, .45);
+    }
+    body.theme-corporate .card.out-count {
+      background: #fff1f2;
+      border-color: rgba(244, 63, 94, .45);
+    }
 
     #bhCanvas {
       position: fixed;
@@ -351,6 +359,14 @@
       cursor: grab;
       transition: transform .12s ease, border-color .12s ease, opacity .12s ease;
     }
+    .card.finalizado {
+      background: rgba(22, 163, 74, .16);
+      border-color: rgba(34, 197, 94, .5);
+    }
+    .card.out-count {
+      background: rgba(239, 68, 68, .12);
+      border-color: rgba(239, 68, 68, .45);
+    }
 
     .card:hover {
       border-color: rgba(56, 189, 248, .42);
@@ -382,6 +398,9 @@
       line-height: 1.2;
       min-width: 0;
       flex: 1 1 auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .name a {
@@ -392,10 +411,47 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      min-width: 0;
+      flex: 1 1 auto;
     }
 
     .name a:hover {
       border-bottom-color: rgba(34, 197, 94, .55);
+    }
+    .pauseIcon {
+      width: 12px;
+      height: 12px;
+      min-width: 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(251, 146, 60, .62);
+      background: rgba(251, 146, 60, .18);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, .10),
+        0 0 10px rgba(251, 146, 60, .34);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .pauseIcon::before,
+    .pauseIcon::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      width: 2px;
+      height: 7px;
+      border-radius: 2px;
+      background: rgba(255, 237, 213, .95);
+      animation: pausePulse .85s ease-in-out infinite;
+    }
+    .pauseIcon::before {
+      left: 3px;
+    }
+    .pauseIcon::after {
+      right: 3px;
+      animation-delay: .12s;
+    }
+    @keyframes pausePulse {
+      0%, 100% { opacity: .65; transform: scaleY(.88); }
+      50% { opacity: 1; transform: scaleY(1); }
     }
 
     .stage {
@@ -835,10 +891,17 @@
         obra: item.obra || "-",
         corretor: item.corretor || "-",
         stage: toStageKey(item.estagio_comercial || item.status_geral),
+        statusCaixa: norm(item.status_cca).replaceAll(" ", "_"),
+        foraContagemMes: Boolean(item?.nao_contar_mes),
         statusGeral: norm(item.status_geral).replaceAll(" ", "_"),
         dataCadastro: item.data_cadastro_origem || item.created_at || null,
         moving: false,
       };
+    }
+
+    function isFinalizadoRow(row) {
+      const statusCaixa = norm(row.statusCaixa).replaceAll(" ", "_");
+      return row.stage === "venda_finalizada" || statusCaixa === "assinatura_caixa" || statusCaixa === "finalizado";
     }
 
     function isVisibleInAnalista(item) {
@@ -861,14 +924,24 @@
 
     function cardTemplate(row) {
       const href = `/app/analise?processo_id=${encodeURIComponent(row.id)}`;
+      const cardClasses = [
+        "card",
+        row.moving ? "updating" : "",
+        row.foraContagemMes ? "out-count" : "",
+        !row.foraContagemMes && isFinalizadoRow(row) ? "finalizado" : "",
+      ].filter(Boolean).join(" ");
+      const pauseIcon = row.foraContagemMes
+        ? '<span class="pauseIcon" title="Fora da contagem do mes atual" aria-hidden="true"></span>'
+        : "";
       return `
-        <div class="card ${row.moving ? "updating" : ""}" draggable="${row.moving ? "false" : "true"}" data-id="${esc(row.id)}" data-stage="${esc(row.stage)}">
+        <div class="${cardClasses}" draggable="${row.moving ? "false" : "true"}" data-id="${esc(row.id)}" data-stage="${esc(row.stage)}">
           <div class="card-top">
-            <p class="name"><a href="${href}" title="Abrir analise">${esc(row.cliente)}</a></p>
+            <p class="name">${pauseIcon}<a href="${href}" title="Abrir analise">${esc(row.cliente)}</a></p>
             <span class="stage">${esc(stageLabel(row.stage))}</span>
           </div>
           <div class="meta-line"><span>Empreendimento</span><b>${esc(row.obra)}</b></div>
           <div class="meta-line"><span>Corretor</span><b>${esc(row.corretor)}</b></div>
+          ${row.foraContagemMes ? '<div class="meta-line"><span>Contagem</span><b>Fora do mes</b></div>' : ""}
           <div class="meta-line"><span>Cadastro</span><b>${esc(formatDate(row.dataCadastro))}</b></div>
         </div>
       `;
@@ -886,7 +959,9 @@
         body.innerHTML = list.map(cardTemplate).join("");
       });
 
-      $("totalCount").textContent = String(filtered.length);
+      const outCount = filtered.reduce((acc, row) => acc + (row.foraContagemMes ? 1 : 0), 0);
+      const counted = Math.max(0, filtered.length - outCount);
+      $("totalCount").textContent = outCount > 0 ? `${counted} + ${outCount} fora` : String(counted);
       bindDragEvents();
     }
 
