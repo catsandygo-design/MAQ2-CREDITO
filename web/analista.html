@@ -67,6 +67,135 @@
 
     body.theme-corporate #bhCanvas{display:none !important}
 
+    body.theme-corporate .topbar,
+    body.theme-corporate .panel{
+      background: rgba(255,255,255,.95);
+      border-color: rgba(15,23,42,.14);
+    }
+    body.theme-corporate .chip{
+      color:#334155;
+      background:#f8fbff;
+      border-color: rgba(15,23,42,.14);
+    }
+    body.theme-corporate .panel-header{
+      border-bottom-color: rgba(15,23,42,.12);
+    }
+    body.theme-corporate .panel-body::-webkit-scrollbar-track{
+      background: rgba(148,163,184,.22);
+    }
+    body.theme-corporate .panel-body::-webkit-scrollbar-thumb{
+      background: rgba(100,116,139,.42);
+      border-color: rgba(241,245,249,.85);
+    }
+    body.theme-corporate input,
+    body.theme-corporate select,
+    body.theme-corporate textarea{
+      color-scheme: light;
+      background:#ffffff;
+      color:#0f172a;
+      border-color: rgba(15,23,42,.20);
+      box-shadow: 0 0 0 1px rgba(15,23,42,.08);
+    }
+    body.theme-corporate input::placeholder,
+    body.theme-corporate textarea::placeholder{
+      color:#64748b;
+    }
+    body.theme-corporate select option{
+      background:#ffffff;
+      color:#0f172a;
+    }
+    body.theme-corporate input[data-info-only="1"],
+    body.theme-corporate select[data-info-only="1"]{
+      background:#eef2f7;
+      border-color: rgba(15,23,42,.16);
+      color:#334155;
+    }
+
+    body.theme-corporate .section{
+      background:#ffffff;
+      border-color: rgba(15,23,42,.14);
+    }
+    body.theme-corporate .section-head{
+      background:#f1f5fb;
+      border-bottom-color: rgba(15,23,42,.14);
+    }
+    body.theme-corporate .section-head .left .s,
+    body.theme-corporate .doc-desc,
+    body.theme-corporate .tiny{
+      color:#475569;
+    }
+    body.theme-corporate .doc-table thead th{
+      background:#dbe5f2;
+      color:#334155;
+      border-bottom-color: rgba(15,23,42,.14);
+    }
+    body.theme-corporate .doc-table tbody tr:hover{
+      background:#f8fbff;
+    }
+    body.theme-corporate .status{
+      background:#ffffff;
+      border-color: rgba(15,23,42,.20);
+      color:#0f172a;
+    }
+    body.theme-corporate .doc-reason-wrap{
+      background:#f8fafc;
+      border-color: rgba(15,23,42,.14);
+    }
+    body.theme-corporate .doc-reason-input{
+      background:#ffffff;
+      color:#0f172a;
+      border-color: rgba(15,23,42,.18);
+    }
+    body.theme-corporate .alertRow{
+      background:#f8fbff;
+      border-color: rgba(15,23,42,.14);
+    }
+
+    /* Padrão sólido para legibilidade no tema corporativo */
+    body.theme-corporate .pill,
+    body.theme-corporate .sla,
+    body.theme-corporate .status.status-pill{
+      background:#ffffff !important;
+      border:1px solid rgba(15,23,42,.18) !important;
+      color:#0f172a !important;
+      text-shadow:none !important;
+      box-shadow:none !important;
+      animation:none !important;
+    }
+    body.theme-corporate .pill.ok,
+    body.theme-corporate .sla.ok,
+    body.theme-corporate .status.status-pill.status-aprovado{
+      background:#ecfdf5 !important;
+      border-color:#16a34a !important;
+      color:#166534 !important;
+    }
+    body.theme-corporate .pill.warn,
+    body.theme-corporate .sla.warn,
+    body.theme-corporate .status.status-pill.status-pendente{
+      background:#fff7ed !important;
+      border-color:#ea580c !important;
+      color:#9a3412 !important;
+    }
+    body.theme-corporate .pill.bad,
+    body.theme-corporate .sla.bad,
+    body.theme-corporate .status.status-pill.status-reprovado{
+      background:#fef2f2 !important;
+      border-color:#dc2626 !important;
+      color:#991b1b !important;
+    }
+    body.theme-corporate .status.status-pill.status-bloqueado{
+      background:#f1f5f9 !important;
+      border-color:#64748b !important;
+      color:#334155 !important;
+    }
+    body.theme-corporate .pill.neutral,
+    body.theme-corporate .sla.neutral,
+    body.theme-corporate .status.status-pill.status-aguardando{
+      background:#e0f2fe !important;
+      border-color:#0284c7 !important;
+      color:#0c4a6e !important;
+    }
+
     #bhCanvas{
       position: fixed;
       inset: 0;
@@ -1393,7 +1522,7 @@ DIVORCIADO: Certidão averbada.</td>
 
         <div class="fg">
           <label>Resumo automático (o que está pendente)</label>
-          <textarea id="resumoPendencias" readonly style="min-height:120px;background: rgba(2,6,23,.45);"></textarea>
+          <textarea id="resumoPendencias" readonly style="min-height:120px;background: var(--bg-soft);"></textarea>
           <div class="inline" style="margin-top:8px;justify-content:space-between;">
             <span class="tiny">Gerado automaticamente com base nos status do checklist.</span>
             <button class="btn" id="btnCopiarResumo">Copiar resumo</button>
