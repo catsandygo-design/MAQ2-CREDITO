@@ -274,7 +274,6 @@
       grid-template-columns: repeat(7, minmax(clamp(210px, 13vw, 260px), 1fr));
       gap: 8px;
       align-items: stretch;
-      scrollbar-gutter: stable;
       cursor: grab;
     }
     .board.panning {
@@ -320,12 +319,13 @@
 
     .cards {
       min-height: 0;
-      overflow: auto;
+      min-width: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
       padding: 5px;
       display: grid;
       gap: 5px;
       align-content: start;
-      scrollbar-gutter: stable;
     }
 
     .cards.drag-over {
@@ -340,6 +340,7 @@
       padding: 7px;
       display: grid;
       gap: 3px;
+      min-width: 0;
       cursor: grab;
       transition: transform .12s ease, border-color .12s ease, opacity .12s ease;
     }
