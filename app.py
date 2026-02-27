@@ -1256,6 +1256,8 @@ class Processo(Base):
     pendente_fiador: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     pendente_sinal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     nao_contar_mes: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    nao_contar_mes_ref_ano: Mapped[Optional[int]] = mapped_column(Integer)
+    nao_contar_mes_ref_mes: Mapped[Optional[int]] = mapped_column(Integer)
     sla_comercial_inicio_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     sla_credito_inicio_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     sla_comercial_fim_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
@@ -2055,6 +2057,36 @@ def _current_meta_period() -> tuple[int, int]:
     return hoje.year, hoje.month
 
 
+def _set_nao_contar_mes_period(processo: "Processo", marcado: bool, now: Optional[datetime] = None) -> None:
+    if not marcado:
+        processo.nao_contar_mes = False
+        processo.nao_contar_mes_ref_ano = None
+        processo.nao_contar_mes_ref_mes = None
+        return
+    ref_now = _as_utc(now) or _utcnow()
+    processo.nao_contar_mes = True
+    processo.nao_contar_mes_ref_ano = ref_now.year
+    processo.nao_contar_mes_ref_mes = ref_now.month
+
+
+def _is_nao_contar_mes_active(processo: "Processo", now: Optional[datetime] = None) -> bool:
+    if not bool(getattr(processo, "nao_contar_mes", False)):
+        return False
+    ref_ano = getattr(processo, "nao_contar_mes_ref_ano", None)
+    ref_mes = getattr(processo, "nao_contar_mes_ref_mes", None)
+    if ref_ano is None or ref_mes is None:
+        return True
+    try:
+        ref_ano_int = int(ref_ano)
+        ref_mes_int = int(ref_mes)
+    except (TypeError, ValueError):
+        return True
+    if ref_mes_int < 1 or ref_mes_int > 12:
+        return True
+    ref_now = _as_utc(now) or _utcnow()
+    return ref_ano_int == ref_now.year and ref_mes_int == ref_now.month
+
+
 def _normalize_meta_period(ano: Optional[int], mes: Optional[int]) -> tuple[int, int]:
     current_ano, current_mes = _current_meta_period()
     ano_val = int(ano if ano is not None else current_ano)
@@ -2189,6 +2221,8 @@ def _ensure_runtime_schema(db: Session) -> None:
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS etapa_repasse VARCHAR(40)",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS cca_responsavel VARCHAR(120)",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS nao_contar_mes BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS nao_contar_mes_ref_ano INTEGER",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS nao_contar_mes_ref_mes INTEGER",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_comercial_inicio_at TIMESTAMPTZ",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_credito_inicio_at TIMESTAMPTZ",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_comercial_fim_at TIMESTAMPTZ",
@@ -2203,6 +2237,19 @@ def _ensure_runtime_schema(db: Session) -> None:
     for stmt in statements:
         db.execute(text(stmt))
     db.execute(text("UPDATE processos SET nao_contar_mes = FALSE WHERE nao_contar_mes IS NULL"))
+    ano_atual, mes_atual = _current_meta_period()
+    db.execute(
+        text(
+            """
+            UPDATE processos
+               SET nao_contar_mes_ref_ano = :ano_atual,
+                   nao_contar_mes_ref_mes = :mes_atual
+             WHERE nao_contar_mes = TRUE
+               AND (nao_contar_mes_ref_ano IS NULL OR nao_contar_mes_ref_mes IS NULL)
+            """
+        ),
+        {"ano_atual": ano_atual, "mes_atual": mes_atual},
+    )
 
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_created_at ON processos (created_at DESC)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_cliente_id ON processos (cliente_id)"))
@@ -3692,6 +3739,8 @@ def patch_processo(
             if value is not None and str(value).strip() and not next_step:
                 raise HTTPException(status_code=422, detail="Etapa de repasse invalida.")
             processo.etapa_repasse = next_step
+        elif field == "nao_contar_mes":
+            _set_nao_contar_mes_period(processo, bool(value), _utcnow())
         elif field in {"sla_credito_dias", "sla_corretor_dias", "sla_cca_dias"}:
             continue
         else:
@@ -3843,7 +3892,7 @@ def app_list_processos(
                 cca_responsavel=processo.cca_responsavel,
                 pendente_fiador=processo.pendente_fiador,
                 pendente_sinal=processo.pendente_sinal,
-                nao_contar_mes=bool(getattr(processo, "nao_contar_mes", False)),
+                nao_contar_mes=_is_nao_contar_mes_active(processo, now),
                 sla_credito_dias=sla_analista_horas // 24,
                 sla_corretor_dias=sla_corretor_horas // 24,
                 sla_cca_dias=sla_cca_horas // 24,
@@ -3996,7 +4045,7 @@ def app_gestor_dashboard(
             or (created_at_utc.date() if created_at_utc else None)
         )
         dias_em_aberto = (now.date() - data_referencia).days if data_referencia else None
-        nao_contar_mes = bool(getattr(processo, "nao_contar_mes", False))
+        nao_contar_mes = _is_nao_contar_mes_active(processo, now)
         pendencias_docs = int(pendencias_docs_por_processo.get(processo.id, 0))
         tem_pendencia_status = _processo_has_pendencia(processo)
         tem_pendencia = tem_pendencia_status or pendencias_docs > 0
@@ -4674,6 +4723,7 @@ def app_get_processo_full(
     processo_out.estagio_comercial = _process_estagio_comercial(processo.estagio_comercial)
     processo_out.etapa_repasse = _process_etapa_repasse(processo.etapa_repasse)
     processo_out.fila_atual = _fila_atual_from_processo(processo)
+    processo_out.nao_contar_mes = _is_nao_contar_mes_active(processo, now)
 
     return ProcessoFullOut(
         processo=processo_out,
@@ -4974,6 +5024,28 @@ def app_patch_processo(
                     old_value=old_value,
                     new_value=status_fiador,
                 )
+        elif field == "nao_contar_mes":
+            old_value = _is_nao_contar_mes_active(processo, _utcnow())
+            _set_nao_contar_mes_period(processo, bool(value), _utcnow())
+            new_value = _is_nao_contar_mes_active(processo, _utcnow())
+            details = None
+            if bool(value):
+                details = (
+                    f"periodo_referencia="
+                    f"{int(processo.nao_contar_mes_ref_ano or 0):04d}-{int(processo.nao_contar_mes_ref_mes or 0):02d}"
+                )
+            if old_value != new_value:
+                _record_processo_event(
+                    db,
+                    processo_id=processo.id,
+                    actor_username=actor_username,
+                    actor_role=actor_role,
+                    event_type="PROCESSO_UPDATE",
+                    field_name=field,
+                    old_value=old_value,
+                    new_value=new_value,
+                    details=details,
+                )
         elif field == "estagio_comercial":
             next_stage = _process_estagio_comercial(value, fallback="")
             if not next_stage:
@@ -5172,6 +5244,7 @@ def app_patch_processo(
     processo_out.estagio_comercial = _process_estagio_comercial(processo.estagio_comercial)
     processo_out.etapa_repasse = _process_etapa_repasse(processo.etapa_repasse)
     processo_out.fila_atual = _fila_atual_from_processo(processo)
+    processo_out.nao_contar_mes = _is_nao_contar_mes_active(processo, now)
     return processo_out
 
 

@@ -108,6 +108,17 @@
   body.theme-corporate .kpi .s{
     color:#334155;
   }
+  body.theme-corporate tbody tr.outCountRow{
+    background:#fff1f2;
+  }
+  body.theme-corporate tbody tr.outCountRow:hover{
+    background:#ffe4e6;
+  }
+  body.theme-corporate .foraCountBadge{
+    color:#9f1239;
+    background:#ffe4e6;
+    border-color:#fb7185;
+  }
 
   #bhCanvas{
     position: fixed;
@@ -345,6 +356,12 @@
     line-height:1.2;
   }
   tbody tr:hover{background: rgba(255,255,255,.02)}
+  tbody tr.outCountRow{
+    background: rgba(239,68,68,.08);
+  }
+  tbody tr.outCountRow:hover{
+    background: rgba(239,68,68,.12);
+  }
 
   .scroll{
     overflow:auto;
@@ -450,6 +467,20 @@
     align-items:center;
     gap:6px;
     flex-wrap:wrap;
+  }
+  .foraCountBadge{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:3px 7px;
+    border-radius:999px;
+    font-size:10px;
+    font-weight:800;
+    border:1px solid rgba(239,68,68,.45);
+    color:#fecaca;
+    background: rgba(239,68,68,.14);
+    letter-spacing:.1px;
+    white-space:nowrap;
   }
 
   .empreendimento{
@@ -1221,6 +1252,7 @@
       dataCadastroOrigem: item.data_reserva_origem || item.data_cadastro_origem || null,
       createdAt: item.created_at || null,
       semDocumento,
+      foraContagemMes: Boolean(item?.nao_contar_mes),
       avisoContratoAgehab: Boolean(item?.aviso_gerar_contrato_agehab),
     };
   }
@@ -1326,6 +1358,9 @@
   function prioBadge(){
     return `<span class="prio"><span class="dot"></span>PRIORIDADE ALTA</span>`;
   }
+  function outCountBadge(){
+    return `<span class="foraCountBadge">Fora da contagem do mes</span>`;
+  }
 
   function severityScore(row){
     const slaC = Number(row.slaCred||0);
@@ -1337,23 +1372,30 @@
     return prio + sCritCred + sCritCor + (slaC * 3) + slaR + (aging * 10);
   }
   function sortCriticalFirst(rows){
-    return [...rows].sort((a,b)=> severityScore(b) - severityScore(a));
+    return [...rows].sort((a,b)=>{
+      const outA = Boolean(a.foraContagemMes);
+      const outB = Boolean(b.foraContagemMes);
+      if (outA !== outB) return outA ? 1 : -1;
+      return severityScore(b) - severityScore(a);
+    });
   }
 
   const HISTORY_MAX = 30;
 
   function trackHistory(rows){
     const count = (pred)=> rows.reduce((acc,r)=> acc + (pred(r)?1:0), 0);
-    const total = rows.length;
-    const comercial = count(r => INSIGHT_COMERCIAL_STAGES.has(statusFromBackend(r.geral)));
-    const repasse = count(r => INSIGHT_REPASSE_STAGES.has(statusFromBackend(r.geral)));
+    const countedRows = rows.filter((r) => !r.foraContagemMes);
+    const total = countedRows.length;
+    const comercial = count(r => !r.foraContagemMes && INSIGHT_COMERCIAL_STAGES.has(statusFromBackend(r.geral)));
+    const repasse = count(r => !r.foraContagemMes && INSIGHT_REPASSE_STAGES.has(statusFromBackend(r.geral)));
     history.push({ t: Date.now(), total, comercial, repasse });
     if(history.length > HISTORY_MAX) history.shift();
   }
 
   function renderInsights(rows){
-    const total = rows.length || 0;
-    const count = (pred)=> rows.reduce((acc,r)=> acc + (pred(r)?1:0), 0);
+    const countedRows = rows.filter((r) => !r.foraContagemMes);
+    const total = countedRows.length || 0;
+    const count = (pred)=> countedRows.reduce((acc,r)=> acc + (pred(r)?1:0), 0);
 
     const comercial = count(r => INSIGHT_COMERCIAL_STAGES.has(statusFromBackend(r.geral)));
     const credito = count(r => INSIGHT_CREDITO_STAGES.has(statusFromBackend(r.geral)));
@@ -1363,8 +1405,8 @@
     const avisoAgehab = count(r => Boolean(r.avisoContratoAgehab));
 
     const avg = (arr)=> arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length) : 0;
-    const avgSlaCor = Math.round(avg(rows.map(r=> Number(r.slaCor||0))));
-    const avgSlaCred = Math.round(avg(rows.map(r=> Number(r.slaCred||0))));
+    const avgSlaCor = Math.round(avg(countedRows.map(r=> Number(r.slaCor||0))));
+    const avgSlaCred = Math.round(avg(countedRows.map(r=> Number(r.slaCred||0))));
 
     const clsSla = (h)=> h < SLA_WARN ? "good" : (h < SLA_BAD ? "warn" : "bad");
 
@@ -1431,7 +1473,11 @@
 
   function render(rows){
     const tb = $("tbody");
-    $("countInfo").textContent = `${rows.length} processo(s)`;
+    const outCount = rows.reduce((acc, r) => acc + (r.foraContagemMes ? 1 : 0), 0);
+    const counted = Math.max(0, rows.length - outCount);
+    $("countInfo").textContent = outCount > 0
+      ? `${counted} processo(s) + ${outCount} fora da contagem`
+      : `${counted} processo(s)`;
 
     if(!rows.length){
       tb.innerHTML = `<tr><td colspan="${TABLE_COLSPAN}" class="muted" style="padding:14px 12px;">Nenhum resultado com esses filtros.</td></tr>`;
@@ -1450,13 +1496,15 @@
       const [fTxt,fCls] = statusText("fiador", r.fiador);
 
       const badges = [];
+      if (r.foraContagemMes) badges.push(outCountBadge());
       if (isHighPriority(r)) badges.push(prioBadge());
       if (r.avisoContratoAgehab) badges.push('<span class="aviso-agehab">Espelho validado: gerar contrato Agehab</span>');
       const badgesHtml = badges.length ? `<div class="rowBadges">${badges.join("")}</div>` : "";
       const url = UPDATE_PAGE_URL(r);
+      const rowCls = r.foraContagemMes ? "outCountRow" : "";
 
       return `
-        <tr>
+        <tr class="${rowCls}">
           <td>
             <div class="cliente">
               <div class="clienteHead">
