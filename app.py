@@ -87,6 +87,17 @@ try:
     FALL_RISK_DAYS = max(1, int(os.getenv("FALL_RISK_DAYS", "15")))
 except ValueError:
     FALL_RISK_DAYS = 15
+try:
+    DASHBOARD_MAX_DIAS_EM_ABERTO = max(30, int(os.getenv("DASHBOARD_MAX_DIAS_EM_ABERTO", "730")))
+except ValueError:
+    DASHBOARD_MAX_DIAS_EM_ABERTO = 730
+try:
+    DASHBOARD_IMPORT_DATE_BACKFILL_TOLERANCE_DAYS = max(
+        0,
+        int(os.getenv("DASHBOARD_IMPORT_DATE_BACKFILL_TOLERANCE_DAYS", "365")),
+    )
+except ValueError:
+    DASHBOARD_IMPORT_DATE_BACKFILL_TOLERANCE_DAYS = 365
 RUNTIME_SCHEMA_REVISION = "2026-02-24-sla-stop-rules-v2"
 PENDENCIA_INFO_MIN_LENGTH = 0
 PROCESS_LIST_CACHE: dict[str, dict[str, Any]] = {}
@@ -2087,6 +2098,39 @@ def _is_nao_contar_mes_active(processo: "Processo", now: Optional[datetime] = No
     return ref_ano_int == ref_now.year and ref_mes_int == ref_now.month
 
 
+def _resolve_dashboard_reference_date(
+    cliente: "Cliente",
+    processo_created_date: Optional[date],
+    now_date: date,
+) -> Optional[date]:
+    floor_by_created: Optional[date] = None
+    if processo_created_date is not None:
+        floor_by_created = processo_created_date - timedelta(days=DASHBOARD_IMPORT_DATE_BACKFILL_TOLERANCE_DAYS)
+
+    raw_candidates: list[Optional[date]] = [
+        getattr(cliente, "data_reserva_origem", None),
+        getattr(cliente, "data_cadastro_origem", None),
+        processo_created_date,
+    ]
+
+    for raw in raw_candidates:
+        if raw is None:
+            continue
+        if raw > now_date:
+            continue
+        if floor_by_created is not None and raw < floor_by_created:
+            continue
+
+        dias = (now_date - raw).days
+        if dias > DASHBOARD_MAX_DIAS_EM_ABERTO and processo_created_date is not None and processo_created_date <= now_date:
+            return processo_created_date
+        return raw
+
+    if processo_created_date is not None and processo_created_date <= now_date:
+        return processo_created_date
+    return None
+
+
 def _normalize_meta_period(ano: Optional[int], mes: Optional[int]) -> tuple[int, int]:
     current_ano, current_mes = _current_meta_period()
     ano_val = int(ano if ano is not None else current_ano)
@@ -4039,12 +4083,11 @@ def app_gestor_dashboard(
         updated_at_utc = _as_utc(getattr(processo, "updated_at", None)) or created_at_utc
         assinado_event_at_utc = _as_utc(assinado_event_at_por_processo.get(processo.id))
         perda_event_at_utc = _as_utc(perda_event_at_por_processo.get(processo.id))
-        data_referencia = (
-            getattr(cliente, "data_reserva_origem", None)
-            or cliente.data_cadastro_origem
-            or (created_at_utc.date() if created_at_utc else None)
-        )
+        created_date = created_at_utc.date() if created_at_utc else None
+        data_referencia = _resolve_dashboard_reference_date(cliente, created_date, now.date())
         dias_em_aberto = (now.date() - data_referencia).days if data_referencia else None
+        if dias_em_aberto is not None and (dias_em_aberto < 0 or dias_em_aberto > DASHBOARD_MAX_DIAS_EM_ABERTO):
+            dias_em_aberto = None
         nao_contar_mes = _is_nao_contar_mes_active(processo, now)
         pendencias_docs = int(pendencias_docs_por_processo.get(processo.id, 0))
         tem_pendencia_status = _processo_has_pendencia(processo)
