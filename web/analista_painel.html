@@ -114,6 +114,12 @@
   body.theme-corporate tbody tr.outCountRow:hover{
     background:#ffe4e6;
   }
+  body.theme-corporate tbody tr.finalizadoRow{
+    background:#ecfdf5;
+  }
+  body.theme-corporate tbody tr.finalizadoRow:hover{
+    background:#dcfce7;
+  }
   body.theme-corporate .foraCountBadge{
     color:#9f1239;
     background:#ffe4e6;
@@ -356,6 +362,12 @@
     line-height:1.2;
   }
   tbody tr:hover{background: rgba(255,255,255,.02)}
+  tbody tr.finalizadoRow{
+    background: rgba(34,197,94,.13);
+  }
+  tbody tr.finalizadoRow:hover{
+    background: rgba(34,197,94,.19);
+  }
   tbody tr.outCountRow{
     background: rgba(239,68,68,.08);
   }
@@ -421,6 +433,29 @@
     border:1px solid rgba(34,197,94,.55);
     background: rgba(34,197,94,.12);
   }
+  .clienteAnim.pause{
+    border:1px solid rgba(251,146,60,.62);
+    background: rgba(251,146,60,.18);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.10),
+      0 0 10px rgba(251,146,60,.34);
+  }
+  .clienteAnim.pause::before,
+  .clienteAnim.pause::after{
+    content:"";
+    position:absolute;
+    top:2px;
+    width:2px;
+    height:8px;
+    border-radius:2px;
+    background: rgba(255,237,213,.95);
+    animation: animPausePulse .85s ease-in-out infinite;
+  }
+  .clienteAnim.pause::before{left:3px}
+  .clienteAnim.pause::after{
+    right:3px;
+    animation-delay:.12s;
+  }
   .clienteAnim.rest::after{
     content:"z";
     position:absolute;
@@ -441,6 +476,10 @@
     0%,100%{transform:translateX(0)}
     25%{transform:translateX(-1px)}
     75%{transform:translateX(1px)}
+  }
+  @keyframes animPausePulse{
+    0%,100%{opacity:.65; transform:scaleY(.88)}
+    50%{opacity:1; transform:scaleY(1)}
   }
   @keyframes animZzz{
     0%{opacity:.35; transform:translateY(0)}
@@ -1311,6 +1350,10 @@
     return ["assinatura_caixa", "finalizado"].includes(row.statusCaixa);
   }
 
+  function isFinalizadoRow(row){
+    return ["assinatura_caixa", "finalizado"].includes(statusFromBackend(row.statusCaixa));
+  }
+
   function isPendingRow(row){
     const pending = new Set(["pendenciado", "pendente_credito", "pendente_cca", "pendente_agehab", "pendente"]);
     return (
@@ -1328,6 +1371,7 @@
   }
 
   function clientAnimState(row){
+    if (row.foraContagemMes) return "pause";
     if (isCelebrating(row)) return "rest";
     if (isPendingRow(row)) return "panic";
     if (isWaitingDocs(row)) return "wait";
@@ -1335,6 +1379,7 @@
   }
 
   function clientAnimTitle(state){
+    if (state === "pause") return "Fora da contagem do mes atual";
     if (state === "wait") return "Aguardando documento";
     if (state === "panic") return "Pendenciado";
     if (state === "rest") return "Processo finalizado";
@@ -1501,7 +1546,10 @@
       if (r.avisoContratoAgehab) badges.push('<span class="aviso-agehab">Espelho validado: gerar contrato Agehab</span>');
       const badgesHtml = badges.length ? `<div class="rowBadges">${badges.join("")}</div>` : "";
       const url = UPDATE_PAGE_URL(r);
-      const rowCls = r.foraContagemMes ? "outCountRow" : "";
+      const rowClasses = [];
+      if (r.foraContagemMes) rowClasses.push("outCountRow");
+      else if (isFinalizadoRow(r)) rowClasses.push("finalizadoRow");
+      const rowCls = rowClasses.join(" ");
 
       return `
         <tr class="${rowCls}">
