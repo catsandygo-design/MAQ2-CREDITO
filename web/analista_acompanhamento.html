@@ -21,8 +21,7 @@
 
     html, body {
       height: 100%;
-      overflow-x: auto;
-      overflow-y: hidden;
+      overflow: hidden;
     }
 
     body {
@@ -108,10 +107,10 @@
       max-width: 100%;
       min-width: 0;
       margin: 0 auto;
-      padding: 8px;
+      padding: clamp(4px, 0.5vw, 8px);
       display: grid;
       grid-template-rows: auto auto auto minmax(0, 1fr);
-      gap: 6px;
+      gap: 4px;
     }
 
     .topbar {
@@ -121,10 +120,10 @@
       backdrop-filter: blur(8px);
       width: 100%;
       min-width: 0;
-      padding: 7px 9px;
+      padding: 6px 8px;
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
-      gap: 6px;
+      gap: 5px;
       align-items: start;
     }
 
@@ -134,7 +133,7 @@
 
     .title h1 {
       margin: 0;
-      font-size: 15px;
+      font-size: 14px;
       letter-spacing: .02em;
     }
 
@@ -146,7 +145,7 @@
 
     .actions {
       display: flex;
-      gap: 6px;
+      gap: 5px;
       flex-wrap: wrap;
       align-items: center;
       justify-content: flex-end;
@@ -160,8 +159,8 @@
       background: rgba(255, 255, 255, 0.04);
       color: var(--text);
       border-radius: 12px;
-      padding: 6px 9px;
-      font-size: 11px;
+      padding: 5px 8px;
+      font-size: 10px;
       font-weight: 700;
       text-decoration: none;
       cursor: pointer;
@@ -174,7 +173,7 @@
 
     .meta {
       display: flex;
-      gap: 6px;
+      gap: 5px;
       align-items: center;
       flex-wrap: wrap;
       width: 100%;
@@ -183,8 +182,8 @@
       overflow-y: hidden;
       padding-bottom: 1px;
       border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 6px;
+      border-radius: 12px;
+      padding: 5px;
       background: #040b1c;
       backdrop-filter: blur(6px);
     }
@@ -195,8 +194,8 @@
       border: 1px solid var(--line);
       background: rgba(255, 255, 255, 0.03);
       border-radius: 999px;
-      padding: 4px 7px;
-      font-size: 10px;
+      padding: 3px 6px;
+      font-size: 9px;
       color: var(--muted);
       white-space: nowrap;
     }
@@ -212,20 +211,20 @@
       backdrop-filter: blur(6px);
       width: 100%;
       min-width: 0;
-      padding: 7px;
+      padding: 6px;
       display: grid;
       grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr) auto auto;
-      gap: 6px;
+      gap: 5px;
       align-items: end;
     }
 
     .field {
       display: grid;
-      gap: 4px;
+      gap: 3px;
     }
 
     .field label {
-      font-size: 9px;
+      font-size: 8px;
       color: var(--muted);
     }
 
@@ -236,14 +235,14 @@
       color: var(--text);
       width: 100%;
       min-width: 0;
-      padding: 7px 9px;
+      padding: 6px 8px;
       outline: none;
-      font-size: 11px;
+      font-size: 10px;
     }
 
     .msg {
       min-height: 14px;
-      font-size: 10px;
+      font-size: 9px;
       color: var(--muted);
       padding: 0 2px;
     }
@@ -254,12 +253,12 @@
     .board-shell {
       min-height: 0;
       border: 1px solid var(--line);
-      border-radius: 16px;
+      border-radius: 14px;
       background: linear-gradient(180deg, rgba(2, 6, 23, .74), rgba(2, 6, 23, .64));
-      padding: 6px;
+      padding: 5px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
       width: 100%;
       min-width: 0;
       overflow: hidden;
@@ -272,15 +271,20 @@
       overflow-x: auto;
       overflow-y: hidden;
       display: grid;
-      grid-template-columns: repeat(7, minmax(clamp(230px, 14vw, 300px), 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(7, minmax(clamp(210px, 13vw, 260px), 1fr));
+      gap: 8px;
       align-items: stretch;
       scrollbar-gutter: stable;
+      cursor: grab;
+    }
+    .board.panning {
+      cursor: grabbing;
+      user-select: none;
     }
 
     .column {
       border: 1px solid var(--line);
-      border-radius: 14px;
+      border-radius: 12px;
       background: rgba(7, 12, 28, .9);
       display: grid;
       grid-template-rows: auto 1fr;
@@ -289,17 +293,17 @@
     }
 
     .col-head {
-      padding: 8px;
+      padding: 7px;
       border-bottom: 1px solid rgba(148, 163, 184, .12);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
     }
 
     .col-title {
       margin: 0;
-      font-size: 11px;
+      font-size: 10px;
       text-transform: uppercase;
       letter-spacing: .06em;
     }
@@ -307,8 +311,8 @@
     .col-count {
       border-radius: 999px;
       border: 1px solid rgba(148, 163, 184, .25);
-      padding: 2px 7px;
-      font-size: 10px;
+      padding: 2px 6px;
+      font-size: 9px;
       color: var(--muted);
       background: rgba(2, 6, 23, .78);
       font-variant-numeric: tabular-nums;
@@ -317,9 +321,9 @@
     .cards {
       min-height: 0;
       overflow: auto;
-      padding: 6px;
+      padding: 5px;
       display: grid;
-      gap: 6px;
+      gap: 5px;
       align-content: start;
       scrollbar-gutter: stable;
     }
@@ -333,9 +337,9 @@
       border: 1px solid rgba(148, 163, 184, .2);
       border-radius: 12px;
       background: rgba(15, 23, 42, .93);
-      padding: 8px;
+      padding: 7px;
       display: grid;
-      gap: 4px;
+      gap: 3px;
       cursor: grab;
       transition: transform .12s ease, border-color .12s ease, opacity .12s ease;
     }
@@ -364,7 +368,7 @@
 
     .name {
       margin: 0;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 800;
       line-height: 1.2;
       min-width: 0;
@@ -397,10 +401,10 @@
     }
 
     .meta-line {
-      font-size: 10px;
+      font-size: 9px;
       color: var(--muted);
       display: grid;
-      grid-template-columns: minmax(0, 92px) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 78px) minmax(0, 1fr);
       gap: 4px;
       align-items: baseline;
     }
@@ -426,9 +430,9 @@
     .empty {
       border: 1px dashed rgba(148, 163, 184, .24);
       border-radius: 10px;
-      padding: 8px;
+      padding: 6px;
       color: var(--muted);
-      font-size: 11px;
+      font-size: 10px;
       text-align: center;
     }
 
@@ -447,7 +451,7 @@
 
     @media (max-width: 1500px) {
       .board {
-        grid-template-columns: repeat(7, minmax(220px, 1fr));
+        grid-template-columns: repeat(7, minmax(200px, 1fr));
       }
     }
 
@@ -462,8 +466,19 @@
         grid-template-columns: 1fr 1fr;
       }
       .board {
-        grid-template-columns: repeat(7, minmax(200px, 1fr));
+        grid-template-columns: repeat(7, minmax(185px, 1fr));
       }
+    }
+
+    @media (max-height: 860px) {
+      .wrap { gap: 3px; }
+      .topbar, .meta, .filters { padding-top: 4px; padding-bottom: 4px; }
+      .title h1 { font-size: 13px; }
+      .title p { font-size: 9px; }
+      .col-head { padding: 6px; }
+      .card { padding: 6px; }
+      .name { font-size: 10px; }
+      .meta-line { font-size: 8px; grid-template-columns: minmax(0, 68px) minmax(0, 1fr); }
     }
   </style>
 </head>
@@ -970,6 +985,73 @@
       });
     }
 
+    function bindBoardPanEvents() {
+      const board = $("board");
+      if (!board || board.dataset.panBound === "1") return;
+      board.dataset.panBound = "1";
+
+      const pan = {
+        active: false,
+        startX: 0,
+        startScrollLeft: 0,
+      };
+
+      const canStartPan = (target) => {
+        if (!target) return true;
+        if (target.closest("a,button,input,select,textarea,label")) return false;
+        if (target.closest(".card")) return false;
+        return true;
+      };
+
+      const stopPan = () => {
+        if (!pan.active) return;
+        pan.active = false;
+        board.classList.remove("panning");
+      };
+
+      board.addEventListener("mousedown", (ev) => {
+        if (ev.button !== 0) return;
+        if (!canStartPan(ev.target)) return;
+        pan.active = true;
+        pan.startX = ev.clientX;
+        pan.startScrollLeft = board.scrollLeft;
+        board.classList.add("panning");
+        ev.preventDefault();
+      });
+
+      window.addEventListener("mousemove", (ev) => {
+        if (!pan.active) return;
+        const dx = ev.clientX - pan.startX;
+        board.scrollLeft = pan.startScrollLeft - dx;
+      });
+
+      window.addEventListener("mouseup", stopPan);
+      board.addEventListener("dragstart", stopPan, true);
+
+      board.addEventListener("touchstart", (ev) => {
+        if (ev.touches.length !== 1) return;
+        if (!canStartPan(ev.target)) return;
+        pan.active = true;
+        pan.startX = ev.touches[0].clientX;
+        pan.startScrollLeft = board.scrollLeft;
+        board.classList.add("panning");
+      }, { passive: true });
+
+      board.addEventListener("touchmove", (ev) => {
+        if (!pan.active) return;
+        if (ev.touches.length !== 1) {
+          stopPan();
+          return;
+        }
+        const dx = ev.touches[0].clientX - pan.startX;
+        board.scrollLeft = pan.startScrollLeft - dx;
+        ev.preventDefault();
+      }, { passive: false });
+
+      board.addEventListener("touchend", stopPan, { passive: true });
+      board.addEventListener("touchcancel", stopPan, { passive: true });
+    }
+
     async function loadData() {
       const rows = await fetchProcessosPaged();
       DATA = rows.filter(isVisibleInAnalista).map(fromBackend);
@@ -1028,6 +1110,7 @@
     });
 
     columnSkeleton();
+    bindBoardPanEvents();
     refresh(true).catch(() => null);
     setInterval(tick, 1000);
   </script>
