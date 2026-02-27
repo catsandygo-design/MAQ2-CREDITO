@@ -1292,7 +1292,7 @@
       createdAt: item.created_at || null,
       semDocumento,
       foraContagemMes: Boolean(item?.nao_contar_mes),
-      avisoContratoAgehab: Boolean(item?.aviso_gerar_contrato_agehab),
+      avisoContratoAgehab: Boolean(item?.aviso_gerar_contrato_agehab) && !semDocumento && statusAgehab === "validado_agehab",
     };
   }
 

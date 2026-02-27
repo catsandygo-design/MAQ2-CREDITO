@@ -3909,7 +3909,12 @@ def app_list_processos(
         espelho_validado = status_cca_norm in {"CONFORME", "TRATANDO_PRODUTO", "AGENDADO"}
         agehab_validado = status_agehab_norm == "VALIDADO_AGEHAB"
         contrato_ja_acionado = etapa_repasse_norm == "ASSINATURA_AUTORIZADA" or status_cca_norm in {"ASSINATURA_CAIXA", "FINALIZADO"}
-        aviso_gerar_contrato_agehab = espelho_validado and agehab_validado and not contrato_ja_acionado
+        aviso_gerar_contrato_agehab = (
+            not sem_documento_enviado
+            and espelho_validado
+            and agehab_validado
+            and not contrato_ja_acionado
+        )
 
         sla_analista_seconds = _compute_sla_seconds(processo, SLA_OWNER_ANALISTA, now)
         sla_corretor_seconds = _compute_sla_seconds(processo, SLA_OWNER_CORRETOR, now)
