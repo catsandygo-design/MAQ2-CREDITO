@@ -402,7 +402,7 @@
       border-radius: 12px;
       border: 1px dashed rgba(148,163,184,.28);
       background: rgba(2,6,23,.34);
-      display: none;
+      display: block;
     }
     .dep-sem-def-row{
       display:flex;
@@ -1035,13 +1035,6 @@
               <option value="bisavos">Bisavós</option>
               <option value="sobrinho-sobrinha">Sobrinho(a)</option>
             </select>
-            <div class="dep-sem-def-wrap" id="dep-sem-def-wrap">
-              <label class="dep-sem-def-row" for="dep-avancar-sem-dependente">
-                <input id="dep-avancar-sem-dependente" type="checkbox" />
-                Avancar sem dependente
-              </label>
-              <div class="dep-sem-def-msg" id="dep-sem-def-msg">DEPENDENTE NAO DEFINIDO, VAI AVANCAR SEM DEPENDENTE?</div>
-            </div>
           </div>
 
           <div class="fg">
@@ -1175,6 +1168,26 @@ Carteira Digital (todas infos) ou CTPS física: qualificação, contratos e anot
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Dependente nao definido -->
+        <div class="section" id="sec-dep-nao-definido" style="display:none;">
+          <div class="section-head">
+            <div class="left">
+              <div class="t">Dependente</div>
+              <div class="s">Dependente nao definido, confirmar se o processo vai seguir sem dependente.</div>
+            </div>
+            <div class="right">
+              <span class="pill neutral">Nao definido</span>
+            </div>
+          </div>
+          <div class="dep-sem-def-wrap">
+            <label class="dep-sem-def-row" for="dep-avancar-sem-dependente">
+              <input id="dep-avancar-sem-dependente" type="checkbox" />
+              Avancar sem dependente
+            </label>
+            <div class="dep-sem-def-msg" id="dep-sem-def-msg">DEPENDENTE NAO DEFINIDO, VAI AVANCAR SEM DEPENDENTE?</div>
+          </div>
         </div>
 
         <!-- Dependente menor -->
@@ -2017,9 +2030,9 @@ DIVORCIADO: Certidão averbada.</td>
   // =========================
   // Dynamic rules (same as original form)
   // =========================
+  const secDepNaoDef = $("sec-dep-nao-definido");
   const secDepMenor = $("sec-dep-menor");
   const secDepMaior = $("sec-dep-maior");
-  const depSemDefWrap = $("dep-sem-def-wrap");
   const depAvancarSemDependente = $("dep-avancar-sem-dependente");
   const depSemDefMsg = $("dep-sem-def-msg");
 
@@ -2056,13 +2069,13 @@ DIVORCIADO: Certidão averbada.</td>
     const isMenor = (tipo === "filho-menor");
 
     if(naoDefinido){
+      setDisplay(secDepNaoDef, true, "block");
       setDisplay(secDepMenor, false, "block");
       setDisplay(secDepMaior, false, "block");
-      setDisplay(depSemDefWrap, true, "block");
     }else{
+      setDisplay(secDepNaoDef, false, "block");
       setDisplay(secDepMenor, isMenor, "block");
       setDisplay(secDepMaior, !isMenor, "block");
-      setDisplay(depSemDefWrap, false, "block");
       if(depAvancarSemDependente) depAvancarSemDependente.checked = false;
     }
     atualizarMensagemSemDependente();
