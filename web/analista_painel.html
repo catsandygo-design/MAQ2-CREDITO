@@ -20,9 +20,9 @@
     --led-neutral:#94a3b8;
     --border: rgba(148,163,184,.14);
 
-    --fs-base:12px;
-    --fs-head:11px;
-    --fs-pill:10px;
+    --fs-base:11px;
+    --fs-head:10px;
+    --fs-pill:9px;
 
     --radius:14px;
     --sla-warn: 24;
@@ -108,30 +108,30 @@
     height:100%;
     max-width:1500px;
     margin:0 auto;
-    padding:18px 14px 18px;
+    padding:12px 10px 12px;
     display:flex;
     flex-direction:column;
-    gap:12px;
+    gap:8px;
     overflow:auto;
     position: relative;
     z-index: 1;
   }
 
-  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:8px}
   .title{display:flex;align-items:center;gap:10px}
   .badgeA{
-    width:34px;height:34px;border-radius:12px;
+    width:30px;height:30px;border-radius:10px;
     border:1px solid rgba(34,197,94,.35);
     background: rgba(34,197,94,.10);
     display:grid;place-items:center;
     font-weight:900;color:var(--accent);
   }
-  .title h1{margin:0;font-size:14px;letter-spacing:.2px}
-  .title p{margin:2px 0 0;color:var(--muted);font-size:11px}
-  .rightTop{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .title h1{margin:0;font-size:12px;letter-spacing:.15px}
+  .title p{margin:1px 0 0;color:var(--muted);font-size:10px}
+  .rightTop{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .chip{
-    font-size:11px;color:var(--muted);
-    padding:6px 10px;border-radius:999px;
+    font-size:10px;color:var(--muted);
+    padding:5px 8px;border-radius:999px;
     border:1px solid rgba(148,163,184,.16);
     background: rgba(255,255,255,.02);
     white-space:nowrap;
@@ -177,20 +177,20 @@
   .filters{
     display:grid;
     grid-template-columns: 1.2fr .9fr .9fr .9fr .9fr .9fr .8fr;
-    gap:10px;
+    gap:8px;
     align-items:end;
   }
   @media (max-width: 1200px){ .filters{grid-template-columns: 1fr 1fr 1fr} }
   @media (max-width: 760px){ .filters{grid-template-columns: 1fr} }
 
-  .field{display:flex;flex-direction:column;gap:6px}
-  .field label{font-size:11px;color:var(--muted)}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:10px;color:var(--muted)}
   .field input,.field select{
     border-radius: 14px;
     border: 1px solid var(--border);
     background: rgba(2,6,23,.60);
     color: var(--text);
-    padding: 10px 11px;
+    padding: 8px 9px;
     outline: none;
     transition: .15s ease;
   }
@@ -203,7 +203,7 @@
     border:1px solid var(--border);
     background: rgba(255,255,255,.03);
     color: var(--text);
-    padding:10px 12px;
+    padding:8px 10px;
     border-radius:14px;
     cursor:pointer;
     font-weight:800;
@@ -228,11 +228,13 @@
 
   .insights{
     display:flex;
-    gap:8px;
+    gap:4px;
     overflow-x:auto;
     overflow-y:hidden;
     padding-bottom:2px;
     scrollbar-width: thin;
+    min-height: 56px;
+    align-items:stretch;
   }
   .insights::-webkit-scrollbar{height:8px}
   .insights::-webkit-scrollbar-track{background: rgba(2,6,23,.35)}
@@ -242,25 +244,27 @@
   }
 
   .kpi{
-    flex: 0 0 175px;
+    flex: 0 0 clamp(128px, 8.2vw, 150px);
     min-width: 0;
     border:1px solid rgba(148,163,184,.14);
     background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.02));
     border-radius: var(--radius);
-    min-height: 72px;
-    padding: 6px 8px;
+    height: 56px;
+    padding: 4px 6px;
     position: relative;
     overflow:hidden;
   }
-  .kpi.spark{flex-basis:230px}
+  .kpi.spark{flex-basis: clamp(140px, 9vw, 165px)}
   .kpi .k{font-size:10px;color:var(--muted)}
-  .kpi .v{margin-top:2px;font-size:13px;font-weight:900;letter-spacing:.2px}
+  .kpi .v{margin-top:1px;font-size:12px;font-weight:900;letter-spacing:.15px}
   .kpi .s{
-    margin-top:1px;
+    margin-top:0;
     font-size:9px;
     color:var(--muted);
-    line-height:1.2;
-    max-height:2.4em;
+    line-height:1.1;
+    max-height:1.2em;
+    white-space:nowrap;
+    text-overflow:ellipsis;
     overflow:hidden;
   }
   .kpi.good .v{color: var(--accent)}
@@ -268,17 +272,26 @@
   .kpi.bad .v{color: var(--danger)}
 
   .sparkWrap{
-    margin-top:3px;
+    margin-top:2px;
     border:1px solid rgba(148,163,184,.12);
     background: rgba(2,6,23,.35);
     border-radius: 8px;
-    padding:3px 6px;
+    padding:2px 5px;
   }
-  canvas{display:block;width:100%;height:18px}
+  canvas{display:block;width:100%;height:14px}
+
+  @media (max-height: 860px){
+    .insights{min-height:56px}
+    .kpi{height:56px;padding:4px 6px}
+    .kpi .k{font-size:9px}
+    .kpi .v{font-size:11px}
+    .kpi .s{display:none}
+    .sparkWrap{display:none}
+  }
 
   .card{
     border:1px solid rgba(148,163,184,.14);
-    border-radius: 16px;
+    border-radius: 14px;
     overflow:hidden;
     background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
     display:flex;
@@ -299,7 +312,7 @@
 
   thead th{
     text-align:left;
-    padding: 10px 12px;
+    padding: 8px 10px;
     font-size: var(--fs-head);
     color: var(--muted);
     border-bottom:1px solid rgba(148,163,184,.10);
@@ -311,7 +324,7 @@
   }
 
   tbody td{
-    padding: 9px 12px;
+    padding: 7px 10px;
     border-bottom:1px solid rgba(148,163,184,.08);
     vertical-align:middle;
     line-height:1.2;
@@ -335,7 +348,7 @@
 
   .cliente{
     font-weight:900;
-    font-size: 12px;
+    font-size: 11px;
     display:flex;
     flex-direction:column;
     align-items:flex-start;
@@ -366,7 +379,7 @@
   }
 
   .empreendimento{
-    font-size:10px;
+    font-size:9px;
     color: var(--muted);
     margin-top:3px;
     overflow:hidden;
@@ -374,7 +387,7 @@
     white-space:nowrap;
   }
   .corretorLinha{
-    font-size:10px;
+    font-size:9px;
     color: var(--muted);
     overflow:hidden;
     text-overflow:ellipsis;
@@ -383,20 +396,20 @@
   .muted{color:var(--muted)}
 
   .toolbar{
-    padding: 10px 12px;
+    padding: 8px 10px;
     display:flex;
     align-items:center;
     justify-content:space-between;
-    gap:10px;
+    gap:8px;
   }
   .toolbar .left{display:flex;flex-direction:column}
-  .toolbar h2{margin:0;font-size:13px}
-  .toolbar .sub{margin-top:3px;font-size:11px;color:var(--muted)}
+  .toolbar h2{margin:0;font-size:12px}
+  .toolbar .sub{margin-top:2px;font-size:10px;color:var(--muted)}
   .toolbar .right{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .count{
-    font-size:11px;
+    font-size:10px;
     color: var(--muted);
-    padding: 6px 10px;
+    padding: 5px 8px;
     border-radius:999px;
     border:1px solid rgba(148,163,184,.16);
     background: rgba(255,255,255,.02);
