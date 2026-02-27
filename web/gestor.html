@@ -136,6 +136,15 @@
         body.theme-corporate .fase-value {
             color: #0f172a;
         }
+        body.theme-corporate .fase-obra {
+            color: #334155;
+        }
+        body.theme-corporate .fase-cliente-main {
+            color: #0f172a;
+        }
+        body.theme-corporate .fase-corretor-aux {
+            color: #475569;
+        }
         body.theme-corporate .fase-list::-webkit-scrollbar-track {
             background: #e2e8f0;
         }
@@ -603,12 +612,10 @@
         .fase-item {
             display: grid;
             grid-template-columns:
-                minmax(180px, 1.4fr)
-                minmax(130px, 1fr)
-                minmax(150px, 1.1fr)
+                minmax(280px, 2fr)
                 repeat(6, minmax(115px, .9fr));
-            gap: 10px;
-            min-width: 1160px;
+            gap: 8px;
+            min-width: 980px;
             align-items: center;
         }
         .fase-header-row {
@@ -630,8 +637,39 @@
             padding: 0 2px;
         }
         .fase-item {
-            padding: 8px 0;
+            padding: 6px 0;
             border-bottom: 1px dashed rgba(148, 163, 184, .14);
+        }
+        .fase-cliente-stack {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .fase-obra,
+        .fase-cliente-main,
+        .fase-corretor-aux {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .fase-obra {
+            color: var(--muted);
+            font-size: calc(.74rem * var(--font-scale));
+            font-weight: 700;
+            letter-spacing: .02em;
+            text-transform: uppercase;
+        }
+        .fase-cliente-main {
+            color: var(--text);
+            font-size: calc(.92rem * var(--font-scale));
+            font-weight: 800;
+            line-height: 1.2;
+        }
+        .fase-corretor-aux {
+            color: var(--muted);
+            font-size: calc(.76rem * var(--font-scale));
+            font-weight: 700;
         }
         .fase-item:last-child {
             border-bottom: 0;
@@ -649,11 +687,11 @@
             align-items: center;
             justify-content: center;
             width: 100%;
-            min-height: 30px;
-            padding: 5px 8px;
+            min-height: 28px;
+            padding: 4px 8px;
             border-radius: 999px;
             border: 1px solid rgba(148, 163, 184, .3);
-            font-size: calc(.7rem * var(--font-scale));
+            font-size: calc(.68rem * var(--font-scale));
             font-weight: 800;
             letter-spacing: .01em;
             white-space: nowrap;
@@ -1571,9 +1609,7 @@
         function renderFaseTable(clientes) {
             const header = `
                 <div class="fase-header-row">
-                    <div class="fase-col-title">Cliente</div>
-                    <div class="fase-col-title">Corretor</div>
-                    <div class="fase-col-title">Obra</div>
+                    <div class="fase-col-title">Empreendimento / Cliente / Corretor | Imobiliaria</div>
                     <div class="fase-col-title">Comercial</div>
                     <div class="fase-col-title">Repasse</div>
                     <div class="fase-col-title">Caixa</div>
@@ -1584,9 +1620,11 @@
             `;
             const rows = clientes.map((item) => `
                 <div class="fase-item">
-                    <div class="fase-value" title="${escapeHtml(item?.cliente_nome || "-")}">${escapeHtml(item?.cliente_nome || "-")}</div>
-                    <div class="fase-value" title="${escapeHtml(item?.corretor || "-")}">${escapeHtml(item?.corretor || "-")}</div>
-                    <div class="fase-value" title="${escapeHtml(item?.obra || "-")}">${escapeHtml(item?.obra || "-")}</div>
+                    <div class="fase-cliente-stack">
+                        <div class="fase-obra" title="${escapeHtml(item?.obra || "-")}">${escapeHtml(item?.obra || "-")}</div>
+                        <div class="fase-cliente-main" title="${escapeHtml(item?.cliente_nome || "-")}">${escapeHtml(item?.cliente_nome || "-")}</div>
+                        <div class="fase-corretor-aux" title="${escapeHtml(`${item?.corretor || "-"} | ${item?.imobiliaria || "Sem imobiliaria"}`)}">${escapeHtml(`${item?.corretor || "-"} | ${item?.imobiliaria || "Sem imobiliaria"}`)}</div>
+                    </div>
                     <div>${renderStatusCell(item, "comercial")}</div>
                     <div>${renderStatusCell(item, "repasse")}</div>
                     <div>${renderStatusCell(item, "caixa")}</div>
