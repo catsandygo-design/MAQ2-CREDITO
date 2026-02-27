@@ -3905,9 +3905,11 @@ def app_list_processos(
         sem_documento_enviado = docs_recebidos <= 0
         status_cca_norm = _process_caixa_status(processo.status_cca)
         status_agehab_norm = _process_agehab_status(processo.status_agehab)
-        espelho_validado = status_cca_norm in {"CONFORME", "TRATANDO_PRODUTO", "AGENDADO", "ASSINATURA_CAIXA", "FINALIZADO"}
-        agehab_contrato_pendente = status_agehab_norm in {"ANALISE_CREDITO", "PENDENTE_CREDITO"}
-        aviso_gerar_contrato_agehab = espelho_validado and agehab_contrato_pendente
+        etapa_repasse_norm = _process_etapa_repasse(getattr(processo, "etapa_repasse", None))
+        espelho_validado = status_cca_norm in {"CONFORME", "TRATANDO_PRODUTO", "AGENDADO"}
+        agehab_validado = status_agehab_norm == "VALIDADO_AGEHAB"
+        contrato_ja_acionado = etapa_repasse_norm == "ASSINATURA_AUTORIZADA" or status_cca_norm in {"ASSINATURA_CAIXA", "FINALIZADO"}
+        aviso_gerar_contrato_agehab = espelho_validado and agehab_validado and not contrato_ja_acionado
 
         sla_analista_seconds = _compute_sla_seconds(processo, SLA_OWNER_ANALISTA, now)
         sla_corretor_seconds = _compute_sla_seconds(processo, SLA_OWNER_CORRETOR, now)

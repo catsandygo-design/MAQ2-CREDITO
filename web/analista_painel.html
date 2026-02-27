@@ -1462,7 +1462,7 @@
       <div class="kpi warn"><div class="k">Repasse</div><div class="v">${repasse}</div><div class="s">Assinatura Diretoria + Aprovacao Diretoria + Envio Sienge + Venda Finalizada</div></div>
       <div class="kpi good"><div class="k">Assinados</div><div class="v">${assinados}</div><div class="s">Status Caixa = Assinatura Caixa</div></div>
       <div class="kpi bad"><div class="k">Prioridade alta</div><div class="v">${prios}</div><div class="s">comercial acima de 15 dias</div></div>
-      <div class="kpi warn"><div class="k">Aviso Agehab</div><div class="v">${avisoAgehab}</div><div class="s">espelho validado: gerar contrato</div></div>
+      <div class="kpi warn"><div class="k">Aviso Agehab</div><div class="v">${avisoAgehab}</div><div class="s">Agehab validado + espelho conforme: solicitar contrato</div></div>
       <div class="kpi ${clsSla(avgSlaCor)}"><div class="k">SLA medio comercial</div><div class="v">${avgSlaCor}h</div><div class="s">media do filtro</div></div>
       <div class="kpi ${clsSla(avgSlaCred)} spark">
         <div class="k">SLA medio credito</div>
@@ -1543,7 +1543,7 @@
       const badges = [];
       if (r.foraContagemMes) badges.push(outCountBadge());
       if (isHighPriority(r)) badges.push(prioBadge());
-      if (r.avisoContratoAgehab) badges.push('<span class="aviso-agehab">Espelho validado: gerar contrato Agehab</span>');
+      if (r.avisoContratoAgehab) badges.push('<span class="aviso-agehab">Agehab validado: solicitar contrato Agehab</span>');
       const badgesHtml = badges.length ? `<div class="rowBadges">${badges.join("")}</div>` : "";
       const url = UPDATE_PAGE_URL(r);
       const rowClasses = [];
