@@ -272,8 +272,8 @@
       overflow-x: auto;
       overflow-y: hidden;
       display: grid;
-      grid-template-columns: repeat(7, minmax(190px, 1fr));
-      gap: 8px;
+      grid-template-columns: repeat(7, minmax(clamp(230px, 14vw, 300px), 1fr));
+      gap: 10px;
       align-items: stretch;
       scrollbar-gutter: stable;
     }
@@ -317,11 +317,11 @@
     .cards {
       min-height: 0;
       overflow: auto;
-      padding: 6px 10px 6px 6px;
+      padding: 6px;
       display: grid;
       gap: 6px;
       align-content: start;
-      scrollbar-gutter: stable both-edges;
+      scrollbar-gutter: stable;
     }
 
     .cards.drag-over {
@@ -359,7 +359,7 @@
       display: flex;
       justify-content: space-between;
       gap: 8px;
-      align-items: start;
+      align-items: flex-start;
     }
 
     .name {
@@ -367,12 +367,18 @@
       font-size: 12px;
       font-weight: 800;
       line-height: 1.2;
+      min-width: 0;
+      flex: 1 1 auto;
     }
 
     .name a {
+      display: block;
       color: var(--text);
       text-decoration: none;
       border-bottom: 1px dashed rgba(148, 163, 184, .3);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .name a:hover {
@@ -387,18 +393,20 @@
       color: #cbd5e1;
       background: rgba(2, 6, 23, .82);
       white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .meta-line {
       font-size: 10px;
       color: var(--muted);
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 6px;
+      grid-template-columns: minmax(0, 92px) minmax(0, 1fr);
+      gap: 4px;
       align-items: baseline;
     }
 
     .meta-line span {
+      font-weight: 600;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -406,11 +414,13 @@
 
     .meta-line b {
       min-width: 0;
+      width: 100%;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      max-width: none;
-      justify-self: end;
+      max-width: 100%;
+      justify-self: stretch;
+      text-align: right;
     }
 
     .empty {
@@ -437,7 +447,7 @@
 
     @media (max-width: 1500px) {
       .board {
-        grid-template-columns: repeat(7, minmax(180px, 1fr));
+        grid-template-columns: repeat(7, minmax(220px, 1fr));
       }
     }
 
@@ -452,7 +462,7 @@
         grid-template-columns: 1fr 1fr;
       }
       .board {
-        grid-template-columns: repeat(7, minmax(170px, 1fr));
+        grid-template-columns: repeat(7, minmax(200px, 1fr));
       }
     }
   </style>
