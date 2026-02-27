@@ -550,6 +550,18 @@
       font-size: .72rem;
       color: var(--text-soft);
     }
+    #dep-nao-definido-wrap {
+      margin-top: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    #dep-nao-definido-msg {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: .02em;
+      line-height: 1.25;
+    }
 
     .highlight-info {
       display: block;
@@ -780,6 +792,7 @@
           <div class="form-group">
             <label for="tipo-dependente">Tipo de dependente</label>
             <select id="tipo-dependente">
+              <option value="nao-definido">Nao definido</option>
               <option value="filho-menor">Filho menor</option>
               <option value="filho-maior">Filho maior</option>
               <option value="tio-tia">Tio ou Tia</option>
@@ -789,6 +802,13 @@
               <option value="bisavos">Bisavó ou Bisavô</option>
               <option value="sobrinho-sobrinha">Sobrinho ou Sobrinha</option>
             </select>
+            <div id="dep-nao-definido-wrap" class="hidden">
+              <div class="checkbox-row">
+                <input type="checkbox" id="dep-avancar-sem-dependente">
+                <label for="dep-avancar-sem-dependente">Avancar sem dependente</label>
+              </div>
+              <span class="muted" id="dep-nao-definido-msg">DEPENDENTE NAO DEFINIDO, VAI AVANCAR SEM DEPENDENTE?</span>
+            </div>
           </div>
 
           <div class="form-group">
@@ -1586,6 +1606,9 @@
 
   <script>
     const tipoDependenteSelect = document.getElementById('tipo-dependente');
+    const depNaoDefinidoWrap = document.getElementById('dep-nao-definido-wrap');
+    const depAvancarSemDependente = document.getElementById('dep-avancar-sem-dependente');
+    const depNaoDefinidoMsg = document.getElementById('dep-nao-definido-msg');
     const estadoCivilDepGroup = document.getElementById('estado-civil-dependente-group');
     const estadoCivilDepSelect = document.getElementById('estado-civil-dependente');
     const estadoCivilPropSelect = document.getElementById('estado-civil-proponente');
@@ -1685,17 +1708,34 @@
       assuntoAgehabInput.value = montarAssunto('KIT AGEHAB');
     }
 
+    function atualizarMensagemDependenteNaoDefinido() {
+      if (!depNaoDefinidoMsg) return;
+      depNaoDefinidoMsg.textContent = depAvancarSemDependente?.checked
+        ? 'VENDA SEM DEPENDENTE.'
+        : 'DEPENDENTE NAO DEFINIDO, VAI AVANCAR SEM DEPENDENTE?';
+    }
+
     function atualizarDependente() {
       const tipo = tipoDependenteSelect.value;
-      if (tipo === 'filho-menor') {
+      if (tipo === 'nao-definido') {
+        secDepMenor.style.display = 'none';
+        secDepMaior.style.display = 'none';
+        estadoCivilDepGroup.classList.add('hidden');
+        if (depNaoDefinidoWrap) depNaoDefinidoWrap.classList.remove('hidden');
+      } else if (tipo === 'filho-menor') {
         secDepMenor.style.display = 'block';
         secDepMaior.style.display = 'none';
         estadoCivilDepGroup.classList.add('hidden');
+        if (depNaoDefinidoWrap) depNaoDefinidoWrap.classList.add('hidden');
+        if (depAvancarSemDependente) depAvancarSemDependente.checked = false;
       } else {
         secDepMenor.style.display = 'none';
         secDepMaior.style.display = 'block';
         estadoCivilDepGroup.classList.remove('hidden');
+        if (depNaoDefinidoWrap) depNaoDefinidoWrap.classList.add('hidden');
+        if (depAvancarSemDependente) depAvancarSemDependente.checked = false;
       }
+      atualizarMensagemDependenteNaoDefinido();
     }
 
     function atualizarEstadoCivilProponente() {
@@ -1976,6 +2016,9 @@ DIVORCIADO: Certidão de casamento averbada.`;
     chkIrpfInformal.addEventListener('change', atualizarPerfilRenda);
 
     tipoDependenteSelect.addEventListener('change', atualizarDependente);
+    if (depAvancarSemDependente) {
+      depAvancarSemDependente.addEventListener('change', atualizarMensagemDependenteNaoDefinido);
+    }
     estadoCivilPropSelect.addEventListener('change', atualizarEstadoCivilProponente);
     if (estadoCivilDepSelect) estadoCivilDepSelect.addEventListener('change', atualizarEstadoCivilDependente);
 
@@ -2174,6 +2217,7 @@ DIVORCIADO: Certidão de casamento averbada.`;
           "#perfil-renda",
           "#estado-civil-proponente",
           "#tipo-dependente",
+          "#dep-avancar-sem-dependente",
           "#estado-civil-dependente",
           "#cotista-3-anos",
           "#irpf-informal",
@@ -2314,6 +2358,8 @@ DIVORCIADO: Certidão de casamento averbada.`;
       }
 
       function getRows() {
+        const tipoDependente = String(document.getElementById("tipo-dependente")?.value || "").trim().toLowerCase();
+        const ignorarDependente = tipoDependente === "nao-definido";
         return Array.from(document.querySelectorAll("section.section-block tr")).map((row) => {
           const nameCell = row.querySelector("td.doc-col");
           const docSelect = row.querySelector("td.status-doc-col select, td.status-col select");
@@ -2332,7 +2378,11 @@ DIVORCIADO: Certidão de casamento averbada.`;
             docSelect,
             creditoSelect,
           };
-        }).filter(Boolean);
+        }).filter((item) => {
+          if (!item) return false;
+          if (!ignorarDependente) return true;
+          return item.categoria !== "depmenor" && item.categoria !== "depmaior";
+        });
       }
 
       function uiDocToBackend(value) {

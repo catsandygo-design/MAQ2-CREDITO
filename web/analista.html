@@ -396,6 +396,41 @@
       color: var(--muted);
       font-weight:600;
     }
+    .dep-sem-def-wrap{
+      margin-top: 6px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px dashed rgba(148,163,184,.28);
+      background: rgba(2,6,23,.34);
+      display: none;
+    }
+    .dep-sem-def-row{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color: var(--text);
+      font-size: var(--fs-sm);
+      font-weight: 600;
+    }
+    .dep-sem-def-msg{
+      margin-top: 6px;
+      font-size: var(--fs-xs);
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+      line-height: 1.25;
+    }
+    body.theme-corporate .dep-sem-def-wrap{
+      background:#f8fbff;
+      border-color: rgba(15,23,42,.16);
+    }
+    body.theme-corporate .dep-sem-def-row{
+      color:#0f172a;
+    }
+    body.theme-corporate .dep-sem-def-msg{
+      color:#475569;
+    }
 
     input, select, textarea{
       color-scheme: dark;
@@ -990,6 +1025,7 @@
           <div class="fg">
             <label for="tipo-dependente">Tipo de dependente</label>
             <select id="tipo-dependente">
+              <option value="nao-definido">Nao definido</option>
               <option value="filho-menor">Filho menor</option>
               <option value="filho-maior">Filho maior</option>
               <option value="tio-tia">Tio/Tia</option>
@@ -999,6 +1035,13 @@
               <option value="bisavos">Bisavós</option>
               <option value="sobrinho-sobrinha">Sobrinho(a)</option>
             </select>
+            <div class="dep-sem-def-wrap" id="dep-sem-def-wrap">
+              <label class="dep-sem-def-row" for="dep-avancar-sem-dependente">
+                <input id="dep-avancar-sem-dependente" type="checkbox" />
+                Avancar sem dependente
+              </label>
+              <div class="dep-sem-def-msg" id="dep-sem-def-msg">DEPENDENTE NAO DEFINIDO, VAI AVANCAR SEM DEPENDENTE?</div>
+            </div>
           </div>
 
           <div class="fg">
@@ -1976,6 +2019,9 @@ DIVORCIADO: Certidão averbada.</td>
   // =========================
   const secDepMenor = $("sec-dep-menor");
   const secDepMaior = $("sec-dep-maior");
+  const depSemDefWrap = $("dep-sem-def-wrap");
+  const depAvancarSemDependente = $("dep-avancar-sem-dependente");
+  const depSemDefMsg = $("dep-sem-def-msg");
 
   const secRendaClt = $("sec-renda-clt");
   const secRendaInformal = $("sec-renda-informal");
@@ -1997,11 +2043,29 @@ DIVORCIADO: Certidão averbada.</td>
     el.style.display = show ? mode : "none";
   }
 
+  function atualizarMensagemSemDependente(){
+    if(!depSemDefMsg) return;
+    depSemDefMsg.textContent = depAvancarSemDependente?.checked
+      ? "VENDA SEM DEPENDENTE."
+      : "DEPENDENTE NAO DEFINIDO, VAI AVANCAR SEM DEPENDENTE?";
+  }
+
   function atualizarDependente(){
     const tipo = $("tipo-dependente").value;
+    const naoDefinido = (tipo === "nao-definido");
     const isMenor = (tipo === "filho-menor");
-    setDisplay(secDepMenor, isMenor, "block");
-    setDisplay(secDepMaior, !isMenor, "block");
+
+    if(naoDefinido){
+      setDisplay(secDepMenor, false, "block");
+      setDisplay(secDepMaior, false, "block");
+      setDisplay(depSemDefWrap, true, "block");
+    }else{
+      setDisplay(secDepMenor, isMenor, "block");
+      setDisplay(secDepMaior, !isMenor, "block");
+      setDisplay(depSemDefWrap, false, "block");
+      if(depAvancarSemDependente) depAvancarSemDependente.checked = false;
+    }
+    atualizarMensagemSemDependente();
     updateSectionCounters();
     buildPendenciasResumo();
   }
@@ -2222,6 +2286,9 @@ DIVORCIADO: Certidão averbada.</td>
 
   // ===== Rule listeners =====
   $("tipo-dependente").addEventListener("change", atualizarDependente);
+  if(depAvancarSemDependente){
+    depAvancarSemDependente.addEventListener("change", atualizarMensagemSemDependente);
+  }
   $("perfil-renda").addEventListener("change", atualizarPerfilRenda);
   $("irpf-informal").addEventListener("change", atualizarPerfilRenda);
   $("cotista-3-anos").addEventListener("change", atualizarCtps);
@@ -2531,6 +2598,8 @@ DIVORCIADO: Certidão averbada.</td>
     }
 
     function getDocRows() {
+      const tipoDependente = byId("tipo-dependente")?.value || "";
+      const ignorarDocsDependente = tipoDependente === "nao-definido";
       return Array.from(document.querySelectorAll("select.status.status-pill[data-doc][data-id]")).map((sel) => {
         const row = sel.closest("tr");
         const reasonInput = getDocReasonInputFromSelect(sel);
@@ -2544,6 +2613,10 @@ DIVORCIADO: Certidão averbada.</td>
           docId,
           nome: canonicalDocName(categoria, rawName, docId),
         };
+      }).filter((row) => {
+        if (!row) return false;
+        if (!ignorarDocsDependente) return true;
+        return row.categoria !== "depmenor" && row.categoria !== "depmaior";
       });
     }
 
