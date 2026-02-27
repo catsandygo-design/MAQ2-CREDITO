@@ -121,6 +121,7 @@
         }
         body.theme-corporate .fase-list {
             border-top-color: rgba(15, 23, 42, 0.15);
+            scrollbar-color: rgba(15, 23, 42, 0.35) #e2e8f0;
         }
         body.theme-corporate .fase-header-row {
             border-bottom-color: rgba(15, 23, 42, 0.16);
@@ -581,7 +582,11 @@
             max-height: 300px;
             overflow: auto;
             border-top: 1px dashed rgba(148, 163, 184, .24);
-            padding-top: 8px;
+            padding-top: 0;
+            position: relative;
+            scrollbar-gutter: stable;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(148, 163, 184, .45) rgba(2, 6, 23, .35);
         }
         .fase-list::-webkit-scrollbar {
             width: 10px;
@@ -609,10 +614,11 @@
         .fase-header-row {
             position: sticky;
             top: 0;
-            z-index: 2;
+            z-index: 6;
             padding: 6px 0;
             border-bottom: 1px solid rgba(148, 163, 184, .24);
             background: linear-gradient(180deg, rgba(2, 6, 23, .96), rgba(2, 6, 23, .86));
+            box-shadow: 0 1px 0 rgba(148, 163, 184, .2);
         }
         .fase-col-title {
             color: var(--muted);
