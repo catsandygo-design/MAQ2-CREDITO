@@ -3610,20 +3610,17 @@ def admin_reset_sistema(
         admin_user.username = admin_username
         admin_user.role = ROLE_ADMIN
         admin_user.is_active = True
-        # No reset geral, o usuario preservado volta para a senha admin oficial do ambiente.
-        _set_user_password(admin_user, admin_password, must_change_password=False)
+        # Mantem a senha atual do admin para evitar bloqueio apos reset.
     admin_user.must_change_password = False
     admin_user.last_login_at = None
 
-    usuarios_removidos = int(
-        db.query(AppUser)
-        .filter(func.lower(AppUser.username) != admin_username)
-        .delete(synchronize_session=False)
-    )
+    # Nao remove usuarios cadastrados no reset geral.
+    usuarios_removidos = 0
 
     _set_runtime_meta(db, META_MENSAL_RUNTIME_KEY, "0")
     _set_runtime_meta(db, LAYOUT_BLACKHOLE_RUNTIME_KEY, "0")
-    _set_runtime_meta(db, USERS_SEED_MODE_RUNTIME_KEY, USERS_SEED_MODE_ADMIN_ONLY)
+    # Volta o seed para full para manter comportamento padrao sem restringir acesso.
+    _set_runtime_meta(db, USERS_SEED_MODE_RUNTIME_KEY, USERS_SEED_MODE_FULL)
 
     db.commit()
     _invalidate_process_list_cache()
