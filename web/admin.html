@@ -215,6 +215,44 @@
       color:var(--muted);
       font-size:calc(12px * var(--font-scale));
     }
+    .storage-grid{
+      display:grid;
+      grid-template-columns:repeat(5,minmax(0,1fr));
+      gap:8px;
+      margin-top:10px;
+    }
+    @media (max-width:1300px){.storage-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
+    @media (max-width:860px){.storage-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    .storage-card{
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:rgba(2,6,23,.45);
+      padding:10px;
+      min-height:78px;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    body.theme-corporate .storage-card{
+      background:#f8fbff;
+      border-color:rgba(15,23,42,.14);
+    }
+    .storage-label{
+      font-size:calc(11px * var(--font-scale));
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.04em;
+    }
+    .storage-value{
+      font-size:calc(20px * var(--font-scale));
+      font-weight:900;
+      line-height:1.1;
+    }
+    .storage-legend{
+      margin-top:8px;
+      color:var(--muted);
+      font-size:calc(11px * var(--font-scale));
+    }
     @keyframes rowEnter {
       from { opacity: .0; transform: translateY(3px); }
       to { opacity: 1; transform: translateY(0); }
@@ -274,6 +312,35 @@
           <span>Blackhole</span>
         </div>
         <div id="layoutHint" class="pref-copy">Desmarcado = layout corporativo tradicional.</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="top">
+        <div class="title">
+          <h1>Uso de dados (Supabase)</h1>
+          <p>Contagem de registros para monitorar consumo no plano gratuito.</p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btnRefreshStorage">Atualizar contagem</button>
+        </div>
+      </div>
+      <div class="body">
+        <div class="storage-grid">
+          <div class="storage-card"><div class="storage-label">Clientes</div><div class="storage-value" id="kpiClientes">0</div></div>
+          <div class="storage-card"><div class="storage-label">Processos</div><div class="storage-value" id="kpiProcessos">0</div></div>
+          <div class="storage-card"><div class="storage-label">Processos ativos</div><div class="storage-value" id="kpiProcessosAtivos">0</div></div>
+          <div class="storage-card"><div class="storage-label">Processos arquivados</div><div class="storage-value" id="kpiProcessosArquivados">0</div></div>
+          <div class="storage-card"><div class="storage-label">Documentos</div><div class="storage-value" id="kpiDocumentos">0</div></div>
+          <div class="storage-card"><div class="storage-label">Eventos de processo</div><div class="storage-value" id="kpiEventos">0</div></div>
+          <div class="storage-card"><div class="storage-label">Logs</div><div class="storage-value" id="kpiLogs">0</div></div>
+          <div class="storage-card"><div class="storage-label">Usuarios</div><div class="storage-value" id="kpiUsuarios">0</div></div>
+          <div class="storage-card"><div class="storage-label">Empreendimentos</div><div class="storage-value" id="kpiEmpreendimentos">0</div></div>
+          <div class="storage-card"><div class="storage-label">Total monitorado</div><div class="storage-value" id="kpiTotalMonitorado">0</div></div>
+        </div>
+        <div class="storage-legend">
+          Dica: acompanhe crescimento de documentos, eventos e logs para evitar estourar limites do banco.
+        </div>
       </div>
     </section>
 
@@ -631,9 +698,20 @@
     const deleteForm = document.getElementById("deleteForm");
     const layoutBlackholeInput = document.getElementById("layoutBlackhole");
     const layoutHint = document.getElementById("layoutHint");
+    const btnRefreshStorage = document.getElementById("btnRefreshStorage");
     const delEntityInput = document.getElementById("delEntity");
     const delIdInput = document.getElementById("delId");
     const delReasonInput = document.getElementById("delReason");
+    const kpiClientes = document.getElementById("kpiClientes");
+    const kpiProcessos = document.getElementById("kpiProcessos");
+    const kpiProcessosAtivos = document.getElementById("kpiProcessosAtivos");
+    const kpiProcessosArquivados = document.getElementById("kpiProcessosArquivados");
+    const kpiDocumentos = document.getElementById("kpiDocumentos");
+    const kpiEventos = document.getElementById("kpiEventos");
+    const kpiLogs = document.getElementById("kpiLogs");
+    const kpiUsuarios = document.getElementById("kpiUsuarios");
+    const kpiEmpreendimentos = document.getElementById("kpiEmpreendimentos");
+    const kpiTotalMonitorado = document.getElementById("kpiTotalMonitorado");
     let currentUser = null;
     let users = [];
     let empreendimentos = [];
@@ -673,6 +751,11 @@
       const d = new Date(value);
       if (Number.isNaN(d.getTime())) return "-";
       return d.toLocaleString("pt-BR");
+    }
+
+    function fmtInt(value) {
+      const num = Number(value || 0);
+      return Number.isFinite(num) ? num.toLocaleString("pt-BR") : "0";
     }
 
     function setFeedbackEmp(message, isError = false) {
@@ -956,6 +1039,25 @@
       renderLogs();
     }
 
+    function renderStorageSummary(data) {
+      const summary = data || {};
+      if (kpiClientes) kpiClientes.textContent = fmtInt(summary.total_clientes);
+      if (kpiProcessos) kpiProcessos.textContent = fmtInt(summary.total_processos);
+      if (kpiProcessosAtivos) kpiProcessosAtivos.textContent = fmtInt(summary.total_processos_ativos);
+      if (kpiProcessosArquivados) kpiProcessosArquivados.textContent = fmtInt(summary.total_processos_arquivados);
+      if (kpiDocumentos) kpiDocumentos.textContent = fmtInt(summary.total_documentos);
+      if (kpiEventos) kpiEventos.textContent = fmtInt(summary.total_eventos_processo);
+      if (kpiLogs) kpiLogs.textContent = fmtInt(summary.total_logs_sistema);
+      if (kpiUsuarios) kpiUsuarios.textContent = fmtInt(summary.total_usuarios);
+      if (kpiEmpreendimentos) kpiEmpreendimentos.textContent = fmtInt(summary.total_empreendimentos);
+      if (kpiTotalMonitorado) kpiTotalMonitorado.textContent = fmtInt(summary.total_registros_monitorados);
+    }
+
+    async function loadStorageSummary() {
+      const data = await api("/app/api/admin/storage-summary");
+      renderStorageSummary(data);
+    }
+
     async function loadMe() {
       const me = await api("/auth/me");
       currentUser = me;
@@ -1012,6 +1114,7 @@
         setFeedback("Funcionario cadastrado com sucesso.");
         await loadUsers();
         await loadLogs();
+        await loadStorageSummary();
       } catch (error) {
         setFeedback(error.message, true);
       }
@@ -1034,6 +1137,7 @@
         setFeedbackEmp("Empreendimento cadastrado com sucesso.");
         await loadEmpreendimentos();
         await loadLogs();
+        await loadStorageSummary();
       } catch (error) {
         setFeedbackEmp(error.message, true);
       }
@@ -1081,6 +1185,7 @@
           await loadEmpreendimentos();
         }
         await loadLogs();
+        await loadStorageSummary();
       } catch (error) {
         setFeedbackDelete(error.message, true);
       }
@@ -1091,6 +1196,7 @@
         await loadUsers();
         await loadEmpreendimentos();
         await loadLogs();
+        await loadStorageSummary();
       } catch (error) {
         setFeedback(error.message, true);
       }
@@ -1104,6 +1210,16 @@
       }
     });
 
+    if (btnRefreshStorage) {
+      btnRefreshStorage.addEventListener("click", async () => {
+        try {
+          await loadStorageSummary();
+        } catch (error) {
+          setFeedback(error.message, true);
+        }
+      });
+    }
+
     document.getElementById("btnPurgeHistoricos").addEventListener("click", async () => {
       const confirmacao = confirm(
         "Deseja deletar historicos definitivamente? Esta acao remove logs do sistema e eventos de processo."
@@ -1115,6 +1231,7 @@
           `Historicos removidos. Eventos: ${result.processo_eventos_removidos || 0} | Logs: ${result.sistema_logs_removidos || 0}`
         );
         await loadLogs();
+        await loadStorageSummary();
       } catch (error) {
         setFeedback(error.message, true);
       }
@@ -1122,7 +1239,7 @@
 
     document.getElementById("btnResetSistema").addEventListener("click", async () => {
       const confirmacao = confirm(
-        "Apagar banco total vai remover clientes, processos, documentos, empreendimentos, logs e usuarios. Apenas douglasadm sera mantido."
+        "Apagar banco total remove clientes, processos, documentos, empreendimentos, logs e metadados. Usuarios cadastrados sao preservados."
       );
       if (!confirmacao) return;
       const prova = prompt("Digite APAGAR TUDO para confirmar a limpeza total:");
@@ -1141,7 +1258,7 @@
           `Eventos removidos: ${result.processo_eventos_removidos || 0}\n` +
           `Logs removidos: ${result.sistema_logs_removidos || 0}\n` +
           `Metadados removidos: ${result.runtime_meta_removidos || 0}\n` +
-          `Usuarios removidos: ${result.usuarios_removidos || 0}\n` +
+          `Usuarios removidos (preservados por seguranca): ${result.usuarios_removidos || 0}\n` +
           `Usuario preservado: ${result.usuario_preservado || "douglasadm"}`
         );
         window.location.href = "/login";
@@ -1185,6 +1302,7 @@
         await loadUsers();
         await loadEmpreendimentos();
         await loadLogs();
+        await loadStorageSummary();
       } catch (error) {
         setFeedback(error.message, true);
       }

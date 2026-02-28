@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, create_engine, text
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, create_engine, or_, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
@@ -50,6 +50,7 @@ LAYOUT_BLACKHOLE_RUNTIME_KEY = "layout_blackhole_enabled"
 USERS_SEED_MODE_RUNTIME_KEY = "users_seed_mode"
 USERS_SEED_MODE_FULL = "full"
 USERS_SEED_MODE_ADMIN_ONLY = "admin_only"
+REPASSE_ARQUIVO_PERIODO_RUNTIME_KEY = "repasse_arquivo_periodo"
 RESET_ADMIN_USERNAME = "douglasadm"
 ROLE_CORRETOR = "corretor"
 ROLE_CCA = "cca"
@@ -98,7 +99,7 @@ try:
     )
 except ValueError:
     DASHBOARD_IMPORT_DATE_BACKFILL_TOLERANCE_DAYS = 365
-RUNTIME_SCHEMA_REVISION = "2026-02-24-sla-stop-rules-v2"
+RUNTIME_SCHEMA_REVISION = "2026-02-28-arquivo-repasse-v1"
 PENDENCIA_INFO_MIN_LENGTH = 0
 PROCESS_LIST_CACHE: dict[str, dict[str, Any]] = {}
 SEED_USERS_READY = False
@@ -751,6 +752,13 @@ def _sync_estagio_repasse_rules(processo: "Processo", now: Optional[datetime] = 
         if _status_token(processo.status_credito) == "REPROVADO":
             processo.status_credito = "EM_ANALISE"
 
+    # Se o processo voltar para status nao final da Caixa, sai do arquivo mensal.
+    if _status_token(getattr(processo, "status_cca", None)) not in PROCESS_CCA_FINAL_STATUSES:
+        processo.arquivado = False
+        processo.arquivado_em = None
+        processo.arquivado_ref_ano = None
+        processo.arquivado_ref_mes = None
+
 
 def _normalize_sla_owner(value: Optional[str], fallback: str = SLA_OWNER_NONE) -> str:
     raw = _status_token(value)
@@ -1269,6 +1277,10 @@ class Processo(Base):
     nao_contar_mes: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     nao_contar_mes_ref_ano: Mapped[Optional[int]] = mapped_column(Integer)
     nao_contar_mes_ref_mes: Mapped[Optional[int]] = mapped_column(Integer)
+    arquivado: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    arquivado_em: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    arquivado_ref_ano: Mapped[Optional[int]] = mapped_column(Integer)
+    arquivado_ref_mes: Mapped[Optional[int]] = mapped_column(Integer)
     sla_comercial_inicio_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     sla_credito_inicio_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     sla_comercial_fim_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
@@ -1654,6 +1666,47 @@ class ProcessoOverviewOut(BaseModel):
     aviso_gerar_contrato_agehab: bool = False
 
 
+class ProcessoArquivadoOut(BaseModel):
+    processo_id: uuid.UUID
+    cliente_id: uuid.UUID
+    cliente_nome: str
+    corretor: Optional[str] = None
+    obra: Optional[str] = None
+    imobiliaria: Optional[str] = None
+    estagio_comercial: str
+    etapa_repasse: Optional[str] = None
+    status_cca: str
+    status_agehab: str
+    status_sinal: str
+    status_fiador: str
+    arquivado_em: Optional[datetime] = None
+    arquivado_ref_ano: Optional[int] = None
+    arquivado_ref_mes: Optional[int] = None
+    data_reserva_origem: Optional[date] = None
+    data_cadastro_origem: Optional[date] = None
+    created_at: Optional[datetime] = None
+
+
+class ProcessoArquivadoListOut(BaseModel):
+    total_clientes_cadastrados: int
+    total_processos_ativos: int
+    total_processos_arquivados: int
+    itens: list[ProcessoArquivadoOut]
+
+
+class AdminStorageSummaryOut(BaseModel):
+    total_clientes: int
+    total_processos: int
+    total_processos_ativos: int
+    total_processos_arquivados: int
+    total_documentos: int
+    total_eventos_processo: int
+    total_logs_sistema: int
+    total_usuarios: int
+    total_empreendimentos: int
+    total_registros_monitorados: int
+
+
 class ImportPlanilhaRowOut(BaseModel):
     linha: int
     nome_cliente: Optional[str] = None
@@ -1777,8 +1830,10 @@ def _processo_has_pendencia(processo: "Processo") -> bool:
     return any(_is_pendencia_status(field, value) for field, value in status_values.items())
 
 
-def _query_processos_by_scope(db: Session, role: str, username: str):
+def _query_processos_by_scope(db: Session, role: str, username: str, include_archived: bool = False):
     query = db.query(Processo)
+    if not include_archived:
+        query = query.filter(_processos_ativos_clause())
     if role == ROLE_CORRETOR:
         if not username:
             return query.filter(text("1=0"))
@@ -2098,6 +2153,58 @@ def _is_nao_contar_mes_active(processo: "Processo", now: Optional[datetime] = No
     return ref_ano_int == ref_now.year and ref_mes_int == ref_now.month
 
 
+def _processos_ativos_clause():
+    return or_(Processo.arquivado.is_(False), Processo.arquivado.is_(None))
+
+
+def _ensure_monthly_repasse_archiving(db: Session, now: Optional[datetime] = None) -> int:
+    ref_now = _as_utc(now) or _utcnow()
+    periodo_atual = f"{ref_now.year:04d}-{ref_now.month:02d}"
+    periodo_registrado = str(_get_runtime_meta(db, REPASSE_ARQUIVO_PERIODO_RUNTIME_KEY) or "").strip()
+    if periodo_registrado == periodo_atual:
+        return 0
+
+    processos_ativos = db.query(Processo).filter(_processos_ativos_clause()).all()
+    candidatos = [p for p in processos_ativos if _status_token(getattr(p, "status_cca", None)) in PROCESS_CCA_FINAL_STATUSES]
+    candidatos_ids = [p.id for p in candidatos]
+    assinatura_evento_por_processo: dict[uuid.UUID, datetime] = {}
+    if candidatos_ids:
+        assinatura_rows = (
+            db.query(ProcessoEvento.processo_id, func.max(ProcessoEvento.created_at))
+            .filter(
+                ProcessoEvento.processo_id.in_(candidatos_ids),
+                func.lower(func.coalesce(ProcessoEvento.field_name, "")) == "status_cca",
+                func.upper(func.coalesce(ProcessoEvento.new_value, "")).in_(tuple(PROCESS_CCA_FINAL_STATUSES)),
+            )
+            .group_by(ProcessoEvento.processo_id)
+            .all()
+        )
+        for processo_id, created_at in assinatura_rows:
+            assinatura_evento_por_processo[processo_id] = created_at
+
+    arquivados = 0
+    for processo in candidatos:
+        assinatura_evento = _as_utc(assinatura_evento_por_processo.get(processo.id))
+        credito_fim = _as_utc(getattr(processo, "sla_credito_fim_at", None))
+        atualizado_em = _as_utc(getattr(processo, "updated_at", None))
+        criado_em = _as_utc(getattr(processo, "created_at", None))
+        referencia = assinatura_evento or credito_fim or atualizado_em or criado_em
+        if referencia is None:
+            continue
+        if (referencia.year, referencia.month) < (ref_now.year, ref_now.month):
+            processo.arquivado = True
+            processo.arquivado_em = ref_now
+            processo.arquivado_ref_ano = referencia.year
+            processo.arquivado_ref_mes = referencia.month
+            arquivados += 1
+
+    _set_runtime_meta(db, REPASSE_ARQUIVO_PERIODO_RUNTIME_KEY, periodo_atual)
+    if arquivados > 0:
+        _invalidate_process_list_cache()
+    db.commit()
+    return arquivados
+
+
 def _resolve_dashboard_reference_date(
     cliente: "Cliente",
     processo_created_date: Optional[date],
@@ -2267,6 +2374,10 @@ def _ensure_runtime_schema(db: Session) -> None:
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS nao_contar_mes BOOLEAN DEFAULT FALSE",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS nao_contar_mes_ref_ano INTEGER",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS nao_contar_mes_ref_mes INTEGER",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS arquivado BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS arquivado_em TIMESTAMPTZ",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS arquivado_ref_ano INTEGER",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS arquivado_ref_mes INTEGER",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_comercial_inicio_at TIMESTAMPTZ",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_credito_inicio_at TIMESTAMPTZ",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_comercial_fim_at TIMESTAMPTZ",
@@ -2281,6 +2392,7 @@ def _ensure_runtime_schema(db: Session) -> None:
     for stmt in statements:
         db.execute(text(stmt))
     db.execute(text("UPDATE processos SET nao_contar_mes = FALSE WHERE nao_contar_mes IS NULL"))
+    db.execute(text("UPDATE processos SET arquivado = FALSE WHERE arquivado IS NULL"))
     ano_atual, mes_atual = _current_meta_period()
     db.execute(
         text(
@@ -2303,6 +2415,7 @@ def _ensure_runtime_schema(db: Session) -> None:
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_status_agehab ON processos (status_agehab)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_estagio_comercial ON processos (estagio_comercial)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_etapa_repasse ON processos (etapa_repasse)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_arquivado ON processos (arquivado)"))
     db.execute(
         text(
             """
@@ -2751,6 +2864,7 @@ async def lifespan(_: FastAPI):
                 try:
                     _ensure_seed_users(db)
                     _ensure_runtime_schema(db)
+                    _ensure_monthly_repasse_archiving(db, _utcnow())
                     now_utc = _utcnow()
                     _set_runtime_meta(db, "sla_runtime_started_at", now_utc.isoformat())
                     reconciled = _reconcile_active_sla_timers(db, now_utc)
@@ -2916,6 +3030,19 @@ def app_analista_repasse_page(request: Request):
     if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
     return _html_page("analista_repasse.html")
+
+
+@app.get("/app/analista/arquivados")
+def app_analista_arquivados_page(request: Request):
+    session = _read_session(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=302)
+    if bool(session.get("must_change_password")):
+        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+    role = _normalize_role(str(session.get("role", "")))
+    if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN}:
+        return RedirectResponse(url=_home_for_role(role), status_code=302)
+    return _html_page("analista_arquivados.html")
 
 
 @app.get("/app/analise")
@@ -3390,6 +3517,50 @@ def admin_list_system_logs(
     return query.order_by(SistemaLog.created_at.desc()).limit(limit).all()
 
 
+@app.get("/app/api/admin/storage-summary", response_model=AdminStorageSummaryOut)
+def admin_storage_summary(
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    _ensure_monthly_repasse_archiving(db, _utcnow())
+
+    total_clientes = int(db.query(func.count(Cliente.id)).scalar() or 0)
+    total_processos = int(db.query(func.count(Processo.id)).scalar() or 0)
+    total_processos_arquivados = int(
+        db.query(func.count(Processo.id)).filter(Processo.arquivado.is_(True)).scalar() or 0
+    )
+    total_processos_ativos = int(
+        db.query(func.count(Processo.id)).filter(_processos_ativos_clause()).scalar() or 0
+    )
+    total_documentos = int(db.query(func.count(Documento.id)).scalar() or 0)
+    total_eventos_processo = int(db.query(func.count(ProcessoEvento.id)).scalar() or 0)
+    total_logs_sistema = int(db.query(func.count(SistemaLog.id)).scalar() or 0)
+    total_usuarios = int(db.query(func.count(AppUser.id)).scalar() or 0)
+    total_empreendimentos = int(db.query(func.count(Empreendimento.id)).scalar() or 0)
+    total_registros_monitorados = (
+        total_clientes
+        + total_processos
+        + total_documentos
+        + total_eventos_processo
+        + total_logs_sistema
+        + total_usuarios
+        + total_empreendimentos
+    )
+
+    return AdminStorageSummaryOut(
+        total_clientes=total_clientes,
+        total_processos=total_processos,
+        total_processos_ativos=total_processos_ativos,
+        total_processos_arquivados=total_processos_arquivados,
+        total_documentos=total_documentos,
+        total_eventos_processo=total_eventos_processo,
+        total_logs_sistema=total_logs_sistema,
+        total_usuarios=total_usuarios,
+        total_empreendimentos=total_empreendimentos,
+        total_registros_monitorados=total_registros_monitorados,
+    )
+
+
 @app.get("/app/api/layout-preference", response_model=LayoutPreferenceOut)
 def app_get_layout_preference(
     _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
@@ -3856,6 +4027,7 @@ def app_list_processos(
     limit: Optional[int] = Query(default=120, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ):
+    _ensure_monthly_repasse_archiving(db, _utcnow())
     role = _normalize_role(str(session.get("role", "")))
     username = _normalize_username(str(session.get("username", "")))
     cache_key = _process_list_cache_key(role, username, limit, offset)
@@ -3864,7 +4036,7 @@ def app_list_processos(
     if cached is not None:
         return cached
 
-    query = db.query(Processo, Cliente).join(Cliente, Processo.cliente_id == Cliente.id)
+    query = db.query(Processo, Cliente).join(Cliente, Processo.cliente_id == Cliente.id).filter(_processos_ativos_clause())
     if role == ROLE_CORRETOR:
         if not username:
             return []
@@ -3966,12 +4138,102 @@ def app_list_processos(
     return output
 
 
+@app.get("/app/api/processos/arquivados", response_model=ProcessoArquivadoListOut)
+def app_list_processos_arquivados(
+    _: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+    q: Optional[str] = Query(default=None),
+    obra: Optional[str] = Query(default=None),
+    corretor: Optional[str] = Query(default=None),
+    imobiliaria: Optional[str] = Query(default=None),
+    limit: Optional[int] = Query(default=120, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+):
+    _ensure_monthly_repasse_archiving(db, _utcnow())
+
+    query = (
+        db.query(Processo, Cliente)
+        .join(Cliente, Processo.cliente_id == Cliente.id)
+        .filter(Processo.arquivado.is_(True))
+    )
+
+    term = (q or "").strip().lower()
+    obra_term = (obra or "").strip().lower()
+    corretor_term = (corretor or "").strip().lower()
+    imobiliaria_term = (imobiliaria or "").strip().lower()
+
+    if term:
+        like = f"%{term}%"
+        query = query.filter(
+            or_(
+                func.lower(func.coalesce(Cliente.nome, "")).like(like),
+                func.lower(func.coalesce(Cliente.obra, "")).like(like),
+                func.lower(func.coalesce(Cliente.corretor, "")).like(like),
+                func.lower(func.coalesce(Cliente.imobiliaria, "")).like(like),
+            )
+        )
+    if obra_term:
+        query = query.filter(func.lower(func.coalesce(Cliente.obra, "")).like(f"%{obra_term}%"))
+    if corretor_term:
+        query = query.filter(func.lower(func.coalesce(Cliente.corretor, "")).like(f"%{corretor_term}%"))
+    if imobiliaria_term:
+        query = query.filter(func.lower(func.coalesce(Cliente.imobiliaria, "")).like(f"%{imobiliaria_term}%"))
+
+    query = query.order_by(Processo.arquivado_em.desc().nullslast(), Processo.updated_at.desc()).offset(offset)
+    if limit is not None:
+        query = query.limit(limit)
+    rows = query.all()
+
+    itens = [
+        ProcessoArquivadoOut(
+            processo_id=processo.id,
+            cliente_id=cliente.id,
+            cliente_nome=cliente.nome,
+            corretor=cliente.corretor,
+            obra=cliente.obra,
+            imobiliaria=getattr(cliente, "imobiliaria", None),
+            estagio_comercial=_process_estagio_comercial(getattr(processo, "estagio_comercial", None)),
+            etapa_repasse=_process_etapa_repasse(getattr(processo, "etapa_repasse", None)),
+            status_cca=processo.status_cca,
+            status_agehab=processo.status_agehab,
+            status_sinal=processo.status_sinal,
+            status_fiador=processo.status_fiador,
+            arquivado_em=_as_utc(getattr(processo, "arquivado_em", None)),
+            arquivado_ref_ano=getattr(processo, "arquivado_ref_ano", None),
+            arquivado_ref_mes=getattr(processo, "arquivado_ref_mes", None),
+            data_reserva_origem=getattr(cliente, "data_reserva_origem", None),
+            data_cadastro_origem=getattr(cliente, "data_cadastro_origem", None),
+            created_at=processo.created_at,
+        )
+        for processo, cliente in rows
+    ]
+
+    total_clientes_cadastrados = int(db.query(func.count(Cliente.id)).scalar() or 0)
+    total_processos_ativos = int(db.query(func.count(Processo.id)).filter(_processos_ativos_clause()).scalar() or 0)
+    total_processos_arquivados = int(
+        db.query(func.count(Processo.id)).filter(Processo.arquivado.is_(True)).scalar() or 0
+    )
+
+    return ProcessoArquivadoListOut(
+        total_clientes_cadastrados=total_clientes_cadastrados,
+        total_processos_ativos=total_processos_ativos,
+        total_processos_arquivados=total_processos_arquivados,
+        itens=itens,
+    )
+
+
 @app.get("/app/api/gestor/dashboard")
 def app_gestor_dashboard(
     _: dict[str, Any] = Depends(require_roles(ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
-    rows = db.query(Processo, Cliente).join(Cliente, Processo.cliente_id == Cliente.id).all()
+    _ensure_monthly_repasse_archiving(db, _utcnow())
+    rows = (
+        db.query(Processo, Cliente)
+        .join(Cliente, Processo.cliente_id == Cliente.id)
+        .filter(_processos_ativos_clause())
+        .all()
+    )
     now = _utcnow()
     total_bruto = len(rows)
     total = 0
@@ -4815,6 +5077,7 @@ def app_get_metricas_processos(
     session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
+    _ensure_monthly_repasse_archiving(db, _utcnow())
     role = _normalize_role(str(session.get("role", "")))
     username = _normalize_username(str(session.get("username", "")))
     processos = _query_processos_by_scope(db, role, username).order_by(Processo.created_at.desc()).all()
