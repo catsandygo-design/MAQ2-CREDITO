@@ -6181,12 +6181,8 @@ def app_list_cca_analise(
     if role == ROLE_CCA:
         if not username:
             return []
-        query = query.filter(
-            or_(
-                func.lower(func.trim(func.coalesce(Processo.cca_responsavel, ""))) == username,
-                func.trim(func.coalesce(Processo.cca_responsavel, "")) == "",
-            )
-        )
+        # CCA ve somente processos atribuidos ao proprio usuario.
+        query = query.filter(func.lower(func.trim(func.coalesce(Processo.cca_responsavel, ""))) == username)
 
     termo = (q or "").strip().lower()
     obra_term = (obra or "").strip().lower()
@@ -6237,13 +6233,19 @@ def app_list_cca_analise(
 
     output: list[CcaAnaliseItemOut] = []
     for processo, cliente in rows:
+        lead_item = leads_by_processo.get(processo.id)
+        if role == ROLE_CCA:
+            # Para CCA, exibir apenas funil de entrada operacional do proprio CCA.
+            estagio_lead = _lead_stage(getattr(lead_item, "estagio_lead", None), fallback="")
+            if estagio_lead not in {"PRECADASTRO", "RESERVA"}:
+                continue
         stats = docs_stats.get(processo.id, {"docs_total": 0, "docs_recebidos": 0})
         output.append(
             _build_cca_analise_item(
                 db,
                 processo,
                 cliente,
-                lead=leads_by_processo.get(processo.id),
+                lead=lead_item,
                 docs_total=int(stats.get("docs_total", 0)),
                 docs_recebidos=int(stats.get("docs_recebidos", 0)),
             )
@@ -6270,22 +6272,8 @@ def app_patch_cca_analise(
     actor_username = _normalize_username(str(session.get("username", "")))
     if actor_role == ROLE_CCA:
         responsavel_norm = _normalize_username(processo.cca_responsavel)
-        if responsavel_norm and responsavel_norm != actor_username:
+        if responsavel_norm != actor_username:
             raise HTTPException(status_code=403, detail="Sem permissao para este processo")
-        if not responsavel_norm:
-            old_responsavel = processo.cca_responsavel
-            processo.cca_responsavel = actor_username
-            _record_processo_event(
-                db,
-                processo_id=processo.id,
-                actor_username=actor_username,
-                actor_role=actor_role,
-                event_type="ATRIBUICAO_CCA",
-                field_name="cca_responsavel",
-                old_value=old_responsavel,
-                new_value=processo.cca_responsavel,
-                details="auto_atribuido_ao_salvar_analise_cca",
-            )
 
     changes = payload.model_dump(exclude_unset=True)
     if "status_cca" in changes:
