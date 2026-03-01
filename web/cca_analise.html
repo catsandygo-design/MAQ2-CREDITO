@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CCA Analise Financeira</title>
+  <style>
+    :root{
+      --bg:#eef3fa;
+      --bg2:#e8eef8;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#475569;
+      --line:rgba(15,23,42,.16);
+      --primary:#0284c7;
+      --primary-soft:#e0f2fe;
+      --success:#16a34a;
+      --danger:#dc2626;
+      --warn:#d97706;
+      --radius:16px;
+      --shadow:0 8px 24px rgba(15,23,42,.06);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%}
+    body{
+      font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+      color:var(--text);
+      background:linear-gradient(180deg,var(--bg),var(--bg2));
+    }
+    .wrap{
+      max-width:1800px;
+      margin:0 auto;
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-height:100%;
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+    }
+    .top{
+      padding:14px 16px;
+      display:flex;
+      gap:10px;
+      align-items:flex-end;
+      justify-content:space-between;
+    }
+    .top h1{margin:0;font-size:26px;line-height:1}
+    .top p{margin:6px 0 0;color:var(--muted);font-size:14px}
+    .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .chip{
+      border:1px solid var(--line);
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:13px;
+      color:var(--muted);
+      background:#fff;
+      white-space:nowrap;
+    }
+    .btn{
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#fff;
+      color:var(--text);
+      font-weight:800;
+      font-size:14px;
+      text-decoration:none;
+      padding:9px 14px;
+      cursor:pointer;
+    }
+    .btn.primary{
+      border-color:rgba(14,165,233,.35);
+      background:var(--primary-soft);
+      color:#075985;
+    }
+    .btn.success{
+      border-color:rgba(22,163,74,.35);
+      background:#dcfce7;
+      color:#166534;
+    }
+    .btn.danger{
+      border-color:rgba(239,68,68,.35);
+      background:#fee2e2;
+      color:#991b1b;
+    }
+    .filters{
+      padding:12px 14px;
+      display:grid;
+      grid-template-columns:1.4fr .9fr .7fr .7fr auto auto;
+      gap:8px;
+      align-items:end;
+    }
+    .field{display:flex;flex-direction:column;gap:5px}
+    .field label{font-size:12px;color:var(--muted)}
+    .field input,.field select{
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:9px 10px;
+      font:inherit;
+      background:#fff;
+      color:var(--text);
+      outline:none;
+      min-width:0;
+    }
+    .field input:focus,.field select:focus{
+      border-color:rgba(14,165,233,.45);
+      box-shadow:0 0 0 3px rgba(14,165,233,.1);
+    }
+    .summary{
+      padding:0 14px 12px;
+      display:grid;
+      grid-template-columns:repeat(4,minmax(160px,1fr));
+      gap:8px;
+    }
+    .sum{
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px;
+      background:#f8fbff;
+    }
+    .sum .k{font-size:12px;color:var(--muted)}
+    .sum .v{font-size:24px;font-weight:900;color:#075985;line-height:1.2}
+    .sum.warn .v{color:#b45309}
+    .sum.bad .v{color:#b91c1c}
+    .sum.ok .v{color:#166534}
+    .flash{
+      display:none;
+      margin:0 14px;
+      border-radius:12px;
+      padding:10px 12px;
+      font-size:13px;
+      border:1px solid transparent;
+    }
+    .flash.ok{display:block;background:#dcfce7;border-color:rgba(22,163,74,.32);color:#166534}
+    .flash.err{display:block;background:#fee2e2;border-color:rgba(220,38,38,.32);color:#991b1b}
+    .tableWrap{
+      flex:1;
+      min-height:0;
+      overflow:auto;
+      border-top:1px solid rgba(148,163,184,.2);
+    }
+    table{width:100%;border-collapse:collapse;min-width:1900px}
+    th,td{
+      border-bottom:1px solid rgba(148,163,184,.2);
+      padding:8px 10px;
+      vertical-align:top;
+      text-align:left;
+      font-size:13px;
+    }
+    th{
+      position:sticky;
+      top:0;
+      z-index:3;
+      background:#e2e8f0;
+      color:#334155;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      font-size:11px;
+    }
+    td .main{font-weight:900;font-size:18px;line-height:1.1}
+    td .meta{margin-top:3px;color:var(--muted)}
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:999px;
+      border:1px solid var(--line);
+      padding:4px 10px;
+      font-size:12px;
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .pill.ok{border-color:rgba(22,163,74,.35);background:#dcfce7;color:#166534}
+    .pill.warn{border-color:rgba(217,119,6,.35);background:#fef3c7;color:#92400e}
+    .pill.bad{border-color:rgba(239,68,68,.35);background:#fee2e2;color:#b91c1c}
+    .rowInput{
+      border:1px solid var(--line);
+      border-radius:10px;
+      background:#fff;
+      color:var(--text);
+      padding:7px 8px;
+      width:130px;
+      font-size:13px;
+      outline:none;
+    }
+    .rowInput:focus{
+      border-color:rgba(14,165,233,.45);
+      box-shadow:0 0 0 3px rgba(14,165,233,.12);
+    }
+    .rowInput.readonly{
+      background:#f1f5f9;
+      color:#0f172a;
+      font-weight:700;
+    }
+    .actionsRow{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      white-space:nowrap;
+    }
+    .mini{
+      border:1px solid var(--line);
+      border-radius:999px;
+      background:#fff;
+      color:#0f172a;
+      font-size:12px;
+      font-weight:800;
+      padding:5px 10px;
+      cursor:pointer;
+    }
+    .mini.success{border-color:rgba(22,163,74,.35);background:#dcfce7;color:#166534}
+    .mini.primary{border-color:rgba(14,165,233,.35);background:#e0f2fe;color:#075985}
+    @media (max-width:1320px){
+      .filters{grid-template-columns:1fr 1fr 1fr 1fr auto auto}
+      .summary{grid-template-columns:repeat(2,minmax(150px,1fr))}
+    }
+    @media (max-width:900px){
+      .top{flex-direction:column;align-items:flex-start}
+      .filters{grid-template-columns:1fr}
+      .summary{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="card">
+      <div class="top">
+        <div>
+          <h1>CCA - Analise de Documentos e Financeiro</h1>
+          <p>Atualize valores da proposta e confira os dados pessoais trazidos no pre-cadastro.</p>
+        </div>
+        <div class="actions">
+          <span class="chip">Auto refresh: <strong id="refreshLabel">40s</strong></span>
+          <a class="btn" href="/app/cca">Voltar painel CCA</a>
+          <button class="btn danger" id="btnLogout" type="button">Sair</button>
+        </div>
+      </div>
+      <div class="filters">
+        <div class="field">
+          <label for="fQ">Busca</label>
+          <input id="fQ" placeholder="Cliente, corretor, obra, CPF..." />
+        </div>
+        <div class="field">
+          <label for="fObra">Empreendimento</label>
+          <input id="fObra" placeholder="Ex.: AGL32" />
+        </div>
+        <div class="field">
+          <label for="fStatusCca">Status CCA</label>
+          <select id="fStatusCca">
+            <option value="">Todos</option>
+            <option value="ANALISE_CREDITO">Analise credito</option>
+            <option value="PENDENTE_CREDITO">Pendente credito</option>
+            <option value="ANALISE_CCA">Analise CCA</option>
+            <option value="PENDENTE_CCA">Pendente CCA</option>
+            <option value="AGUARDANDO_CONFORMIDADE">Aguardando conformidade</option>
+            <option value="CONFORME">Conforme</option>
+            <option value="TRATANDO_PRODUTO">Tratando produto</option>
+            <option value="AGENDADO">Agendado</option>
+            <option value="ASSINATURA_CAIXA">Assinatura caixa</option>
+            <option value="FINALIZADO">Finalizado</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fLimit">Limite</label>
+          <select id="fLimit">
+            <option value="120">120</option>
+            <option value="250" selected>250</option>
+            <option value="500">500</option>
+          </select>
+        </div>
+        <button class="btn primary" type="button" id="btnFiltrar">Filtrar</button>
+        <button class="btn" type="button" id="btnLimpar">Limpar</button>
+      </div>
+      <div class="summary">
+        <div class="sum"><div class="k">Total na tela</div><div class="v" id="kTotal">0</div></div>
+        <div class="sum warn"><div class="k">Com pendencia doc</div><div class="v" id="kPend">0</div></div>
+        <div class="sum ok"><div class="k">Com cheque moradia</div><div class="v" id="kCheque">0</div></div>
+        <div class="sum bad"><div class="k">Sem renda preenchida</div><div class="v" id="kSemRenda">0</div></div>
+      </div>
+      <div id="flash" class="flash"></div>
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:22%">Cliente / Dados pessoais</th>
+              <th style="width:10%">Estagio</th>
+              <th style="width:10%">Docs</th>
+              <th>Parcela</th>
+              <th>Renda bruta</th>
+              <th>Renda liquida</th>
+              <th>Valor imovel</th>
+              <th>Avaliacao</th>
+              <th>Financiamento</th>
+              <th>Subsidio</th>
+              <th>Cheque moradia</th>
+              <th style="width:10%">Acoes</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const API_LIST = "/app/api/cca/analise";
+    const API_PATCH = "/app/api/cca/analise";
+    const REFRESH_SECONDS = 40;
+
+    const FIELD_ORDER = [
+      "valor_parcela",
+      "renda_bruta",
+      "renda_liquida",
+      "valor_imovel",
+      "valor_avaliacao",
+      "valor_financiamento",
+      "valor_subsidio",
+    ];
+
+    let rows = [];
+    let loading = false;
+    let countdown = REFRESH_SECONDS;
+    let currentRole = "";
+
+    const $ = (id) => document.getElementById(id);
+
+    function esc(v){
+      return String(v ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#39;");
+    }
+
+    function formatMoney(v){
+      const n = Number(v);
+      if (!Number.isFinite(n)) return "-";
+      return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+    }
+
+    function parseMoneyInput(value){
+      const raw = String(value || "").trim();
+      if (!raw) return null;
+      let text = raw.replace(/R\\$/gi, "").replace(/\s+/g, "");
+      if (text.includes(",") && text.includes(".")) {
+        text = text.replaceAll(".", "").replace(",", ".");
+      } else if (text.includes(",")) {
+        text = text.replace(",", ".");
+      }
+      const num = Number(text);
+      if (!Number.isFinite(num) || num < 0) return Number.NaN;
+      return Number(num.toFixed(2));
+    }
+
+    function normalizeText(v){
+      return String(v || "").trim().toLowerCase();
+    }
+
+    function showFlash(message, error = false){
+      const node = $("flash");
+      node.textContent = message;
+      node.className = `flash ${error ? "err" : "ok"}`;
+      setTimeout(() => {
+        if (node.textContent === message) {
+          node.textContent = "";
+          node.className = "flash";
+        }
+      }, 3200);
+    }
+
+    function stageBadgeClass(item){
+      const status = normalizeText(item.status_cca);
+      if (status.includes("pend")) return "bad";
+      if (status.includes("conforme") || status.includes("finalizado") || status.includes("assinatura")) return "ok";
+      return "warn";
+    }
+
+    function docsBadge(item){
+      const total = Number(item.docs_total || 0);
+      const ok = Number(item.docs_recebidos || 0);
+      const pend = Math.max(0, total - ok);
+      const cls = pend > 0 ? "warn" : "ok";
+      return `<span class="pill ${cls}">${ok}/${total}</span>`;
+    }
+
+    function buildQuery(){
+      const params = new URLSearchParams();
+      const q = $("fQ").value.trim();
+      const obra = $("fObra").value.trim();
+      const status = $("fStatusCca").value.trim();
+      const limit = $("fLimit").value.trim();
+      if (q) params.set("q", q);
+      if (obra) params.set("obra", obra);
+      if (status) params.set("status_cca", status);
+      if (limit) params.set("limit", limit);
+      return params.toString();
+    }
+
+    function renderSummary(list){
+      let pend = 0;
+      let cheque = 0;
+      let semRenda = 0;
+      list.forEach((item) => {
+        if ((Number(item.docs_pendentes || 0)) > 0) pend += 1;
+        if ((Number(item.valor_cheque_moradia || 0)) > 0) cheque += 1;
+        const rendaBruta = Number(item.renda_bruta || 0);
+        const rendaLiquida = Number(item.renda_liquida || 0);
+        if (rendaBruta <= 0 || rendaLiquida <= 0) semRenda += 1;
+      });
+      $("kTotal").textContent = String(list.length);
+      $("kPend").textContent = String(pend);
+      $("kCheque").textContent = String(cheque);
+      $("kSemRenda").textContent = String(semRenda);
+    }
+
+    function clientInfo(item){
+      const estadoCivil = String(item.estado_civil || "-").replaceAll("_", " ");
+      const certidao = item.estado_civil === "CASADO" ? (item.certidao_numero || "-") : "-";
+      return `
+        <div class="main">${esc(item.cliente_nome || "-")}</div>
+        <div class="meta"><strong>Empreendimento:</strong> ${esc(item.obra || "-")}</div>
+        <div class="meta"><strong>Corretor:</strong> ${esc(item.corretor || "-")}</div>
+        <div class="meta"><strong>CPF:</strong> ${esc(item.cpf || "-")} | <strong>Doc:</strong> ${esc(item.documento_identificacao || "-")}</div>
+        <div class="meta"><strong>Estado civil:</strong> ${esc(estadoCivil)} | <strong>Certidao:</strong> ${esc(certidao)}</div>
+        <div class="meta"><strong>Nascimento:</strong> ${esc(item.cidade_nascimento || "-")} ${item.data_nascimento ? `(${esc(new Date(item.data_nascimento).toLocaleDateString("pt-BR"))})` : ""}</div>
+        <div class="meta"><strong>Contato:</strong> ${esc(item.telefone || item.whatsapp || item.email || "-")}</div>
+      `;
+    }
+
+    function rowInput(field, value, readonly = false){
+      return `<input class="rowInput ${readonly ? "readonly" : ""}" data-field="${esc(field)}" value="${esc(value ?? "")}" ${readonly ? "readonly" : ""} />`;
+    }
+
+    function renderTable(list){
+      const tbody = $("tbody");
+      if (!list.length){
+        tbody.innerHTML = `<tr><td colspan="12" style="padding:14px;color:#64748b;">Nenhum processo encontrado para os filtros atuais.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = list.map((item) => `
+        <tr data-processo-id="${esc(item.processo_id)}">
+          <td>${clientInfo(item)}</td>
+          <td>
+            <span class="pill ${stageBadgeClass(item)}">${esc(item.status_cca || "-")}</span>
+            <div class="meta"><strong>Agehab:</strong> ${esc(item.status_agehab || "-")}</div>
+            <div class="meta"><strong>Comercial:</strong> ${esc(item.estagio_comercial || "-")}</div>
+          </td>
+          <td>${docsBadge(item)}</td>
+          <td>${rowInput("valor_parcela", item.valor_parcela)}</td>
+          <td>${rowInput("renda_bruta", item.renda_bruta)}</td>
+          <td>${rowInput("renda_liquida", item.renda_liquida)}</td>
+          <td>${rowInput("valor_imovel", item.valor_imovel)}</td>
+          <td>${rowInput("valor_avaliacao", item.valor_avaliacao)}</td>
+          <td>${rowInput("valor_financiamento", item.valor_financiamento)}</td>
+          <td>${rowInput("valor_subsidio", item.valor_subsidio)}</td>
+          <td title="Automatico pela regra do empreendimento">${rowInput("valor_cheque_moradia", formatMoney(item.valor_cheque_moradia), true)}</td>
+          <td>
+            <div class="actionsRow">
+              <button class="mini success" type="button" data-action="save">Salvar</button>
+              <button class="mini primary" type="button" data-action="checklist">Checklist</button>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    function findRow(processoId){
+      return rows.find((r) => String(r.processo_id) === String(processoId));
+    }
+
+    async function api(path = "", options = {}){
+      const res = await fetch(`${path}`, {
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options,
+      });
+      if (res.status === 401){
+        window.location.href = "/login";
+        throw new Error("Nao autenticado");
+      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok){
+        throw new Error(data.detail || "Falha na requisicao");
+      }
+      return data;
+    }
+
+    async function loadSession(){
+      const data = await api("/auth/me");
+      currentRole = normalizeText(data.role);
+      if (!["cca","analista","gestor","gestor_credito","admin"].includes(currentRole)){
+        window.location.href = "/app";
+        throw new Error("Perfil sem acesso.");
+      }
+    }
+
+    async function loadRows(force = false){
+      if (loading) return;
+      if (!force && document.hidden) return;
+      loading = true;
+      try{
+        const qs = buildQuery();
+        const data = await api(`${API_LIST}${qs ? `?${qs}` : ""}`);
+        rows = Array.isArray(data) ? data : [];
+        renderSummary(rows);
+        renderTable(rows);
+      } catch (error){
+        $("tbody").innerHTML = `<tr><td colspan="12" style="padding:14px;color:#991b1b;">Erro ao carregar: ${esc(error.message)}</td></tr>`;
+      } finally {
+        loading = false;
+      }
+    }
+
+    function collectPayload(tr){
+      const payload = {};
+      for (const field of FIELD_ORDER){
+        const input = tr.querySelector(`input[data-field="${field}"]`);
+        if (!input) continue;
+        const parsed = parseMoneyInput(input.value);
+        if (Number.isNaN(parsed)){
+          throw new Error(`Valor invalido em ${field.replaceAll("_"," ")}.`);
+        }
+        payload[field] = parsed;
+      }
+      return payload;
+    }
+
+    async function saveRow(tr){
+      const processoId = tr.getAttribute("data-processo-id");
+      if (!processoId) return;
+      const payload = collectPayload(tr);
+      const updated = await api(`${API_PATCH}/${encodeURIComponent(processoId)}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+      const idx = rows.findIndex((r) => String(r.processo_id) === String(processoId));
+      if (idx >= 0) rows[idx] = updated;
+      renderSummary(rows);
+      renderTable(rows);
+      showFlash("Analise financeira atualizada.");
+    }
+
+    function openChecklist(tr){
+      const processoId = tr.getAttribute("data-processo-id");
+      if (!processoId) return;
+      const params = new URLSearchParams({ processo_id: processoId, return_to: "/app/cca/analise" });
+      if (currentRole === "cca") params.set("readonly", "1");
+      window.location.href = `/app/checklist?${params.toString()}`;
+    }
+
+    async function onTableClick(ev){
+      const target = ev.target;
+      if (!(target instanceof HTMLElement)) return;
+      const action = target.getAttribute("data-action");
+      if (!action) return;
+      const tr = target.closest("tr");
+      if (!(tr instanceof HTMLTableRowElement)) return;
+
+      if (action === "save"){
+        try {
+          await saveRow(tr);
+        } catch (error){
+          showFlash(error.message || "Falha ao salvar.", true);
+        }
+      } else if (action === "checklist"){
+        openChecklist(tr);
+      }
+    }
+
+    function resetFilters(){
+      $("fQ").value = "";
+      $("fObra").value = "";
+      $("fStatusCca").value = "";
+      $("fLimit").value = "250";
+    }
+
+    function tick(){
+      if (document.hidden){
+        $("refreshLabel").textContent = "pausado";
+        return;
+      }
+      countdown -= 1;
+      if (countdown <= 0){
+        countdown = REFRESH_SECONDS;
+        loadRows().catch(() => null);
+      }
+      $("refreshLabel").textContent = `${countdown}s`;
+    }
+
+    async function logout(){
+      await fetch("/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => null);
+      window.location.href = "/login";
+    }
+
+    async function boot(){
+      await loadSession();
+      await loadRows(true);
+      setInterval(tick, 1000);
+    }
+
+    $("btnFiltrar").addEventListener("click", () => {
+      countdown = REFRESH_SECONDS;
+      loadRows(true).catch(() => null);
+    });
+    $("btnLimpar").addEventListener("click", () => {
+      resetFilters();
+      countdown = REFRESH_SECONDS;
+      loadRows(true).catch(() => null);
+    });
+    $("btnLogout").addEventListener("click", logout);
+    $("tbody").addEventListener("click", onTableClick);
+    ["fQ","fObra"].forEach((id) => {
+      $(id).addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter"){
+          ev.preventDefault();
+          countdown = REFRESH_SECONDS;
+          loadRows(true).catch(() => null);
+        }
+      });
+    });
+    $("fStatusCca").addEventListener("change", () => loadRows(true).catch(() => null));
+    $("fLimit").addEventListener("change", () => loadRows(true).catch(() => null));
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden){
+        countdown = REFRESH_SECONDS;
+        loadRows(true).catch(() => null);
+      }
+    });
+
+    boot().catch((error) => {
+      showFlash(error.message || "Falha ao iniciar tela CCA.", true);
+    });
+  </script>
+</body>
+</html>

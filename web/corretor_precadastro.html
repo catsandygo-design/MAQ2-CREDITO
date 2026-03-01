@@ -285,6 +285,41 @@
               <label for="email">E-mail</label>
               <input id="email" type="email" placeholder="cliente@email.com" />
             </div>
+            <div class="field">
+              <label for="cpf">CPF</label>
+              <input id="cpf" placeholder="Somente numeros" />
+            </div>
+            <div class="field">
+              <label for="documentoIdentificacao">RG / CNH</label>
+              <input id="documentoIdentificacao" placeholder="Numero do RG ou CNH" />
+            </div>
+            <div class="field">
+              <label for="estadoCivil">Estado civil</label>
+              <select id="estadoCivil">
+                <option value="">Nao informado</option>
+                <option value="SOLTEIRO">Solteiro(a)</option>
+                <option value="CASADO">Casado(a)</option>
+                <option value="DIVORCIADO">Divorciado(a)</option>
+                <option value="VIUVO">Viuvo(a)</option>
+                <option value="UNIAO_ESTAVEL">Uniao estavel</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="certidaoNumero">N. certidao (casado)</label>
+              <input id="certidaoNumero" placeholder="Numero da certidao" />
+            </div>
+            <div class="field">
+              <label for="cidadeNascimento">Cidade de nascimento</label>
+              <input id="cidadeNascimento" placeholder="Cidade de nascimento" />
+            </div>
+            <div class="field">
+              <label for="dataNascimento">Data de nascimento</label>
+              <input id="dataNascimento" type="date" />
+            </div>
+            <div class="field full">
+              <label for="endereco">Endereco</label>
+              <input id="endereco" placeholder="Endereco completo" />
+            </div>
             <div class="field full">
               <label for="empreendimento">Empreendimento de interesse</label>
               <input id="empreendimento" list="empreendimentosList" placeholder="Ex.: AGL32 - Vila Margarida" />
@@ -297,6 +332,15 @@
             <div class="field">
               <label for="localAgendamento">Local de agendamento</label>
               <input id="localAgendamento" placeholder="Ex.: Stand de vendas AGL32" />
+            </div>
+            <div class="field">
+              <label for="tipoVisita">Tipo de visita</label>
+              <select id="tipoVisita">
+                <option value="">Nao definido</option>
+                <option value="ONLINE">Online</option>
+                <option value="PRESENCIAL">Presencial</option>
+                <option value="HIBRIDA">Hibrida</option>
+              </select>
             </div>
             <div class="field">
               <label for="dataAgendamento">Data e hora do agendamento</label>
@@ -370,14 +414,11 @@
     const API_BASE = "/app/api/corretor/pre-cadastros";
     const REFRESH_SECONDS = 30;
     const STAGE_LABELS = {
-      NOVO: "Novo",
-      CONTATO_INICIAL: "Contato inicial",
-      QUALIFICACAO: "Qualificacao",
-      AGENDADO: "Agendado",
-      EM_ATENDIMENTO: "Em atendimento",
-      PROPOSTA: "Proposta",
-      NEGOCIACAO: "Negociacao",
-      GANHO: "Ganho",
+      LEAD: "Lead",
+      AGENDAMENTO: "Agendamento",
+      VISITA: "Visita",
+      PRECADASTRO: "Pre-cadastro",
+      RESERVA: "Reserva",
       PERDIDO: "Perdido",
     };
 
@@ -539,20 +580,30 @@
             ${esc(stageLabel(s))}
           </option>
         `).join("");
+        const estadoCivil = String(lead.estado_civil || "").replaceAll("_", " ");
+        const showCertidao = String(lead.estado_civil || "").toUpperCase() === "CASADO";
+        const hasProcesso = Boolean(lead.processo_id);
+        const canReservar = String(lead.estagio_lead || "").toUpperCase() !== "PERDIDO" && !hasProcesso;
+        const btnApresentacaoLabel = hasProcesso ? "Apresentacao" : "Apresentacao livre";
+        const btnApresentacaoClass = hasProcesso ? "primary" : "";
         return `
           <tr>
             <td>
               <div class="main">${esc(lead.nome_cliente || "-")}</div>
               <div class="meta">Corretor: ${esc(lead.corretor_username || "-")}</div>
+              <div class="meta">CPF: ${esc(lead.cpf || "-")} | Doc: ${esc(lead.documento_identificacao || "-")}</div>
+              <div class="meta">Estado civil: ${esc(estadoCivil || "-")}${showCertidao ? ` | Certidao: ${esc(lead.certidao_numero || "-")}` : ""}</div>
             </td>
             <td>
               <div>Tel: ${esc(lead.telefone || "-")}</div>
               <div>Whats: ${esc(lead.whatsapp || "-")}</div>
               <div>Email: ${esc(lead.email || "-")}</div>
+              <div>Cidade nasc.: ${esc(lead.cidade_nascimento || "-")}</div>
             </td>
             <td>
               <div><strong>Empreendimento:</strong> ${esc(lead.empreendimento_interesse || "-")}</div>
               <div><strong>Localidade:</strong> ${esc(lead.localidade_interesse || "-")}</div>
+              <div><strong>Visita:</strong> ${esc((lead.tipo_visita || "-").replaceAll("_", " "))}</div>
               <div><strong>Agenda:</strong> ${esc(lead.local_agendamento || "-")} | ${esc(agData)}</div>
               <div class="meta"><strong>Ult. contato:</strong> ${esc(ultContato)}</div>
             </td>
@@ -563,6 +614,8 @@
               <div class="rowTools">
                 <button class="miniBtn primary" data-action="edit" data-id="${esc(lead.id)}">Editar</button>
                 <button class="miniBtn success" data-action="touch" data-id="${esc(lead.id)}">Contato agora</button>
+                <button class="miniBtn ${canReservar ? "success" : ""}" data-action="reserve" data-id="${esc(lead.id)}" ${canReservar ? "" : "disabled"}>${hasProcesso ? "Reservado" : "Virar reserva"}</button>
+                <button class="miniBtn ${btnApresentacaoClass}" data-action="presentation" data-id="${esc(lead.id)}">${btnApresentacaoLabel}</button>
               </div>
             </td>
           </tr>
@@ -578,6 +631,7 @@
       if (stages.length){
         $("estagioLead").value = stages[0];
       }
+      syncEstadoCivilForm();
     }
 
     function fillForm(lead){
@@ -588,13 +642,30 @@
       $("telefone").value = lead.telefone || "";
       $("whatsapp").value = lead.whatsapp || "";
       $("email").value = lead.email || "";
+      $("cpf").value = lead.cpf || "";
+      $("documentoIdentificacao").value = lead.documento_identificacao || "";
+      $("estadoCivil").value = String(lead.estado_civil || "").toUpperCase();
+      $("certidaoNumero").value = lead.certidao_numero || "";
+      $("cidadeNascimento").value = lead.cidade_nascimento || "";
+      $("dataNascimento").value = lead.data_nascimento || "";
+      $("endereco").value = lead.endereco || "";
       $("empreendimento").value = lead.empreendimento_interesse || "";
       $("localidade").value = lead.localidade_interesse || "";
       $("localAgendamento").value = lead.local_agendamento || "";
+      $("tipoVisita").value = String(lead.tipo_visita || "").toUpperCase();
       $("dataAgendamento").value = toLocalInput(lead.data_agendamento);
       $("estagioLead").value = String(lead.estagio_lead || "").toUpperCase();
       $("ultimoContato").value = toLocalInput(lead.ultimo_contato_em);
       $("observacoes").value = lead.observacoes || "";
+      syncEstadoCivilForm();
+    }
+
+    function syncEstadoCivilForm(){
+      const isCasado = String($("estadoCivil").value || "").toUpperCase() === "CASADO";
+      $("certidaoNumero").disabled = !isCasado;
+      if (!isCasado){
+        $("certidaoNumero").value = "";
+      }
     }
 
     function payloadFromForm(){
@@ -603,9 +674,17 @@
         telefone: $("telefone").value.trim() || null,
         whatsapp: $("whatsapp").value.trim() || null,
         email: $("email").value.trim() || null,
+        cpf: $("cpf").value.trim() || null,
+        documento_identificacao: $("documentoIdentificacao").value.trim() || null,
+        estado_civil: $("estadoCivil").value || null,
+        certidao_numero: $("certidaoNumero").value.trim() || null,
+        cidade_nascimento: $("cidadeNascimento").value.trim() || null,
+        data_nascimento: $("dataNascimento").value || null,
+        endereco: $("endereco").value.trim() || null,
         empreendimento_interesse: $("empreendimento").value.trim() || null,
         localidade_interesse: $("localidade").value.trim() || null,
         local_agendamento: $("localAgendamento").value.trim() || null,
+        tipo_visita: $("tipoVisita").value || null,
         data_agendamento: fromLocalInput($("dataAgendamento").value),
         estagio_lead: $("estagioLead").value,
         ultimo_contato_em: fromLocalInput($("ultimoContato").value),
@@ -672,6 +751,14 @@
       }
     }
 
+    async function reserveLead(id){
+      const data = await api(`/${encodeURIComponent(id)}/reservar`, { method: "POST" });
+      if (!data || !data.processo_id){
+        throw new Error("Falha ao gerar reserva.");
+      }
+      return data;
+    }
+
     async function onTableClick(ev){
       const target = ev.target;
       if (!(target instanceof HTMLElement)) return;
@@ -684,6 +771,25 @@
         fillForm(lead);
       } else if (action === "touch"){
         await quickUpdate(id, { ultimo_contato_em: new Date().toISOString() }, "Ultimo contato registrado.");
+      } else if (action === "reserve"){
+        try{
+          const result = await reserveLead(id);
+          setFlash("Lead convertido para reserva com sucesso.");
+          await loadLeads(true);
+          if (result.processo_id){
+            const go = confirm("Reserva criada. Abrir tela de apresentacao agora?");
+            if (go){
+              window.location.href = `/app/corretor/apresentacao?processo_id=${encodeURIComponent(result.processo_id)}`;
+            }
+          }
+        }catch(error){
+          setFlash(error.message || "Falha ao converter lead em reserva.", "err");
+        }
+      } else if (action === "presentation"){
+        const targetUrl = lead.processo_id
+          ? `/app/corretor/apresentacao?processo_id=${encodeURIComponent(lead.processo_id)}`
+          : "/app/corretor/apresentacao";
+        window.location.href = targetUrl;
       }
     }
 
@@ -726,6 +832,7 @@
     $("btnNovo").addEventListener("click", resetForm);
     $("btnFiltrar").addEventListener("click", () => loadLeads(true));
     $("btnLogout").addEventListener("click", logout);
+    $("estadoCivil").addEventListener("change", syncEstadoCivilForm);
     $("tbody").addEventListener("click", onTableClick);
     $("tbody").addEventListener("change", onStageChange);
     ["filtroQ", "filtroEmp", "filtroLoc"].forEach((id) => {

@@ -99,7 +99,7 @@ try:
     )
 except ValueError:
     DASHBOARD_IMPORT_DATE_BACKFILL_TOLERANCE_DAYS = 365
-RUNTIME_SCHEMA_REVISION = "2026-02-28-arquivo-repasse-v1"
+RUNTIME_SCHEMA_REVISION = "2026-03-01-cca-analise-financeira-v1"
 PENDENCIA_INFO_MIN_LENGTH = 0
 PROCESS_LIST_CACHE: dict[str, dict[str, Any]] = {}
 SEED_USERS_READY = False
@@ -613,14 +613,11 @@ ESTAGIOS_REPASSE_COMERCIAL = {
 }
 ESTAGIOS_DASH_COMERCIAL = {"EM_PROCESSO", "CREDITO", "SECRETARIA_VENDAS"}
 LEAD_STAGE_VALUES = [
-    "NOVO",
-    "CONTATO_INICIAL",
-    "QUALIFICACAO",
-    "AGENDADO",
-    "EM_ATENDIMENTO",
-    "PROPOSTA",
-    "NEGOCIACAO",
-    "GANHO",
+    "LEAD",
+    "AGENDAMENTO",
+    "VISITA",
+    "PRECADASTRO",
+    "RESERVA",
     "PERDIDO",
 ]
 LEAD_STAGE_SET = set(LEAD_STAGE_VALUES)
@@ -711,23 +708,29 @@ def _process_etapa_repasse(value: Optional[str], fallback: Optional[str] = None)
     return fallback
 
 
-def _lead_stage(value: Optional[str], fallback: str = "NOVO") -> str:
+def _lead_stage(value: Optional[str], fallback: str = "LEAD") -> str:
     token = _normalize_text_key(value)
     aliases = {
-        "novo": "NOVO",
-        "contato_inicial": "CONTATO_INICIAL",
-        "primeiro_contato": "CONTATO_INICIAL",
-        "qualificacao": "QUALIFICACAO",
-        "qualificado": "QUALIFICACAO",
-        "agendado": "AGENDADO",
-        "em_atendimento": "EM_ATENDIMENTO",
-        "atendimento": "EM_ATENDIMENTO",
-        "proposta": "PROPOSTA",
-        "proposta_enviada": "PROPOSTA",
-        "negociacao": "NEGOCIACAO",
-        "negociando": "NEGOCIACAO",
-        "ganho": "GANHO",
-        "fechado": "GANHO",
+        "lead": "LEAD",
+        "novo": "LEAD",
+        "contato_inicial": "LEAD",
+        "primeiro_contato": "LEAD",
+        "qualificacao": "LEAD",
+        "qualificado": "LEAD",
+        "agendamento": "AGENDAMENTO",
+        "agendado": "AGENDAMENTO",
+        "visita": "VISITA",
+        "em_atendimento": "VISITA",
+        "atendimento": "VISITA",
+        "precadastro": "PRECADASTRO",
+        "pre_cadastro": "PRECADASTRO",
+        "proposta": "PRECADASTRO",
+        "proposta_enviada": "PRECADASTRO",
+        "negociacao": "PRECADASTRO",
+        "negociando": "PRECADASTRO",
+        "reserva": "RESERVA",
+        "ganho": "RESERVA",
+        "fechado": "RESERVA",
         "perdido": "PERDIDO",
     }
     mapped = aliases.get(token, "")
@@ -1326,6 +1329,14 @@ class Processo(Base):
     status_agehab: Mapped[str] = mapped_column(String, nullable=False, default="ANALISE_CREDITO")
     status_sinal: Mapped[str] = mapped_column(String, nullable=False, default="NAO_TEM")
     valor_sinal: Mapped[Optional[float]] = mapped_column(Float)
+    renda_bruta: Mapped[Optional[float]] = mapped_column(Float)
+    renda_liquida: Mapped[Optional[float]] = mapped_column(Float)
+    valor_parcela: Mapped[Optional[float]] = mapped_column(Float)
+    valor_imovel: Mapped[Optional[float]] = mapped_column(Float)
+    valor_avaliacao: Mapped[Optional[float]] = mapped_column(Float)
+    valor_financiamento: Mapped[Optional[float]] = mapped_column(Float)
+    valor_subsidio: Mapped[Optional[float]] = mapped_column(Float)
+    valor_cheque_moradia: Mapped[Optional[float]] = mapped_column(Float)
     status_fiador: Mapped[str] = mapped_column(String, nullable=False, default="NAO_TEM")
     estagio_comercial: Mapped[str] = mapped_column(String(40), nullable=False, default="RESERVA")
     etapa_repasse: Mapped[Optional[str]] = mapped_column(String(40))
@@ -1453,6 +1464,26 @@ class Empreendimento(Base):
     )
 
 
+class EmpreendimentoRegraFinanceira(Base):
+    __tablename__ = "empreendimento_regras_financeiras"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    empreendimento_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("empreendimentos.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    valor_cheque_moradia: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
 class LeadPreCadastro(Base):
     __tablename__ = "lead_precadastros"
 
@@ -1462,11 +1493,21 @@ class LeadPreCadastro(Base):
     telefone: Mapped[Optional[str]] = mapped_column(String(40))
     whatsapp: Mapped[Optional[str]] = mapped_column(String(40))
     email: Mapped[Optional[str]] = mapped_column(String(180))
+    cpf: Mapped[Optional[str]] = mapped_column(String(20), index=True)
+    documento_identificacao: Mapped[Optional[str]] = mapped_column(String(40))
+    estado_civil: Mapped[Optional[str]] = mapped_column(String(30))
+    certidao_numero: Mapped[Optional[str]] = mapped_column(String(60))
+    cidade_nascimento: Mapped[Optional[str]] = mapped_column(String(120))
+    data_nascimento: Mapped[Optional[date]] = mapped_column(Date)
+    endereco: Mapped[Optional[str]] = mapped_column(Text)
     empreendimento_interesse: Mapped[Optional[str]] = mapped_column(Text)
     localidade_interesse: Mapped[Optional[str]] = mapped_column(Text)
     local_agendamento: Mapped[Optional[str]] = mapped_column(Text)
+    tipo_visita: Mapped[Optional[str]] = mapped_column(String(20))
     data_agendamento: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    estagio_lead: Mapped[str] = mapped_column(String(40), nullable=False, default="NOVO")
+    estagio_lead: Mapped[str] = mapped_column(String(40), nullable=False, default="LEAD")
+    processo_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("processos.id", ondelete="SET NULL"))
+    reservado_em: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     observacoes: Mapped[Optional[str]] = mapped_column(Text)
     ultimo_contato_em: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
@@ -1531,6 +1572,14 @@ class ProcessoUpdate(BaseModel):
     status_agehab: Optional[str] = None
     status_sinal: Optional[str] = None
     valor_sinal: Optional[float] = None
+    renda_bruta: Optional[float] = None
+    renda_liquida: Optional[float] = None
+    valor_parcela: Optional[float] = None
+    valor_imovel: Optional[float] = None
+    valor_avaliacao: Optional[float] = None
+    valor_financiamento: Optional[float] = None
+    valor_subsidio: Optional[float] = None
+    valor_cheque_moradia: Optional[float] = None
     status_fiador: Optional[str] = None
     estagio_comercial: Optional[str] = None
     etapa_repasse: Optional[str] = None
@@ -1554,6 +1603,14 @@ class ProcessoOut(BaseModel):
     status_agehab: str
     status_sinal: str
     valor_sinal: Optional[float] = None
+    renda_bruta: Optional[float] = None
+    renda_liquida: Optional[float] = None
+    valor_parcela: Optional[float] = None
+    valor_imovel: Optional[float] = None
+    valor_avaliacao: Optional[float] = None
+    valor_financiamento: Optional[float] = None
+    valor_subsidio: Optional[float] = None
+    valor_cheque_moradia: Optional[float] = None
     status_fiador: str
     estagio_comercial: str
     etapa_repasse: Optional[str] = None
@@ -1738,14 +1795,33 @@ class EmpreendimentoOut(BaseModel):
     updated_at: datetime
 
 
+class EmpreendimentoRegraFinanceiraPayload(BaseModel):
+    valor_cheque_moradia: float
+
+
+class EmpreendimentoRegraFinanceiraOut(BaseModel):
+    empreendimento_id: uuid.UUID
+    empreendimento_nome: str
+    valor_cheque_moradia: float
+    updated_at: datetime
+
+
 class LeadPreCadastroCreate(BaseModel):
     nome_cliente: str
     telefone: Optional[str] = None
     whatsapp: Optional[str] = None
     email: Optional[str] = None
+    cpf: Optional[str] = None
+    documento_identificacao: Optional[str] = None
+    estado_civil: Optional[str] = None
+    certidao_numero: Optional[str] = None
+    cidade_nascimento: Optional[str] = None
+    data_nascimento: Optional[date] = None
+    endereco: Optional[str] = None
     empreendimento_interesse: Optional[str] = None
     localidade_interesse: Optional[str] = None
     local_agendamento: Optional[str] = None
+    tipo_visita: Optional[str] = None
     data_agendamento: Optional[datetime] = None
     estagio_lead: Optional[str] = None
     observacoes: Optional[str] = None
@@ -1757,9 +1833,17 @@ class LeadPreCadastroUpdate(BaseModel):
     telefone: Optional[str] = None
     whatsapp: Optional[str] = None
     email: Optional[str] = None
+    cpf: Optional[str] = None
+    documento_identificacao: Optional[str] = None
+    estado_civil: Optional[str] = None
+    certidao_numero: Optional[str] = None
+    cidade_nascimento: Optional[str] = None
+    data_nascimento: Optional[date] = None
+    endereco: Optional[str] = None
     empreendimento_interesse: Optional[str] = None
     localidade_interesse: Optional[str] = None
     local_agendamento: Optional[str] = None
+    tipo_visita: Optional[str] = None
     data_agendamento: Optional[datetime] = None
     estagio_lead: Optional[str] = None
     observacoes: Optional[str] = None
@@ -1774,15 +1858,33 @@ class LeadPreCadastroOut(BaseModel):
     telefone: Optional[str] = None
     whatsapp: Optional[str] = None
     email: Optional[str] = None
+    cpf: Optional[str] = None
+    documento_identificacao: Optional[str] = None
+    estado_civil: Optional[str] = None
+    certidao_numero: Optional[str] = None
+    cidade_nascimento: Optional[str] = None
+    data_nascimento: Optional[date] = None
+    endereco: Optional[str] = None
     empreendimento_interesse: Optional[str] = None
     localidade_interesse: Optional[str] = None
     local_agendamento: Optional[str] = None
+    tipo_visita: Optional[str] = None
     data_agendamento: Optional[datetime] = None
     estagio_lead: str
+    processo_id: Optional[uuid.UUID] = None
+    reservado_em: Optional[datetime] = None
     observacoes: Optional[str] = None
     ultimo_contato_em: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
+
+
+class LeadReservaOut(BaseModel):
+    lead_id: uuid.UUID
+    cliente_id: uuid.UUID
+    processo_id: uuid.UUID
+    estagio_lead: str
+    reservado_em: datetime
 
 
 class UnidadeDisponivelCreate(BaseModel):
@@ -1898,6 +2000,48 @@ class ProcessoOverviewOut(BaseModel):
     docs_recebidos: int = 0
     sem_documento_enviado: bool = True
     aviso_gerar_contrato_agehab: bool = False
+
+
+class CcaAnaliseItemOut(BaseModel):
+    processo_id: uuid.UUID
+    cliente_id: uuid.UUID
+    cliente_nome: str
+    corretor: Optional[str] = None
+    obra: Optional[str] = None
+    estagio_comercial: str
+    status_cca: str
+    status_agehab: str
+    renda_bruta: Optional[float] = None
+    renda_liquida: Optional[float] = None
+    valor_parcela: Optional[float] = None
+    valor_imovel: Optional[float] = None
+    valor_avaliacao: Optional[float] = None
+    valor_financiamento: Optional[float] = None
+    valor_subsidio: Optional[float] = None
+    valor_cheque_moradia: Optional[float] = None
+    cpf: Optional[str] = None
+    documento_identificacao: Optional[str] = None
+    estado_civil: Optional[str] = None
+    certidao_numero: Optional[str] = None
+    cidade_nascimento: Optional[str] = None
+    data_nascimento: Optional[date] = None
+    telefone: Optional[str] = None
+    whatsapp: Optional[str] = None
+    email: Optional[str] = None
+    docs_total: int = 0
+    docs_recebidos: int = 0
+    docs_pendentes: int = 0
+    updated_at: Optional[datetime] = None
+
+
+class CcaAnaliseUpdate(BaseModel):
+    renda_bruta: Optional[float] = None
+    renda_liquida: Optional[float] = None
+    valor_parcela: Optional[float] = None
+    valor_imovel: Optional[float] = None
+    valor_avaliacao: Optional[float] = None
+    valor_financiamento: Optional[float] = None
+    valor_subsidio: Optional[float] = None
 
 
 class ProcessoArquivadoOut(BaseModel):
@@ -2172,6 +2316,149 @@ def _normalize_lead_phone(value: Optional[str]) -> Optional[str]:
     if not phone:
         return None
     return phone
+
+
+def _normalize_lead_cpf(value: Optional[str]) -> Optional[str]:
+    raw = "".join(ch for ch in str(value or "") if ch.isdigit())
+    if not raw:
+        return None
+    if len(raw) > 11:
+        raw = raw[:11]
+    return raw
+
+
+def _normalize_lead_documento(value: Optional[str]) -> Optional[str]:
+    doc = _normalize_lead_text(value, max_len=40)
+    if not doc:
+        return None
+    return doc.upper()
+
+
+def _normalize_estado_civil(value: Optional[str]) -> Optional[str]:
+    token = _normalize_text_key(value)
+    aliases = {
+        "solteiro": "SOLTEIRO",
+        "solteira": "SOLTEIRO",
+        "casado": "CASADO",
+        "casada": "CASADO",
+        "divorciado": "DIVORCIADO",
+        "divorciada": "DIVORCIADO",
+        "viuvo": "VIUVO",
+        "viuva": "VIUVO",
+        "uniao_estavel": "UNIAO_ESTAVEL",
+    }
+    mapped = aliases.get(token, "")
+    return mapped or None
+
+
+def _normalize_tipo_visita(value: Optional[str]) -> Optional[str]:
+    token = _normalize_text_key(value)
+    aliases = {
+        "online": "ONLINE",
+        "presencial": "PRESENCIAL",
+        "hibrida": "HIBRIDA",
+        "hibrido": "HIBRIDA",
+    }
+    mapped = aliases.get(token, "")
+    return mapped or None
+
+
+def _normalize_currency_value(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    raw = str(value).strip()
+    if not raw:
+        return None
+    raw = raw.replace("R$", "").replace(" ", "")
+    # Aceita formatos "1.234,56" e "1234.56"
+    if "," in raw and "." in raw:
+        raw = raw.replace(".", "").replace(",", ".")
+    elif "," in raw:
+        raw = raw.replace(",", ".")
+    try:
+        parsed = float(raw)
+    except ValueError:
+        return None
+    if parsed < 0:
+        return None
+    return round(parsed, 2)
+
+
+def _resolve_cheque_moradia_valor(db: Session, obra_nome: Optional[str]) -> float:
+    obra = _normalize_empreendimento_nome(obra_nome)
+    if not obra:
+        return 0.0
+    empreendimento = (
+        db.query(Empreendimento)
+        .filter(func.lower(Empreendimento.nome) == obra.lower())
+        .first()
+    )
+    if not empreendimento:
+        return 0.0
+    regra = (
+        db.query(EmpreendimentoRegraFinanceira)
+        .filter(EmpreendimentoRegraFinanceira.empreendimento_id == empreendimento.id)
+        .first()
+    )
+    if not regra:
+        return 0.0
+    valor = float(regra.valor_cheque_moradia or 0.0)
+    return round(valor if valor > 0 else 0.0, 2)
+
+
+def _coerce_optional_currency(value: Any, field_label: str) -> Optional[float]:
+    if value is None:
+        return None
+    parsed = _normalize_currency_value(value)
+    if parsed is None:
+        raise HTTPException(status_code=422, detail=f"{field_label} invalido.")
+    return parsed
+
+
+def _build_cca_analise_item(
+    db: Session,
+    processo: "Processo",
+    cliente: "Cliente",
+    *,
+    lead: Optional["LeadPreCadastro"] = None,
+    docs_total: int = 0,
+    docs_recebidos: int = 0,
+) -> CcaAnaliseItemOut:
+    valor_cheque_moradia = getattr(processo, "valor_cheque_moradia", None)
+    if valor_cheque_moradia is None:
+        valor_cheque_moradia = _resolve_cheque_moradia_valor(db, getattr(cliente, "obra", None))
+
+    return CcaAnaliseItemOut(
+        processo_id=processo.id,
+        cliente_id=cliente.id,
+        cliente_nome=cliente.nome,
+        corretor=cliente.corretor,
+        obra=cliente.obra,
+        estagio_comercial=_process_estagio_comercial(processo.estagio_comercial),
+        status_cca=_process_caixa_status(processo.status_cca),
+        status_agehab=_process_agehab_status(processo.status_agehab),
+        renda_bruta=float(processo.renda_bruta) if getattr(processo, "renda_bruta", None) is not None else None,
+        renda_liquida=float(processo.renda_liquida) if getattr(processo, "renda_liquida", None) is not None else None,
+        valor_parcela=float(processo.valor_parcela) if getattr(processo, "valor_parcela", None) is not None else None,
+        valor_imovel=float(processo.valor_imovel) if getattr(processo, "valor_imovel", None) is not None else None,
+        valor_avaliacao=float(processo.valor_avaliacao) if getattr(processo, "valor_avaliacao", None) is not None else None,
+        valor_financiamento=float(processo.valor_financiamento) if getattr(processo, "valor_financiamento", None) is not None else None,
+        valor_subsidio=float(processo.valor_subsidio) if getattr(processo, "valor_subsidio", None) is not None else None,
+        valor_cheque_moradia=float(valor_cheque_moradia) if valor_cheque_moradia is not None else None,
+        cpf=getattr(lead, "cpf", None),
+        documento_identificacao=getattr(lead, "documento_identificacao", None),
+        estado_civil=getattr(lead, "estado_civil", None),
+        certidao_numero=getattr(lead, "certidao_numero", None),
+        cidade_nascimento=getattr(lead, "cidade_nascimento", None),
+        data_nascimento=getattr(lead, "data_nascimento", None),
+        telefone=getattr(lead, "telefone", None),
+        whatsapp=getattr(lead, "whatsapp", None),
+        email=getattr(lead, "email", None),
+        docs_total=max(0, int(docs_total or 0)),
+        docs_recebidos=max(0, int(docs_recebidos or 0)),
+        docs_pendentes=max(0, int(docs_total or 0) - int(docs_recebidos or 0)),
+        updated_at=getattr(processo, "updated_at", None),
+    )
 
 
 def _normalize_unidade_text(value: Optional[str], *, max_len: int = 220) -> Optional[str]:
@@ -2660,13 +2947,36 @@ def _ensure_runtime_schema(db: Session) -> None:
                 telefone VARCHAR(40),
                 whatsapp VARCHAR(40),
                 email VARCHAR(180),
+                cpf VARCHAR(20),
+                documento_identificacao VARCHAR(40),
+                estado_civil VARCHAR(30),
+                certidao_numero VARCHAR(60),
+                cidade_nascimento VARCHAR(120),
+                data_nascimento DATE,
+                endereco TEXT,
                 empreendimento_interesse TEXT,
                 localidade_interesse TEXT,
                 local_agendamento TEXT,
+                tipo_visita VARCHAR(20),
                 data_agendamento TIMESTAMPTZ,
-                estagio_lead VARCHAR(40) NOT NULL DEFAULT 'NOVO',
+                estagio_lead VARCHAR(40) NOT NULL DEFAULT 'LEAD',
+                processo_id UUID REFERENCES processos(id) ON DELETE SET NULL,
+                reservado_em TIMESTAMPTZ,
                 observacoes TEXT,
                 ultimo_contato_em TIMESTAMPTZ,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS empreendimento_regras_financeiras (
+                id UUID PRIMARY KEY,
+                empreendimento_id UUID NOT NULL UNIQUE REFERENCES empreendimentos(id) ON DELETE CASCADE,
+                valor_cheque_moradia DOUBLE PRECISION NOT NULL DEFAULT 0,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
@@ -2704,6 +3014,14 @@ def _ensure_runtime_schema(db: Session) -> None:
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_credito VARCHAR(30) DEFAULT 'EM_ANALISE'",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_sinal VARCHAR(30) DEFAULT 'NAO_TEM'",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_sinal DOUBLE PRECISION",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS renda_bruta DOUBLE PRECISION",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS renda_liquida DOUBLE PRECISION",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_parcela DOUBLE PRECISION",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_imovel DOUBLE PRECISION",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_avaliacao DOUBLE PRECISION",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_financiamento DOUBLE PRECISION",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_subsidio DOUBLE PRECISION",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_cheque_moradia DOUBLE PRECISION",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_fiador VARCHAR(30) DEFAULT 'NAO_TEM'",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS estagio_comercial VARCHAR(40) DEFAULT 'RESERVA'",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS etapa_repasse VARCHAR(40)",
@@ -2820,16 +3138,43 @@ def _ensure_runtime_schema(db: Session) -> None:
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS telefone VARCHAR(40)"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(40)"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS email VARCHAR(180)"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS cpf VARCHAR(20)"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS documento_identificacao VARCHAR(40)"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS estado_civil VARCHAR(30)"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS certidao_numero VARCHAR(60)"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS cidade_nascimento VARCHAR(120)"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS data_nascimento DATE"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS endereco TEXT"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS empreendimento_interesse TEXT"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS localidade_interesse TEXT"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS local_agendamento TEXT"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS tipo_visita VARCHAR(20)"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS data_agendamento TIMESTAMPTZ"))
-    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS estagio_lead VARCHAR(40) DEFAULT 'NOVO'"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS estagio_lead VARCHAR(40) DEFAULT 'LEAD'"))
+    db.execute(text("ALTER TABLE lead_precadastros ALTER COLUMN estagio_lead SET DEFAULT 'LEAD'"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS processo_id UUID REFERENCES processos(id) ON DELETE SET NULL"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS reservado_em TIMESTAMPTZ"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS observacoes TEXT"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS ultimo_contato_em TIMESTAMPTZ"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()"))
-    db.execute(text("UPDATE lead_precadastros SET estagio_lead = 'NOVO' WHERE COALESCE(TRIM(estagio_lead), '') = ''"))
+    db.execute(text("UPDATE lead_precadastros SET estagio_lead = 'LEAD' WHERE COALESCE(TRIM(estagio_lead), '') = ''"))
+    db.execute(
+        text(
+            """
+            UPDATE lead_precadastros
+               SET estagio_lead = CASE
+                 WHEN UPPER(COALESCE(estagio_lead, '')) IN ('NOVO', 'CONTATO_INICIAL', 'QUALIFICACAO') THEN 'LEAD'
+                 WHEN UPPER(COALESCE(estagio_lead, '')) IN ('AGENDADO') THEN 'AGENDAMENTO'
+                 WHEN UPPER(COALESCE(estagio_lead, '')) IN ('EM_ATENDIMENTO') THEN 'VISITA'
+                 WHEN UPPER(COALESCE(estagio_lead, '')) IN ('PROPOSTA', 'NEGOCIACAO') THEN 'PRECADASTRO'
+                 WHEN UPPER(COALESCE(estagio_lead, '')) IN ('GANHO') THEN 'RESERVA'
+                 WHEN UPPER(COALESCE(estagio_lead, '')) IN ('PERDIDO') THEN 'PERDIDO'
+                 ELSE estagio_lead
+               END
+            """
+        )
+    )
     db.execute(
         text(
             """
@@ -2838,8 +3183,23 @@ def _ensure_runtime_schema(db: Session) -> None:
             """
         )
     )
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_cpf ON lead_precadastros (cpf)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_processo_id ON lead_precadastros (processo_id)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_estagio ON lead_precadastros (estagio_lead)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_updated_at ON lead_precadastros (updated_at DESC)"))
+    db.execute(text("ALTER TABLE empreendimento_regras_financeiras ADD COLUMN IF NOT EXISTS empreendimento_id UUID REFERENCES empreendimentos(id) ON DELETE CASCADE"))
+    db.execute(text("ALTER TABLE empreendimento_regras_financeiras ADD COLUMN IF NOT EXISTS valor_cheque_moradia DOUBLE PRECISION DEFAULT 0"))
+    db.execute(text("ALTER TABLE empreendimento_regras_financeiras ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()"))
+    db.execute(text("ALTER TABLE empreendimento_regras_financeiras ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()"))
+    db.execute(text("UPDATE empreendimento_regras_financeiras SET valor_cheque_moradia = 0 WHERE valor_cheque_moradia IS NULL"))
+    db.execute(
+        text(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS ux_empreendimento_regras_financeiras_empreendimento_id
+            ON empreendimento_regras_financeiras (empreendimento_id)
+            """
+        )
+    )
     db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS created_by_username TEXT"))
     db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS empreendimento VARCHAR(220)"))
     db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS unidade VARCHAR(80)"))
@@ -3345,6 +3705,19 @@ def app_cca_page(request: Request):
     if role not in {ROLE_CCA, ROLE_ANALISTA}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
     return _html_page("cca.html")
+
+
+@app.get("/app/cca/analise")
+def app_cca_analise_page(request: Request):
+    session = _read_session(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=302)
+    if bool(session.get("must_change_password")):
+        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+    role = _normalize_role(str(session.get("role", "")))
+    if role not in {ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN}:
+        return RedirectResponse(url=_home_for_role(role), status_code=302)
+    return _html_page("cca_analise.html")
 
 
 @app.get("/app/checklist")
@@ -3893,6 +4266,8 @@ def corretor_list_pre_cadastros(
                 func.lower(func.coalesce(LeadPreCadastro.telefone, "")).like(like),
                 func.lower(func.coalesce(LeadPreCadastro.whatsapp, "")).like(like),
                 func.lower(func.coalesce(LeadPreCadastro.email, "")).like(like),
+                func.lower(func.coalesce(LeadPreCadastro.cpf, "")).like(like),
+                func.lower(func.coalesce(LeadPreCadastro.documento_identificacao, "")).like(like),
                 func.lower(func.coalesce(LeadPreCadastro.empreendimento_interesse, "")).like(like),
                 func.lower(func.coalesce(LeadPreCadastro.localidade_interesse, "")).like(like),
                 func.lower(func.coalesce(LeadPreCadastro.local_agendamento, "")).like(like),
@@ -3927,17 +4302,30 @@ def corretor_create_pre_cadastro(
         payload.empreendimento_interesse,
         max_len=220,
     )
+    estado_civil = _normalize_estado_civil(payload.estado_civil)
+    certidao_numero = _normalize_lead_text(payload.certidao_numero, max_len=60)
+    if estado_civil != "CASADO":
+        certidao_numero = None
+
     lead = LeadPreCadastro(
         corretor_username=actor_username,
         nome_cliente=nome_cliente,
         telefone=_normalize_lead_phone(payload.telefone),
         whatsapp=_normalize_lead_phone(payload.whatsapp),
         email=_normalize_lead_email(payload.email),
+        cpf=_normalize_lead_cpf(payload.cpf),
+        documento_identificacao=_normalize_lead_documento(payload.documento_identificacao),
+        estado_civil=estado_civil,
+        certidao_numero=certidao_numero,
+        cidade_nascimento=_normalize_lead_text(payload.cidade_nascimento, max_len=120),
+        data_nascimento=payload.data_nascimento,
+        endereco=_normalize_lead_text(payload.endereco, max_len=400),
         empreendimento_interesse=empreendimento,
         localidade_interesse=_normalize_lead_text(payload.localidade_interesse, max_len=220),
         local_agendamento=_normalize_lead_text(payload.local_agendamento, max_len=220),
+        tipo_visita=_normalize_tipo_visita(payload.tipo_visita),
         data_agendamento=_as_utc(payload.data_agendamento),
-        estagio_lead=_lead_stage(payload.estagio_lead, fallback="NOVO"),
+        estagio_lead=_lead_stage(payload.estagio_lead, fallback="LEAD"),
         observacoes=_normalize_lead_text(payload.observacoes, max_len=2000),
         ultimo_contato_em=_as_utc(payload.ultimo_contato_em),
     )
@@ -3992,6 +4380,22 @@ def corretor_update_pre_cadastro(
         lead.whatsapp = _normalize_lead_phone(changes.get("whatsapp"))
     if "email" in changes:
         lead.email = _normalize_lead_email(changes.get("email"))
+    if "cpf" in changes:
+        lead.cpf = _normalize_lead_cpf(changes.get("cpf"))
+    if "documento_identificacao" in changes:
+        lead.documento_identificacao = _normalize_lead_documento(changes.get("documento_identificacao"))
+    if "estado_civil" in changes:
+        lead.estado_civil = _normalize_estado_civil(changes.get("estado_civil"))
+        if lead.estado_civil != "CASADO":
+            lead.certidao_numero = None
+    if "certidao_numero" in changes:
+        lead.certidao_numero = _normalize_lead_text(changes.get("certidao_numero"), max_len=60) if lead.estado_civil == "CASADO" else None
+    if "cidade_nascimento" in changes:
+        lead.cidade_nascimento = _normalize_lead_text(changes.get("cidade_nascimento"), max_len=120)
+    if "data_nascimento" in changes:
+        lead.data_nascimento = changes.get("data_nascimento")
+    if "endereco" in changes:
+        lead.endereco = _normalize_lead_text(changes.get("endereco"), max_len=400)
     if "empreendimento_interesse" in changes:
         lead.empreendimento_interesse = _resolve_empreendimento_nome(db, changes.get("empreendimento_interesse")) or _normalize_lead_text(
             changes.get("empreendimento_interesse"),
@@ -4001,10 +4405,12 @@ def corretor_update_pre_cadastro(
         lead.localidade_interesse = _normalize_lead_text(changes.get("localidade_interesse"), max_len=220)
     if "local_agendamento" in changes:
         lead.local_agendamento = _normalize_lead_text(changes.get("local_agendamento"), max_len=220)
+    if "tipo_visita" in changes:
+        lead.tipo_visita = _normalize_tipo_visita(changes.get("tipo_visita"))
     if "data_agendamento" in changes:
         lead.data_agendamento = _as_utc(changes.get("data_agendamento"))
     if "estagio_lead" in changes:
-        lead.estagio_lead = _lead_stage(changes.get("estagio_lead"), fallback=lead.estagio_lead or "NOVO")
+        lead.estagio_lead = _lead_stage(changes.get("estagio_lead"), fallback=lead.estagio_lead or "LEAD")
     if "observacoes" in changes:
         lead.observacoes = _normalize_lead_text(changes.get("observacoes"), max_len=2000)
     if "ultimo_contato_em" in changes:
@@ -4023,6 +4429,102 @@ def corretor_update_pre_cadastro(
     db.commit()
     db.refresh(lead)
     return lead
+
+
+@app.post("/app/api/corretor/pre-cadastros/{lead_id}/reservar", response_model=LeadReservaOut)
+def corretor_reservar_pre_cadastro(
+    lead_id: uuid.UUID,
+    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    role = _normalize_role(str(session.get("role", "")))
+    actor_username = _normalize_username(str(session.get("username", "")))
+    lead = db.get(LeadPreCadastro, lead_id)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead nao encontrado")
+    if role == ROLE_CORRETOR and _normalize_username(lead.corretor_username) != actor_username:
+        raise HTTPException(status_code=403, detail="Sem permissao para reservar este lead")
+
+    processo_existente = db.get(Processo, lead.processo_id) if getattr(lead, "processo_id", None) else None
+    if processo_existente:
+        now_existing = _utcnow()
+        lead.estagio_lead = "RESERVA"
+        lead.reservado_em = lead.reservado_em or now_existing
+        db.commit()
+        return LeadReservaOut(
+            lead_id=lead.id,
+            cliente_id=processo_existente.cliente_id,
+            processo_id=processo_existente.id,
+            estagio_lead=lead.estagio_lead,
+            reservado_em=_as_utc(lead.reservado_em) or now_existing,
+        )
+
+    now = _utcnow()
+    empreendimento_nome = _resolve_empreendimento_nome(db, lead.empreendimento_interesse) or _normalize_lead_text(
+        lead.empreendimento_interesse,
+        max_len=220,
+    )
+    corretor_nome = _normalize_corretor_nome_curto(lead.corretor_username) or (lead.corretor_username or "").strip() or None
+
+    cliente = Cliente(
+        nome=lead.nome_cliente,
+        corretor=corretor_nome,
+        obra=empreendimento_nome,
+        imobiliaria=None,
+        data_reserva_origem=now.date(),
+        data_cadastro_origem=(lead.created_at.date() if getattr(lead, "created_at", None) else now.date()),
+    )
+    db.add(cliente)
+    db.flush()
+
+    processo = Processo(
+        cliente_id=cliente.id,
+        estagio_comercial="EM_PROCESSO",
+        valor_cheque_moradia=_resolve_cheque_moradia_valor(db, empreendimento_nome),
+        sla_comercial_inicio_at=_utc_start_of_day(cliente.data_cadastro_origem) or now,
+    )
+    _sync_estagio_repasse_rules(processo, now)
+    _refresh_sla_fixed_markers(processo, now)
+    _switch_sla_owner(processo, SLA_OWNER_ANALISTA, now)
+    db.add(processo)
+    db.flush()
+    _ensure_default_documentos(db, processo.id, autocommit=False)
+    _record_processo_event(
+        db,
+        processo_id=processo.id,
+        actor_username=actor_username,
+        actor_role=role,
+        event_type="PROCESSO_CRIADO_LEAD_RESERVA",
+        details=f"lead_id={lead.id}; cliente={cliente.nome}",
+    )
+
+    lead.estagio_lead = "RESERVA"
+    lead.processo_id = processo.id
+    lead.reservado_em = now
+
+    _record_system_log(
+        db,
+        actor_username=actor_username,
+        actor_role=role,
+        tela="corretor_precadastro",
+        acao="LEAD_CONVERTIDO_RESERVA",
+        entidade_tipo="lead_precadastro",
+        entidade_id=str(lead.id),
+        details=(
+            f"cliente={cliente.nome}; processo_id={processo.id}; "
+            f"empreendimento={cliente.obra or '-'}; cheque_moradia={processo.valor_cheque_moradia or 0}"
+        ),
+    )
+
+    db.commit()
+    _invalidate_process_list_cache()
+    return LeadReservaOut(
+        lead_id=lead.id,
+        cliente_id=cliente.id,
+        processo_id=processo.id,
+        estagio_lead=lead.estagio_lead,
+        reservado_em=lead.reservado_em or now,
+    )
 
 
 @app.get("/app/api/corretor/unidades/status")
@@ -4369,6 +4871,80 @@ def admin_delete_empreendimento(
     )
     db.commit()
     return {"ok": True}
+
+
+@app.get("/app/api/admin/empreendimentos/regras-financeiras", response_model=list[EmpreendimentoRegraFinanceiraOut])
+def admin_list_empreendimento_regras_financeiras(
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    empreendimentos = db.query(Empreendimento).order_by(func.lower(Empreendimento.nome).asc()).all()
+    regras = db.query(EmpreendimentoRegraFinanceira).all()
+    regras_map: dict[uuid.UUID, EmpreendimentoRegraFinanceira] = {
+        regra.empreendimento_id: regra for regra in regras if getattr(regra, "empreendimento_id", None)
+    }
+    now = _utcnow()
+    output: list[EmpreendimentoRegraFinanceiraOut] = []
+    for emp in empreendimentos:
+        regra = regras_map.get(emp.id)
+        output.append(
+            EmpreendimentoRegraFinanceiraOut(
+                empreendimento_id=emp.id,
+                empreendimento_nome=emp.nome,
+                valor_cheque_moradia=float(getattr(regra, "valor_cheque_moradia", 0.0) or 0.0),
+                updated_at=getattr(regra, "updated_at", None) or getattr(emp, "updated_at", None) or now,
+            )
+        )
+    return output
+
+
+@app.put("/app/api/admin/empreendimentos/{empreendimento_id}/regra-financeira", response_model=EmpreendimentoRegraFinanceiraOut)
+def admin_upsert_empreendimento_regra_financeira(
+    empreendimento_id: uuid.UUID,
+    payload: EmpreendimentoRegraFinanceiraPayload,
+    session: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    empreendimento = db.get(Empreendimento, empreendimento_id)
+    if not empreendimento:
+        raise HTTPException(status_code=404, detail="Empreendimento nao encontrado")
+
+    valor = _coerce_optional_currency(payload.valor_cheque_moradia, "Valor do cheque moradia")
+    if valor is None:
+        valor = 0.0
+
+    regra = (
+        db.query(EmpreendimentoRegraFinanceira)
+        .filter(EmpreendimentoRegraFinanceira.empreendimento_id == empreendimento_id)
+        .first()
+    )
+    if not regra:
+        regra = EmpreendimentoRegraFinanceira(
+            empreendimento_id=empreendimento_id,
+            valor_cheque_moradia=valor,
+        )
+        db.add(regra)
+    else:
+        regra.valor_cheque_moradia = valor
+
+    _record_system_log(
+        db,
+        actor_username=_normalize_username(str(session.get("username", ""))),
+        actor_role=_normalize_role(str(session.get("role", ""))),
+        tela="admin",
+        acao="EMPREENDIMENTO_REGRA_FINANCEIRA_ATUALIZADA",
+        entidade_tipo="empreendimento",
+        entidade_id=str(empreendimento.id),
+        details=f"nome={empreendimento.nome}; valor_cheque_moradia={valor}",
+    )
+    db.commit()
+    db.refresh(regra)
+    return EmpreendimentoRegraFinanceiraOut(
+        empreendimento_id=empreendimento.id,
+        empreendimento_nome=empreendimento.nome,
+        valor_cheque_moradia=float(regra.valor_cheque_moradia or 0.0),
+        updated_at=regra.updated_at or _utcnow(),
+    )
 
 
 @app.get("/app/api/admin/logs", response_model=list[SistemaLogOut])
@@ -5194,6 +5770,219 @@ def app_list_processos(
     return output
 
 
+@app.get("/app/api/cca/analise", response_model=list[CcaAnaliseItemOut])
+def app_list_cca_analise(
+    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+    q: Optional[str] = Query(default=None),
+    obra: Optional[str] = Query(default=None),
+    status_cca: Optional[str] = Query(default=None),
+    limit: int = Query(default=250, ge=1, le=1000),
+):
+    _ensure_monthly_repasse_archiving(db, _utcnow())
+    role = _normalize_role(str(session.get("role", "")))
+    username = _normalize_username(str(session.get("username", "")))
+
+    query = (
+        db.query(Processo, Cliente)
+        .join(Cliente, Processo.cliente_id == Cliente.id)
+        .filter(_processos_ativos_clause())
+    )
+
+    if role == ROLE_CCA:
+        if not username:
+            return []
+        query = query.filter(
+            or_(
+                func.lower(func.trim(func.coalesce(Processo.cca_responsavel, ""))) == username,
+                func.trim(func.coalesce(Processo.cca_responsavel, "")) == "",
+            )
+        )
+
+    termo = (q or "").strip().lower()
+    obra_term = (obra or "").strip().lower()
+    status_cca_norm = _process_caixa_status(status_cca, fallback="") if status_cca else ""
+
+    if termo:
+        like = f"%{termo}%"
+        query = query.filter(
+            or_(
+                func.lower(func.coalesce(Cliente.nome, "")).like(like),
+                func.lower(func.coalesce(Cliente.corretor, "")).like(like),
+                func.lower(func.coalesce(Cliente.obra, "")).like(like),
+                func.lower(func.coalesce(Processo.status_cca, "")).like(like),
+            )
+        )
+    if obra_term:
+        query = query.filter(func.lower(func.coalesce(Cliente.obra, "")).like(f"%{obra_term}%"))
+    if status_cca_norm:
+        query = query.filter(func.upper(func.coalesce(Processo.status_cca, "")) == status_cca_norm)
+
+    rows = query.order_by(Processo.updated_at.desc(), Processo.created_at.desc()).limit(limit).all()
+    processo_ids = [processo.id for processo, _ in rows]
+
+    leads_by_processo: dict[uuid.UUID, LeadPreCadastro] = {}
+    docs_stats: dict[uuid.UUID, dict[str, int]] = {}
+    if processo_ids:
+        lead_rows = (
+            db.query(LeadPreCadastro)
+            .filter(LeadPreCadastro.processo_id.in_(processo_ids))
+            .order_by(LeadPreCadastro.updated_at.desc(), LeadPreCadastro.created_at.desc())
+            .all()
+        )
+        for lead in lead_rows:
+            pid = getattr(lead, "processo_id", None)
+            if pid and pid not in leads_by_processo:
+                leads_by_processo[pid] = lead
+
+        docs_rows = (
+            db.query(Documento.processo_id, Documento.status_doc)
+            .filter(Documento.processo_id.in_(processo_ids))
+            .all()
+        )
+        for processo_id, status_doc in docs_rows:
+            stats = docs_stats.setdefault(processo_id, {"docs_total": 0, "docs_recebidos": 0})
+            stats["docs_total"] += 1
+            if _doc_is_done(status_doc):
+                stats["docs_recebidos"] += 1
+
+    output: list[CcaAnaliseItemOut] = []
+    for processo, cliente in rows:
+        stats = docs_stats.get(processo.id, {"docs_total": 0, "docs_recebidos": 0})
+        output.append(
+            _build_cca_analise_item(
+                db,
+                processo,
+                cliente,
+                lead=leads_by_processo.get(processo.id),
+                docs_total=int(stats.get("docs_total", 0)),
+                docs_recebidos=int(stats.get("docs_recebidos", 0)),
+            )
+        )
+    return output
+
+
+@app.patch("/app/api/cca/analise/{processo_id}", response_model=CcaAnaliseItemOut)
+def app_patch_cca_analise(
+    processo_id: uuid.UUID,
+    payload: CcaAnaliseUpdate,
+    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    processo = db.get(Processo, processo_id)
+    if not processo:
+        raise HTTPException(status_code=404, detail="Processo nao encontrado")
+
+    cliente = db.get(Cliente, processo.cliente_id)
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente nao encontrado")
+
+    actor_role = _normalize_role(str(session.get("role", "")))
+    actor_username = _normalize_username(str(session.get("username", "")))
+    if actor_role == ROLE_CCA:
+        responsavel_norm = _normalize_username(processo.cca_responsavel)
+        if responsavel_norm and responsavel_norm != actor_username:
+            raise HTTPException(status_code=403, detail="Sem permissao para este processo")
+        if not responsavel_norm:
+            old_responsavel = processo.cca_responsavel
+            processo.cca_responsavel = actor_username
+            _record_processo_event(
+                db,
+                processo_id=processo.id,
+                actor_username=actor_username,
+                actor_role=actor_role,
+                event_type="ATRIBUICAO_CCA",
+                field_name="cca_responsavel",
+                old_value=old_responsavel,
+                new_value=processo.cca_responsavel,
+                details="auto_atribuido_ao_salvar_analise_cca",
+            )
+
+    changes = payload.model_dump(exclude_unset=True)
+    labels = {
+        "renda_bruta": "Renda bruta",
+        "renda_liquida": "Renda liquida",
+        "valor_parcela": "Valor da parcela",
+        "valor_imovel": "Valor do imovel",
+        "valor_avaliacao": "Valor de avaliacao",
+        "valor_financiamento": "Valor do financiamento",
+        "valor_subsidio": "Valor do subsidio",
+    }
+
+    for field_name, label in labels.items():
+        if field_name not in changes:
+            continue
+        old_value = getattr(processo, field_name, None)
+        new_value = _coerce_optional_currency(changes.get(field_name), label)
+        setattr(processo, field_name, new_value)
+        if old_value != new_value:
+            _record_processo_event(
+                db,
+                processo_id=processo.id,
+                actor_username=actor_username,
+                actor_role=actor_role,
+                event_type="PROCESSO_UPDATE",
+                field_name=field_name,
+                old_value=old_value,
+                new_value=new_value,
+            )
+
+    old_cheque = getattr(processo, "valor_cheque_moradia", None)
+    auto_cheque = _resolve_cheque_moradia_valor(db, cliente.obra)
+    processo.valor_cheque_moradia = auto_cheque
+    if old_cheque != auto_cheque:
+        _record_processo_event(
+            db,
+            processo_id=processo.id,
+            actor_username=actor_username,
+            actor_role=actor_role,
+            event_type="PROCESSO_UPDATE",
+            field_name="valor_cheque_moradia",
+            old_value=old_cheque,
+            new_value=auto_cheque,
+            details=f"regra_automatica_empreendimento={cliente.obra or '-'}",
+        )
+
+    _record_system_log(
+        db,
+        actor_username=actor_username,
+        actor_role=actor_role,
+        tela="cca_analise",
+        acao="CCA_ANALISE_FINANCEIRA_ATUALIZADA",
+        entidade_tipo="processo",
+        entidade_id=str(processo.id),
+        details=(
+            f"cliente={cliente.nome}; obra={cliente.obra or '-'}; "
+            f"cheque_moradia={processo.valor_cheque_moradia or 0}; campos={','.join(sorted(changes.keys())) or 'auto'}"
+        ),
+    )
+    db.commit()
+    _invalidate_process_list_cache()
+
+    lead = (
+        db.query(LeadPreCadastro)
+        .filter(LeadPreCadastro.processo_id == processo.id)
+        .order_by(LeadPreCadastro.updated_at.desc(), LeadPreCadastro.created_at.desc())
+        .first()
+    )
+    docs_rows = (
+        db.query(Documento.status_doc)
+        .filter(Documento.processo_id == processo.id)
+        .all()
+    )
+    docs_total = len(docs_rows)
+    docs_recebidos = sum(1 for (status_doc,) in docs_rows if _doc_is_done(status_doc))
+    db.refresh(processo)
+    return _build_cca_analise_item(
+        db,
+        processo,
+        cliente,
+        lead=lead,
+        docs_total=docs_total,
+        docs_recebidos=docs_recebidos,
+    )
+
+
 @app.get("/app/api/processos/arquivados", response_model=ProcessoArquivadoListOut)
 def app_list_processos_arquivados(
     _: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
@@ -5790,6 +6579,7 @@ def app_create_intake(
         cliente_id=cliente.id,
         estagio_comercial=estagio,
         etapa_repasse="EM_REPASSE" if estagio in ESTAGIOS_REPASSE_COMERCIAL else None,
+        valor_cheque_moradia=_resolve_cheque_moradia_valor(db, obra_nome),
         sla_comercial_inicio_at=_utc_start_of_day(payload.data_cadastro_origem) or _utcnow(),
     )
     _sync_estagio_repasse_rules(processo, _utcnow())
@@ -5988,6 +6778,7 @@ async def app_importar_processos_planilha(
             cliente_id=cliente.id,
             estagio_comercial=estagio,
             etapa_repasse="EM_REPASSE" if estagio in ESTAGIOS_REPASSE_COMERCIAL else None,
+            valor_cheque_moradia=_resolve_cheque_moradia_valor(db, empreendimento),
             sla_comercial_inicio_at=_utc_start_of_day(data_cadastro_origem) or _utcnow(),
         )
         _sync_estagio_repasse_rules(processo, _utcnow())
