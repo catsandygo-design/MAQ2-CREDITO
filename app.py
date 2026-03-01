@@ -619,6 +619,8 @@ LEAD_STAGE_VALUES = [
     "PERDIDO",
 ]
 LEAD_STAGE_SET = set(LEAD_STAGE_VALUES)
+UNIDADE_STATUS_VALUES = ["DISPONIVEL", "RESERVADA", "VENDIDA", "BLOQUEADA"]
+UNIDADE_STATUS_SET = set(UNIDADE_STATUS_VALUES)
 IMPORT_REQUIRED_COLUMNS = {
     "reserva",
     "nome_cliente",
@@ -725,6 +727,22 @@ def _lead_stage(value: Optional[str], fallback: str = "NOVO") -> str:
     }
     mapped = aliases.get(token, "")
     return mapped if mapped in LEAD_STAGE_SET else fallback
+
+
+def _unidade_status(value: Optional[str], fallback: str = "DISPONIVEL") -> str:
+    token = _normalize_text_key(value)
+    aliases = {
+        "disponivel": "DISPONIVEL",
+        "livre": "DISPONIVEL",
+        "reservada": "RESERVADA",
+        "reservado": "RESERVADA",
+        "vendida": "VENDIDA",
+        "vendido": "VENDIDA",
+        "bloqueada": "BLOQUEADA",
+        "bloqueado": "BLOQUEADA",
+    }
+    mapped = aliases.get(token, "")
+    return mapped if mapped in UNIDADE_STATUS_SET else fallback
 
 
 def _should_be_in_repasse(processo: "Processo") -> bool:
@@ -1455,6 +1473,34 @@ class LeadPreCadastro(Base):
     )
 
 
+class UnidadeDisponivel(Base):
+    __tablename__ = "unidades_disponiveis"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    created_by_username: Mapped[Optional[str]] = mapped_column(String(120), index=True)
+    empreendimento: Mapped[str] = mapped_column(String(220), nullable=False, index=True)
+    unidade: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    bloco: Mapped[Optional[str]] = mapped_column(String(80))
+    tipologia: Mapped[Optional[str]] = mapped_column(String(120), index=True)
+    quartos: Mapped[Optional[int]] = mapped_column(Integer)
+    banheiros: Mapped[Optional[int]] = mapped_column(Integer)
+    vagas: Mapped[Optional[int]] = mapped_column(Integer)
+    area_m2: Mapped[Optional[float]] = mapped_column(Float)
+    valor: Mapped[Optional[float]] = mapped_column(Float)
+    localizacao: Mapped[Optional[str]] = mapped_column(Text)
+    diferenciais: Mapped[Optional[str]] = mapped_column(Text)
+    url_imagem: Mapped[Optional[str]] = mapped_column(Text)
+    visita_disponivel: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    status_unidade: Mapped[str] = mapped_column(String(20), nullable=False, default="DISPONIVEL", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        index=True,
+    )
+
+
 class ClienteCreate(BaseModel):
     nome: str
     corretor: Optional[str] = None
@@ -1734,6 +1780,70 @@ class LeadPreCadastroOut(BaseModel):
     updated_at: datetime
 
 
+class UnidadeDisponivelCreate(BaseModel):
+    empreendimento: str
+    unidade: str
+    bloco: Optional[str] = None
+    tipologia: Optional[str] = None
+    quartos: Optional[int] = None
+    banheiros: Optional[int] = None
+    vagas: Optional[int] = None
+    area_m2: Optional[float] = None
+    valor: Optional[float] = None
+    localizacao: Optional[str] = None
+    diferenciais: Optional[str] = None
+    url_imagem: Optional[str] = None
+    visita_disponivel: Optional[bool] = True
+    status_unidade: Optional[str] = None
+
+
+class UnidadeDisponivelUpdate(BaseModel):
+    empreendimento: Optional[str] = None
+    unidade: Optional[str] = None
+    bloco: Optional[str] = None
+    tipologia: Optional[str] = None
+    quartos: Optional[int] = None
+    banheiros: Optional[int] = None
+    vagas: Optional[int] = None
+    area_m2: Optional[float] = None
+    valor: Optional[float] = None
+    localizacao: Optional[str] = None
+    diferenciais: Optional[str] = None
+    url_imagem: Optional[str] = None
+    visita_disponivel: Optional[bool] = None
+    status_unidade: Optional[str] = None
+
+
+class UnidadeDisponivelOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    created_by_username: Optional[str] = None
+    empreendimento: str
+    unidade: str
+    bloco: Optional[str] = None
+    tipologia: Optional[str] = None
+    quartos: Optional[int] = None
+    banheiros: Optional[int] = None
+    vagas: Optional[int] = None
+    area_m2: Optional[float] = None
+    valor: Optional[float] = None
+    localizacao: Optional[str] = None
+    diferenciais: Optional[str] = None
+    url_imagem: Optional[str] = None
+    visita_disponivel: bool
+    status_unidade: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class UnidadeDisponivelMetricasOut(BaseModel):
+    total: int
+    disponiveis: int
+    ticket_medio: float
+    area_media: float
+    empreendimentos: int
+
+
 class ProcessoIntakeCreate(BaseModel):
     nome: str
     corretor: Optional[str] = None
@@ -1819,6 +1929,7 @@ class AdminStorageSummaryOut(BaseModel):
     total_processos_ativos: int
     total_processos_arquivados: int
     total_pre_cadastros: int
+    total_unidades_disponiveis: int
     total_documentos: int
     total_eventos_processo: int
     total_logs_sistema: int
@@ -2056,6 +2167,37 @@ def _normalize_lead_phone(value: Optional[str]) -> Optional[str]:
     if not phone:
         return None
     return phone
+
+
+def _normalize_unidade_text(value: Optional[str], *, max_len: int = 220) -> Optional[str]:
+    text = " ".join(str(value or "").strip().split())
+    if not text:
+        return None
+    return text[:max_len]
+
+
+def _normalize_unidade_positive_int(value: Optional[int], *, min_value: int = 0, max_value: int = 999) -> Optional[int]:
+    if value is None:
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    if parsed < min_value:
+        return None
+    return min(parsed, max_value)
+
+
+def _normalize_unidade_positive_float(value: Optional[float], *, min_value: float = 0.0, max_value: float = 1_000_000_000.0) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if parsed < min_value:
+        return None
+    return min(parsed, max_value)
 
 
 def _resolve_empreendimento_nome(db: Session, value: Optional[str]) -> Optional[str]:
@@ -2526,6 +2668,32 @@ def _ensure_runtime_schema(db: Session) -> None:
             """
         )
     )
+    db.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS unidades_disponiveis (
+                id UUID PRIMARY KEY,
+                created_by_username TEXT,
+                empreendimento VARCHAR(220) NOT NULL,
+                unidade VARCHAR(80) NOT NULL,
+                bloco VARCHAR(80),
+                tipologia VARCHAR(120),
+                quartos INTEGER,
+                banheiros INTEGER,
+                vagas INTEGER,
+                area_m2 DOUBLE PRECISION,
+                valor DOUBLE PRECISION,
+                localizacao TEXT,
+                diferenciais TEXT,
+                url_imagem TEXT,
+                visita_disponivel BOOLEAN NOT NULL DEFAULT TRUE,
+                status_unidade VARCHAR(20) NOT NULL DEFAULT 'DISPONIVEL',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+    )
 
     statements = [
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_credito VARCHAR(30) DEFAULT 'EM_ANALISE'",
@@ -2667,6 +2835,37 @@ def _ensure_runtime_schema(db: Session) -> None:
     )
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_estagio ON lead_precadastros (estagio_lead)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_updated_at ON lead_precadastros (updated_at DESC)"))
+    db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS created_by_username TEXT"))
+    db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS empreendimento VARCHAR(220)"))
+    db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS unidade VARCHAR(80)"))
+    db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS bloco VARCHAR(80)"))
+    db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS tipologia VARCHAR(120)"))
+    db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS quartos INTEGER"))
+    db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS banheiros INTEGER"))
+    db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS vagas INTEGER"))
+    db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS area_m2 DOUBLE PRECISION"))
+    db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS valor DOUBLE PRECISION"))
+    db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS localizacao TEXT"))
+    db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS diferenciais TEXT"))
+    db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS url_imagem TEXT"))
+    db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS visita_disponivel BOOLEAN DEFAULT TRUE"))
+    db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS status_unidade VARCHAR(20) DEFAULT 'DISPONIVEL'"))
+    db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()"))
+    db.execute(text("ALTER TABLE unidades_disponiveis ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()"))
+    db.execute(text("UPDATE unidades_disponiveis SET status_unidade = 'DISPONIVEL' WHERE COALESCE(TRIM(status_unidade), '') = ''"))
+    db.execute(text("UPDATE unidades_disponiveis SET visita_disponivel = TRUE WHERE visita_disponivel IS NULL"))
+    db.execute(
+        text(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS ux_unidades_disponiveis_empreendimento_unidade
+            ON unidades_disponiveis ((LOWER(TRIM(COALESCE(empreendimento, '')))), (LOWER(TRIM(COALESCE(unidade, '')))))
+            """
+        )
+    )
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_unidades_disponiveis_status ON unidades_disponiveis (status_unidade)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_unidades_disponiveis_empreendimento ON unidades_disponiveis (empreendimento)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_unidades_disponiveis_tipologia ON unidades_disponiveis (tipologia)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_unidades_disponiveis_updated_at ON unidades_disponiveis (updated_at DESC)"))
 
     current_revision = db.execute(
         text("SELECT meta_value FROM app_runtime_meta WHERE meta_key = 'runtime_schema_revision'")
@@ -3194,6 +3393,26 @@ def app_corretor_precadastro_page(request: Request):
         response.delete_cookie(key=SESSION_COOKIE_NAME)
         return response
     return _html_page("corretor_precadastro.html")
+
+
+@app.get("/app/corretor/apresentacao")
+def app_corretor_apresentacao_page(request: Request):
+    session = _read_session(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=302)
+    if bool(session.get("must_change_password")):
+        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+    role = _normalize_role(str(session.get("role", "")))
+    if role != ROLE_CORRETOR:
+        return RedirectResponse(url=_home_for_role(role), status_code=302)
+    if not CORRETOR_ROUTE_ENABLED:
+        token = request.cookies.get(SESSION_COOKIE_NAME)
+        if token:
+            ACTIVE_SESSIONS.pop(token, None)
+        response = RedirectResponse(url="/login", status_code=302)
+        response.delete_cookie(key=SESSION_COOKIE_NAME)
+        return response
+    return _html_page("corretor_apresentacao.html")
 
 
 @app.get("/app/analista")
@@ -3801,6 +4020,273 @@ def corretor_update_pre_cadastro(
     return lead
 
 
+@app.get("/app/api/corretor/unidades/status")
+def corretor_unidades_status(
+    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_ADMIN)),
+):
+    return {"status": UNIDADE_STATUS_VALUES}
+
+
+@app.get("/app/api/corretor/unidades", response_model=list[UnidadeDisponivelOut])
+def corretor_list_unidades(
+    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+    q: Optional[str] = Query(default=None),
+    empreendimento: Optional[str] = Query(default=None),
+    tipologia: Optional[str] = Query(default=None),
+    status: Optional[str] = Query(default=None),
+    quartos_min: Optional[int] = Query(default=None, ge=0, le=20),
+    preco_max: Optional[float] = Query(default=None, ge=0),
+    somente_disponiveis: bool = Query(default=True),
+    limit: int = Query(default=300, ge=1, le=1000),
+):
+    query = db.query(UnidadeDisponivel)
+
+    term = (q or "").strip().lower()
+    empreendimento_term = (empreendimento or "").strip().lower()
+    tipologia_term = (tipologia or "").strip().lower()
+    status_norm = _unidade_status(status, fallback="") if status else ""
+
+    if term:
+        like = f"%{term}%"
+        query = query.filter(
+            or_(
+                func.lower(func.coalesce(UnidadeDisponivel.empreendimento, "")).like(like),
+                func.lower(func.coalesce(UnidadeDisponivel.unidade, "")).like(like),
+                func.lower(func.coalesce(UnidadeDisponivel.bloco, "")).like(like),
+                func.lower(func.coalesce(UnidadeDisponivel.tipologia, "")).like(like),
+                func.lower(func.coalesce(UnidadeDisponivel.localizacao, "")).like(like),
+                func.lower(func.coalesce(UnidadeDisponivel.diferenciais, "")).like(like),
+            )
+        )
+    if empreendimento_term:
+        query = query.filter(func.lower(func.coalesce(UnidadeDisponivel.empreendimento, "")).like(f"%{empreendimento_term}%"))
+    if tipologia_term:
+        query = query.filter(func.lower(func.coalesce(UnidadeDisponivel.tipologia, "")).like(f"%{tipologia_term}%"))
+    if status_norm:
+        query = query.filter(func.upper(func.coalesce(UnidadeDisponivel.status_unidade, "")) == status_norm)
+    elif somente_disponiveis:
+        query = query.filter(func.upper(func.coalesce(UnidadeDisponivel.status_unidade, "")) == "DISPONIVEL")
+
+    if quartos_min is not None:
+        query = query.filter(func.coalesce(UnidadeDisponivel.quartos, 0) >= int(quartos_min))
+    if preco_max is not None:
+        query = query.filter(func.coalesce(UnidadeDisponivel.valor, 0) <= float(preco_max))
+
+    status_order = (
+        "CASE UPPER(COALESCE(status_unidade, '')) "
+        "WHEN 'DISPONIVEL' THEN 0 "
+        "WHEN 'RESERVADA' THEN 1 "
+        "WHEN 'BLOQUEADA' THEN 2 "
+        "WHEN 'VENDIDA' THEN 3 "
+        "ELSE 9 END"
+    )
+    return (
+        query.order_by(
+            text(status_order),
+            UnidadeDisponivel.valor.asc().nullslast(),
+            UnidadeDisponivel.updated_at.desc(),
+        )
+        .limit(limit)
+        .all()
+    )
+
+
+@app.get("/app/api/corretor/unidades/metricas", response_model=UnidadeDisponivelMetricasOut)
+def corretor_unidades_metricas(
+    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    total = int(db.query(func.count(UnidadeDisponivel.id)).scalar() or 0)
+    disponiveis = int(
+        db.query(func.count(UnidadeDisponivel.id))
+        .filter(func.upper(func.coalesce(UnidadeDisponivel.status_unidade, "")) == "DISPONIVEL")
+        .scalar()
+        or 0
+    )
+    ticket_medio = float(
+        db.query(func.avg(UnidadeDisponivel.valor))
+        .filter(
+            UnidadeDisponivel.valor.isnot(None),
+            func.upper(func.coalesce(UnidadeDisponivel.status_unidade, "")) == "DISPONIVEL",
+        )
+        .scalar()
+        or 0.0
+    )
+    area_media = float(
+        db.query(func.avg(UnidadeDisponivel.area_m2))
+        .filter(
+            UnidadeDisponivel.area_m2.isnot(None),
+            func.upper(func.coalesce(UnidadeDisponivel.status_unidade, "")) == "DISPONIVEL",
+        )
+        .scalar()
+        or 0.0
+    )
+    empreendimentos = int(
+        db.query(func.count(func.distinct(func.lower(func.coalesce(UnidadeDisponivel.empreendimento, "")))))
+        .filter(UnidadeDisponivel.empreendimento.isnot(None))
+        .scalar()
+        or 0
+    )
+    return UnidadeDisponivelMetricasOut(
+        total=total,
+        disponiveis=disponiveis,
+        ticket_medio=ticket_medio,
+        area_media=area_media,
+        empreendimentos=empreendimentos,
+    )
+
+
+@app.post("/app/api/corretor/unidades", response_model=UnidadeDisponivelOut)
+def corretor_create_unidade(
+    payload: UnidadeDisponivelCreate,
+    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    actor_username = _normalize_username(str(session.get("username", "")))
+    actor_role = _normalize_role(str(session.get("role", "")))
+
+    empreendimento = _resolve_empreendimento_nome(db, payload.empreendimento) or _normalize_unidade_text(
+        payload.empreendimento,
+        max_len=220,
+    )
+    unidade = _normalize_unidade_text(payload.unidade, max_len=80)
+    if not empreendimento:
+        raise HTTPException(status_code=422, detail="Empreendimento obrigatorio")
+    if not unidade:
+        raise HTTPException(status_code=422, detail="Identificacao da unidade obrigatoria")
+
+    exists = (
+        db.query(UnidadeDisponivel.id)
+        .filter(
+            func.lower(func.trim(func.coalesce(UnidadeDisponivel.empreendimento, ""))) == empreendimento.strip().lower(),
+            func.lower(func.trim(func.coalesce(UnidadeDisponivel.unidade, ""))) == unidade.strip().lower(),
+        )
+        .first()
+    )
+    if exists:
+        raise HTTPException(status_code=409, detail="Unidade ja cadastrada para esse empreendimento")
+
+    unidade_db = UnidadeDisponivel(
+        created_by_username=actor_username,
+        empreendimento=empreendimento,
+        unidade=unidade,
+        bloco=_normalize_unidade_text(payload.bloco, max_len=80),
+        tipologia=_normalize_unidade_text(payload.tipologia, max_len=120),
+        quartos=_normalize_unidade_positive_int(payload.quartos, min_value=0, max_value=20),
+        banheiros=_normalize_unidade_positive_int(payload.banheiros, min_value=0, max_value=20),
+        vagas=_normalize_unidade_positive_int(payload.vagas, min_value=0, max_value=20),
+        area_m2=_normalize_unidade_positive_float(payload.area_m2, min_value=0.0, max_value=5000.0),
+        valor=_normalize_unidade_positive_float(payload.valor, min_value=0.0),
+        localizacao=_normalize_unidade_text(payload.localizacao, max_len=220),
+        diferenciais=_normalize_unidade_text(payload.diferenciais, max_len=1500),
+        url_imagem=_normalize_unidade_text(payload.url_imagem, max_len=700),
+        visita_disponivel=bool(payload.visita_disponivel if payload.visita_disponivel is not None else True),
+        status_unidade=_unidade_status(payload.status_unidade, fallback="DISPONIVEL"),
+    )
+    db.add(unidade_db)
+    db.flush()
+    _record_system_log(
+        db,
+        actor_username=actor_username,
+        actor_role=actor_role,
+        tela="corretor_apresentacao",
+        acao="UNIDADE_CADASTRADA",
+        entidade_tipo="unidade",
+        entidade_id=str(unidade_db.id),
+        details=f"empreendimento={unidade_db.empreendimento}; unidade={unidade_db.unidade}; status={unidade_db.status_unidade}",
+    )
+    db.commit()
+    db.refresh(unidade_db)
+    return unidade_db
+
+
+@app.patch("/app/api/corretor/unidades/{unidade_id}", response_model=UnidadeDisponivelOut)
+def corretor_update_unidade(
+    unidade_id: uuid.UUID,
+    payload: UnidadeDisponivelUpdate,
+    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    actor_username = _normalize_username(str(session.get("username", "")))
+    actor_role = _normalize_role(str(session.get("role", "")))
+    unidade = db.get(UnidadeDisponivel, unidade_id)
+    if not unidade:
+        raise HTTPException(status_code=404, detail="Unidade nao encontrada")
+
+    changes = payload.model_dump(exclude_unset=True)
+    if not changes:
+        return unidade
+
+    empreendimento_normalizado = unidade.empreendimento
+    unidade_normalizada = unidade.unidade
+    if "empreendimento" in changes:
+        empreendimento_normalizado = _resolve_empreendimento_nome(db, changes.get("empreendimento")) or _normalize_unidade_text(
+            changes.get("empreendimento"),
+            max_len=220,
+        )
+        if not empreendimento_normalizado:
+            raise HTTPException(status_code=422, detail="Empreendimento obrigatorio")
+    if "unidade" in changes:
+        unidade_normalizada = _normalize_unidade_text(changes.get("unidade"), max_len=80)
+        if not unidade_normalizada:
+            raise HTTPException(status_code=422, detail="Identificacao da unidade obrigatoria")
+
+    if empreendimento_normalizado != unidade.empreendimento or unidade_normalizada != unidade.unidade:
+        exists = (
+            db.query(UnidadeDisponivel.id)
+            .filter(
+                UnidadeDisponivel.id != unidade.id,
+                func.lower(func.trim(func.coalesce(UnidadeDisponivel.empreendimento, ""))) == empreendimento_normalizado.strip().lower(),
+                func.lower(func.trim(func.coalesce(UnidadeDisponivel.unidade, ""))) == unidade_normalizada.strip().lower(),
+            )
+            .first()
+        )
+        if exists:
+            raise HTTPException(status_code=409, detail="Ja existe outra unidade com esse identificador")
+
+    unidade.empreendimento = empreendimento_normalizado
+    unidade.unidade = unidade_normalizada
+    if "bloco" in changes:
+        unidade.bloco = _normalize_unidade_text(changes.get("bloco"), max_len=80)
+    if "tipologia" in changes:
+        unidade.tipologia = _normalize_unidade_text(changes.get("tipologia"), max_len=120)
+    if "quartos" in changes:
+        unidade.quartos = _normalize_unidade_positive_int(changes.get("quartos"), min_value=0, max_value=20)
+    if "banheiros" in changes:
+        unidade.banheiros = _normalize_unidade_positive_int(changes.get("banheiros"), min_value=0, max_value=20)
+    if "vagas" in changes:
+        unidade.vagas = _normalize_unidade_positive_int(changes.get("vagas"), min_value=0, max_value=20)
+    if "area_m2" in changes:
+        unidade.area_m2 = _normalize_unidade_positive_float(changes.get("area_m2"), min_value=0.0, max_value=5000.0)
+    if "valor" in changes:
+        unidade.valor = _normalize_unidade_positive_float(changes.get("valor"), min_value=0.0)
+    if "localizacao" in changes:
+        unidade.localizacao = _normalize_unidade_text(changes.get("localizacao"), max_len=220)
+    if "diferenciais" in changes:
+        unidade.diferenciais = _normalize_unidade_text(changes.get("diferenciais"), max_len=1500)
+    if "url_imagem" in changes:
+        unidade.url_imagem = _normalize_unidade_text(changes.get("url_imagem"), max_len=700)
+    if "visita_disponivel" in changes:
+        unidade.visita_disponivel = bool(changes.get("visita_disponivel"))
+    if "status_unidade" in changes:
+        unidade.status_unidade = _unidade_status(changes.get("status_unidade"), fallback=unidade.status_unidade or "DISPONIVEL")
+
+    _record_system_log(
+        db,
+        actor_username=actor_username,
+        actor_role=actor_role,
+        tela="corretor_apresentacao",
+        acao="UNIDADE_ATUALIZADA",
+        entidade_tipo="unidade",
+        entidade_id=str(unidade.id),
+        details=f"empreendimento={unidade.empreendimento}; unidade={unidade.unidade}; status={unidade.status_unidade}",
+    )
+    db.commit()
+    db.refresh(unidade)
+    return unidade
+
+
 @app.get("/app/api/admin/empreendimentos", response_model=list[EmpreendimentoOut])
 def admin_list_empreendimentos(
     _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
@@ -3911,6 +4397,7 @@ def admin_storage_summary(
         db.query(func.count(Processo.id)).filter(Processo.arquivado.is_(True)).scalar() or 0
     )
     total_pre_cadastros = int(db.query(func.count(LeadPreCadastro.id)).scalar() or 0)
+    total_unidades_disponiveis = int(db.query(func.count(UnidadeDisponivel.id)).scalar() or 0)
     total_processos_ativos = int(
         db.query(func.count(Processo.id)).filter(_processos_ativos_clause()).scalar() or 0
     )
@@ -3923,6 +4410,7 @@ def admin_storage_summary(
         total_clientes
         + total_processos
         + total_pre_cadastros
+        + total_unidades_disponiveis
         + total_documentos
         + total_eventos_processo
         + total_logs_sistema
@@ -3936,6 +4424,7 @@ def admin_storage_summary(
         total_processos_ativos=total_processos_ativos,
         total_processos_arquivados=total_processos_arquivados,
         total_pre_cadastros=total_pre_cadastros,
+        total_unidades_disponiveis=total_unidades_disponiveis,
         total_documentos=total_documentos,
         total_eventos_processo=total_eventos_processo,
         total_logs_sistema=total_logs_sistema,
@@ -4004,6 +4493,10 @@ def _normalize_maintenance_entity(value: Optional[str]) -> str:
         "app_users": "usuario",
         "empreendimento": "empreendimento",
         "empreendimentos": "empreendimento",
+        "unidade": "unidade",
+        "unidades": "unidade",
+        "unidade_disponivel": "unidade",
+        "unidades_disponiveis": "unidade",
         "processo_evento": "processo_evento",
         "processo_eventos": "processo_evento",
         "evento": "processo_evento",
@@ -4030,7 +4523,7 @@ def admin_search_registros(
             status_code=422,
             detail=(
                 "Entidade invalida. Use: cliente, processo, documento, usuario, "
-                "empreendimento, processo_evento ou sistema_log."
+                "empreendimento, unidade, processo_evento ou sistema_log."
             ),
         )
 
@@ -4128,6 +4621,24 @@ def admin_search_registros(
             detalhe = f"Ativo: {'Sim' if emp.is_active else 'Nao'}"
             itens.append(AdminRegistroLookupItem(id=emp.id, titulo=emp.nome or "-", detalhe=detalhe))
 
+    elif entidade_norm == "unidade":
+        query = db.query(UnidadeDisponivel)
+        filtros = or_(
+            func.lower(func.coalesce(UnidadeDisponivel.empreendimento, "")).like(termo_like),
+            func.lower(func.coalesce(UnidadeDisponivel.unidade, "")).like(termo_like),
+            func.lower(func.coalesce(UnidadeDisponivel.tipologia, "")).like(termo_like),
+            func.lower(func.coalesce(UnidadeDisponivel.status_unidade, "")).like(termo_like),
+        )
+        if uuid_term:
+            filtros = or_(filtros, UnidadeDisponivel.id == uuid_term)
+        rows = query.filter(filtros).order_by(UnidadeDisponivel.updated_at.desc()).limit(limit).all()
+        for unit in rows:
+            detalhe = (
+                f"Empreendimento: {unit.empreendimento or '-'} | "
+                f"Status: {unit.status_unidade or '-'} | Valor: {unit.valor or '-'}"
+            )
+            itens.append(AdminRegistroLookupItem(id=unit.id, titulo=unit.unidade or "-", detalhe=detalhe))
+
     elif entidade_norm == "processo_evento":
         query = db.query(ProcessoEvento)
         filtros = or_(
@@ -4180,7 +4691,7 @@ def admin_delete_registro(
             status_code=422,
             detail=(
                 "Entidade invalida. Use: cliente, processo, documento, usuario, "
-                "empreendimento, processo_evento ou sistema_log."
+                "empreendimento, unidade, processo_evento ou sistema_log."
             ),
         )
 
@@ -4192,6 +4703,7 @@ def admin_delete_registro(
         "documento": Documento,
         "usuario": AppUser,
         "empreendimento": Empreendimento,
+        "unidade": UnidadeDisponivel,
         "processo_evento": ProcessoEvento,
         "sistema_log": SistemaLog,
     }
@@ -4280,6 +4792,7 @@ def admin_reset_sistema(
     processos_total = int(db.query(func.count(Processo.id)).scalar() or 0)
     documentos_total = int(db.query(func.count(Documento.id)).scalar() or 0)
     empreendimentos_total = int(db.query(func.count(Empreendimento.id)).scalar() or 0)
+    unidades_total = int(db.query(func.count(UnidadeDisponivel.id)).scalar() or 0)
     eventos_total = int(db.query(func.count(ProcessoEvento.id)).scalar() or 0)
     logs_total = int(db.query(func.count(SistemaLog.id)).scalar() or 0)
     usuarios_total = int(db.query(func.count(AppUser.id)).scalar() or 0)
@@ -4293,6 +4806,7 @@ def admin_reset_sistema(
     db.query(Processo).delete(synchronize_session=False)
     db.query(Cliente).delete(synchronize_session=False)
     db.query(Empreendimento).delete(synchronize_session=False)
+    db.query(UnidadeDisponivel).delete(synchronize_session=False)
     db.query(SistemaLog).delete(synchronize_session=False)
     if runtime_meta_exists:
         db.execute(text("DELETE FROM app_runtime_meta"))
@@ -4340,6 +4854,7 @@ def admin_reset_sistema(
         "processos_removidos": processos_total,
         "documentos_removidos": documentos_total,
         "empreendimentos_removidos": empreendimentos_total,
+        "unidades_disponiveis_removidas": unidades_total,
         "processo_eventos_removidos": eventos_total,
         "sistema_logs_removidos": logs_total,
         "runtime_meta_removidos": runtime_meta_total,
