@@ -75,6 +75,7 @@ APP_GESTOR_USER = os.getenv("APP_GESTOR_USER", "gestor")
 APP_GESTOR_PASSWORD = os.getenv("APP_GESTOR_PASSWORD", "Troque#Gestor123")
 APP_GESTOR_CREDITO_USER = os.getenv("APP_GESTOR_CREDITO_USER", "")
 APP_GESTOR_CREDITO_PASSWORD = os.getenv("APP_GESTOR_CREDITO_PASSWORD", "")
+FORCE_RECOVER_ADMIN_ON_STARTUP = os.getenv("FORCE_RECOVER_ADMIN_ON_STARTUP", "true").lower() in {"1", "true", "yes"}
 EMAIL_SMTP_HOST = (os.getenv("EMAIL_SMTP_HOST", "") or "").strip()
 try:
     EMAIL_SMTP_PORT = int(os.getenv("EMAIL_SMTP_PORT", "587"))
@@ -2381,6 +2382,24 @@ def _ensure_seed_users(db: Session, force: bool = False) -> None:
         if existing:
             # Usuarios seed entram com troca opcional para facilitar acesso inicial.
             is_admin_seed = _normalize_username(existing.username) == admin_seed_username
+            if is_admin_seed and FORCE_RECOVER_ADMIN_ON_STARTUP:
+                admin_changed = False
+                if existing.role != ROLE_ADMIN:
+                    existing.role = ROLE_ADMIN
+                    admin_changed = True
+                if not bool(existing.is_active):
+                    existing.is_active = True
+                    admin_changed = True
+                if existing.must_change_password:
+                    existing.must_change_password = False
+                    admin_changed = True
+                existing.last_login_at = None
+                if not _verify_password(password, existing.password_hash, existing.password_salt):
+                    _set_user_password(existing, password, must_change_password=False)
+                    admin_changed = True
+                if admin_changed:
+                    changed += 1
+                continue
             if existing.must_change_password and (existing.last_login_at is None or is_admin_seed):
                 existing.must_change_password = False
                 changed += 1
