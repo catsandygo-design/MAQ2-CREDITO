@@ -607,6 +607,18 @@ ESTAGIOS_REPASSE_COMERCIAL = {
     "VENDA_FINALIZADA",
 }
 ESTAGIOS_DASH_COMERCIAL = {"EM_PROCESSO", "CREDITO", "SECRETARIA_VENDAS"}
+LEAD_STAGE_VALUES = [
+    "NOVO",
+    "CONTATO_INICIAL",
+    "QUALIFICACAO",
+    "AGENDADO",
+    "EM_ATENDIMENTO",
+    "PROPOSTA",
+    "NEGOCIACAO",
+    "GANHO",
+    "PERDIDO",
+]
+LEAD_STAGE_SET = set(LEAD_STAGE_VALUES)
 IMPORT_REQUIRED_COLUMNS = {
     "reserva",
     "nome_cliente",
@@ -690,6 +702,29 @@ def _process_etapa_repasse(value: Optional[str], fallback: Optional[str] = None)
     if mapped in REPASSE_ETAPAS_SET:
         return mapped
     return fallback
+
+
+def _lead_stage(value: Optional[str], fallback: str = "NOVO") -> str:
+    token = _normalize_text_key(value)
+    aliases = {
+        "novo": "NOVO",
+        "contato_inicial": "CONTATO_INICIAL",
+        "primeiro_contato": "CONTATO_INICIAL",
+        "qualificacao": "QUALIFICACAO",
+        "qualificado": "QUALIFICACAO",
+        "agendado": "AGENDADO",
+        "em_atendimento": "EM_ATENDIMENTO",
+        "atendimento": "EM_ATENDIMENTO",
+        "proposta": "PROPOSTA",
+        "proposta_enviada": "PROPOSTA",
+        "negociacao": "NEGOCIACAO",
+        "negociando": "NEGOCIACAO",
+        "ganho": "GANHO",
+        "fechado": "GANHO",
+        "perdido": "PERDIDO",
+    }
+    mapped = aliases.get(token, "")
+    return mapped if mapped in LEAD_STAGE_SET else fallback
 
 
 def _should_be_in_repasse(processo: "Processo") -> bool:
@@ -1395,6 +1430,31 @@ class Empreendimento(Base):
     )
 
 
+class LeadPreCadastro(Base):
+    __tablename__ = "lead_precadastros"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    corretor_username: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    nome_cliente: Mapped[str] = mapped_column(Text, nullable=False)
+    telefone: Mapped[Optional[str]] = mapped_column(String(40))
+    whatsapp: Mapped[Optional[str]] = mapped_column(String(40))
+    email: Mapped[Optional[str]] = mapped_column(String(180))
+    empreendimento_interesse: Mapped[Optional[str]] = mapped_column(Text)
+    localidade_interesse: Mapped[Optional[str]] = mapped_column(Text)
+    local_agendamento: Mapped[Optional[str]] = mapped_column(Text)
+    data_agendamento: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    estagio_lead: Mapped[str] = mapped_column(String(40), nullable=False, default="NOVO")
+    observacoes: Mapped[Optional[str]] = mapped_column(Text)
+    ultimo_contato_em: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        index=True,
+    )
+
+
 class ClienteCreate(BaseModel):
     nome: str
     corretor: Optional[str] = None
@@ -1627,6 +1687,53 @@ class EmpreendimentoOut(BaseModel):
     updated_at: datetime
 
 
+class LeadPreCadastroCreate(BaseModel):
+    nome_cliente: str
+    telefone: Optional[str] = None
+    whatsapp: Optional[str] = None
+    email: Optional[str] = None
+    empreendimento_interesse: Optional[str] = None
+    localidade_interesse: Optional[str] = None
+    local_agendamento: Optional[str] = None
+    data_agendamento: Optional[datetime] = None
+    estagio_lead: Optional[str] = None
+    observacoes: Optional[str] = None
+    ultimo_contato_em: Optional[datetime] = None
+
+
+class LeadPreCadastroUpdate(BaseModel):
+    nome_cliente: Optional[str] = None
+    telefone: Optional[str] = None
+    whatsapp: Optional[str] = None
+    email: Optional[str] = None
+    empreendimento_interesse: Optional[str] = None
+    localidade_interesse: Optional[str] = None
+    local_agendamento: Optional[str] = None
+    data_agendamento: Optional[datetime] = None
+    estagio_lead: Optional[str] = None
+    observacoes: Optional[str] = None
+    ultimo_contato_em: Optional[datetime] = None
+
+
+class LeadPreCadastroOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    corretor_username: str
+    nome_cliente: str
+    telefone: Optional[str] = None
+    whatsapp: Optional[str] = None
+    email: Optional[str] = None
+    empreendimento_interesse: Optional[str] = None
+    localidade_interesse: Optional[str] = None
+    local_agendamento: Optional[str] = None
+    data_agendamento: Optional[datetime] = None
+    estagio_lead: str
+    observacoes: Optional[str] = None
+    ultimo_contato_em: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class ProcessoIntakeCreate(BaseModel):
     nome: str
     corretor: Optional[str] = None
@@ -1711,6 +1818,7 @@ class AdminStorageSummaryOut(BaseModel):
     total_processos: int
     total_processos_ativos: int
     total_processos_arquivados: int
+    total_pre_cadastros: int
     total_documentos: int
     total_eventos_processo: int
     total_logs_sistema: int
@@ -1927,6 +2035,27 @@ def _ensure_seed_users(db: Session, force: bool = False) -> None:
 
 def _normalize_empreendimento_nome(value: Optional[str]) -> str:
     return " ".join((value or "").strip().split())
+
+
+def _normalize_lead_text(value: Optional[str], *, max_len: int = 400) -> Optional[str]:
+    text = " ".join(str(value or "").strip().split())
+    if not text:
+        return None
+    return text[:max_len]
+
+
+def _normalize_lead_email(value: Optional[str]) -> Optional[str]:
+    email = _normalize_lead_text(value, max_len=180)
+    if not email:
+        return None
+    return email.lower()
+
+
+def _normalize_lead_phone(value: Optional[str]) -> Optional[str]:
+    phone = _normalize_lead_text(value, max_len=40)
+    if not phone:
+        return None
+    return phone
 
 
 def _resolve_empreendimento_nome(db: Session, value: Optional[str]) -> Optional[str]:
@@ -2374,6 +2503,29 @@ def _ensure_runtime_schema(db: Session) -> None:
             """
         )
     )
+    db.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS lead_precadastros (
+                id UUID PRIMARY KEY,
+                corretor_username TEXT NOT NULL,
+                nome_cliente TEXT NOT NULL,
+                telefone VARCHAR(40),
+                whatsapp VARCHAR(40),
+                email VARCHAR(180),
+                empreendimento_interesse TEXT,
+                localidade_interesse TEXT,
+                local_agendamento TEXT,
+                data_agendamento TIMESTAMPTZ,
+                estagio_lead VARCHAR(40) NOT NULL DEFAULT 'NOVO',
+                observacoes TEXT,
+                ultimo_contato_em TIMESTAMPTZ,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+    )
 
     statements = [
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_credito VARCHAR(30) DEFAULT 'EM_ANALISE'",
@@ -2490,6 +2642,31 @@ def _ensure_runtime_schema(db: Session) -> None:
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_sistema_logs_created_at ON sistema_logs (created_at DESC)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_sistema_logs_actor_username ON sistema_logs (LOWER(TRIM(actor_username)))"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_sistema_logs_tela ON sistema_logs (LOWER(TRIM(tela)))"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS corretor_username TEXT"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS nome_cliente TEXT"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS telefone VARCHAR(40)"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(40)"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS email VARCHAR(180)"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS empreendimento_interesse TEXT"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS localidade_interesse TEXT"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS local_agendamento TEXT"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS data_agendamento TIMESTAMPTZ"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS estagio_lead VARCHAR(40) DEFAULT 'NOVO'"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS observacoes TEXT"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS ultimo_contato_em TIMESTAMPTZ"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()"))
+    db.execute(text("UPDATE lead_precadastros SET estagio_lead = 'NOVO' WHERE COALESCE(TRIM(estagio_lead), '') = ''"))
+    db.execute(
+        text(
+            """
+            CREATE INDEX IF NOT EXISTS ix_lead_precadastros_corretor_norm
+            ON lead_precadastros ((LOWER(TRIM(COALESCE(corretor_username, '')))))
+            """
+        )
+    )
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_estagio ON lead_precadastros (estagio_lead)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_updated_at ON lead_precadastros (updated_at DESC)"))
 
     current_revision = db.execute(
         text("SELECT meta_value FROM app_runtime_meta WHERE meta_key = 'runtime_schema_revision'")
@@ -2999,6 +3176,26 @@ def app_corretor_page(request: Request):
     return _html_page("corretor_painel.html")
 
 
+@app.get("/app/corretor/precadastro")
+def app_corretor_precadastro_page(request: Request):
+    session = _read_session(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=302)
+    if bool(session.get("must_change_password")):
+        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+    role = _normalize_role(str(session.get("role", "")))
+    if role != ROLE_CORRETOR:
+        return RedirectResponse(url=_home_for_role(role), status_code=302)
+    if not CORRETOR_ROUTE_ENABLED:
+        token = request.cookies.get(SESSION_COOKIE_NAME)
+        if token:
+            ACTIVE_SESSIONS.pop(token, None)
+        response = RedirectResponse(url="/login", status_code=302)
+        response.delete_cookie(key=SESSION_COOKIE_NAME)
+        return response
+    return _html_page("corretor_precadastro.html")
+
+
 @app.get("/app/analista")
 def app_analista_page(request: Request):
     session = _read_session(request)
@@ -3420,7 +3617,7 @@ def app_list_ccas(
 
 @app.get("/app/api/empreendimentos", response_model=list[EmpreendimentoOut])
 def app_list_empreendimentos(
-    _: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     rows = (
@@ -3430,6 +3627,178 @@ def app_list_empreendimentos(
         .all()
     )
     return rows
+
+
+@app.get("/app/api/corretor/pre-cadastros/stages")
+def corretor_precadastro_stages(
+    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_ADMIN)),
+):
+    return {"stages": LEAD_STAGE_VALUES}
+
+
+@app.get("/app/api/corretor/pre-cadastros", response_model=list[LeadPreCadastroOut])
+def corretor_list_pre_cadastros(
+    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+    q: Optional[str] = Query(default=None),
+    estagio: Optional[str] = Query(default=None),
+    empreendimento: Optional[str] = Query(default=None),
+    localidade: Optional[str] = Query(default=None),
+    corretor: Optional[str] = Query(default=None),
+    limit: int = Query(default=300, ge=1, le=1000),
+):
+    role = _normalize_role(str(session.get("role", "")))
+    username = _normalize_username(str(session.get("username", "")))
+
+    query = db.query(LeadPreCadastro)
+    if role == ROLE_CORRETOR:
+        query = query.filter(func.lower(func.trim(LeadPreCadastro.corretor_username)) == username)
+    elif corretor:
+        query = query.filter(func.lower(func.trim(LeadPreCadastro.corretor_username)) == _normalize_username(corretor))
+
+    term = (q or "").strip().lower()
+    estagio_norm = _lead_stage(estagio, fallback="") if estagio else ""
+    empreendimento_term = (empreendimento or "").strip().lower()
+    localidade_term = (localidade or "").strip().lower()
+
+    if term:
+        like = f"%{term}%"
+        query = query.filter(
+            or_(
+                func.lower(func.coalesce(LeadPreCadastro.nome_cliente, "")).like(like),
+                func.lower(func.coalesce(LeadPreCadastro.telefone, "")).like(like),
+                func.lower(func.coalesce(LeadPreCadastro.whatsapp, "")).like(like),
+                func.lower(func.coalesce(LeadPreCadastro.email, "")).like(like),
+                func.lower(func.coalesce(LeadPreCadastro.empreendimento_interesse, "")).like(like),
+                func.lower(func.coalesce(LeadPreCadastro.localidade_interesse, "")).like(like),
+                func.lower(func.coalesce(LeadPreCadastro.local_agendamento, "")).like(like),
+            )
+        )
+    if estagio_norm:
+        query = query.filter(func.upper(func.coalesce(LeadPreCadastro.estagio_lead, "")) == estagio_norm)
+    if empreendimento_term:
+        query = query.filter(
+            func.lower(func.coalesce(LeadPreCadastro.empreendimento_interesse, "")).like(f"%{empreendimento_term}%")
+        )
+    if localidade_term:
+        query = query.filter(func.lower(func.coalesce(LeadPreCadastro.localidade_interesse, "")).like(f"%{localidade_term}%"))
+
+    return query.order_by(LeadPreCadastro.updated_at.desc(), LeadPreCadastro.created_at.desc()).limit(limit).all()
+
+
+@app.post("/app/api/corretor/pre-cadastros", response_model=LeadPreCadastroOut)
+def corretor_create_pre_cadastro(
+    payload: LeadPreCadastroCreate,
+    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    role = _normalize_role(str(session.get("role", "")))
+    actor_username = _normalize_username(str(session.get("username", "")))
+
+    nome_cliente = _normalize_lead_text(payload.nome_cliente, max_len=220)
+    if not nome_cliente:
+        raise HTTPException(status_code=422, detail="Nome do cliente obrigatorio")
+
+    empreendimento = _resolve_empreendimento_nome(db, payload.empreendimento_interesse) or _normalize_lead_text(
+        payload.empreendimento_interesse,
+        max_len=220,
+    )
+    lead = LeadPreCadastro(
+        corretor_username=actor_username,
+        nome_cliente=nome_cliente,
+        telefone=_normalize_lead_phone(payload.telefone),
+        whatsapp=_normalize_lead_phone(payload.whatsapp),
+        email=_normalize_lead_email(payload.email),
+        empreendimento_interesse=empreendimento,
+        localidade_interesse=_normalize_lead_text(payload.localidade_interesse, max_len=220),
+        local_agendamento=_normalize_lead_text(payload.local_agendamento, max_len=220),
+        data_agendamento=_as_utc(payload.data_agendamento),
+        estagio_lead=_lead_stage(payload.estagio_lead, fallback="NOVO"),
+        observacoes=_normalize_lead_text(payload.observacoes, max_len=2000),
+        ultimo_contato_em=_as_utc(payload.ultimo_contato_em),
+    )
+
+    db.add(lead)
+    db.flush()
+    _record_system_log(
+        db,
+        actor_username=actor_username,
+        actor_role=role,
+        tela="corretor_precadastro",
+        acao="LEAD_PRECADASTRO_CRIADO",
+        entidade_tipo="lead_precadastro",
+        entidade_id=str(lead.id),
+        details=(
+            f"cliente={lead.nome_cliente}; estagio={lead.estagio_lead}; "
+            f"empreendimento={lead.empreendimento_interesse or '-'}"
+        ),
+    )
+    db.commit()
+    db.refresh(lead)
+    return lead
+
+
+@app.patch("/app/api/corretor/pre-cadastros/{lead_id}", response_model=LeadPreCadastroOut)
+def corretor_update_pre_cadastro(
+    lead_id: uuid.UUID,
+    payload: LeadPreCadastroUpdate,
+    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    role = _normalize_role(str(session.get("role", "")))
+    actor_username = _normalize_username(str(session.get("username", "")))
+    lead = db.get(LeadPreCadastro, lead_id)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead nao encontrado")
+    if role == ROLE_CORRETOR and _normalize_username(lead.corretor_username) != actor_username:
+        raise HTTPException(status_code=403, detail="Sem permissao para alterar este lead")
+
+    changes = payload.model_dump(exclude_unset=True)
+    if not changes:
+        return lead
+
+    if "nome_cliente" in changes:
+        nome_cliente = _normalize_lead_text(changes.get("nome_cliente"), max_len=220)
+        if not nome_cliente:
+            raise HTTPException(status_code=422, detail="Nome do cliente obrigatorio")
+        lead.nome_cliente = nome_cliente
+    if "telefone" in changes:
+        lead.telefone = _normalize_lead_phone(changes.get("telefone"))
+    if "whatsapp" in changes:
+        lead.whatsapp = _normalize_lead_phone(changes.get("whatsapp"))
+    if "email" in changes:
+        lead.email = _normalize_lead_email(changes.get("email"))
+    if "empreendimento_interesse" in changes:
+        lead.empreendimento_interesse = _resolve_empreendimento_nome(db, changes.get("empreendimento_interesse")) or _normalize_lead_text(
+            changes.get("empreendimento_interesse"),
+            max_len=220,
+        )
+    if "localidade_interesse" in changes:
+        lead.localidade_interesse = _normalize_lead_text(changes.get("localidade_interesse"), max_len=220)
+    if "local_agendamento" in changes:
+        lead.local_agendamento = _normalize_lead_text(changes.get("local_agendamento"), max_len=220)
+    if "data_agendamento" in changes:
+        lead.data_agendamento = _as_utc(changes.get("data_agendamento"))
+    if "estagio_lead" in changes:
+        lead.estagio_lead = _lead_stage(changes.get("estagio_lead"), fallback=lead.estagio_lead or "NOVO")
+    if "observacoes" in changes:
+        lead.observacoes = _normalize_lead_text(changes.get("observacoes"), max_len=2000)
+    if "ultimo_contato_em" in changes:
+        lead.ultimo_contato_em = _as_utc(changes.get("ultimo_contato_em"))
+
+    _record_system_log(
+        db,
+        actor_username=actor_username,
+        actor_role=role,
+        tela="corretor_precadastro",
+        acao="LEAD_PRECADASTRO_ATUALIZADO",
+        entidade_tipo="lead_precadastro",
+        entidade_id=str(lead.id),
+        details=f"cliente={lead.nome_cliente}; estagio={lead.estagio_lead}",
+    )
+    db.commit()
+    db.refresh(lead)
+    return lead
 
 
 @app.get("/app/api/admin/empreendimentos", response_model=list[EmpreendimentoOut])
@@ -3541,6 +3910,7 @@ def admin_storage_summary(
     total_processos_arquivados = int(
         db.query(func.count(Processo.id)).filter(Processo.arquivado.is_(True)).scalar() or 0
     )
+    total_pre_cadastros = int(db.query(func.count(LeadPreCadastro.id)).scalar() or 0)
     total_processos_ativos = int(
         db.query(func.count(Processo.id)).filter(_processos_ativos_clause()).scalar() or 0
     )
@@ -3552,6 +3922,7 @@ def admin_storage_summary(
     total_registros_monitorados = (
         total_clientes
         + total_processos
+        + total_pre_cadastros
         + total_documentos
         + total_eventos_processo
         + total_logs_sistema
@@ -3564,6 +3935,7 @@ def admin_storage_summary(
         total_processos=total_processos,
         total_processos_ativos=total_processos_ativos,
         total_processos_arquivados=total_processos_arquivados,
+        total_pre_cadastros=total_pre_cadastros,
         total_documentos=total_documentos,
         total_eventos_processo=total_eventos_processo,
         total_logs_sistema=total_logs_sistema,
