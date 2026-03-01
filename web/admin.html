@@ -253,6 +253,52 @@
       color:var(--muted);
       font-size:calc(11px * var(--font-scale));
     }
+    .lookup-row{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:8px;
+      align-items:end;
+      margin-top:10px;
+    }
+    @media (max-width:900px){.lookup-row{grid-template-columns:1fr}}
+    .lookup-results{
+      margin-top:8px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      max-height:240px;
+      overflow:auto;
+      background:rgba(2,6,23,.3);
+    }
+    body.theme-corporate .lookup-results{
+      background:#f8fbff;
+      border-color:rgba(15,23,42,.14);
+    }
+    .lookup-empty{
+      padding:10px;
+      color:var(--muted);
+      font-size:calc(11px * var(--font-scale));
+    }
+    .lookup-item{
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      padding:10px;
+      border-top:1px solid rgba(148,163,184,.12);
+      align-items:flex-start;
+    }
+    .lookup-item:first-child{border-top:none}
+    .lookup-main{min-width:0}
+    .lookup-title{
+      font-size:calc(12px * var(--font-scale));
+      font-weight:800;
+      line-height:1.25;
+    }
+    .lookup-id{
+      margin-top:4px;
+      color:var(--muted);
+      font-size:calc(11px * var(--font-scale));
+      font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
     @keyframes rowEnter {
       from { opacity: .0; transform: translateY(3px); }
       to { opacity: 1; transform: translateY(0); }
@@ -437,6 +483,20 @@
           Exclusao definitiva: remove o registro da tabela e nao tem desfazer.
         </div>
         <div id="feedbackDelete" class="feedback" aria-live="polite"></div>
+        <div class="lookup-row">
+          <div class="field">
+            <label for="delSearch">Buscar registro para obter ID (nome, usuario, obra, acao...)</label>
+            <input id="delSearch" placeholder="Ex.: Maria, douglas, AGL32, pendencia" />
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn" id="btnBuscarRegistro" type="button">Buscar ID</button>
+          </div>
+        </div>
+        <div id="lookupHint" class="tiny" style="margin-top:6px;"></div>
+        <div id="lookupResults" class="lookup-results">
+          <div class="lookup-empty">Selecione a entidade, digite um termo e clique em Buscar ID.</div>
+        </div>
       </div>
     </section>
 
@@ -702,6 +762,10 @@
     const delEntityInput = document.getElementById("delEntity");
     const delIdInput = document.getElementById("delId");
     const delReasonInput = document.getElementById("delReason");
+    const delSearchInput = document.getElementById("delSearch");
+    const btnBuscarRegistro = document.getElementById("btnBuscarRegistro");
+    const lookupHint = document.getElementById("lookupHint");
+    const lookupResults = document.getElementById("lookupResults");
     const kpiClientes = document.getElementById("kpiClientes");
     const kpiProcessos = document.getElementById("kpiProcessos");
     const kpiProcessosAtivos = document.getElementById("kpiProcessosAtivos");
@@ -775,6 +839,70 @@
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#39;");
+    }
+
+    function setLookupHint(message, isError = false) {
+      if (!lookupHint) return;
+      lookupHint.textContent = message || "";
+      lookupHint.style.color = isError ? "#ef4444" : "var(--muted)";
+    }
+
+    function renderLookupResults(items = []) {
+      if (!lookupResults) return;
+      if (!Array.isArray(items) || !items.length) {
+        lookupResults.innerHTML = `<div class="lookup-empty">Nenhum resultado para este filtro.</div>`;
+        return;
+      }
+      lookupResults.innerHTML = items.map((item) => `
+        <div class="lookup-item">
+          <div class="lookup-main">
+            <div class="lookup-title">${esc(item.titulo || "-")}</div>
+            <div class="tiny">${esc(item.detalhe || "-")}</div>
+            <div class="lookup-id">ID: ${esc(item.id)}</div>
+          </div>
+          <button class="btn btn-use-id" data-id="${esc(item.id)}" type="button">Usar ID</button>
+        </div>
+      `).join("");
+      lookupResults.querySelectorAll(".btn-use-id").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-id") || "";
+          delIdInput.value = id;
+          setLookupHint(`ID preenchido: ${id.slice(0, 8)}...`);
+          delIdInput.focus();
+        });
+      });
+    }
+
+    async function searchRegistroIds() {
+      const entidade = delEntityInput?.value || "";
+      const termo = (delSearchInput?.value || "").trim();
+      if (!entidade) {
+        setLookupHint("Selecione a entidade antes de buscar.", true);
+        return;
+      }
+      if (termo.length < 2) {
+        setLookupHint("Digite ao menos 2 caracteres para buscar.", true);
+        return;
+      }
+      if (!btnBuscarRegistro) return;
+      btnBuscarRegistro.disabled = true;
+      setLookupHint("Buscando IDs...");
+      try {
+        const params = new URLSearchParams({
+          entidade,
+          q: termo,
+          limit: "20",
+        });
+        const data = await api(`/app/api/admin/maintenance/search-registros?${params.toString()}`);
+        const itens = Array.isArray(data?.itens) ? data.itens : [];
+        renderLookupResults(itens);
+        setLookupHint(`Resultados encontrados: ${Number(data?.total || itens.length)}`);
+      } catch (error) {
+        renderLookupResults([]);
+        setLookupHint(error.message || "Falha ao buscar IDs.", true);
+      } finally {
+        btnBuscarRegistro.disabled = false;
+      }
     }
 
     function passwordPolicyError(value) {
@@ -1190,6 +1318,28 @@
         setFeedbackDelete(error.message, true);
       }
     });
+
+    if (btnBuscarRegistro) {
+      btnBuscarRegistro.addEventListener("click", () => {
+        searchRegistroIds().catch(() => null);
+      });
+    }
+
+    if (delSearchInput) {
+      delSearchInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          searchRegistroIds().catch(() => null);
+        }
+      });
+    }
+
+    if (delEntityInput) {
+      delEntityInput.addEventListener("change", () => {
+        setLookupHint("");
+        renderLookupResults([]);
+      });
+    }
 
     document.getElementById("btnRefresh").addEventListener("click", async () => {
       try {

@@ -1581,6 +1581,18 @@ class AdminDeleteRegistroPayload(BaseModel):
     motivo: Optional[str] = None
 
 
+class AdminRegistroLookupItem(BaseModel):
+    id: uuid.UUID
+    titulo: str
+    detalhe: Optional[str] = None
+
+
+class AdminRegistroLookupOut(BaseModel):
+    entidade: str
+    total: int
+    itens: list[AdminRegistroLookupItem]
+
+
 class LayoutPreferencePayload(BaseModel):
     blackhole_enabled: bool = False
 
@@ -3630,6 +3642,158 @@ def _normalize_maintenance_entity(value: Optional[str]) -> str:
         "logs": "sistema_log",
     }
     return aliases.get(raw, "")
+
+
+@app.get("/app/api/admin/maintenance/search-registros", response_model=AdminRegistroLookupOut)
+def admin_search_registros(
+    entidade: str = Query(...),
+    q: str = Query(..., min_length=1),
+    limit: int = Query(default=20, ge=1, le=100),
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    entidade_norm = _normalize_maintenance_entity(entidade)
+    if not entidade_norm:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Entidade invalida. Use: cliente, processo, documento, usuario, "
+                "empreendimento, processo_evento ou sistema_log."
+            ),
+        )
+
+    termo = (q or "").strip()
+    if len(termo) < 2:
+        raise HTTPException(status_code=422, detail="Digite ao menos 2 caracteres para buscar.")
+
+    termo_like = f"%{termo.lower()}%"
+    uuid_term: Optional[uuid.UUID] = None
+    try:
+        uuid_term = uuid.UUID(termo)
+    except ValueError:
+        uuid_term = None
+
+    itens: list[AdminRegistroLookupItem] = []
+
+    if entidade_norm == "cliente":
+        query = db.query(Cliente)
+        filtros = or_(
+            func.lower(func.coalesce(Cliente.nome, "")).like(termo_like),
+            func.lower(func.coalesce(Cliente.corretor, "")).like(termo_like),
+            func.lower(func.coalesce(Cliente.obra, "")).like(termo_like),
+            func.lower(func.coalesce(Cliente.imobiliaria, "")).like(termo_like),
+        )
+        if uuid_term:
+            filtros = or_(filtros, Cliente.id == uuid_term)
+        rows = query.filter(filtros).order_by(Cliente.created_at.desc()).limit(limit).all()
+        for item in rows:
+            detalhe = f"Corretor: {item.corretor or '-'} | Obra: {item.obra or '-'} | Imobiliaria: {item.imobiliaria or '-'}"
+            itens.append(AdminRegistroLookupItem(id=item.id, titulo=item.nome or "-", detalhe=detalhe))
+
+    elif entidade_norm == "processo":
+        query = db.query(Processo, Cliente).join(Cliente, Processo.cliente_id == Cliente.id)
+        filtros = or_(
+            func.lower(func.coalesce(Cliente.nome, "")).like(termo_like),
+            func.lower(func.coalesce(Cliente.corretor, "")).like(termo_like),
+            func.lower(func.coalesce(Cliente.obra, "")).like(termo_like),
+            func.lower(func.coalesce(Processo.estagio_comercial, "")).like(termo_like),
+            func.lower(func.coalesce(Processo.status_cca, "")).like(termo_like),
+            func.lower(func.coalesce(Processo.status_agehab, "")).like(termo_like),
+        )
+        if uuid_term:
+            filtros = or_(filtros, Processo.id == uuid_term, Processo.cliente_id == uuid_term)
+        rows = query.filter(filtros).order_by(Processo.updated_at.desc()).limit(limit).all()
+        for processo, cliente in rows:
+            detalhe = (
+                f"Cliente: {cliente.nome or '-'} | Obra: {cliente.obra or '-'} | "
+                f"Comercial: {_process_estagio_comercial(processo.estagio_comercial)} | Caixa: {processo.status_cca}"
+            )
+            itens.append(AdminRegistroLookupItem(id=processo.id, titulo=f"Processo de {cliente.nome or '-'}", detalhe=detalhe))
+
+    elif entidade_norm == "documento":
+        query = (
+            db.query(Documento, Processo, Cliente)
+            .join(Processo, Documento.processo_id == Processo.id)
+            .join(Cliente, Processo.cliente_id == Cliente.id)
+        )
+        filtros = or_(
+            func.lower(func.coalesce(Documento.nome, "")).like(termo_like),
+            func.lower(func.coalesce(Documento.categoria, "")).like(termo_like),
+            func.lower(func.coalesce(Documento.status_credito, "")).like(termo_like),
+            func.lower(func.coalesce(Cliente.nome, "")).like(termo_like),
+            func.lower(func.coalesce(Cliente.obra, "")).like(termo_like),
+        )
+        if uuid_term:
+            filtros = or_(filtros, Documento.id == uuid_term, Documento.processo_id == uuid_term, Processo.cliente_id == uuid_term)
+        rows = query.filter(filtros).order_by(Documento.updated_at.desc()).limit(limit).all()
+        for doc, processo, cliente in rows:
+            detalhe = (
+                f"Cliente: {cliente.nome or '-'} | Categoria: {doc.categoria or '-'} | "
+                f"Status: {doc.status_credito or '-'} | Processo: {str(processo.id)[:8]}"
+            )
+            itens.append(AdminRegistroLookupItem(id=doc.id, titulo=doc.nome or "-", detalhe=detalhe))
+
+    elif entidade_norm == "usuario":
+        query = db.query(AppUser)
+        filtros = or_(
+            func.lower(func.coalesce(AppUser.username, "")).like(termo_like),
+            func.lower(func.coalesce(AppUser.role, "")).like(termo_like),
+        )
+        if uuid_term:
+            filtros = or_(filtros, AppUser.id == uuid_term)
+        rows = query.filter(filtros).order_by(func.lower(AppUser.username).asc()).limit(limit).all()
+        for user in rows:
+            detalhe = f"Perfil: {user.role} | Ativo: {'Sim' if user.is_active else 'Nao'} | Troca senha: {'Sim' if user.must_change_password else 'Nao'}"
+            itens.append(AdminRegistroLookupItem(id=user.id, titulo=user.username or "-", detalhe=detalhe))
+
+    elif entidade_norm == "empreendimento":
+        query = db.query(Empreendimento)
+        filtros = func.lower(func.coalesce(Empreendimento.nome, "")).like(termo_like)
+        if uuid_term:
+            filtros = or_(filtros, Empreendimento.id == uuid_term)
+        rows = query.filter(filtros).order_by(func.lower(Empreendimento.nome).asc()).limit(limit).all()
+        for emp in rows:
+            detalhe = f"Ativo: {'Sim' if emp.is_active else 'Nao'}"
+            itens.append(AdminRegistroLookupItem(id=emp.id, titulo=emp.nome or "-", detalhe=detalhe))
+
+    elif entidade_norm == "processo_evento":
+        query = db.query(ProcessoEvento)
+        filtros = or_(
+            func.lower(func.coalesce(ProcessoEvento.actor_username, "")).like(termo_like),
+            func.lower(func.coalesce(ProcessoEvento.event_type, "")).like(termo_like),
+            func.lower(func.coalesce(ProcessoEvento.field_name, "")).like(termo_like),
+            func.lower(func.coalesce(ProcessoEvento.details, "")).like(termo_like),
+        )
+        if uuid_term:
+            filtros = or_(filtros, ProcessoEvento.id == uuid_term, ProcessoEvento.processo_id == uuid_term)
+        rows = query.filter(filtros).order_by(ProcessoEvento.created_at.desc()).limit(limit).all()
+        for ev in rows:
+            detalhe = (
+                f"Actor: {ev.actor_username or '-'} | Campo: {ev.field_name or '-'} | "
+                f"Novo: {ev.new_value or '-'} | Processo: {str(ev.processo_id)[:8]}"
+            )
+            itens.append(AdminRegistroLookupItem(id=ev.id, titulo=ev.event_type or "EVENT", detalhe=detalhe))
+
+    elif entidade_norm == "sistema_log":
+        query = db.query(SistemaLog)
+        filtros = or_(
+            func.lower(func.coalesce(SistemaLog.actor_username, "")).like(termo_like),
+            func.lower(func.coalesce(SistemaLog.tela, "")).like(termo_like),
+            func.lower(func.coalesce(SistemaLog.acao, "")).like(termo_like),
+            func.lower(func.coalesce(SistemaLog.details, "")).like(termo_like),
+        )
+        if uuid_term:
+            filtros = or_(filtros, SistemaLog.id == uuid_term)
+        rows = query.filter(filtros).order_by(SistemaLog.created_at.desc()).limit(limit).all()
+        for log in rows:
+            detalhe = f"Tela: {log.tela or '-'} | Usuario: {log.actor_username or '-'} | Acao: {log.acao or '-'}"
+            itens.append(AdminRegistroLookupItem(id=log.id, titulo=log.details or "Log do sistema", detalhe=detalhe))
+
+    return AdminRegistroLookupOut(
+        entidade=entidade_norm,
+        total=len(itens),
+        itens=itens,
+    )
 
 
 @app.post("/app/api/admin/maintenance/delete-registro")
