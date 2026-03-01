@@ -351,6 +351,24 @@
               <select id="estagioLead"></select>
             </div>
             <div class="field">
+              <label for="decisaoCca">Decisao CCA</label>
+              <select id="decisaoCca">
+                <option value="EM_ANALISE">Em analise</option>
+                <option value="APROVADO">Aprovado</option>
+                <option value="CONDICIONADO">Condicionado</option>
+                <option value="REPROVADO">Reprovado</option>
+                <option value="BLOQUEADO">Bloqueado</option>
+                <option value="DAR_QV">Dar QV</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="contratoAssinado">Contrato assinado</label>
+              <select id="contratoAssinado">
+                <option value="false">Nao</option>
+                <option value="true">Sim</option>
+              </select>
+            </div>
+            <div class="field">
               <label for="ultimoContato">Ultimo contato</label>
               <input id="ultimoContato" type="datetime-local" />
             </div>
@@ -583,7 +601,25 @@
         const estadoCivil = String(lead.estado_civil || "").replaceAll("_", " ");
         const showCertidao = String(lead.estado_civil || "").toUpperCase() === "CASADO";
         const hasProcesso = Boolean(lead.processo_id);
-        const canReservar = String(lead.estagio_lead || "").toUpperCase() !== "PERDIDO" && !hasProcesso;
+        const decisaoCca = String(lead.decisao_cca || "EM_ANALISE").toUpperCase();
+        const contratoAssinado = Boolean(lead.contrato_assinado);
+        const assinaturaEmailConfirmada = Boolean(lead.assinatura_email_confirmada);
+        let reserveReason = "";
+        if (String(lead.estagio_lead || "").toUpperCase() === "PERDIDO") reserveReason = "Lead em perdido.";
+        else if (hasProcesso) reserveReason = "Lead ja convertido em reserva.";
+        else if (!(decisaoCca === "APROVADO" || decisaoCca === "CONDICIONADO")) reserveReason = "CCA precisa aprovar ou condicionar.";
+        else if (!contratoAssinado) reserveReason = "Marque contrato assinado.";
+        else if (!assinaturaEmailConfirmada) reserveReason = "Falta confirmacao de assinatura por e-mail.";
+        const canReservar = String(lead.estagio_lead || "").toUpperCase() !== "PERDIDO"
+          && !hasProcesso
+          && (decisaoCca === "APROVADO" || decisaoCca === "CONDICIONADO")
+          && contratoAssinado
+          && assinaturaEmailConfirmada;
+        const assinaturaEmail = assinaturaEmailConfirmada
+          ? "Confirmado por e-mail"
+          : (lead.assinatura_email_token_expires_at
+            ? `Pendente (expira ${new Date(lead.assinatura_email_token_expires_at).toLocaleString("pt-BR")})`
+            : "Nao enviado");
         const btnApresentacaoLabel = hasProcesso ? "Apresentacao" : "Apresentacao livre";
         const btnApresentacaoClass = hasProcesso ? "primary" : "";
         return `
@@ -603,6 +639,8 @@
             <td>
               <div><strong>Empreendimento:</strong> ${esc(lead.empreendimento_interesse || "-")}</div>
               <div><strong>Localidade:</strong> ${esc(lead.localidade_interesse || "-")}</div>
+              <div><strong>CCA:</strong> ${esc(decisaoCca.replaceAll("_"," "))}</div>
+              <div><strong>Contrato:</strong> ${contratoAssinado ? "Assinado" : "Nao assinado"} | <strong>Email:</strong> ${esc(assinaturaEmail)}</div>
               <div><strong>Visita:</strong> ${esc((lead.tipo_visita || "-").replaceAll("_", " "))}</div>
               <div><strong>Agenda:</strong> ${esc(lead.local_agendamento || "-")} | ${esc(agData)}</div>
               <div class="meta"><strong>Ult. contato:</strong> ${esc(ultContato)}</div>
@@ -614,7 +652,9 @@
               <div class="rowTools">
                 <button class="miniBtn primary" data-action="edit" data-id="${esc(lead.id)}">Editar</button>
                 <button class="miniBtn success" data-action="touch" data-id="${esc(lead.id)}">Contato agora</button>
-                <button class="miniBtn ${canReservar ? "success" : ""}" data-action="reserve" data-id="${esc(lead.id)}" ${canReservar ? "" : "disabled"}>${hasProcesso ? "Reservado" : "Virar reserva"}</button>
+                <button class="miniBtn" data-action="contract" data-id="${esc(lead.id)}">${contratoAssinado ? "Contrato: Sim" : "Contrato: Nao"}</button>
+                <button class="miniBtn" data-action="emailConfirm" data-id="${esc(lead.id)}" ${contratoAssinado ? "" : "disabled"}>Confirmar assinatura e-mail</button>
+                <button class="miniBtn ${canReservar ? "success" : ""}" title="${esc(reserveReason || "Pronto para virar reserva")}" data-action="reserve" data-id="${esc(lead.id)}" ${canReservar ? "" : "disabled"}>${hasProcesso ? "Reservado" : "Virar reserva"}</button>
                 <button class="miniBtn ${btnApresentacaoClass}" data-action="presentation" data-id="${esc(lead.id)}">${btnApresentacaoLabel}</button>
               </div>
             </td>
@@ -631,6 +671,8 @@
       if (stages.length){
         $("estagioLead").value = stages[0];
       }
+      $("decisaoCca").value = "EM_ANALISE";
+      $("contratoAssinado").value = "false";
       syncEstadoCivilForm();
     }
 
@@ -655,6 +697,8 @@
       $("tipoVisita").value = String(lead.tipo_visita || "").toUpperCase();
       $("dataAgendamento").value = toLocalInput(lead.data_agendamento);
       $("estagioLead").value = String(lead.estagio_lead || "").toUpperCase();
+      $("decisaoCca").value = String(lead.decisao_cca || "EM_ANALISE").toUpperCase();
+      $("contratoAssinado").value = String(Boolean(lead.contrato_assinado));
       $("ultimoContato").value = toLocalInput(lead.ultimo_contato_em);
       $("observacoes").value = lead.observacoes || "";
       syncEstadoCivilForm();
@@ -687,6 +731,8 @@
         tipo_visita: $("tipoVisita").value || null,
         data_agendamento: fromLocalInput($("dataAgendamento").value),
         estagio_lead: $("estagioLead").value,
+        decisao_cca: $("decisaoCca").value,
+        contrato_assinado: $("contratoAssinado").value === "true",
         ultimo_contato_em: fromLocalInput($("ultimoContato").value),
         observacoes: $("observacoes").value.trim() || null,
       };
@@ -759,6 +805,10 @@
       return data;
     }
 
+    async function sendContractEmailConfirmation(id){
+      return api(`/${encodeURIComponent(id)}/assinatura/enviar-confirmacao`, { method: "POST" });
+    }
+
     async function onTableClick(ev){
       const target = ev.target;
       if (!(target instanceof HTMLElement)) return;
@@ -771,6 +821,22 @@
         fillForm(lead);
       } else if (action === "touch"){
         await quickUpdate(id, { ultimo_contato_em: new Date().toISOString() }, "Ultimo contato registrado.");
+      } else if (action === "contract"){
+        const next = !Boolean(lead.contrato_assinado);
+        await quickUpdate(
+          id,
+          { contrato_assinado: next },
+          next ? "Contrato marcado como assinado." : "Contrato desmarcado."
+        );
+      } else if (action === "emailConfirm"){
+        try{
+          const data = await sendContractEmailConfirmation(id);
+          const expira = data?.token_expires_at ? new Date(data.token_expires_at).toLocaleString("pt-BR") : "-";
+          setFlash(`Confirmacao enviada para ${data?.email || lead.email || "e-mail do cliente"} (expira em ${expira}).`);
+          await loadLeads(true);
+        }catch(error){
+          setFlash(error.message || "Falha ao enviar confirmacao por e-mail.", "err");
+        }
       } else if (action === "reserve"){
         try{
           const result = await reserveLead(id);

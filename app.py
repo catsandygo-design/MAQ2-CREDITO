@@ -2,6 +2,7 @@ import os
 import io
 import csv
 import uuid
+import smtplib
 import logging
 import hashlib
 import hmac
@@ -10,12 +11,13 @@ import calendar
 import unicodedata
 from contextlib import asynccontextmanager
 from datetime import date, datetime, time, timedelta, timezone
+from email.message import EmailMessage
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlparse
 
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, create_engine, or_, text
 from sqlalchemy.dialects.postgresql import UUID
@@ -73,6 +75,20 @@ APP_GESTOR_USER = os.getenv("APP_GESTOR_USER", "gestor")
 APP_GESTOR_PASSWORD = os.getenv("APP_GESTOR_PASSWORD", "Troque#Gestor123")
 APP_GESTOR_CREDITO_USER = os.getenv("APP_GESTOR_CREDITO_USER", "")
 APP_GESTOR_CREDITO_PASSWORD = os.getenv("APP_GESTOR_CREDITO_PASSWORD", "")
+EMAIL_SMTP_HOST = (os.getenv("EMAIL_SMTP_HOST", "") or "").strip()
+try:
+    EMAIL_SMTP_PORT = int(os.getenv("EMAIL_SMTP_PORT", "587"))
+except ValueError:
+    EMAIL_SMTP_PORT = 587
+EMAIL_SMTP_USER = (os.getenv("EMAIL_SMTP_USER", "") or "").strip()
+EMAIL_SMTP_PASSWORD = os.getenv("EMAIL_SMTP_PASSWORD", "")
+EMAIL_SMTP_FROM = (os.getenv("EMAIL_SMTP_FROM", "") or "").strip()
+EMAIL_SMTP_STARTTLS = os.getenv("EMAIL_SMTP_STARTTLS", "true").lower() in {"1", "true", "yes"}
+EMAIL_CONFIRM_LINK_BASE_URL = (os.getenv("EMAIL_CONFIRM_LINK_BASE_URL", "") or "").strip()
+try:
+    EMAIL_CONFIRM_TOKEN_TTL_HOURS = max(1, int(os.getenv("EMAIL_CONFIRM_TOKEN_TTL_HOURS", "72")))
+except ValueError:
+    EMAIL_CONFIRM_TOKEN_TTL_HOURS = 72
 
 PASSWORD_HASH_ITERATIONS = int(os.getenv("PASSWORD_HASH_ITERATIONS", "200000"))
 PASSWORD_MIN_LENGTH = int(os.getenv("PASSWORD_MIN_LENGTH", "10"))
@@ -635,6 +651,15 @@ LEAD_STAGE_VALUES = [
     "PERDIDO",
 ]
 LEAD_STAGE_SET = set(LEAD_STAGE_VALUES)
+LEAD_CCA_DECISION_VALUES = [
+    "EM_ANALISE",
+    "APROVADO",
+    "CONDICIONADO",
+    "REPROVADO",
+    "BLOQUEADO",
+    "DAR_QV",
+]
+LEAD_CCA_DECISION_SET = set(LEAD_CCA_DECISION_VALUES)
 UNIDADE_STATUS_VALUES = ["DISPONIVEL", "RESERVADA", "VENDIDA", "BLOQUEADA"]
 UNIDADE_STATUS_SET = set(UNIDADE_STATUS_VALUES)
 IMPORT_REQUIRED_COLUMNS = {
@@ -749,6 +774,25 @@ def _lead_stage(value: Optional[str], fallback: str = "LEAD") -> str:
     }
     mapped = aliases.get(token, "")
     return mapped if mapped in LEAD_STAGE_SET else fallback
+
+
+def _lead_cca_decision(value: Optional[str], fallback: str = "EM_ANALISE") -> str:
+    token = _normalize_text_key(value)
+    aliases = {
+        "em_analise": "EM_ANALISE",
+        "analise": "EM_ANALISE",
+        "pendente": "EM_ANALISE",
+        "aprovado": "APROVADO",
+        "condicionado": "CONDICIONADO",
+        "reprovado": "REPROVADO",
+        "bloqueado": "BLOQUEADO",
+        "dar_qv": "DAR_QV",
+        "dar qv": "DAR_QV",
+        "dar-qv": "DAR_QV",
+        "darqv": "DAR_QV",
+    }
+    mapped = aliases.get(token, "")
+    return mapped if mapped in LEAD_CCA_DECISION_SET else fallback
 
 
 def _unidade_status(value: Optional[str], fallback: str = "DISPONIVEL") -> str:
@@ -1537,6 +1581,14 @@ class LeadPreCadastro(Base):
     tipo_visita: Mapped[Optional[str]] = mapped_column(String(20))
     data_agendamento: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     estagio_lead: Mapped[str] = mapped_column(String(40), nullable=False, default="LEAD")
+    decisao_cca: Mapped[str] = mapped_column(String(30), nullable=False, default="EM_ANALISE")
+    contrato_assinado: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    contrato_assinado_em: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    assinatura_email_confirmada: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    assinatura_email_confirmada_em: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    assinatura_email_token: Mapped[Optional[str]] = mapped_column(String(120), index=True)
+    assinatura_email_token_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    assinatura_email_enviado_em: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     processo_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("processos.id", ondelete="SET NULL"))
     reservado_em: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     observacoes: Mapped[Optional[str]] = mapped_column(Text)
@@ -1857,6 +1909,8 @@ class LeadPreCadastroCreate(BaseModel):
     tipo_visita: Optional[str] = None
     data_agendamento: Optional[datetime] = None
     estagio_lead: Optional[str] = None
+    decisao_cca: Optional[str] = None
+    contrato_assinado: Optional[bool] = None
     observacoes: Optional[str] = None
     ultimo_contato_em: Optional[datetime] = None
 
@@ -1879,6 +1933,8 @@ class LeadPreCadastroUpdate(BaseModel):
     tipo_visita: Optional[str] = None
     data_agendamento: Optional[datetime] = None
     estagio_lead: Optional[str] = None
+    decisao_cca: Optional[str] = None
+    contrato_assinado: Optional[bool] = None
     observacoes: Optional[str] = None
     ultimo_contato_em: Optional[datetime] = None
 
@@ -1904,6 +1960,13 @@ class LeadPreCadastroOut(BaseModel):
     tipo_visita: Optional[str] = None
     data_agendamento: Optional[datetime] = None
     estagio_lead: str
+    decisao_cca: str
+    contrato_assinado: bool
+    contrato_assinado_em: Optional[datetime] = None
+    assinatura_email_confirmada: bool
+    assinatura_email_confirmada_em: Optional[datetime] = None
+    assinatura_email_enviado_em: Optional[datetime] = None
+    assinatura_email_token_expires_at: Optional[datetime] = None
     processo_id: Optional[uuid.UUID] = None
     reservado_em: Optional[datetime] = None
     observacoes: Optional[str] = None
@@ -1918,6 +1981,13 @@ class LeadReservaOut(BaseModel):
     processo_id: uuid.UUID
     estagio_lead: str
     reservado_em: datetime
+
+
+class LeadAssinaturaEmailOut(BaseModel):
+    lead_id: uuid.UUID
+    email: str
+    token_expires_at: datetime
+    enviado_em: datetime
 
 
 class UnidadeDisponivelCreate(BaseModel):
@@ -2398,6 +2468,46 @@ def _normalize_tipo_visita(value: Optional[str]) -> Optional[str]:
     }
     mapped = aliases.get(token, "")
     return mapped or None
+
+
+def _is_email_delivery_configured() -> bool:
+    return bool(EMAIL_SMTP_HOST and EMAIL_SMTP_FROM)
+
+
+def _send_email_message(*, to_email: str, subject: str, text_body: str) -> None:
+    if not _is_email_delivery_configured():
+        raise RuntimeError("Envio de e-mail nao configurado no ambiente.")
+
+    msg = EmailMessage()
+    msg["From"] = EMAIL_SMTP_FROM
+    msg["To"] = to_email
+    msg["Subject"] = subject
+    msg.set_content(text_body)
+
+    with smtplib.SMTP(EMAIL_SMTP_HOST, EMAIL_SMTP_PORT, timeout=20) as smtp:
+        if EMAIL_SMTP_STARTTLS:
+            smtp.starttls()
+        if EMAIL_SMTP_USER:
+            smtp.login(EMAIL_SMTP_USER, EMAIL_SMTP_PASSWORD)
+        smtp.send_message(msg)
+
+
+def _build_email_confirmation_link(request: Request, token: str) -> str:
+    base = EMAIL_CONFIRM_LINK_BASE_URL.rstrip("/")
+    if not base:
+        base = str(request.base_url).rstrip("/")
+    return f"{base}/app/assinatura/confirmar?token={token}"
+
+
+def _lead_reserva_block_reason(lead: "LeadPreCadastro") -> Optional[str]:
+    decisao = _lead_cca_decision(getattr(lead, "decisao_cca", None))
+    if decisao not in {"APROVADO", "CONDICIONADO"}:
+        return "Reserva bloqueada: CCA precisa aprovar ou condicionar o cliente."
+    if not bool(getattr(lead, "contrato_assinado", False)):
+        return "Reserva bloqueada: contrato ainda nao foi marcado como assinado."
+    if not bool(getattr(lead, "assinatura_email_confirmada", False)):
+        return "Reserva bloqueada: assinatura do contrato ainda nao foi confirmada por e-mail."
+    return None
 
 
 def _normalize_currency_value(value: Any) -> Optional[float]:
@@ -2998,6 +3108,14 @@ def _ensure_runtime_schema(db: Session) -> None:
                 tipo_visita VARCHAR(20),
                 data_agendamento TIMESTAMPTZ,
                 estagio_lead VARCHAR(40) NOT NULL DEFAULT 'LEAD',
+                decisao_cca VARCHAR(30) NOT NULL DEFAULT 'EM_ANALISE',
+                contrato_assinado BOOLEAN NOT NULL DEFAULT FALSE,
+                contrato_assinado_em TIMESTAMPTZ,
+                assinatura_email_confirmada BOOLEAN NOT NULL DEFAULT FALSE,
+                assinatura_email_confirmada_em TIMESTAMPTZ,
+                assinatura_email_token VARCHAR(120),
+                assinatura_email_token_expires_at TIMESTAMPTZ,
+                assinatura_email_enviado_em TIMESTAMPTZ,
                 processo_id UUID REFERENCES processos(id) ON DELETE SET NULL,
                 reservado_em TIMESTAMPTZ,
                 observacoes TEXT,
@@ -3192,6 +3310,15 @@ def _ensure_runtime_schema(db: Session) -> None:
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS data_agendamento TIMESTAMPTZ"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS estagio_lead VARCHAR(40) DEFAULT 'LEAD'"))
     db.execute(text("ALTER TABLE lead_precadastros ALTER COLUMN estagio_lead SET DEFAULT 'LEAD'"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS decisao_cca VARCHAR(30) DEFAULT 'EM_ANALISE'"))
+    db.execute(text("ALTER TABLE lead_precadastros ALTER COLUMN decisao_cca SET DEFAULT 'EM_ANALISE'"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS contrato_assinado BOOLEAN DEFAULT FALSE"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS contrato_assinado_em TIMESTAMPTZ"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS assinatura_email_confirmada BOOLEAN DEFAULT FALSE"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS assinatura_email_confirmada_em TIMESTAMPTZ"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS assinatura_email_token VARCHAR(120)"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS assinatura_email_token_expires_at TIMESTAMPTZ"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS assinatura_email_enviado_em TIMESTAMPTZ"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS processo_id UUID REFERENCES processos(id) ON DELETE SET NULL"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS reservado_em TIMESTAMPTZ"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS observacoes TEXT"))
@@ -3199,6 +3326,9 @@ def _ensure_runtime_schema(db: Session) -> None:
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()"))
     db.execute(text("UPDATE lead_precadastros SET estagio_lead = 'LEAD' WHERE COALESCE(TRIM(estagio_lead), '') = ''"))
+    db.execute(text("UPDATE lead_precadastros SET decisao_cca = 'EM_ANALISE' WHERE COALESCE(TRIM(decisao_cca), '') = ''"))
+    db.execute(text("UPDATE lead_precadastros SET contrato_assinado = FALSE WHERE contrato_assinado IS NULL"))
+    db.execute(text("UPDATE lead_precadastros SET assinatura_email_confirmada = FALSE WHERE assinatura_email_confirmada IS NULL"))
     db.execute(
         text(
             """
@@ -3218,6 +3348,23 @@ def _ensure_runtime_schema(db: Session) -> None:
     db.execute(
         text(
             """
+            UPDATE lead_precadastros
+               SET decisao_cca = CASE
+                 WHEN UPPER(COALESCE(decisao_cca, '')) IN ('EM_ANALISE', 'APROVADO', 'CONDICIONADO', 'REPROVADO', 'BLOQUEADO', 'DAR_QV') THEN UPPER(decisao_cca)
+                 WHEN UPPER(COALESCE(decisao_cca, '')) IN ('DAR QV', 'DAR-QV', 'DARQV') THEN 'DAR_QV'
+                 WHEN UPPER(COALESCE(decisao_cca, '')) IN ('PENDENTE', 'ANALISE') THEN 'EM_ANALISE'
+                 ELSE 'EM_ANALISE'
+               END
+            """
+        )
+    )
+    db.execute(text("UPDATE lead_precadastros SET assinatura_email_confirmada = FALSE WHERE assinatura_email_confirmada IS TRUE AND contrato_assinado IS FALSE"))
+    db.execute(text("UPDATE lead_precadastros SET contrato_assinado_em = NULL WHERE contrato_assinado IS FALSE"))
+    db.execute(text("UPDATE lead_precadastros SET assinatura_email_confirmada_em = NULL WHERE assinatura_email_confirmada IS FALSE"))
+    db.execute(text("UPDATE lead_precadastros SET assinatura_email_token = NULL, assinatura_email_token_expires_at = NULL WHERE assinatura_email_confirmada IS TRUE"))
+    db.execute(
+        text(
+            """
             CREATE INDEX IF NOT EXISTS ix_lead_precadastros_corretor_norm
             ON lead_precadastros ((LOWER(TRIM(COALESCE(corretor_username, '')))))
             """
@@ -3226,6 +3373,8 @@ def _ensure_runtime_schema(db: Session) -> None:
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_cpf ON lead_precadastros (cpf)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_processo_id ON lead_precadastros (processo_id)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_estagio ON lead_precadastros (estagio_lead)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_decisao_cca ON lead_precadastros (decisao_cca)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_assinatura_email_token ON lead_precadastros (assinatura_email_token)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_updated_at ON lead_precadastros (updated_at DESC)"))
     db.execute(text("ALTER TABLE empreendimento_regras_financeiras ADD COLUMN IF NOT EXISTS empreendimento_id UUID REFERENCES empreendimentos(id) ON DELETE CASCADE"))
     db.execute(text("ALTER TABLE empreendimento_regras_financeiras ADD COLUMN IF NOT EXISTS valor_cheque_moradia DOUBLE PRECISION DEFAULT 0"))
@@ -4325,6 +4474,7 @@ def corretor_list_pre_cadastros(
                 func.lower(func.coalesce(LeadPreCadastro.email, "")).like(like),
                 func.lower(func.coalesce(LeadPreCadastro.cpf, "")).like(like),
                 func.lower(func.coalesce(LeadPreCadastro.documento_identificacao, "")).like(like),
+                func.lower(func.coalesce(LeadPreCadastro.decisao_cca, "")).like(like),
                 func.lower(func.coalesce(LeadPreCadastro.empreendimento_interesse, "")).like(like),
                 func.lower(func.coalesce(LeadPreCadastro.localidade_interesse, "")).like(like),
                 func.lower(func.coalesce(LeadPreCadastro.local_agendamento, "")).like(like),
@@ -4383,6 +4533,14 @@ def corretor_create_pre_cadastro(
         tipo_visita=_normalize_tipo_visita(payload.tipo_visita),
         data_agendamento=_as_utc(payload.data_agendamento),
         estagio_lead=_lead_stage(payload.estagio_lead, fallback="LEAD"),
+        decisao_cca=_lead_cca_decision(payload.decisao_cca, fallback="EM_ANALISE"),
+        contrato_assinado=bool(payload.contrato_assinado) if payload.contrato_assinado is not None else False,
+        contrato_assinado_em=_utcnow() if bool(payload.contrato_assinado) else None,
+        assinatura_email_confirmada=False,
+        assinatura_email_confirmada_em=None,
+        assinatura_email_token=None,
+        assinatura_email_token_expires_at=None,
+        assinatura_email_enviado_em=None,
         observacoes=_normalize_lead_text(payload.observacoes, max_len=2000),
         ultimo_contato_em=_as_utc(payload.ultimo_contato_em),
     )
@@ -4436,7 +4594,14 @@ def corretor_update_pre_cadastro(
     if "whatsapp" in changes:
         lead.whatsapp = _normalize_lead_phone(changes.get("whatsapp"))
     if "email" in changes:
-        lead.email = _normalize_lead_email(changes.get("email"))
+        next_email = _normalize_lead_email(changes.get("email"))
+        if next_email != lead.email:
+            lead.assinatura_email_confirmada = False
+            lead.assinatura_email_confirmada_em = None
+            lead.assinatura_email_token = None
+            lead.assinatura_email_token_expires_at = None
+            lead.assinatura_email_enviado_em = None
+        lead.email = next_email
     if "cpf" in changes:
         lead.cpf = _normalize_lead_cpf(changes.get("cpf"))
     if "documento_identificacao" in changes:
@@ -4468,6 +4633,21 @@ def corretor_update_pre_cadastro(
         lead.data_agendamento = _as_utc(changes.get("data_agendamento"))
     if "estagio_lead" in changes:
         lead.estagio_lead = _lead_stage(changes.get("estagio_lead"), fallback=lead.estagio_lead or "LEAD")
+    if "decisao_cca" in changes:
+        lead.decisao_cca = _lead_cca_decision(changes.get("decisao_cca"), fallback=lead.decisao_cca or "EM_ANALISE")
+    if "contrato_assinado" in changes:
+        contrato_assinado = bool(changes.get("contrato_assinado"))
+        if contrato_assinado and not bool(lead.contrato_assinado):
+            lead.contrato_assinado = True
+            lead.contrato_assinado_em = _utcnow()
+        elif not contrato_assinado and bool(lead.contrato_assinado):
+            lead.contrato_assinado = False
+            lead.contrato_assinado_em = None
+            lead.assinatura_email_confirmada = False
+            lead.assinatura_email_confirmada_em = None
+            lead.assinatura_email_token = None
+            lead.assinatura_email_token_expires_at = None
+            lead.assinatura_email_enviado_em = None
     if "observacoes" in changes:
         lead.observacoes = _normalize_lead_text(changes.get("observacoes"), max_len=2000)
     if "ultimo_contato_em" in changes:
@@ -4488,6 +4668,115 @@ def corretor_update_pre_cadastro(
     return lead
 
 
+@app.post("/app/api/corretor/pre-cadastros/{lead_id}/assinatura/enviar-confirmacao", response_model=LeadAssinaturaEmailOut)
+def corretor_enviar_confirmacao_assinatura_email(
+    lead_id: uuid.UUID,
+    request: Request,
+    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    role = _normalize_role(str(session.get("role", "")))
+    actor_username = _normalize_username(str(session.get("username", "")))
+    lead = db.get(LeadPreCadastro, lead_id)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead nao encontrado")
+    if role == ROLE_CORRETOR and _normalize_username(lead.corretor_username) != actor_username:
+        raise HTTPException(status_code=403, detail="Sem permissao para este lead")
+    if not _is_email_delivery_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Envio de e-mail nao configurado. Defina EMAIL_SMTP_HOST e EMAIL_SMTP_FROM no ambiente.",
+        )
+    if not lead.email:
+        raise HTTPException(status_code=422, detail="Lead sem e-mail cadastrado para confirmacao de assinatura.")
+    if not bool(lead.contrato_assinado):
+        raise HTTPException(status_code=422, detail="Marque contrato assinado antes de enviar confirmacao por e-mail.")
+
+    now = _utcnow()
+    token = secrets.token_urlsafe(32)
+    expires_at = now + timedelta(hours=EMAIL_CONFIRM_TOKEN_TTL_HOURS)
+    lead.assinatura_email_confirmada = False
+    lead.assinatura_email_confirmada_em = None
+    lead.assinatura_email_token = token
+    lead.assinatura_email_token_expires_at = expires_at
+    lead.assinatura_email_enviado_em = now
+
+    link = _build_email_confirmation_link(request, token)
+    subject = "Confirmacao de assinatura de contrato - SioCred"
+    text_body = (
+        f"Ola, {lead.nome_cliente}.\n\n"
+        "Recebemos a assinatura do contrato e precisamos da sua confirmacao por e-mail.\n"
+        "Clique no link abaixo para confirmar:\n\n"
+        f"{link}\n\n"
+        f"Este link expira em {EMAIL_CONFIRM_TOKEN_TTL_HOURS} hora(s).\n"
+        "Se voce nao reconhece este envio, desconsidere."
+    )
+    try:
+        _send_email_message(to_email=lead.email, subject=subject, text_body=text_body)
+    except Exception as exc:
+        db.rollback()
+        logger.exception("Falha ao enviar e-mail de confirmacao de assinatura.")
+        raise HTTPException(status_code=502, detail=f"Falha ao enviar e-mail de confirmacao: {exc}") from exc
+
+    _record_system_log(
+        db,
+        actor_username=actor_username,
+        actor_role=role,
+        tela="corretor_precadastro",
+        acao="LEAD_ASSINATURA_EMAIL_ENVIADO",
+        entidade_tipo="lead_precadastro",
+        entidade_id=str(lead.id),
+        details=f"cliente={lead.nome_cliente}; email={lead.email}; expira={expires_at.isoformat()}",
+    )
+    db.commit()
+    db.refresh(lead)
+    return LeadAssinaturaEmailOut(
+        lead_id=lead.id,
+        email=lead.email,
+        token_expires_at=lead.assinatura_email_token_expires_at or expires_at,
+        enviado_em=lead.assinatura_email_enviado_em or now,
+    )
+
+
+@app.get("/app/assinatura/confirmar", response_class=HTMLResponse)
+def app_confirmar_assinatura_email(token: str = Query(default=""), db: Session = Depends(get_db)):
+    token_value = (token or "").strip()
+    if not token_value:
+        return HTMLResponse(
+            "<h2>Link invalido</h2><p>Token de confirmacao nao informado.</p>",
+            status_code=400,
+        )
+    now = _utcnow()
+    lead = (
+        db.query(LeadPreCadastro)
+        .filter(LeadPreCadastro.assinatura_email_token == token_value)
+        .first()
+    )
+    if not lead:
+        return HTMLResponse(
+            "<h2>Link invalido</h2><p>O link de confirmacao nao foi encontrado ou ja foi utilizado.</p>",
+            status_code=404,
+        )
+    expires_at = _as_utc(getattr(lead, "assinatura_email_token_expires_at", None))
+    if expires_at is None or expires_at < now:
+        lead.assinatura_email_token = None
+        lead.assinatura_email_token_expires_at = None
+        db.commit()
+        return HTMLResponse(
+            "<h2>Link expirado</h2><p>Solicite um novo e-mail de confirmacao com o corretor.</p>",
+            status_code=410,
+        )
+    lead.assinatura_email_confirmada = True
+    lead.assinatura_email_confirmada_em = now
+    lead.assinatura_email_token = None
+    lead.assinatura_email_token_expires_at = None
+    db.commit()
+    return HTMLResponse(
+        "<h2>Assinatura confirmada</h2><p>Obrigada. Sua confirmacao foi registrada com sucesso.</p>",
+        status_code=200,
+    )
+
+
 @app.post("/app/api/corretor/pre-cadastros/{lead_id}/reservar", response_model=LeadReservaOut)
 def corretor_reservar_pre_cadastro(
     lead_id: uuid.UUID,
@@ -4505,9 +4794,11 @@ def corretor_reservar_pre_cadastro(
     processo_existente = db.get(Processo, lead.processo_id) if getattr(lead, "processo_id", None) else None
     if processo_existente:
         now_existing = _utcnow()
+        processo_existente.estagio_comercial = "EM_PROCESSO"
         lead.estagio_lead = "RESERVA"
         lead.reservado_em = lead.reservado_em or now_existing
         db.commit()
+        _invalidate_process_list_cache()
         return LeadReservaOut(
             lead_id=lead.id,
             cliente_id=processo_existente.cliente_id,
@@ -4516,7 +4807,12 @@ def corretor_reservar_pre_cadastro(
             reservado_em=_as_utc(lead.reservado_em) or now_existing,
         )
 
+    block_reason = _lead_reserva_block_reason(lead)
+    if block_reason:
+        raise HTTPException(status_code=422, detail=block_reason)
+
     now = _utcnow()
+    decisao_cca = _lead_cca_decision(getattr(lead, "decisao_cca", None), fallback="EM_ANALISE")
     empreendimento_nome = _resolve_empreendimento_nome(db, lead.empreendimento_interesse) or _normalize_lead_text(
         lead.empreendimento_interesse,
         max_len=220,
@@ -4537,6 +4833,9 @@ def corretor_reservar_pre_cadastro(
     processo = Processo(
         cliente_id=cliente.id,
         estagio_comercial="EM_PROCESSO",
+        status_cca=decisao_cca,
+        status_credito=("APROVADO" if decisao_cca == "APROVADO" else ("PENDENCIADO" if decisao_cca == "CONDICIONADO" else "EM_ANALISE")),
+        status_geral=("EM_ANDAMENTO" if decisao_cca == "APROVADO" else ("PENDENCIADO" if decisao_cca == "CONDICIONADO" else "NOVO")),
         valor_cheque_moradia=_resolve_cheque_moradia_valor(db, empreendimento_nome),
         sla_comercial_inicio_at=_utc_start_of_day(cliente.data_cadastro_origem) or now,
     )
