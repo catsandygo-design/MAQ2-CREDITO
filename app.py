@@ -4172,6 +4172,20 @@ def auth_login(payload: LoginPayload, db: Session = Depends(get_db)):
 
     user = _get_user_by_username(db, username)
     if not user:
+        # Auto-recupera seed full caso o runtime tenha ficado em admin_only apos manutencao.
+        seed_mode_raw = (_get_runtime_meta(db, USERS_SEED_MODE_RUNTIME_KEY) or USERS_SEED_MODE_FULL).strip().lower()
+        if seed_mode_raw == USERS_SEED_MODE_ADMIN_ONLY:
+            try:
+                _set_runtime_meta(db, USERS_SEED_MODE_RUNTIME_KEY, USERS_SEED_MODE_FULL)
+                db.commit()
+                global SEED_USERS_READY
+                SEED_USERS_READY = False
+                _ensure_seed_users(db, force=True)
+                user = _get_user_by_username(db, username)
+            except Exception:
+                db.rollback()
+
+    if not user:
         raise HTTPException(status_code=401, detail="Credenciais invalidas")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Acesso bloqueado. Procure o administrador.")

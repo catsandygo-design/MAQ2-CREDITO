@@ -17,7 +17,7 @@ from app import (
     APP_ADMIN_USER,
     META_MENSAL_RUNTIME_KEY,
     ROLE_ADMIN,
-    USERS_SEED_MODE_ADMIN_ONLY,
+    USERS_SEED_MODE_FULL,
     USERS_SEED_MODE_RUNTIME_KEY,
     AppUser,
     Base,
@@ -123,8 +123,8 @@ def main() -> int:
                 .delete(synchronize_session=False)
             )
 
-        # Mantem o runtime em modo seguro: somente admin seed apos resets.
-        _set_runtime_meta(db, USERS_SEED_MODE_RUNTIME_KEY, USERS_SEED_MODE_ADMIN_ONLY)
+        # Mantem o runtime em modo full para nao bloquear outros perfis apos restart/sleep.
+        _set_runtime_meta(db, USERS_SEED_MODE_RUNTIME_KEY, USERS_SEED_MODE_FULL)
         _set_runtime_meta(db, META_MENSAL_RUNTIME_KEY, "0")
 
         db.commit()
