@@ -35,7 +35,7 @@ SESSION_IDLE_PASSIVE_PATHS = {
     "/app/api/processos",
 }
 SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() in {"1", "true", "yes"}
-CORRETOR_ROUTE_ENABLED = os.getenv("CORRETOR_ROUTE_ENABLED", "false").lower() in {"1", "true", "yes"}
+CORRETOR_ROUTE_ENABLED = os.getenv("CORRETOR_ROUTE_ENABLED", "true").lower() in {"1", "true", "yes"}
 try:
     GESTOR_META_MENSAL = max(0, int(os.getenv("GESTOR_META_MENSAL", "0")))
 except ValueError:
