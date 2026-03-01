@@ -5078,7 +5078,7 @@ def patch_documento(
 
 @app.get("/app/api/processos", response_model=list[ProcessoOverviewOut])
 def app_list_processos(
-    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
     db: Session = Depends(get_db),
     limit: Optional[int] = Query(default=120, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
