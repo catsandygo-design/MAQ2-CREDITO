@@ -706,6 +706,11 @@
             <option value="pendente_credito">Pendente Credito</option>
             <option value="analise_cca">Em Analise CCA</option>
             <option value="pendente_cca">Pendente CCA</option>
+            <option value="aprovado">Aprovado</option>
+            <option value="reprovado">Reprovado</option>
+            <option value="condicionado">Condicionado</option>
+            <option value="bloqueado">Bloqueado</option>
+            <option value="dar_qv">Dar QV</option>
             <option value="aguardando_conformidade">Aguardando Conformidade</option>
             <option value="conforme">Conforme</option>
             <option value="tratando_produto">Tratando Produto</option>
@@ -1022,6 +1027,11 @@
         pendente_credito: "Pendente",
         analise_cca: "Em Analise",
         pendente_cca: "Pendenciado",
+        aprovado: "Aprovado",
+        reprovado: "Reprovado",
+        condicionado: "Condicionado",
+        bloqueado: "Bloqueado",
+        dar_qv: "Dar QV",
         aguardando_conformidade: "Aguardando Conformidade",
         conforme: "Aprovado",
         tratando_produto: "Tratando Produto",
@@ -1303,7 +1313,7 @@
       if (item.fiadorPendente) p += 1;
       if (item.sinalPendente) p += 1;
       [item.estagioCadKey, item.estagioCcaKey, item.estagioAgehabKey].forEach((k) => {
-        if (k.includes("pendenc") || k.includes("pendente")) p += 1;
+        if (k.includes("pendenc") || k.includes("pendente") || k === "condicionado" || k === "bloqueado") p += 1;
       });
       return p;
     }
@@ -1313,9 +1323,9 @@
       const cca = item.estagioCcaKey;
 
       if (cca === "assinatura_caixa") return "finalizados";
-      if (cca === "agendado") return "agendados";
-      if (cca === "conforme") return hasPend ? "conformesComPendencia" : "conformesParaAssinatura";
-      if (cca === "aguardando_conformidade") return "aguardandoConformidade";
+      if (cca === "agendado" || cca === "dar_qv") return "agendados";
+      if (cca === "conforme" || cca === "aprovado") return hasPend ? "conformesComPendencia" : "conformesParaAssinatura";
+      if (cca === "aguardando_conformidade" || cca === "condicionado" || cca === "pendente_credito" || cca === "pendente_cca") return "aguardandoConformidade";
       return "aguardandoEnvio";
     }
 

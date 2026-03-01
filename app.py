@@ -99,7 +99,7 @@ try:
     )
 except ValueError:
     DASHBOARD_IMPORT_DATE_BACKFILL_TOLERANCE_DAYS = 365
-RUNTIME_SCHEMA_REVISION = "2026-03-01-cca-analise-financeira-v1"
+RUNTIME_SCHEMA_REVISION = "2026-03-01-cca-analise-financeira-v2"
 PENDENCIA_INFO_MIN_LENGTH = 0
 PROCESS_LIST_CACHE: dict[str, dict[str, Any]] = {}
 SEED_USERS_READY = False
@@ -573,6 +573,11 @@ PROCESS_CAIXA_STATUSES = {
     "PENDENTE_CREDITO",
     "ANALISE_CCA",
     "PENDENTE_CCA",
+    "APROVADO",
+    "REPROVADO",
+    "CONDICIONADO",
+    "BLOQUEADO",
+    "DAR_QV",
     "AGUARDANDO_CONFORMIDADE",
     "CONFORME",
     "TRATANDO_PRODUTO",
@@ -583,9 +588,18 @@ PROCESS_CAIXA_STATUSES = {
 PROCESS_AGEHAB_STATUSES = {"ANALISE_CREDITO", "PENDENTE_CREDITO", "ENVIO_AGEHAB", "PENDENTE_AGEHAB", "VALIDADO_AGEHAB"}
 PROCESS_SINAL_STATUSES = {"NAO_TEM", "PENDENTE", "PAGO"}
 PROCESS_FIADOR_STATUSES = {"NAO_TEM", "PENDENTE", "FINALIZADO"}
+PROCESS_RECOLHA_FGTS_STATUSES = {"OK", "NAO_RECOLHIDO", "VALIDADO_PELO_BANCO", "RECOLHENDO"}
 PROCESS_GERAL_FINAL_STATUSES = {"APROVADO", "REPROVADO", "DISTRATO", "CANCELADO"}
 PROCESS_CCA_FINAL_STATUSES = {"ASSINATURA_CAIXA", "FINALIZADO"}
-CAIXA_ASSINATURA_APTA_STATUSES = {"CONFORME", "TRATANDO_PRODUTO", "AGENDADO", "ASSINATURA_CAIXA", "FINALIZADO"}
+CAIXA_ASSINATURA_APTA_STATUSES = {
+    "APROVADO",
+    "DAR_QV",
+    "CONFORME",
+    "TRATANDO_PRODUTO",
+    "AGENDADO",
+    "ASSINATURA_CAIXA",
+    "FINALIZADO",
+}
 
 ESTAGIO_COMERCIAL_VALUES = [
     "RESERVA",
@@ -941,11 +955,11 @@ def _seconds_from_value(value: Any) -> int:
 
 
 def _is_cca_sla_start_condition(processo: "Processo") -> bool:
-    return _status_token(processo.status_cca) == "ANALISE_CCA"
+    return _status_token(processo.status_cca) in {"ANALISE_CCA", "ANALISE_CREDITO"}
 
 
 def _is_cca_sla_pendencia_condition(processo: "Processo") -> bool:
-    return _status_token(processo.status_cca) == "PENDENTE_CCA" or _status_token(processo.status_agehab) == "PENDENTE_AGEHAB"
+    return _status_token(processo.status_cca) in {"PENDENTE_CCA", "CONDICIONADO"} or _status_token(processo.status_agehab) == "PENDENTE_AGEHAB"
 
 
 def _is_cca_sla_end_condition(processo: "Processo") -> bool:
@@ -1133,8 +1147,13 @@ def _process_caixa_status(value: Optional[str], fallback: str = "ANALISE_CREDITO
         "EM_ANALISE": "ANALISE_CREDITO",
         "EM ANALISE": "ANALISE_CREDITO",
         "PENDENTE": "PENDENTE_CREDITO",
-        "APROVADO": "CONFORME",
-        "REPROVADO": "PENDENTE_CREDITO",
+        "CONFORME": "APROVADO",
+        "TRATANDO_PRODUTO": "CONDICIONADO",
+        "AGUARDANDO_CONFORMIDADE": "CONDICIONADO",
+        "AGENDADO": "DAR_QV",
+        "DAR QV": "DAR_QV",
+        "DAR-QV": "DAR_QV",
+        "DARQV": "DAR_QV",
     }
     raw = aliases.get(raw, raw)
     return raw if raw in PROCESS_CAIXA_STATUSES else fallback
@@ -1168,12 +1187,23 @@ def _process_fiador_status(value: Optional[str], fallback: str = "NAO_TEM") -> s
     return raw if raw in PROCESS_FIADOR_STATUSES else fallback
 
 
+def _process_recolha_fgts_status(value: Optional[str], fallback: str = "NAO_RECOLHIDO") -> str:
+    raw = _status_token(value)
+    aliases = {
+        "NAO RECOLHIDO": "NAO_RECOLHIDO",
+        "VALIDADO BANCO": "VALIDADO_PELO_BANCO",
+        "VALIDADO PELO BANCO": "VALIDADO_PELO_BANCO",
+    }
+    raw = aliases.get(raw, raw)
+    return raw if raw in PROCESS_RECOLHA_FGTS_STATUSES else fallback
+
+
 def _is_pendencia_status(field: str, status_value: Optional[str]) -> bool:
     token = _status_token(status_value)
     if field in {"status_credito", "status_geral"}:
         return token == "PENDENCIADO"
     if field in {"status_cca", "status_agehab"}:
-        return token.startswith("PENDENTE_")
+        return token.startswith("PENDENTE_") or token == "CONDICIONADO"
     if field in {"status_sinal", "status_fiador"}:
         return token == "PENDENTE"
     return False
@@ -1337,6 +1367,7 @@ class Processo(Base):
     valor_financiamento: Mapped[Optional[float]] = mapped_column(Float)
     valor_subsidio: Mapped[Optional[float]] = mapped_column(Float)
     valor_cheque_moradia: Mapped[Optional[float]] = mapped_column(Float)
+    recolha_fgts: Mapped[str] = mapped_column(String(30), nullable=False, default="NAO_RECOLHIDO")
     status_fiador: Mapped[str] = mapped_column(String, nullable=False, default="NAO_TEM")
     estagio_comercial: Mapped[str] = mapped_column(String(40), nullable=False, default="RESERVA")
     etapa_repasse: Mapped[Optional[str]] = mapped_column(String(40))
@@ -1580,6 +1611,7 @@ class ProcessoUpdate(BaseModel):
     valor_financiamento: Optional[float] = None
     valor_subsidio: Optional[float] = None
     valor_cheque_moradia: Optional[float] = None
+    recolha_fgts: Optional[str] = None
     status_fiador: Optional[str] = None
     estagio_comercial: Optional[str] = None
     etapa_repasse: Optional[str] = None
@@ -1611,6 +1643,7 @@ class ProcessoOut(BaseModel):
     valor_financiamento: Optional[float] = None
     valor_subsidio: Optional[float] = None
     valor_cheque_moradia: Optional[float] = None
+    recolha_fgts: str
     status_fiador: str
     estagio_comercial: str
     etapa_repasse: Optional[str] = None
@@ -1974,6 +2007,7 @@ class ProcessoOverviewOut(BaseModel):
     status_agehab: str
     status_sinal: str
     valor_sinal: Optional[float] = None
+    recolha_fgts: str
     status_fiador: str
     estagio_comercial: str
     etapa_repasse: Optional[str] = None
@@ -2019,6 +2053,7 @@ class CcaAnaliseItemOut(BaseModel):
     valor_financiamento: Optional[float] = None
     valor_subsidio: Optional[float] = None
     valor_cheque_moradia: Optional[float] = None
+    recolha_fgts: str
     cpf: Optional[str] = None
     documento_identificacao: Optional[str] = None
     estado_civil: Optional[str] = None
@@ -2035,6 +2070,7 @@ class CcaAnaliseItemOut(BaseModel):
 
 
 class CcaAnaliseUpdate(BaseModel):
+    status_cca: Optional[str] = None
     renda_bruta: Optional[float] = None
     renda_liquida: Optional[float] = None
     valor_parcela: Optional[float] = None
@@ -2042,6 +2078,7 @@ class CcaAnaliseUpdate(BaseModel):
     valor_avaliacao: Optional[float] = None
     valor_financiamento: Optional[float] = None
     valor_subsidio: Optional[float] = None
+    recolha_fgts: Optional[str] = None
 
 
 class ProcessoArquivadoOut(BaseModel):
@@ -2445,6 +2482,7 @@ def _build_cca_analise_item(
         valor_financiamento=float(processo.valor_financiamento) if getattr(processo, "valor_financiamento", None) is not None else None,
         valor_subsidio=float(processo.valor_subsidio) if getattr(processo, "valor_subsidio", None) is not None else None,
         valor_cheque_moradia=float(valor_cheque_moradia) if valor_cheque_moradia is not None else None,
+        recolha_fgts=_process_recolha_fgts_status(getattr(processo, "recolha_fgts", None)),
         cpf=getattr(lead, "cpf", None),
         documento_identificacao=getattr(lead, "documento_identificacao", None),
         estado_civil=getattr(lead, "estado_civil", None),
@@ -3022,6 +3060,7 @@ def _ensure_runtime_schema(db: Session) -> None:
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_financiamento DOUBLE PRECISION",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_subsidio DOUBLE PRECISION",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_cheque_moradia DOUBLE PRECISION",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS recolha_fgts VARCHAR(30) DEFAULT 'NAO_RECOLHIDO'",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_fiador VARCHAR(30) DEFAULT 'NAO_TEM'",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS estagio_comercial VARCHAR(40) DEFAULT 'RESERVA'",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS etapa_repasse VARCHAR(40)",
@@ -3048,6 +3087,7 @@ def _ensure_runtime_schema(db: Session) -> None:
         db.execute(text(stmt))
     db.execute(text("UPDATE processos SET nao_contar_mes = FALSE WHERE nao_contar_mes IS NULL"))
     db.execute(text("UPDATE processos SET arquivado = FALSE WHERE arquivado IS NULL"))
+    db.execute(text("UPDATE processos SET recolha_fgts = 'NAO_RECOLHIDO' WHERE COALESCE(TRIM(recolha_fgts), '') = ''"))
     ano_atual, mes_atual = _current_meta_period()
     db.execute(
         text(
@@ -3290,13 +3330,30 @@ def _ensure_runtime_schema(db: Session) -> None:
             SET status_cca = CASE
                 WHEN UPPER(COALESCE(status_cca, '')) IN (
                     'ANALISE_CREDITO', 'PENDENTE_CREDITO', 'ANALISE_CCA', 'PENDENTE_CCA',
-                    'AGUARDANDO_CONFORMIDADE', 'CONFORME', 'TRATANDO_PRODUTO', 'AGENDADO', 'ASSINATURA_CAIXA', 'FINALIZADO'
+                    'APROVADO', 'REPROVADO', 'CONDICIONADO', 'BLOQUEADO', 'DAR_QV',
+                    'ASSINATURA_CAIXA', 'FINALIZADO'
                 ) THEN UPPER(status_cca)
+                WHEN UPPER(COALESCE(status_cca, '')) IN ('DAR QV', 'DAR-QV', 'DARQV') THEN 'DAR_QV'
+                WHEN UPPER(COALESCE(status_cca, '')) IN ('CONFORME') THEN 'APROVADO'
+                WHEN UPPER(COALESCE(status_cca, '')) IN ('TRATANDO_PRODUTO', 'AGUARDANDO_CONFORMIDADE') THEN 'CONDICIONADO'
+                WHEN UPPER(COALESCE(status_cca, '')) IN ('AGENDADO') THEN 'DAR_QV'
                 WHEN UPPER(COALESCE(status_cca, '')) IN ('EM_ANALISE', 'EM ANALISE', 'EMANALISE', 'ANALISE') THEN 'ANALISE_CREDITO'
                 WHEN UPPER(COALESCE(status_cca, '')) IN ('PENDENTE', 'PENDENCIADO') THEN 'PENDENTE_CREDITO'
-                WHEN UPPER(COALESCE(status_cca, '')) IN ('APROVADO') THEN 'CONFORME'
-                WHEN UPPER(COALESCE(status_cca, '')) IN ('REPROVADO') THEN 'PENDENTE_CREDITO'
                 ELSE 'ANALISE_CREDITO'
+            END
+            """
+        )
+    )
+
+    db.execute(
+        text(
+            """
+            UPDATE processos
+            SET recolha_fgts = CASE
+                WHEN UPPER(COALESCE(recolha_fgts, '')) IN ('OK', 'NAO_RECOLHIDO', 'VALIDADO_PELO_BANCO', 'RECOLHENDO') THEN UPPER(recolha_fgts)
+                WHEN UPPER(COALESCE(recolha_fgts, '')) IN ('NAO RECOLHIDO') THEN 'NAO_RECOLHIDO'
+                WHEN UPPER(COALESCE(recolha_fgts, '')) IN ('VALIDADO BANCO', 'VALIDADO PELO BANCO') THEN 'VALIDADO_PELO_BANCO'
+                ELSE 'NAO_RECOLHIDO'
             END
             """
         )
@@ -5562,6 +5619,16 @@ def patch_processo(
             status_cca = _process_caixa_status(value)
             _validate_status_transition(field, processo.status_cca, status_cca)
             processo.status_cca = status_cca
+            if status_cca in {"APROVADO", "DAR_QV"}:
+                processo.status_credito = "APROVADO"
+                if processo.status_geral in {"NOVO", "PENDENCIADO"}:
+                    processo.status_geral = "EM_ANDAMENTO"
+            elif status_cca == "CONDICIONADO":
+                processo.status_credito = "PENDENCIADO"
+                processo.status_geral = "PENDENCIADO"
+            elif status_cca in {"REPROVADO", "BLOQUEADO"}:
+                processo.status_credito = "REPROVADO"
+                processo.status_geral = "REPROVADO"
         elif field == "status_agehab":
             status_agehab = _process_agehab_status(value)
             _validate_status_transition(field, processo.status_agehab, status_agehab)
@@ -5570,6 +5637,8 @@ def patch_processo(
             processo.status_sinal = _process_sinal_status(value)
         elif field == "status_fiador":
             processo.status_fiador = _process_fiador_status(value)
+        elif field == "recolha_fgts":
+            processo.recolha_fgts = _process_recolha_fgts_status(value, fallback=processo.recolha_fgts or "NAO_RECOLHIDO")
         elif field == "estagio_comercial":
             next_stage = _process_estagio_comercial(value, fallback="")
             if not next_stage:
@@ -5707,13 +5776,14 @@ def app_list_processos(
         status_cca_norm = _process_caixa_status(processo.status_cca)
         status_agehab_norm = _process_agehab_status(processo.status_agehab)
         etapa_repasse_norm = _process_etapa_repasse(getattr(processo, "etapa_repasse", None))
-        espelho_validado = status_cca_norm in {"CONFORME", "TRATANDO_PRODUTO", "AGENDADO"}
+        espelho_validado = status_cca_norm in {"APROVADO", "DAR_QV"}
         agehab_validado = status_agehab_norm == "VALIDADO_AGEHAB"
         contrato_ja_acionado = etapa_repasse_norm == "ASSINATURA_AUTORIZADA" or status_cca_norm in {"ASSINATURA_CAIXA", "FINALIZADO"}
         aviso_gerar_contrato_agehab = (
             not sem_documento_enviado
             and espelho_validado
             and agehab_validado
+            and _process_estagio_comercial(getattr(processo, "estagio_comercial", None)) == "VENDA_FINALIZADA"
             and not contrato_ja_acionado
         )
 
@@ -5733,10 +5803,11 @@ def app_list_processos(
                 imobiliaria=getattr(cliente, 'imobiliaria', None),
                 status_credito=processo.status_credito,
                 status_geral=processo.status_geral,
-                status_cca=processo.status_cca,
-                status_agehab=processo.status_agehab,
+                status_cca=status_cca_norm,
+                status_agehab=status_agehab_norm,
                 status_sinal=processo.status_sinal,
                 valor_sinal=float(processo.valor_sinal) if getattr(processo, "valor_sinal", None) is not None else None,
+                recolha_fgts=_process_recolha_fgts_status(getattr(processo, "recolha_fgts", None)),
                 status_fiador=processo.status_fiador,
                 estagio_comercial=_process_estagio_comercial(processo.estagio_comercial),
                 etapa_repasse=_process_etapa_repasse(processo.etapa_repasse),
@@ -5899,6 +5970,122 @@ def app_patch_cca_analise(
             )
 
     changes = payload.model_dump(exclude_unset=True)
+    if "status_cca" in changes:
+        next_status_cca = _process_caixa_status(changes.get("status_cca"), fallback=processo.status_cca or "ANALISE_CREDITO")
+        old_status_cca = processo.status_cca
+        _validate_status_transition("status_cca", old_status_cca, next_status_cca)
+        if old_status_cca != next_status_cca:
+            processo.status_cca = next_status_cca
+            _record_processo_event(
+                db,
+                processo_id=processo.id,
+                actor_username=actor_username,
+                actor_role=actor_role,
+                event_type="STATUS_CHANGE",
+                field_name="status_cca",
+                old_value=old_status_cca,
+                new_value=next_status_cca,
+                details="decisao_cca",
+            )
+
+            # Regra de fluxo profissional: resposta da CCA sincroniza credito/geral.
+            if next_status_cca in {"APROVADO", "DAR_QV"}:
+                if processo.status_credito != "APROVADO":
+                    _record_processo_event(
+                        db,
+                        processo_id=processo.id,
+                        actor_username=actor_username,
+                        actor_role=actor_role,
+                        event_type="STATUS_CHANGE",
+                        field_name="status_credito",
+                        old_value=processo.status_credito,
+                        new_value="APROVADO",
+                        details="sincronizado_status_cca",
+                    )
+                    processo.status_credito = "APROVADO"
+                if processo.status_geral in {"NOVO", "PENDENCIADO"}:
+                    _record_processo_event(
+                        db,
+                        processo_id=processo.id,
+                        actor_username=actor_username,
+                        actor_role=actor_role,
+                        event_type="STATUS_CHANGE",
+                        field_name="status_geral",
+                        old_value=processo.status_geral,
+                        new_value="EM_ANDAMENTO",
+                        details="sincronizado_status_cca",
+                    )
+                    processo.status_geral = "EM_ANDAMENTO"
+            elif next_status_cca == "CONDICIONADO":
+                if processo.status_credito != "PENDENCIADO":
+                    _record_processo_event(
+                        db,
+                        processo_id=processo.id,
+                        actor_username=actor_username,
+                        actor_role=actor_role,
+                        event_type="STATUS_CHANGE",
+                        field_name="status_credito",
+                        old_value=processo.status_credito,
+                        new_value="PENDENCIADO",
+                        details="sincronizado_status_cca",
+                    )
+                    processo.status_credito = "PENDENCIADO"
+                if processo.status_geral != "PENDENCIADO":
+                    _record_processo_event(
+                        db,
+                        processo_id=processo.id,
+                        actor_username=actor_username,
+                        actor_role=actor_role,
+                        event_type="STATUS_CHANGE",
+                        field_name="status_geral",
+                        old_value=processo.status_geral,
+                        new_value="PENDENCIADO",
+                        details="sincronizado_status_cca",
+                    )
+                    processo.status_geral = "PENDENCIADO"
+            elif next_status_cca in {"REPROVADO", "BLOQUEADO"}:
+                if processo.status_credito != "REPROVADO":
+                    _record_processo_event(
+                        db,
+                        processo_id=processo.id,
+                        actor_username=actor_username,
+                        actor_role=actor_role,
+                        event_type="STATUS_CHANGE",
+                        field_name="status_credito",
+                        old_value=processo.status_credito,
+                        new_value="REPROVADO",
+                        details="sincronizado_status_cca",
+                    )
+                    processo.status_credito = "REPROVADO"
+                if processo.status_geral != "REPROVADO":
+                    _record_processo_event(
+                        db,
+                        processo_id=processo.id,
+                        actor_username=actor_username,
+                        actor_role=actor_role,
+                        event_type="STATUS_CHANGE",
+                        field_name="status_geral",
+                        old_value=processo.status_geral,
+                        new_value="REPROVADO",
+                        details="sincronizado_status_cca",
+                    )
+                    processo.status_geral = "REPROVADO"
+
+    if "recolha_fgts" in changes:
+        old_fgts = getattr(processo, "recolha_fgts", None)
+        processo.recolha_fgts = _process_recolha_fgts_status(changes.get("recolha_fgts"), fallback=old_fgts or "NAO_RECOLHIDO")
+        if old_fgts != processo.recolha_fgts:
+            _record_processo_event(
+                db,
+                processo_id=processo.id,
+                actor_username=actor_username,
+                actor_role=actor_role,
+                event_type="PROCESSO_UPDATE",
+                field_name="recolha_fgts",
+                old_value=old_fgts,
+                new_value=processo.recolha_fgts,
+            )
+
     labels = {
         "renda_bruta": "Renda bruta",
         "renda_liquida": "Renda liquida",
@@ -5942,6 +6129,12 @@ def app_patch_cca_analise(
             new_value=auto_cheque,
             details=f"regra_automatica_empreendimento={cliente.obra or '-'}",
         )
+
+    _refresh_sla_fixed_markers(processo, _utcnow())
+    _apply_sla_rules(
+        processo,
+        has_enviado_docs=_process_has_enviado_docs(db, processo.id),
+    )
 
     _record_system_log(
         db,
@@ -6263,13 +6456,14 @@ def app_gestor_dashboard(
             "estagio_comercial": estagio,
             "etapa_repasse": etapa_repasse,
             "fila_atual": fila_atual,
-            "status_geral": processo.status_geral,
-            "status_credito": processo.status_credito,
-            "status_cca": processo.status_cca,
-            "status_agehab": processo.status_agehab,
-            "status_sinal": processo.status_sinal,
+            "status_geral": _geral_status(getattr(processo, "status_geral", None)),
+            "status_credito": _credit_status(getattr(processo, "status_credito", None)),
+            "status_cca": _process_caixa_status(getattr(processo, "status_cca", None)),
+            "status_agehab": _process_agehab_status(getattr(processo, "status_agehab", None)),
+            "status_sinal": _process_sinal_status(getattr(processo, "status_sinal", None)),
             "valor_sinal": float(processo.valor_sinal) if getattr(processo, "valor_sinal", None) is not None else None,
-            "status_fiador": processo.status_fiador,
+            "status_fiador": _process_fiador_status(getattr(processo, "status_fiador", None)),
+            "recolha_fgts": _process_recolha_fgts_status(getattr(processo, "recolha_fgts", None)),
             "dias_em_aberto": dias_em_aberto,
             "data_cadastro_origem": data_referencia.isoformat() if data_referencia else None,
             "pendencias_documentos": pendencias_docs,
@@ -6876,6 +7070,9 @@ def app_get_processo_full(
     processo_out.sla_cca_dias = processo_out.sla_cca_horas // 24
     processo_out.sla_owner = _normalize_sla_owner(processo.sla_owner)
     processo_out.sla_active_since = _as_utc(processo.sla_active_since)
+    processo_out.status_cca = _process_caixa_status(processo.status_cca)
+    processo_out.status_agehab = _process_agehab_status(processo.status_agehab)
+    processo_out.recolha_fgts = _process_recolha_fgts_status(getattr(processo, "recolha_fgts", None))
     processo_out.estagio_comercial = _process_estagio_comercial(processo.estagio_comercial)
     processo_out.etapa_repasse = _process_etapa_repasse(processo.etapa_repasse)
     processo_out.fila_atual = _fila_atual_from_processo(processo)
@@ -7073,6 +7270,18 @@ def app_patch_processo(
             _validate_status_transition(field, processo.status_cca, status_cca)
             old_value = processo.status_cca
             processo.status_cca = status_cca
+            if status_cca in {"APROVADO", "DAR_QV"}:
+                processo.status_credito = "APROVADO"
+                if processo.status_geral in {"NOVO", "PENDENCIADO"}:
+                    processo.status_geral = "EM_ANDAMENTO"
+            elif status_cca == "CONDICIONADO":
+                processo.status_credito = "PENDENCIADO"
+                processo.status_geral = "PENDENCIADO"
+                if old_sla_owner == SLA_OWNER_CCA:
+                    sla_trigger = "cca_pendenciou"
+            elif status_cca in {"REPROVADO", "BLOQUEADO"}:
+                processo.status_credito = "REPROVADO"
+                processo.status_geral = "REPROVADO"
             if status_cca == "ASSINATURA_CAIXA":
                 assinatura_caixa_requested = True
             if old_sla_owner == SLA_OWNER_CCA and status_cca == "PENDENTE_CCA":
@@ -7181,6 +7390,20 @@ def app_patch_processo(
                     old_value=old_value,
                     new_value=status_fiador,
                 )
+        elif field == "recolha_fgts":
+            old_value = getattr(processo, "recolha_fgts", None)
+            processo.recolha_fgts = _process_recolha_fgts_status(value, fallback=old_value or "NAO_RECOLHIDO")
+            if old_value != processo.recolha_fgts:
+                _record_processo_event(
+                    db,
+                    processo_id=processo.id,
+                    actor_username=actor_username,
+                    actor_role=actor_role,
+                    event_type="PROCESSO_UPDATE",
+                    field_name=field,
+                    old_value=old_value,
+                    new_value=processo.recolha_fgts,
+                )
         elif field == "nao_contar_mes":
             old_value = _is_nao_contar_mes_active(processo, _utcnow())
             _set_nao_contar_mes_period(processo, bool(value), _utcnow())
@@ -7255,7 +7478,7 @@ def app_patch_processo(
                     status_code=422,
                     detail=(
                         "Nao pode avancar para ASSINATURA_AUTORIZADA. "
-                        "Exige estagio VENDA_FINALIZADA, sinal/fiador regular, Agehab validada e Caixa em CONFORME ou acima."
+                        "Exige estagio VENDA_FINALIZADA, sinal/fiador regular, Agehab validada e Caixa aprovado."
                     ),
                 )
             old_value = _process_etapa_repasse(processo.etapa_repasse)
@@ -7320,7 +7543,7 @@ def app_patch_processo(
                 status_code=422,
                 detail=(
                     "Nao pode avancar para ASSINATURA_CAIXA. "
-                    "Exige VENDA_FINALIZADA, sinal/fiador regular, Agehab validada e Caixa em CONFORME ou acima."
+                    "Exige VENDA_FINALIZADA, sinal/fiador regular, Agehab validada e Caixa aprovado."
                 ),
             )
         old_etapa = _process_etapa_repasse(processo.etapa_repasse)
@@ -7398,6 +7621,9 @@ def app_patch_processo(
     processo_out.sla_cca_dias = processo_out.sla_cca_horas // 24
     processo_out.sla_owner = _normalize_sla_owner(processo.sla_owner)
     processo_out.sla_active_since = _as_utc(processo.sla_active_since)
+    processo_out.status_cca = _process_caixa_status(processo.status_cca)
+    processo_out.status_agehab = _process_agehab_status(processo.status_agehab)
+    processo_out.recolha_fgts = _process_recolha_fgts_status(getattr(processo, "recolha_fgts", None))
     processo_out.estagio_comercial = _process_estagio_comercial(processo.estagio_comercial)
     processo_out.etapa_repasse = _process_etapa_repasse(processo.etapa_repasse)
     processo_out.fila_atual = _fila_atual_from_processo(processo)

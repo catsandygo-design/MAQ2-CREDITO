@@ -1504,16 +1504,13 @@ DIVORCIADO: Certidão averbada.</td>
           <div class="fg">
             <label for="status-caixa">Status Caixa</label>
             <select id="status-caixa">
-              <option value="aguardando">Aguardando</option>
-              <option value="analise_credito">Analise Credito</option>
-              <option value="pendente_credito">Pendente Credito</option>
-              <option value="analise_cca">Analise CCA</option>
-              <option value="pendente_cca">Pendente CCA</option>
-              <option value="aguardando_conformidade">Aguardando Conformidade</option>
-              <option value="conforme">Conforme</option>
-              <option value="tratando_produto">Tratando Produto</option>
-              <option value="agendado">Agendado</option>
-              <option value="assinatura_caixa">Finalizado</option>
+              <option value="analise_cca">Em Analise CCA</option>
+              <option value="aprovado">Aprovado</option>
+              <option value="condicionado">Condicionado</option>
+              <option value="bloqueado">Bloqueado</option>
+              <option value="reprovado">Reprovado</option>
+              <option value="dar_qv">Dar QV</option>
+              <option value="assinatura_caixa">Assinatura Caixa</option>
             </select>
           </div>
 
@@ -1815,16 +1812,22 @@ DIVORCIADO: Certidão averbada.</td>
   // =========================
   const STATUS_LABELS = {
     caixa: {
-      aguardando: "Aguardando",
-      analise_credito: "Analise Credito",
-      pendente_credito: "Pendente Credito",
-      analise_cca: "Analise CCA",
-      pendente_cca: "Pendente CCA",
-      aguardando_conformidade: "Aguardando Conformidade",
-      conforme: "Conforme",
-      tratando_produto: "Tratando Produto",
-      agendado: "Agendado",
-      assinatura_caixa: "Finalizado",
+      aguardando: "Em Analise CCA",
+      analise_credito: "Em Analise CCA",
+      analise_cca: "Em Analise CCA",
+      pendente_credito: "Condicionado",
+      pendente_cca: "Condicionado",
+      aguardando_conformidade: "Condicionado",
+      tratando_produto: "Condicionado",
+      condicionado: "Condicionado",
+      conforme: "Aprovado",
+      aprovado: "Aprovado",
+      agendado: "Dar QV",
+      dar_qv: "Dar QV",
+      reprovado: "Reprovado",
+      bloqueado: "Bloqueado",
+      assinatura_caixa: "Assinatura Caixa",
+      finalizado: "Assinatura Caixa",
     },
     agehab: {
       aguardando: "Aguardando",
@@ -1850,8 +1853,9 @@ DIVORCIADO: Certidão averbada.</td>
 
   function pillClassFromStatus(v){
     const status = toLower(v);
-    if (["aprovado", "conforme", "validado_agehab", "pago", "finalizado", "assinatura_caixa"].includes(status)) return "ok";
-    if (["pendenciado", "reprovado", "cancelado", "distrato", "pendente_credito", "pendente_cca", "pendente_agehab", "pendente"].includes(status)) return "bad";
+    if (["aprovado", "dar_qv", "conforme", "validado_agehab", "pago", "finalizado", "assinatura_caixa"].includes(status)) return "ok";
+    if (["pendenciado", "reprovado", "bloqueado", "cancelado", "distrato", "pendente_credito", "pendente_cca", "pendente_agehab", "pendente"].includes(status)) return "bad";
+    if (["condicionado", "aguardando_conformidade", "tratando_produto"].includes(status)) return "warn";
     if (["novo", "nao_tem"].includes(status)) return "neutral";
     return "warn";
   }
@@ -2495,16 +2499,14 @@ DIVORCIADO: Certidão averbada.</td>
 
     function backendFromUiCaixa(value) {
       const v = norm(value);
-      if (v === "aguardando") return "ANALISE_CREDITO";
-      if (v === "pendente_credito") return "PENDENTE_CREDITO";
-      if (v === "analise_cca") return "ANALISE_CCA";
-      if (v === "pendente_cca") return "PENDENTE_CCA";
-      if (v === "aguardando_conformidade") return "AGUARDANDO_CONFORMIDADE";
-      if (v === "conforme") return "CONFORME";
-      if (v === "tratando_produto") return "TRATANDO_PRODUTO";
-      if (v === "agendado") return "AGENDADO";
+      if (v === "aguardando" || v === "analise_credito" || v === "analise_cca") return "ANALISE_CCA";
+      if (v === "aprovado" || v === "conforme") return "APROVADO";
+      if (v === "condicionado" || v === "pendente_credito" || v === "pendente_cca" || v === "aguardando_conformidade" || v === "tratando_produto") return "CONDICIONADO";
+      if (v === "bloqueado") return "BLOQUEADO";
+      if (v === "reprovado") return "REPROVADO";
+      if (v === "dar_qv" || v === "agendado") return "DAR_QV";
       if (v === "assinatura_caixa") return "ASSINATURA_CAIXA";
-      return "ANALISE_CREDITO";
+      return "ANALISE_CCA";
     }
 
     function backendFromUiAgehab(value) {
@@ -2535,16 +2537,14 @@ DIVORCIADO: Certidão averbada.</td>
 
     function uiFromBackendCaixa(value) {
       const v = norm(value);
-      if (v === "analise_credito") return "aguardando";
-      if (v === "pendente_credito" || v === "pendente") return "pendente_credito";
-      if (v === "analise_cca") return "analise_cca";
-      if (v === "pendente_cca") return "pendente_cca";
-      if (v === "aguardando_conformidade") return "aguardando_conformidade";
-      if (v === "conforme" || v === "aprovado") return "conforme";
-      if (v === "tratando_produto") return "tratando_produto";
-      if (v === "agendado") return "agendado";
+      if (v === "analise_credito" || v === "analise_cca") return "analise_cca";
+      if (v === "aprovado" || v === "conforme") return "aprovado";
+      if (v === "condicionado" || v === "pendente_credito" || v === "pendente_cca" || v === "pendente" || v === "aguardando_conformidade" || v === "tratando_produto") return "condicionado";
+      if (v === "bloqueado") return "bloqueado";
+      if (v === "reprovado") return "reprovado";
+      if (v === "dar_qv" || v === "agendado") return "dar_qv";
       if (v === "assinatura_caixa" || v === "finalizado") return "assinatura_caixa";
-      return "aguardando";
+      return "analise_cca";
     }
 
     function uiFromBackendAgehab(value) {

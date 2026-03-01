@@ -782,14 +782,19 @@
         cancelado: "Cancelado",
       },
       caixa: {
-        analise_credito: "Analise Credito",
-        pendente_credito: "Pendente Credito",
-        analise_cca: "Analise CCA",
-        pendente_cca: "Pendente CCA",
-        aguardando_conformidade: "Aguardando Conformidade",
-        conforme: "Conforme",
-        tratando_produto: "Tratando Produto",
-        agendado: "Agendado",
+        analise_credito: "Em Analise CCA",
+        analise_cca: "Em Analise CCA",
+        pendente_credito: "Condicionado",
+        pendente_cca: "Condicionado",
+        aguardando_conformidade: "Condicionado",
+        tratando_produto: "Condicionado",
+        condicionado: "Condicionado",
+        conforme: "Aprovado",
+        aprovado: "Aprovado",
+        agendado: "Dar QV",
+        dar_qv: "Dar QV",
+        reprovado: "Reprovado",
+        bloqueado: "Bloqueado",
         assinatura_caixa: "Assinatura Caixa",
       },
       agehab: {
@@ -826,8 +831,9 @@
 
     function statusClass(status){
       const s = statusFromBackend(status);
-      if (["aprovado", "conforme", "validado_agehab"].includes(s)) return "ok";
-      if (["pendenciado", "reprovado", "cancelado", "distrato", "pendente_credito", "pendente_cca", "pendente_agehab", "pendente"].includes(s)) return "bad";
+      if (["aprovado", "dar_qv", "conforme", "validado_agehab"].includes(s)) return "ok";
+      if (["pendenciado", "reprovado", "bloqueado", "cancelado", "distrato", "pendente_credito", "pendente_cca", "pendente_agehab", "pendente"].includes(s)) return "bad";
+      if (["condicionado", "aguardando_conformidade", "tratando_produto"].includes(s)) return "warn";
       if (["novo", "nao_tem"].includes(s)) return "neutral";
       return "warn";
     }

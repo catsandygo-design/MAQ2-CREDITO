@@ -252,14 +252,12 @@
           <label for="fStatusCca">Status CCA</label>
           <select id="fStatusCca">
             <option value="">Todos</option>
-            <option value="ANALISE_CREDITO">Analise credito</option>
-            <option value="PENDENTE_CREDITO">Pendente credito</option>
             <option value="ANALISE_CCA">Analise CCA</option>
-            <option value="PENDENTE_CCA">Pendente CCA</option>
-            <option value="AGUARDANDO_CONFORMIDADE">Aguardando conformidade</option>
-            <option value="CONFORME">Conforme</option>
-            <option value="TRATANDO_PRODUTO">Tratando produto</option>
-            <option value="AGENDADO">Agendado</option>
+            <option value="APROVADO">Aprovado</option>
+            <option value="REPROVADO">Reprovado</option>
+            <option value="CONDICIONADO">Condicionado</option>
+            <option value="BLOQUEADO">Bloqueado</option>
+            <option value="DAR_QV">Dar QV</option>
             <option value="ASSINATURA_CAIXA">Assinatura caixa</option>
             <option value="FINALIZADO">Finalizado</option>
           </select>
@@ -289,6 +287,8 @@
               <th style="width:22%">Cliente / Dados pessoais</th>
               <th style="width:10%">Estagio</th>
               <th style="width:10%">Docs</th>
+              <th style="width:10%">Decisao CCA</th>
+              <th style="width:10%">Recolha FGTS</th>
               <th>Parcela</th>
               <th>Renda bruta</th>
               <th>Renda liquida</th>
@@ -311,7 +311,7 @@
     const API_PATCH = "/app/api/cca/analise";
     const REFRESH_SECONDS = 40;
 
-    const FIELD_ORDER = [
+    const CURRENCY_FIELDS = [
       "valor_parcela",
       "renda_bruta",
       "renda_liquida",
@@ -319,6 +319,22 @@
       "valor_avaliacao",
       "valor_financiamento",
       "valor_subsidio",
+    ];
+    const CCA_STATUS_OPTIONS = [
+      "ANALISE_CCA",
+      "APROVADO",
+      "REPROVADO",
+      "CONDICIONADO",
+      "BLOQUEADO",
+      "DAR_QV",
+      "ASSINATURA_CAIXA",
+      "FINALIZADO",
+    ];
+    const RECOLHA_FGTS_OPTIONS = [
+      "OK",
+      "NAO_RECOLHIDO",
+      "VALIDADO_PELO_BANCO",
+      "RECOLHENDO",
     ];
 
     let rows = [];
@@ -375,8 +391,9 @@
 
     function stageBadgeClass(item){
       const status = normalizeText(item.status_cca);
-      if (status.includes("pend")) return "bad";
-      if (status.includes("conforme") || status.includes("finalizado") || status.includes("assinatura")) return "ok";
+      if (status.includes("aprovado") || status.includes("dar_qv") || status.includes("conforme") || status.includes("finalizado") || status.includes("assinatura")) return "ok";
+      if (status.includes("reprovado") || status.includes("bloqueado")) return "bad";
+      if (status.includes("condicionado") || status.includes("pend")) return "warn";
       return "warn";
     }
 
@@ -436,10 +453,16 @@
       return `<input class="rowInput ${readonly ? "readonly" : ""}" data-field="${esc(field)}" value="${esc(value ?? "")}" ${readonly ? "readonly" : ""} />`;
     }
 
+    function rowSelect(field, selected, options){
+      const current = String(selected || "").trim().toUpperCase();
+      const opts = options.map((option) => `<option value="${esc(option)}" ${current === option ? "selected" : ""}>${esc(option.replaceAll("_"," "))}</option>`).join("");
+      return `<select class="rowInput" data-field="${esc(field)}">${opts}</select>`;
+    }
+
     function renderTable(list){
       const tbody = $("tbody");
       if (!list.length){
-        tbody.innerHTML = `<tr><td colspan="12" style="padding:14px;color:#64748b;">Nenhum processo encontrado para os filtros atuais.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="14" style="padding:14px;color:#64748b;">Nenhum processo encontrado para os filtros atuais.</td></tr>`;
         return;
       }
 
@@ -452,6 +475,8 @@
             <div class="meta"><strong>Comercial:</strong> ${esc(item.estagio_comercial || "-")}</div>
           </td>
           <td>${docsBadge(item)}</td>
+          <td>${rowSelect("status_cca", item.status_cca, CCA_STATUS_OPTIONS)}</td>
+          <td>${rowSelect("recolha_fgts", item.recolha_fgts, RECOLHA_FGTS_OPTIONS)}</td>
           <td>${rowInput("valor_parcela", item.valor_parcela)}</td>
           <td>${rowInput("renda_bruta", item.renda_bruta)}</td>
           <td>${rowInput("renda_liquida", item.renda_liquida)}</td>
@@ -511,7 +536,7 @@
         renderSummary(rows);
         renderTable(rows);
       } catch (error){
-        $("tbody").innerHTML = `<tr><td colspan="12" style="padding:14px;color:#991b1b;">Erro ao carregar: ${esc(error.message)}</td></tr>`;
+        $("tbody").innerHTML = `<tr><td colspan="14" style="padding:14px;color:#991b1b;">Erro ao carregar: ${esc(error.message)}</td></tr>`;
       } finally {
         loading = false;
       }
@@ -519,7 +544,7 @@
 
     function collectPayload(tr){
       const payload = {};
-      for (const field of FIELD_ORDER){
+      for (const field of CURRENCY_FIELDS){
         const input = tr.querySelector(`input[data-field="${field}"]`);
         if (!input) continue;
         const parsed = parseMoneyInput(input.value);
@@ -528,6 +553,10 @@
         }
         payload[field] = parsed;
       }
+      const statusSelect = tr.querySelector('select[data-field="status_cca"]');
+      if (statusSelect) payload.status_cca = String(statusSelect.value || "").trim().toUpperCase();
+      const fgtsSelect = tr.querySelector('select[data-field="recolha_fgts"]');
+      if (fgtsSelect) payload.recolha_fgts = String(fgtsSelect.value || "").trim().toUpperCase();
       return payload;
     }
 

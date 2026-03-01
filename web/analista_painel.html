@@ -1147,6 +1147,11 @@
       pendente_credito: "Pendente Credito",
       analise_cca: "Analise CCA",
       pendente_cca: "Pendente CCA",
+      aprovado: "Aprovado",
+      reprovado: "Reprovado",
+      condicionado: "Condicionado",
+      bloqueado: "Bloqueado",
+      dar_qv: "Dar QV",
       aguardando_conformidade: "Aguardando Conformidade",
       conforme: "Conforme",
       tratando_produto: "Tratando Produto",
@@ -1226,8 +1231,9 @@
   function classForStatus(value){
     const v = statusFromBackend(value);
     if (!v || v === "-") return "neutral";
-    if (["assinatura_autorizada", "aprovado", "conforme", "validado_agehab", "pago", "finalizado", "assinatura_caixa"].includes(v)) return "ok";
-    if (["pendenciado", "reprovado", "cancelado", "distrato", "pendente_credito", "pendente_cca", "pendente_agehab", "pendente"].includes(v)) return "bad";
+    if (["assinatura_autorizada", "aprovado", "dar_qv", "conforme", "validado_agehab", "pago", "finalizado", "assinatura_caixa"].includes(v)) return "ok";
+    if (["pendenciado", "reprovado", "bloqueado", "cancelado", "distrato", "pendente_credito", "pendente_cca", "pendente_agehab", "pendente"].includes(v)) return "bad";
+    if (["condicionado"].includes(v)) return "warn";
     if (["novo", "nao_tem", "reserva", "sem_repasse", "comercial", "repasse", "venda_finalizada", "nao_iniciado"].includes(v)) return "neutral";
     return "warn";
   }
@@ -1356,7 +1362,7 @@
   }
 
   function isPendingRow(row){
-    const pending = new Set(["pendenciado", "pendente_credito", "pendente_cca", "pendente_agehab", "pendente"]);
+    const pending = new Set(["pendenciado", "pendente_credito", "pendente_cca", "pendente_agehab", "pendente", "condicionado", "bloqueado"]);
     return (
       pending.has(statusFromBackend(row.geral)) ||
       pending.has(statusFromBackend(row.statusCaixa)) ||

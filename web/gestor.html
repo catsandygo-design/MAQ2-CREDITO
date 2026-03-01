@@ -1063,7 +1063,7 @@
                     <div class="kpi-icon">🔷</div>
                     <div class="kpi-label">Conformidade OK</div>
                     <div class="kpi-count" id="kpi-conformidade">—</div>
-                    <div class="kpi-sub">Status Caixa = CONFORME</div>
+                    <div class="kpi-sub">Status CCA = APROVADO</div>
                 </article>
 
                 <article class="kpi-card kpi-purple" id="card-env-conf" data-kpi="enviados_conformidade">
@@ -1537,7 +1537,9 @@
                 return "tone-bad";
             }
             if (
-                token === "CONFORME"
+                token === "APROVADO"
+                || token === "DAR_QV"
+                || token === "CONFORME"
                 || token === "VALIDADO_AGEHAB"
                 || token === "PAGO"
                 || token === "FINALIZADO"
