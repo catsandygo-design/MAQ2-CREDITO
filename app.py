@@ -6818,7 +6818,7 @@ def app_gestor_dashboard(
             "estagio_comercial": estagio,
             "etapa_repasse": etapa_repasse,
             "fila_atual": fila_atual,
-            "status_geral": _geral_status(getattr(processo, "status_geral", None)),
+            "status_geral": _process_geral_status(getattr(processo, "status_geral", None)),
             "status_credito": _credit_status(getattr(processo, "status_credito", None)),
             "status_cca": _process_caixa_status(getattr(processo, "status_cca", None)),
             "status_agehab": _process_agehab_status(getattr(processo, "status_agehab", None)),
