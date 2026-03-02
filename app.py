@@ -19,7 +19,7 @@ from urllib.parse import urlparse
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, create_engine, or_, text
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, and_, create_engine, or_, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
@@ -75,7 +75,7 @@ APP_GESTOR_USER = os.getenv("APP_GESTOR_USER", "gestor")
 APP_GESTOR_PASSWORD = os.getenv("APP_GESTOR_PASSWORD", "Troque#Gestor123")
 APP_GESTOR_CREDITO_USER = os.getenv("APP_GESTOR_CREDITO_USER", "")
 APP_GESTOR_CREDITO_PASSWORD = os.getenv("APP_GESTOR_CREDITO_PASSWORD", "")
-FORCE_RECOVER_ADMIN_ON_STARTUP = os.getenv("FORCE_RECOVER_ADMIN_ON_STARTUP", "true").lower() in {"1", "true", "yes"}
+FORCE_RECOVER_ADMIN_ON_STARTUP = os.getenv("FORCE_RECOVER_ADMIN_ON_STARTUP", "false").lower() in {"1", "true", "yes"}
 EMAIL_SMTP_HOST = (os.getenv("EMAIL_SMTP_HOST", "") or "").strip()
 try:
     EMAIL_SMTP_PORT = int(os.getenv("EMAIL_SMTP_PORT", "587"))
@@ -2171,6 +2171,8 @@ class ProcessoArquivadoOut(BaseModel):
     data_reserva_origem: Optional[date] = None
     data_cadastro_origem: Optional[date] = None
     created_at: Optional[datetime] = None
+    sla_analista_horas: Optional[int] = None
+    sla_corretor_horas: Optional[int] = None
 
 
 class ProcessoArquivadoListOut(BaseModel):
@@ -6504,6 +6506,8 @@ def app_list_processos_arquivados(
     obra: Optional[str] = Query(default=None),
     corretor: Optional[str] = Query(default=None),
     imobiliaria: Optional[str] = Query(default=None),
+    ano: Optional[int] = Query(default=None),
+    mes: Optional[int] = Query(default=None),
     limit: Optional[int] = Query(default=120, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ):
@@ -6514,6 +6518,34 @@ def app_list_processos_arquivados(
         .join(Cliente, Processo.cliente_id == Cliente.id)
         .filter(Processo.arquivado.is_(True))
     )
+
+    ano_periodo: Optional[int] = None
+    mes_periodo: Optional[int] = None
+    if ano is not None or mes is not None:
+        ano_periodo, mes_periodo = _normalize_meta_period(ano, mes)
+        periodo_inicio = date(ano_periodo, mes_periodo, 1)
+        if mes_periodo == 12:
+            proximo_mes = date(ano_periodo + 1, 1, 1)
+        else:
+            proximo_mes = date(ano_periodo, mes_periodo + 1, 1)
+        periodo_inicio_dt = datetime.combine(periodo_inicio, time.min, tzinfo=timezone.utc)
+        periodo_fim_exclusivo_dt = datetime.combine(proximo_mes, time.min, tzinfo=timezone.utc)
+
+        query = query.filter(
+            or_(
+                and_(
+                    Processo.arquivado_ref_ano == ano_periodo,
+                    Processo.arquivado_ref_mes == mes_periodo,
+                ),
+                and_(
+                    Processo.arquivado_ref_ano.is_(None),
+                    Processo.arquivado_ref_mes.is_(None),
+                    Processo.arquivado_em.is_not(None),
+                    Processo.arquivado_em >= periodo_inicio_dt,
+                    Processo.arquivado_em < periodo_fim_exclusivo_dt,
+                ),
+            )
+        )
 
     term = (q or "").strip().lower()
     obra_term = (obra or "").strip().lower()
@@ -6562,6 +6594,16 @@ def app_list_processos_arquivados(
             data_reserva_origem=getattr(cliente, "data_reserva_origem", None),
             data_cadastro_origem=getattr(cliente, "data_cadastro_origem", None),
             created_at=processo.created_at,
+            sla_analista_horas=(
+                int(round((int(getattr(processo, "sla_analista_seconds", 0) or 0)) / 3600))
+                if getattr(processo, "sla_analista_seconds", None) is not None
+                else None
+            ),
+            sla_corretor_horas=(
+                int(round((int(getattr(processo, "sla_corretor_seconds", 0) or 0)) / 3600))
+                if getattr(processo, "sla_corretor_seconds", None) is not None
+                else None
+            ),
         )
         for processo, cliente in rows
     ]

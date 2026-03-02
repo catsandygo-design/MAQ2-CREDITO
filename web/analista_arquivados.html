@@ -85,7 +85,7 @@
     }
     .filters{
       display:grid;
-      grid-template-columns:1.4fr 1fr 1fr 1fr auto auto;
+      grid-template-columns:1.25fr .9fr .9fr .9fr .72fr .72fr .72fr auto auto auto;
       gap:8px;
       padding:12px 14px;
       border-bottom:1px solid var(--border);
@@ -93,7 +93,7 @@
     }
     .field{display:flex;flex-direction:column;gap:5px}
     .field label{font-size:14px;color:var(--muted)}
-    input{
+    input, select{
       border:1px solid var(--border);
       border-radius:12px;
       padding:11px 12px;
@@ -102,6 +102,48 @@
       background:#fff;
       min-width:0;
     }
+    .meta-status{
+      font-size:13px;
+      color:var(--muted);
+      grid-column: 1 / -1;
+      margin-top:2px;
+    }
+    .insights{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      padding:10px 14px 12px;
+      border-bottom:1px solid var(--border);
+      background:linear-gradient(180deg,#f8fbff,#f3f8ff);
+    }
+    .kpi{
+      min-width:145px;
+      border:1px solid var(--border);
+      background:#fff;
+      border-radius:14px;
+      padding:8px 10px;
+      flex:1 1 150px;
+    }
+    .kpi .k{
+      font-size:12px;
+      color:var(--muted);
+    }
+    .kpi .v{
+      margin-top:2px;
+      font-size:21px;
+      font-weight:900;
+      line-height:1;
+      color:#0f172a;
+    }
+    .kpi .s{
+      margin-top:4px;
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.2;
+    }
+    .kpi.good .v{color:var(--ok)}
+    .kpi.warn .v{color:var(--warn)}
+    .kpi.bad .v{color:var(--bad)}
     .table-wrap{
       padding:0 14px 14px;
     }
@@ -162,8 +204,8 @@
       text-align:center;
     }
     .hidden{display:none !important}
-    @media (max-width:1300px){
-      .filters{grid-template-columns:1fr 1fr 1fr}
+    @media (max-width:1400px){
+      .filters{grid-template-columns:1fr 1fr 1fr 1fr}
     }
     @media (max-width:860px){
       body{padding:10px}
@@ -172,6 +214,8 @@
       .filters{grid-template-columns:1fr}
       .btn{width:100%;text-align:center}
       .actions{width:100%}
+      .insights{padding:10px}
+      .kpi{min-width:0}
     }
   </style>
 </head>
@@ -197,6 +241,10 @@
         <span class="chip">Processos ativos: <b id="kpiAtivos">0</b></span>
         <span class="chip">Processos arquivados: <b id="kpiArquivados">0</b></span>
         <span class="chip">Exibidos: <b id="kpiExibidos">0</b></span>
+        <span class="chip">Periodo: <b id="kpiPeriodo">-</b></span>
+        <span class="chip">Meta mensal: <b id="kpiMetaMensal">0</b></span>
+        <span class="chip">Realizado no periodo: <b id="kpiMetaRealizado">0</b></span>
+        <span class="chip">Falta para meta: <b id="kpiMetaFalta">0</b></span>
         <span class="chip">Auto refresh: <b id="refreshLabel">60s</b></span>
       </div>
 
@@ -217,9 +265,38 @@
           <label for="imobiliaria">Imobiliaria</label>
           <input id="imobiliaria" placeholder="Ex: equipe propria" />
         </div>
+        <div class="field">
+          <label for="mes">Mes</label>
+          <select id="mes">
+            <option value="1">Janeiro</option>
+            <option value="2">Fevereiro</option>
+            <option value="3">Marco</option>
+            <option value="4">Abril</option>
+            <option value="5">Maio</option>
+            <option value="6">Junho</option>
+            <option value="7">Julho</option>
+            <option value="8">Agosto</option>
+            <option value="9">Setembro</option>
+            <option value="10">Outubro</option>
+            <option value="11">Novembro</option>
+            <option value="12">Dezembro</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="ano">Ano</label>
+          <input id="ano" type="number" min="2000" max="2100" step="1" placeholder="2026" />
+        </div>
+        <div class="field">
+          <label for="metaMensal">Meta do mes</label>
+          <input id="metaMensal" type="number" min="0" step="1" placeholder="0" />
+        </div>
         <button class="btn primary" id="btnFiltrar" type="button">Filtrar</button>
         <button class="btn" id="btnLimpar" type="button">Limpar</button>
+        <button class="btn primary" id="btnSalvarMeta" type="button">Salvar meta</button>
+        <div class="meta-status" id="metaStatus">Meta por periodo fica salva por mes/ano.</div>
       </div>
+
+      <div class="insights" id="insights"></div>
 
       <div class="table-wrap">
         <div class="table-scroll">
@@ -257,9 +334,16 @@
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#39;");
     const norm = (v) => String(v || "").trim().toLowerCase();
+    const COMERCIAL_STAGES = new Set(["em_processo", "venda_finalizada"]);
+    const CREDITO_STAGES = new Set(["credito", "secretaria_vendas"]);
+    const REPASSE_STAGES = new Set(["assinatura_diretoria", "autorizacao_diretoria", "envio_sienge", "venda_finalizada"]);
+    const ASSINADOS_STATUS = new Set(["assinatura_caixa"]);
 
     let countdown = REFRESH_SECONDS;
     let timerId = 0;
+    let currentMetaSemanal = 0;
+    let currentMetaMensal = 0;
+    let lastTotalPeriodo = 0;
 
     function statusClass(v){
       const key = norm(v).replace(/\s+/g, "_");
@@ -280,6 +364,43 @@
       const d = new Date(value);
       if (Number.isNaN(d.getTime())) return "-";
       return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    }
+
+    function getDefaultPeriod(){
+      const now = new Date();
+      let ano = now.getFullYear();
+      let mes = now.getMonth(); // mes anterior (1-12)
+      if (mes === 0) {
+        mes = 12;
+        ano -= 1;
+      }
+      return { ano, mes };
+    }
+
+    function getPeriodBounds(ano, mes){
+      const mesNum = Math.max(1, Math.min(12, Number(mes || 1)));
+      const anoNum = Math.max(2000, Math.min(2100, Number(ano || new Date().getFullYear())));
+      const inicio = new Date(anoNum, mesNum - 1, 1, 0, 0, 0, 0);
+      const fim = new Date(anoNum, mesNum, 0, 23, 59, 59, 999);
+      return { ano: anoNum, mes: mesNum, inicio, fim };
+    }
+
+    function periodLabel(ano, mes){
+      const { inicio, fim } = getPeriodBounds(ano, mes);
+      return `${String(mes).padStart(2, "0")}/${ano} (${inicio.getDate()} a ${fim.getDate()})`;
+    }
+
+    function toDate(value){
+      if (!value) return null;
+      const d = new Date(value);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    function openDaysAtPeriodEnd(item, periodEnd){
+      const source = toDate(item.data_reserva_origem) || toDate(item.data_cadastro_origem) || toDate(item.created_at);
+      if (!source) return 0;
+      const diff = periodEnd.getTime() - source.getTime();
+      return Math.max(0, Math.floor(diff / 86400000));
     }
 
     function refreshCountdown(){
@@ -306,11 +427,15 @@
     }
 
     function readFilters(){
+      const mes = Number($("mes").value || 0);
+      const ano = Number($("ano").value || 0);
       return {
         q: $("q").value.trim(),
         obra: $("obra").value.trim(),
         corretor: $("corretor").value.trim(),
         imobiliaria: $("imobiliaria").value.trim(),
+        mes: Number.isFinite(mes) && mes >= 1 && mes <= 12 ? mes : getDefaultPeriod().mes,
+        ano: Number.isFinite(ano) && ano >= 2000 && ano <= 2100 ? ano : getDefaultPeriod().ano,
       };
     }
 
@@ -320,6 +445,8 @@
       if (filters.obra) params.set("obra", filters.obra);
       if (filters.corretor) params.set("corretor", filters.corretor);
       if (filters.imobiliaria) params.set("imobiliaria", filters.imobiliaria);
+      params.set("mes", String(filters.mes));
+      params.set("ano", String(filters.ano));
       params.set("limit", String(limit));
       params.set("offset", String(offset));
       return params.toString();
@@ -342,6 +469,93 @@
         total_processos_arquivados: Number(totals?.total_processos_arquivados || 0),
         itens: all,
       };
+    }
+
+    async function loadMetaPeriodo(ano, mes){
+      const query = new URLSearchParams({ ano: String(ano), mes: String(mes) }).toString();
+      const data = await api(`/gestor/meta-periodo?${query}`);
+      currentMetaSemanal = Number(data?.meta_semanal || 0);
+      currentMetaMensal = Number(data?.meta_mensal || 0);
+      $("metaMensal").value = String(currentMetaMensal);
+      return currentMetaMensal;
+    }
+
+    async function saveMetaPeriodo(){
+      const filters = readFilters();
+      const meta = Math.max(0, Number($("metaMensal").value || 0));
+      const payload = {
+        ano: filters.ano,
+        mes: filters.mes,
+        meta_mensal: meta,
+        meta_semanal: currentMetaSemanal,
+      };
+      $("metaStatus").textContent = "Salvando meta...";
+      const out = await api("/gestor/meta-periodo", {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+      currentMetaSemanal = Number(out?.meta_semanal || currentMetaSemanal);
+      currentMetaMensal = Number(out?.meta_mensal || meta);
+      $("metaMensal").value = String(currentMetaMensal);
+      renderMetaResumo(lastTotalPeriodo);
+      $("metaStatus").textContent = `Meta ${String(filters.mes).padStart(2, "0")}/${filters.ano} salva com sucesso.`;
+    }
+
+    function clsSla(horas){
+      const h = Number(horas || 0);
+      if (h >= 48) return "bad";
+      if (h >= 24) return "warn";
+      return "good";
+    }
+
+    function renderMetaResumo(realizado){
+      const real = Math.max(0, Number(realizado || 0));
+      const meta = Math.max(0, Number(currentMetaMensal || 0));
+      const falta = Math.max(0, meta - real);
+      $("kpiMetaMensal").textContent = String(meta);
+      $("kpiMetaRealizado").textContent = String(real);
+      $("kpiMetaFalta").textContent = String(falta);
+    }
+
+    function renderInsights(itens, ano, mes){
+      const { fim } = getPeriodBounds(ano, mes);
+      const count = (pred) => itens.reduce((acc, item) => acc + (pred(item) ? 1 : 0), 0);
+      const key = (value) => norm(value).replace(/\s+/g, "_");
+      const avg = (values) => values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : 0;
+
+      const total = itens.length;
+      const comercial = count((item) => COMERCIAL_STAGES.has(key(item.estagio_comercial)));
+      const credito = count((item) => CREDITO_STAGES.has(key(item.estagio_comercial)));
+      const repasse = count((item) => REPASSE_STAGES.has(key(item.estagio_comercial)));
+      const assinados = count((item) => ASSINADOS_STATUS.has(key(item.status_cca)));
+      const prioridadeAlta = count((item) => COMERCIAL_STAGES.has(key(item.estagio_comercial)) && openDaysAtPeriodEnd(item, fim) > 15);
+      const avisoAgehab = count((item) => {
+        const estagio = key(item.estagio_comercial);
+        const caixa = key(item.status_cca);
+        const agehab = key(item.status_agehab);
+        const repasseEtapa = key(item.etapa_repasse || "sem_repasse");
+        const espelhoValidado = caixa === "aprovado" || caixa === "dar_qv";
+        const agehabValidado = agehab === "validado_agehab";
+        const contratoJa = repasseEtapa === "assinatura_autorizada" || caixa === "assinatura_caixa" || caixa === "finalizado";
+        return estagio === "venda_finalizada" && espelhoValidado && agehabValidado && !contratoJa;
+      });
+      const avgSlaComercial = avg(itens.map((item) => Number(item.sla_corretor_horas || 0)));
+      const avgSlaCredito = avg(itens.map((item) => Number(item.sla_analista_horas || 0)));
+
+      $("insights").innerHTML = `
+        <div class="kpi"><div class="k">Total na fila</div><div class="v">${total}</div><div class="s">periodo filtrado</div></div>
+        <div class="kpi good"><div class="k">Comercial</div><div class="v">${comercial}</div><div class="s">Em Processo + Venda Finalizada</div></div>
+        <div class="kpi"><div class="k">Credito</div><div class="v">${credito}</div><div class="s">Credito + Secretaria de Vendas</div></div>
+        <div class="kpi warn"><div class="k">Repasse</div><div class="v">${repasse}</div><div class="s">Assinatura Diretoria + Aprovacao Diretoria + Envio Sienge + Venda Finalizada</div></div>
+        <div class="kpi good"><div class="k">Assinados</div><div class="v">${assinados}</div><div class="s">Status Caixa = Assinatura Caixa</div></div>
+        <div class="kpi bad"><div class="k">Prioridade alta</div><div class="v">${prioridadeAlta}</div><div class="s">comercial acima de 15 dias</div></div>
+        <div class="kpi warn"><div class="k">Aviso Agehab</div><div class="v">${avisoAgehab}</div><div class="s">espelho validado + agehab validado</div></div>
+        <div class="kpi ${clsSla(avgSlaComercial)}"><div class="k">SLA medio comercial</div><div class="v">${avgSlaComercial}h</div><div class="s">media do periodo filtrado</div></div>
+        <div class="kpi ${clsSla(avgSlaCredito)}"><div class="k">SLA medio credito</div><div class="v">${avgSlaCredito}h</div><div class="s">media do periodo filtrado</div></div>
+      `;
+
+      lastTotalPeriodo = total;
+      renderMetaResumo(total);
     }
 
     function renderRows(itens){
@@ -381,17 +595,27 @@
       }).join("");
     }
 
-    function renderTotals(data){
+    function renderTotals(data, filters){
       $("kpiClientes").textContent = String(data.total_clientes_cadastrados || 0);
       $("kpiAtivos").textContent = String(data.total_processos_ativos || 0);
       $("kpiArquivados").textContent = String(data.total_processos_arquivados || 0);
       $("kpiExibidos").textContent = String((data.itens || []).length);
+      $("kpiPeriodo").textContent = periodLabel(filters.ano, filters.mes);
     }
 
     async function loadAndRender(force = false){
       const filters = readFilters();
       const data = await loadArquivados(filters);
-      renderTotals(data);
+      renderTotals(data, filters);
+      try {
+        await loadMetaPeriodo(filters.ano, filters.mes);
+        $("metaStatus").textContent = "Meta por periodo fica salva por mes/ano.";
+      } catch (error) {
+        currentMetaMensal = 0;
+        $("metaMensal").value = "0";
+        $("metaStatus").textContent = `Falha ao carregar meta do periodo: ${error?.message || "erro desconhecido"}`;
+      }
+      renderInsights(data.itens || [], filters.ano, filters.mes);
       renderRows(data.itens || []);
       countdown = REFRESH_SECONDS;
       $("refreshLabel").textContent = `${countdown}s`;
@@ -408,14 +632,24 @@
       $("obra").value = "";
       $("corretor").value = "";
       $("imobiliaria").value = "";
+      $("metaStatus").textContent = "Meta por periodo fica salva por mes/ano.";
       loadAndRender(true).catch(() => null);
     });
-    ["q", "obra", "corretor", "imobiliaria"].forEach((id) => {
+    ["q", "obra", "corretor", "imobiliaria", "mes", "ano"].forEach((id) => {
       $(id).addEventListener("keydown", (event) => {
         if (event.key === "Enter") loadAndRender(true).catch(() => null);
       });
     });
+    $("btnSalvarMeta").addEventListener("click", () => {
+      saveMetaPeriodo().catch((error) => {
+        $("metaStatus").textContent = `Falha ao salvar meta: ${error?.message || "erro desconhecido"}`;
+      });
+    });
     $("btnSair").addEventListener("click", logout);
+
+    const initialPeriod = getDefaultPeriod();
+    $("mes").value = String(initialPeriod.mes);
+    $("ano").value = String(initialPeriod.ano);
 
     loadAndRender(true).catch(() => null);
     timerId = window.setInterval(refreshCountdown, 1000);
