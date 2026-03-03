@@ -18,6 +18,7 @@ from urllib.parse import urlparse
 
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, and_, create_engine, or_, text
 from sqlalchemy.dialects.postgresql import UUID
@@ -120,6 +121,8 @@ RUNTIME_SCHEMA_REVISION = "2026-03-01-cca-analise-financeira-v2"
 PENDENCIA_INFO_MIN_LENGTH = 0
 PROCESS_LIST_CACHE: dict[str, dict[str, Any]] = {}
 SEED_USERS_READY = False
+CREDITO_PLANEJAMENTO_TIPOS = {"tarefa", "agendamento", "entrega", "urgente", "anotacao"}
+CREDITO_PLANEJAMENTO_STATUS = {"pendente", "em_andamento", "concluido", "atrasado"}
 
 
 def _normalize_username(value: Optional[str]) -> str:
@@ -1631,6 +1634,31 @@ class UnidadeDisponivel(Base):
     )
 
 
+class CreditoPlanejamentoItem(Base):
+    __tablename__ = "credito_planejamento_itens"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tipo: Mapped[str] = mapped_column(String(20), nullable=False, default="tarefa", index=True)
+    titulo: Mapped[str] = mapped_column(String(180), nullable=False)
+    descricao: Mapped[Optional[str]] = mapped_column(Text)
+    responsavel: Mapped[Optional[str]] = mapped_column(String(120), index=True)
+    data_referencia: Mapped[Optional[date]] = mapped_column(Date, index=True)
+    hora_inicio: Mapped[Optional[str]] = mapped_column(String(5))
+    hora_fim: Mapped[Optional[str]] = mapped_column(String(5))
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pendente", index=True)
+    progresso: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    urgente: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    created_by_username: Mapped[Optional[str]] = mapped_column(String(120))
+    updated_by_username: Mapped[Optional[str]] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        index=True,
+    )
+
+
 class ClienteCreate(BaseModel):
     nome: str
     corretor: Optional[str] = None
@@ -2238,6 +2266,73 @@ class GestorMetaPeriodoOut(BaseModel):
     fonte_semanal: str
 
 
+class CreditoPlanejamentoItemCreate(BaseModel):
+    tipo: str = "tarefa"
+    titulo: str
+    descricao: Optional[str] = None
+    responsavel: Optional[str] = None
+    data_referencia: Optional[date] = None
+    hora_inicio: Optional[str] = None
+    hora_fim: Optional[str] = None
+    status: Optional[str] = "pendente"
+    progresso: Optional[int] = 0
+    urgente: Optional[bool] = False
+
+
+class CreditoPlanejamentoItemUpdate(BaseModel):
+    tipo: Optional[str] = None
+    titulo: Optional[str] = None
+    descricao: Optional[str] = None
+    responsavel: Optional[str] = None
+    data_referencia: Optional[date] = None
+    hora_inicio: Optional[str] = None
+    hora_fim: Optional[str] = None
+    status: Optional[str] = None
+    progresso: Optional[int] = None
+    urgente: Optional[bool] = None
+
+
+class CreditoPlanejamentoItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    tipo: str
+    titulo: str
+    descricao: Optional[str] = None
+    responsavel: Optional[str] = None
+    data_referencia: Optional[date] = None
+    hora_inicio: Optional[str] = None
+    hora_fim: Optional[str] = None
+    status: str
+    progresso: int
+    urgente: bool
+    created_by_username: Optional[str] = None
+    updated_by_username: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class CreditoPlanejamentoEvolucaoOut(BaseModel):
+    responsavel: str
+    total: int
+    concluidas: int
+    pendentes: int
+    progresso_medio: int
+    taxa_conclusao: float
+
+
+class CreditoPlanejamentoDashboardOut(BaseModel):
+    referencia: date
+    pendentes_total: int
+    tarefas_dia: list[CreditoPlanejamentoItemOut]
+    agendamentos_dia: list[CreditoPlanejamentoItemOut]
+    entregas_dia: list[CreditoPlanejamentoItemOut]
+    urgentes: list[CreditoPlanejamentoItemOut]
+    evolucao_time: list[CreditoPlanejamentoEvolucaoOut]
+    anotacoes: list[CreditoPlanejamentoItemOut]
+    itens: list[CreditoPlanejamentoItemOut]
+
+
 class ProcessoFullOut(BaseModel):
     processo: ProcessoOut
     cliente: ClienteOut
@@ -2254,6 +2349,101 @@ class DocumentoBulkItem(BaseModel):
 
 class DocumentoBulkUpsert(BaseModel):
     documentos: list[DocumentoBulkItem]
+
+
+def _normalize_credito_planejamento_text(value: Optional[str], *, max_len: int) -> Optional[str]:
+    cleaned = " ".join(str(value or "").strip().split())
+    if not cleaned:
+        return None
+    return cleaned[:max_len]
+
+
+def _credito_planejamento_tipo(value: Optional[str], *, fallback: str = "tarefa") -> str:
+    raw = (
+        str(value or "")
+        .strip()
+        .lower()
+        .replace("-", "_")
+        .replace(" ", "_")
+    )
+    aliases = {
+        "agenda": "agendamento",
+        "agendamentos": "agendamento",
+        "tarefas": "tarefa",
+        "task": "tarefa",
+        "tasks": "tarefa",
+        "entregas": "entrega",
+        "urgencias": "urgente",
+        "urgencia": "urgente",
+        "nota": "anotacao",
+        "notas": "anotacao",
+        "anotacoes": "anotacao",
+    }
+    value_norm = aliases.get(raw, raw)
+    if value_norm in CREDITO_PLANEJAMENTO_TIPOS:
+        return value_norm
+    return fallback if fallback in CREDITO_PLANEJAMENTO_TIPOS else "tarefa"
+
+
+def _credito_planejamento_status(value: Optional[str], *, fallback: str = "pendente") -> str:
+    raw = (
+        str(value or "")
+        .strip()
+        .lower()
+        .replace("-", "_")
+        .replace(" ", "_")
+    )
+    aliases = {
+        "andamento": "em_andamento",
+        "em_andamento": "em_andamento",
+        "em_execucao": "em_andamento",
+        "feito": "concluido",
+        "finalizado": "concluido",
+        "done": "concluido",
+    }
+    value_norm = aliases.get(raw, raw)
+    if value_norm in CREDITO_PLANEJAMENTO_STATUS:
+        return value_norm
+    return fallback if fallback in CREDITO_PLANEJAMENTO_STATUS else "pendente"
+
+
+def _credito_planejamento_hora(value: Optional[str], *, field_name: str) -> Optional[str]:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        parsed = datetime.strptime(raw, "%H:%M")
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=f"{field_name} invalida. Use HH:MM.") from exc
+    return parsed.strftime("%H:%M")
+
+
+def _credito_planejamento_progresso(value: Optional[int]) -> int:
+    try:
+        parsed = int(value if value is not None else 0)
+    except (TypeError, ValueError):
+        parsed = 0
+    return max(0, min(100, parsed))
+
+
+def _credito_planejamento_item_out(item: CreditoPlanejamentoItem) -> CreditoPlanejamentoItemOut:
+    return CreditoPlanejamentoItemOut(
+        id=item.id,
+        tipo=_credito_planejamento_tipo(item.tipo, fallback="tarefa"),
+        titulo=item.titulo,
+        descricao=item.descricao,
+        responsavel=item.responsavel,
+        data_referencia=item.data_referencia,
+        hora_inicio=item.hora_inicio,
+        hora_fim=item.hora_fim,
+        status=_credito_planejamento_status(item.status, fallback="pendente"),
+        progresso=_credito_planejamento_progresso(item.progresso),
+        urgente=bool(item.urgente) or _credito_planejamento_tipo(item.tipo, fallback="tarefa") == "urgente",
+        created_by_username=item.created_by_username,
+        updated_by_username=item.updated_by_username,
+        created_at=item.created_at,
+        updated_at=item.updated_at,
+    )
 
 
 def _record_processo_event(
@@ -3186,6 +3376,29 @@ def _ensure_runtime_schema(db: Session) -> None:
             """
         )
     )
+    db.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS credito_planejamento_itens (
+                id UUID PRIMARY KEY,
+                tipo VARCHAR(20) NOT NULL DEFAULT 'tarefa',
+                titulo VARCHAR(180) NOT NULL,
+                descricao TEXT,
+                responsavel VARCHAR(120),
+                data_referencia DATE,
+                hora_inicio VARCHAR(5),
+                hora_fim VARCHAR(5),
+                status VARCHAR(20) NOT NULL DEFAULT 'pendente',
+                progresso INTEGER NOT NULL DEFAULT 0,
+                urgente BOOLEAN NOT NULL DEFAULT FALSE,
+                created_by_username VARCHAR(120),
+                updated_by_username VARCHAR(120),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+    )
 
     statements = [
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_credito VARCHAR(30) DEFAULT 'EM_ANALISE'",
@@ -3441,6 +3654,44 @@ def _ensure_runtime_schema(db: Session) -> None:
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_unidades_disponiveis_empreendimento ON unidades_disponiveis (empreendimento)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_unidades_disponiveis_tipologia ON unidades_disponiveis (tipologia)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_unidades_disponiveis_updated_at ON unidades_disponiveis (updated_at DESC)"))
+    db.execute(text("ALTER TABLE credito_planejamento_itens ADD COLUMN IF NOT EXISTS tipo VARCHAR(20) DEFAULT 'tarefa'"))
+    db.execute(text("ALTER TABLE credito_planejamento_itens ADD COLUMN IF NOT EXISTS titulo VARCHAR(180)"))
+    db.execute(text("ALTER TABLE credito_planejamento_itens ADD COLUMN IF NOT EXISTS descricao TEXT"))
+    db.execute(text("ALTER TABLE credito_planejamento_itens ADD COLUMN IF NOT EXISTS responsavel VARCHAR(120)"))
+    db.execute(text("ALTER TABLE credito_planejamento_itens ADD COLUMN IF NOT EXISTS data_referencia DATE"))
+    db.execute(text("ALTER TABLE credito_planejamento_itens ADD COLUMN IF NOT EXISTS hora_inicio VARCHAR(5)"))
+    db.execute(text("ALTER TABLE credito_planejamento_itens ADD COLUMN IF NOT EXISTS hora_fim VARCHAR(5)"))
+    db.execute(text("ALTER TABLE credito_planejamento_itens ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pendente'"))
+    db.execute(text("ALTER TABLE credito_planejamento_itens ADD COLUMN IF NOT EXISTS progresso INTEGER DEFAULT 0"))
+    db.execute(text("ALTER TABLE credito_planejamento_itens ADD COLUMN IF NOT EXISTS urgente BOOLEAN DEFAULT FALSE"))
+    db.execute(text("ALTER TABLE credito_planejamento_itens ADD COLUMN IF NOT EXISTS created_by_username VARCHAR(120)"))
+    db.execute(text("ALTER TABLE credito_planejamento_itens ADD COLUMN IF NOT EXISTS updated_by_username VARCHAR(120)"))
+    db.execute(text("ALTER TABLE credito_planejamento_itens ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()"))
+    db.execute(text("ALTER TABLE credito_planejamento_itens ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()"))
+    db.execute(text("UPDATE credito_planejamento_itens SET tipo = 'tarefa' WHERE COALESCE(TRIM(tipo), '') = ''"))
+    db.execute(text("UPDATE credito_planejamento_itens SET status = 'pendente' WHERE COALESCE(TRIM(status), '') = ''"))
+    db.execute(text("UPDATE credito_planejamento_itens SET progresso = 0 WHERE progresso IS NULL"))
+    db.execute(text("UPDATE credito_planejamento_itens SET urgente = FALSE WHERE urgente IS NULL"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_credito_planejamento_itens_tipo ON credito_planejamento_itens (tipo)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_credito_planejamento_itens_status ON credito_planejamento_itens (status)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_credito_planejamento_itens_data ON credito_planejamento_itens (data_referencia)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_credito_planejamento_itens_urgente ON credito_planejamento_itens (urgente)"))
+    db.execute(
+        text(
+            """
+            CREATE INDEX IF NOT EXISTS ix_credito_planejamento_itens_responsavel_norm
+            ON credito_planejamento_itens ((LOWER(TRIM(COALESCE(responsavel, '')))))
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            CREATE INDEX IF NOT EXISTS ix_credito_planejamento_itens_updated_at
+            ON credito_planejamento_itens (updated_at DESC)
+            """
+        )
+    )
 
     current_revision = db.execute(
         text("SELECT meta_value FROM app_runtime_meta WHERE meta_key = 'runtime_schema_revision'")
@@ -3872,6 +4123,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="Sistema Credito API", lifespan=lifespan)
+app.mount("/assets", StaticFiles(directory=str(WEB_DIR)), name="web_assets")
 
 
 @app.middleware("http")
@@ -7105,6 +7357,292 @@ def app_set_gestor_meta_periodo(
         fonte_mensal=fonte_mensal,
         fonte_semanal=fonte_semanal,
     )
+
+
+@app.get("/app/api/analista/planejamento", response_model=CreditoPlanejamentoDashboardOut)
+def app_get_credito_planejamento_dashboard(
+    dias: int = Query(default=10, ge=1, le=30),
+    _: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    hoje = _utcnow().date()
+    inicio_periodo = hoje - timedelta(days=2)
+    fim_periodo = hoje + timedelta(days=max(1, dias))
+    corte_recente = _utcnow() - timedelta(days=2)
+
+    itens_db = (
+        db.query(CreditoPlanejamentoItem)
+        .filter(
+            func.lower(func.coalesce(CreditoPlanejamentoItem.tipo, "")) != "anotacao",
+            or_(
+                and_(
+                    CreditoPlanejamentoItem.data_referencia.isnot(None),
+                    CreditoPlanejamentoItem.data_referencia >= inicio_periodo,
+                    CreditoPlanejamentoItem.data_referencia <= fim_periodo,
+                ),
+                and_(
+                    CreditoPlanejamentoItem.urgente.is_(True),
+                    func.lower(func.coalesce(CreditoPlanejamentoItem.status, "")) != "concluido",
+                ),
+                and_(
+                    CreditoPlanejamentoItem.data_referencia.is_(None),
+                    CreditoPlanejamentoItem.updated_at >= corte_recente,
+                ),
+            ),
+        )
+        .order_by(CreditoPlanejamentoItem.updated_at.desc())
+        .limit(300)
+        .all()
+    )
+    anotacoes_db = (
+        db.query(CreditoPlanejamentoItem)
+        .filter(func.lower(func.coalesce(CreditoPlanejamentoItem.tipo, "")) == "anotacao")
+        .order_by(CreditoPlanejamentoItem.updated_at.desc())
+        .limit(30)
+        .all()
+    )
+
+    itens_out = [_credito_planejamento_item_out(item) for item in itens_db]
+    itens_out.sort(
+        key=lambda item: (
+            0 if item.urgente else 1,
+            item.data_referencia or date(9999, 12, 31),
+            item.hora_inicio or "99:99",
+            0 if item.status != "concluido" else 1,
+            item.titulo.lower(),
+        )
+    )
+
+    tarefas_dia = sorted(
+        [item for item in itens_out if item.data_referencia == hoje and item.tipo in {"tarefa", "urgente"}],
+        key=lambda item: (item.hora_inicio or "99:99", item.titulo.lower()),
+    )
+    agendamentos_dia = sorted(
+        [item for item in itens_out if item.data_referencia == hoje and item.tipo == "agendamento"],
+        key=lambda item: (item.hora_inicio or "99:99", item.titulo.lower()),
+    )
+    entregas_dia = sorted(
+        [item for item in itens_out if item.data_referencia == hoje and item.tipo == "entrega"],
+        key=lambda item: (0 if item.status != "concluido" else 1, item.hora_inicio or "99:99", item.titulo.lower()),
+    )
+    urgentes = sorted(
+        [item for item in itens_out if item.urgente and item.status != "concluido"],
+        key=lambda item: (
+            0 if item.data_referencia == hoje else 1,
+            item.data_referencia or date(9999, 12, 31),
+            item.hora_inicio or "99:99",
+            item.titulo.lower(),
+        ),
+    )[:18]
+
+    evolucao_map: dict[str, dict[str, float]] = {}
+    for item in itens_out:
+        responsavel = _normalize_credito_planejamento_text(item.responsavel, max_len=120) or "Sem responsavel"
+        bucket = evolucao_map.setdefault(
+            responsavel,
+            {"total": 0.0, "concluidas": 0.0, "pendentes": 0.0, "progresso_total": 0.0},
+        )
+        bucket["total"] += 1
+        progresso = _credito_planejamento_progresso(item.progresso)
+        if item.status == "concluido":
+            bucket["concluidas"] += 1
+            progresso = 100
+        else:
+            bucket["pendentes"] += 1
+        bucket["progresso_total"] += progresso
+
+    evolucao_time: list[CreditoPlanejamentoEvolucaoOut] = []
+    for responsavel, bucket in evolucao_map.items():
+        total = int(bucket["total"])
+        concluidas = int(bucket["concluidas"])
+        pendentes = int(bucket["pendentes"])
+        progresso_medio = int(round((bucket["progresso_total"] / total), 0)) if total else 0
+        taxa = round((concluidas / total) * 100, 1) if total else 0.0
+        evolucao_time.append(
+            CreditoPlanejamentoEvolucaoOut(
+                responsavel=responsavel,
+                total=total,
+                concluidas=concluidas,
+                pendentes=pendentes,
+                progresso_medio=progresso_medio,
+                taxa_conclusao=taxa,
+            )
+        )
+    evolucao_time.sort(key=lambda row: (-row.taxa_conclusao, -row.total, row.responsavel.lower()))
+    anotacoes_out = [_credito_planejamento_item_out(item) for item in anotacoes_db]
+    pendentes_total = sum(1 for item in itens_out if item.status != "concluido")
+
+    return CreditoPlanejamentoDashboardOut(
+        referencia=hoje,
+        pendentes_total=pendentes_total,
+        tarefas_dia=tarefas_dia,
+        agendamentos_dia=agendamentos_dia,
+        entregas_dia=entregas_dia,
+        urgentes=urgentes,
+        evolucao_time=evolucao_time,
+        anotacoes=anotacoes_out,
+        itens=itens_out,
+    )
+
+
+@app.post("/app/api/analista/planejamento/itens", response_model=CreditoPlanejamentoItemOut)
+def app_create_credito_planejamento_item(
+    payload: CreditoPlanejamentoItemCreate,
+    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    actor_username = _normalize_username(str(session.get("username", "")))
+    actor_role = _normalize_role(str(session.get("role", "")))
+
+    tipo = _credito_planejamento_tipo(payload.tipo, fallback="tarefa")
+    titulo = _normalize_credito_planejamento_text(payload.titulo, max_len=180)
+    if not titulo:
+        raise HTTPException(status_code=422, detail="Titulo obrigatorio.")
+    descricao = _normalize_credito_planejamento_text(payload.descricao, max_len=2200)
+    responsavel = _normalize_credito_planejamento_text(payload.responsavel, max_len=120)
+    status = _credito_planejamento_status(payload.status, fallback="pendente")
+    progresso = _credito_planejamento_progresso(payload.progresso)
+    hora_inicio = _credito_planejamento_hora(payload.hora_inicio, field_name="Hora inicio")
+    hora_fim = _credito_planejamento_hora(payload.hora_fim, field_name="Hora fim")
+
+    if hora_inicio and hora_fim and hora_fim < hora_inicio:
+        raise HTTPException(status_code=422, detail="Hora fim nao pode ser menor que hora inicio.")
+    urgente = bool(payload.urgente) or tipo == "urgente"
+    if status == "concluido":
+        progresso = 100
+    if tipo == "anotacao":
+        status = "pendente"
+        progresso = 0
+
+    item = CreditoPlanejamentoItem(
+        tipo=tipo,
+        titulo=titulo,
+        descricao=descricao,
+        responsavel=responsavel,
+        data_referencia=payload.data_referencia,
+        hora_inicio=hora_inicio,
+        hora_fim=hora_fim,
+        status=status,
+        progresso=progresso,
+        urgente=urgente,
+        created_by_username=actor_username or None,
+        updated_by_username=actor_username or None,
+    )
+    db.add(item)
+    db.flush()
+    _record_system_log(
+        db,
+        actor_username=actor_username,
+        actor_role=actor_role,
+        tela="analista_painel",
+        acao="CREDITO_PLANEJAMENTO_ITEM_CRIADO",
+        entidade_tipo="planejamento",
+        entidade_id=str(item.id),
+        details=(
+            f"tipo={item.tipo}; titulo={item.titulo}; status={item.status}; "
+            f"progresso={item.progresso}; urgente={item.urgente}"
+        ),
+    )
+    db.commit()
+    db.refresh(item)
+    return _credito_planejamento_item_out(item)
+
+
+@app.patch("/app/api/analista/planejamento/itens/{item_id}", response_model=CreditoPlanejamentoItemOut)
+def app_update_credito_planejamento_item(
+    item_id: uuid.UUID,
+    payload: CreditoPlanejamentoItemUpdate,
+    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    item = db.get(CreditoPlanejamentoItem, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item nao encontrado.")
+
+    actor_username = _normalize_username(str(session.get("username", "")))
+    actor_role = _normalize_role(str(session.get("role", "")))
+    changes = payload.model_dump(exclude_unset=True)
+    if not changes:
+        return _credito_planejamento_item_out(item)
+
+    if "tipo" in changes:
+        item.tipo = _credito_planejamento_tipo(changes.get("tipo"), fallback=_credito_planejamento_tipo(item.tipo, fallback="tarefa"))
+    if "titulo" in changes:
+        titulo = _normalize_credito_planejamento_text(changes.get("titulo"), max_len=180)
+        if not titulo:
+            raise HTTPException(status_code=422, detail="Titulo obrigatorio.")
+        item.titulo = titulo
+    if "descricao" in changes:
+        item.descricao = _normalize_credito_planejamento_text(changes.get("descricao"), max_len=2200)
+    if "responsavel" in changes:
+        item.responsavel = _normalize_credito_planejamento_text(changes.get("responsavel"), max_len=120)
+    if "data_referencia" in changes:
+        item.data_referencia = changes.get("data_referencia")
+    if "hora_inicio" in changes:
+        item.hora_inicio = _credito_planejamento_hora(changes.get("hora_inicio"), field_name="Hora inicio")
+    if "hora_fim" in changes:
+        item.hora_fim = _credito_planejamento_hora(changes.get("hora_fim"), field_name="Hora fim")
+    if item.hora_inicio and item.hora_fim and item.hora_fim < item.hora_inicio:
+        raise HTTPException(status_code=422, detail="Hora fim nao pode ser menor que hora inicio.")
+    if "status" in changes:
+        item.status = _credito_planejamento_status(changes.get("status"), fallback=_credito_planejamento_status(item.status))
+    if "progresso" in changes:
+        item.progresso = _credito_planejamento_progresso(changes.get("progresso"))
+    if "urgente" in changes:
+        item.urgente = bool(changes.get("urgente"))
+
+    if _credito_planejamento_tipo(item.tipo, fallback="tarefa") == "urgente":
+        item.urgente = True
+    if _credito_planejamento_status(item.status, fallback="pendente") == "concluido":
+        item.progresso = 100
+    if _credito_planejamento_tipo(item.tipo, fallback="tarefa") == "anotacao":
+        item.status = "pendente"
+        item.progresso = 0
+
+    item.updated_by_username = actor_username or None
+    _record_system_log(
+        db,
+        actor_username=actor_username,
+        actor_role=actor_role,
+        tela="analista_painel",
+        acao="CREDITO_PLANEJAMENTO_ITEM_ATUALIZADO",
+        entidade_tipo="planejamento",
+        entidade_id=str(item.id),
+        details=(
+            f"tipo={item.tipo}; titulo={item.titulo}; status={item.status}; "
+            f"progresso={item.progresso}; urgente={item.urgente}"
+        ),
+    )
+    db.commit()
+    db.refresh(item)
+    return _credito_planejamento_item_out(item)
+
+
+@app.delete("/app/api/analista/planejamento/itens/{item_id}")
+def app_delete_credito_planejamento_item(
+    item_id: uuid.UUID,
+    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    item = db.get(CreditoPlanejamentoItem, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item nao encontrado.")
+
+    actor_username = _normalize_username(str(session.get("username", "")))
+    actor_role = _normalize_role(str(session.get("role", "")))
+    _record_system_log(
+        db,
+        actor_username=actor_username,
+        actor_role=actor_role,
+        tela="analista_painel",
+        acao="CREDITO_PLANEJAMENTO_ITEM_REMOVIDO",
+        entidade_tipo="planejamento",
+        entidade_id=str(item.id),
+        details=f"tipo={item.tipo}; titulo={item.titulo}; status={item.status}; urgente={item.urgente}",
+    )
+    db.delete(item)
+    db.commit()
+    return {"ok": True}
 
 
 @app.post("/app/api/processos/intake")
