@@ -128,11 +128,26 @@
   body.theme-corporate .opsBox,
   body.theme-corporate .opsForm,
   body.theme-corporate .opsItem,
+  body.theme-corporate .opsForm .field input,
+  body.theme-corporate .opsForm .field select,
   body.theme-corporate .opsNoteInput,
   body.theme-corporate .opsNoteArea{
     background:#ffffff;
     border-color:rgba(15,23,42,.16);
     color:#0f172a;
+  }
+  body.theme-corporate .opsMini{
+    background:#ffffff;
+    border-color:rgba(15,23,42,.2);
+    color:#0f172a;
+  }
+  body.theme-corporate .opsMini.danger{
+    background:#fee2e2;
+    border-color:rgba(239,68,68,.45);
+    color:#991b1b;
+  }
+  body.theme-corporate .opsCheck{
+    color:#334155;
   }
   body.theme-corporate .opsDesc,
   body.theme-corporate .opsMeta,
@@ -361,6 +376,8 @@
   .opsCentral{
     padding:8px;
     gap:8px;
+    flex:0 0 auto;
+    overflow:visible;
   }
   .opsHead{
     display:flex;
@@ -391,8 +408,11 @@
     padding:8px;
     background:rgba(2,6,23,.45);
     display:grid;
-    grid-template-columns:repeat(6, minmax(0, 1fr));
+    grid-template-columns:repeat(8, minmax(0, 1fr));
     gap:6px;
+  }
+  .opsForm .field{
+    min-width:0;
   }
   .opsForm .field label{
     font-size:9px;
@@ -424,8 +444,10 @@
     grid-column: span 3;
   }
   .opsFormActions{
+    grid-column: span 2;
     display:flex;
     align-items:flex-end;
+    justify-content:flex-end;
     gap:6px;
   }
   .opsCheck{
@@ -636,7 +658,8 @@
   @media (max-width: 760px){
     .opsForm{grid-template-columns:1fr}
     .opsForm .span2,
-    .opsForm .span3{grid-column:auto}
+    .opsForm .span3,
+    .opsFormActions{grid-column:auto}
     .opsGrid{grid-template-columns:1fr}
   }
 
@@ -1209,11 +1232,11 @@
           <option value="urgente">Urgente</option>
         </select>
       </div>
-      <div class="field span2">
+      <div class="field span3">
         <label>Titulo</label>
         <input id="opTitulo" placeholder="Ex: Conferir documentos da Caixa" maxlength="180" />
       </div>
-      <div class="field">
+      <div class="field span2">
         <label>Responsavel</label>
         <input id="opResponsavel" placeholder="Nome da pessoa" maxlength="120" />
       </div>
@@ -1242,7 +1265,7 @@
         <label>Progresso (%)</label>
         <input id="opProgresso" type="number" min="0" max="100" step="5" value="0" />
       </div>
-      <div class="field span2">
+      <div class="field span3">
         <label>Descricao</label>
         <input id="opDescricao" placeholder="Detalhes rapidos para o time" maxlength="2200" />
       </div>
