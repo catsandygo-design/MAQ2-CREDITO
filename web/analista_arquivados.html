@@ -219,8 +219,174 @@
     }
   </style>
   <link rel="stylesheet" href="/assets/theme_techboard.css" />
+  <style>
+    body.analista-pro{
+      padding:12px;
+    }
+    body.analista-pro .wrap{
+      width:min(1940px, 100%);
+      max-width:100%;
+      gap:10px;
+    }
+    body.analista-pro .panel{
+      border-radius:16px;
+    }
+    body.analista-pro .top{
+      display:grid;
+      grid-template-columns:minmax(0, 1fr) auto;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+    }
+    body.analista-pro .title h1{
+      font-size:23px;
+      line-height:1.05;
+      color:#0a3357;
+    }
+    body.analista-pro .title p{
+      margin-top:4px;
+      font-size:12px;
+      color:#455a73;
+    }
+    body.analista-pro .actions{
+      justify-content:flex-end;
+      gap:8px;
+    }
+    body.analista-pro .btn{
+      min-height:38px;
+      padding:8px 14px;
+      font-size:12px;
+      border-radius:13px;
+      font-weight:700;
+    }
+    body.analista-pro .btn.activeNav{
+      border-color:rgba(14,165,233,.46);
+      background:linear-gradient(180deg, #dff4ff, #c9eafe);
+      color:#0b507f;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.65), 0 6px 14px rgba(14,116,144,.16);
+    }
+    body.analista-pro .btn.danger{
+      border-color:rgba(239,68,68,.45);
+      background:#fee2e2;
+      color:#991b1b;
+    }
+    body.analista-pro .chips{
+      padding:8px 12px;
+      gap:8px;
+    }
+    body.analista-pro .chip{
+      font-size:11px;
+      padding:5px 10px;
+      font-weight:600;
+    }
+    body.analista-pro .filters{
+      grid-template-columns:minmax(230px, 1.3fr) repeat(6, minmax(130px, 1fr)) auto auto auto;
+      gap:8px;
+      padding:8px 12px;
+      align-items:end;
+    }
+    body.analista-pro .field{
+      gap:5px;
+    }
+    body.analista-pro .field label{
+      font-size:11px;
+      font-weight:600;
+    }
+    body.analista-pro input,
+    body.analista-pro select{
+      min-height:41px;
+      padding:8px 11px;
+      font-size:13px;
+      border-radius:12px;
+    }
+    body.analista-pro .meta-status{
+      font-size:11px;
+      margin-top:0;
+    }
+    body.analista-pro .insights{
+      padding:8px 12px 10px;
+      gap:8px;
+    }
+    body.analista-pro .kpi{
+      border-radius:13px;
+      padding:8px 10px;
+      min-width:135px;
+    }
+    body.analista-pro .kpi .k{
+      font-size:11px;
+      font-weight:600;
+    }
+    body.analista-pro .kpi .v{
+      font-size:20px;
+    }
+    body.analista-pro .kpi .s{
+      font-size:10px;
+    }
+    body.analista-pro .table-wrap{
+      padding:0 12px 12px;
+    }
+    body.analista-pro .table-scroll{
+      border-radius:13px;
+      max-height:64vh;
+    }
+    body.analista-pro thead th{
+      font-size:11px;
+      padding:10px 11px;
+    }
+    body.analista-pro tbody td{
+      font-size:12px;
+      padding:10px 11px;
+      line-height:1.3;
+    }
+    body.analista-pro .name{
+      font-size:13px;
+    }
+    body.analista-pro .sub{
+      font-size:11px;
+    }
+    body.analista-pro .pill{
+      min-width:124px;
+      padding:4px 9px;
+      font-size:10px;
+      font-weight:700;
+    }
+    @media (max-width: 1400px){
+      body.analista-pro .filters{
+        grid-template-columns:repeat(4, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 980px){
+      body.analista-pro .top{
+        grid-template-columns:1fr;
+      }
+      body.analista-pro .actions{
+        justify-content:flex-start;
+      }
+      body.analista-pro .filters{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 760px){
+      body.analista-pro{
+        padding:10px;
+      }
+      body.analista-pro .title h1{
+        font-size:18px;
+      }
+      body.analista-pro .title p{
+        font-size:11px;
+      }
+      body.analista-pro .filters{
+        grid-template-columns:1fr;
+      }
+      body.analista-pro .btn{
+        width:100%;
+        text-align:center;
+      }
+    }
+  </style>
 </head>
-<body>
+<body class="theme-corporate analista-pro">
   <div class="wrap">
     <section class="panel">
       <div class="top">
@@ -229,11 +395,13 @@
           <p>Clientes repassados de meses anteriores ficam aqui para consulta e pesquisa.</p>
         </div>
         <div class="actions">
-          <a class="btn" href="/app/analista">Voltar painel</a>
+          <a class="btn" href="/app/analista">Painel</a>
           <a class="btn" href="/app/analista/acompanhamento">Acompanhamento</a>
+          <a class="btn" href="/app/analista/acompanhamento-operacional">Operacional</a>
           <a class="btn" href="/app/analista/repasse">Repasse</a>
           <a class="btn" href="/app/analista/importacao">Importacao</a>
-          <button class="btn" id="btnSair" type="button">Sair</button>
+          <a class="btn activeNav" href="/app/analista/arquivados" aria-current="page">Arquivados</a>
+          <button class="btn danger" id="btnSair" type="button">Sair</button>
         </div>
       </div>
 
