@@ -1,644 +1,596 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Painel Operacional - Credito e Repasse</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Painel Operacional | Credito e Repasse</title>
   <style>
-    :root {
-      --sidebar-bg: #0f172a;
-      --sidebar-bg-soft: #111827;
-      --sidebar-accent: #22c55e;
-      --bg: #f1f5f9;
-      --card-bg: #ffffff;
-      --border-soft: #d1d5db;
-      --text: #0f172a;
-      --text-soft: #6b7280;
-      --kanban-todo: #0ea5e9;
-      --kanban-email: #8b5cf6;
-      --kanban-pendente: #f97316;
-      --kanban-done: #22c55e;
+    :root{
+      --bg:#f1f5f9;
+      --card:#ffffff;
+      --line:#d1d5db;
+      --text:#0f172a;
+      --muted:#64748b;
+      --ok:#16a34a;
+      --warn:#d97706;
+      --bad:#dc2626;
+      --nav:#0f172a;
+      --nav-soft:#111827;
+      --accent:#22c55e;
     }
-
-    * {
-      box-sizing: border-box;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      opacity:0;
+      transform:translateY(6px);
+      transition:opacity .18s ease,transform .18s ease;
     }
-
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
+    body.page-ready{opacity:1;transform:none}
+    body.page-leaving{opacity:0;transform:translateY(8px)}
+    .layout{display:flex;min-height:100vh}
+    .sidebar{
+      width:252px;
+      background:linear-gradient(180deg,var(--nav),var(--nav-soft));
+      color:#e5e7eb;
+      padding:14px 10px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
     }
-
-    .layout { display: flex; min-height: 100vh; }
-
-    .sidebar {
-      width: 260px;
-      background: linear-gradient(180deg, var(--sidebar-bg) 0%, var(--sidebar-bg-soft) 100%);
-      color: #e5e7eb;
-      display: flex;
-      flex-direction: column;
-      padding: 16px 10px;
+    .brand{
+      display:flex;align-items:center;gap:10px;padding:8px 10px 14px;
+      border-bottom:1px solid rgba(148,163,184,.22)
     }
-
-    .sidebar-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 10px 18px;
-      border-bottom: 1px solid rgba(148,163,184,0.2);
-      margin-bottom: 8px;
+    .brand-dot{
+      width:34px;height:34px;border-radius:999px;border:2px solid var(--accent);
+      display:grid;place-items:center;font-weight:800;font-size:.82rem
     }
-
-    .sidebar-logo {
-      width: 34px;
-      height: 34px;
-      border-radius: 999px;
-      border: 2px solid var(--sidebar-accent);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 0.95rem;
-      background: radial-gradient(circle at top, rgba(34,197,94,0.3), transparent);
+    .brand h1{margin:0;font-size:.93rem}
+    .brand p{margin:2px 0 0;font-size:.67rem;letter-spacing:.14em;text-transform:uppercase;color:#94a3b8}
+    .menu{display:grid;gap:2px}
+    .menu .label{font-size:.67rem;letter-spacing:.15em;text-transform:uppercase;color:#94a3b8;padding:9px 12px 3px}
+    .menu a{
+      margin:0 4px;padding:7px 11px;border-radius:999px;color:#e5e7eb;text-decoration:none;font-size:.8rem;
+      display:flex;align-items:center;gap:8px;transition:background .12s ease,transform .08s ease
     }
-
-    .sidebar-title { display: flex; flex-direction: column; gap: 2px; }
-    .sidebar-title span:first-child { font-size: 0.9rem; font-weight: 600; }
-    .sidebar-title span:last-child {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #9ca3af;
+    .menu a:hover{background:rgba(15,23,42,.84)}
+    .menu a.active{background:rgba(34,197,94,.2);transform:translateX(1px)}
+    .menu b{
+      width:20px;height:20px;border-radius:999px;background:rgba(15,23,42,.9);display:grid;place-items:center;
+      font-size:.62rem
     }
-
-    .sidebar-menu { margin-top: 6px; padding: 4px 0; flex: 1; overflow-y: auto; }
-    .menu-section-label {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      color: #9ca3af;
-      padding: 10px 12px 4px;
+    .side-note{margin-top:auto;border-top:1px solid rgba(148,163,184,.25);padding:8px 12px 0;font-size:.7rem;color:#94a3b8;line-height:1.35}
+    .main{flex:1;padding:14px 18px;display:grid;gap:12px;align-content:start}
+    .top{
+      display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap
     }
-
-    .menu-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 12px;
-      border-radius: 999px;
-      color: #e5e7eb;
-      font-size: 0.82rem;
-      margin: 1px 4px;
-      text-decoration: none;
-      transition: background 0.12s ease, transform 0.08s ease;
+    .top h2{margin:0;font-size:1.18rem}
+    .top p{margin:2px 0 0;color:var(--muted);font-size:.8rem}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .search{
+      border:1px solid var(--line);background:#f8fafc;border-radius:999px;padding:7px 10px;font-size:.8rem;min-width:190px
     }
-
-    .menu-item-icon {
-      width: 22px;
-      height: 22px;
-      border-radius: 999px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.75rem;
-      background: rgba(15,23,42,0.9);
-      font-weight: 700;
+    .btn{
+      border:1px solid var(--line);border-radius:999px;background:#fff;color:#334155;font-size:.78rem;font-weight:700;
+      padding:7px 12px;text-decoration:none;cursor:pointer;transition:transform .08s ease,box-shadow .12s ease
     }
+    .btn:hover{transform:translateY(-1px);box-shadow:0 10px 16px rgba(15,23,42,.1)}
+    .btn.primary{background:linear-gradient(90deg,#22c55e,#16a34a);border-color:transparent;color:#f8fafc}
 
-    .menu-item.active { background: rgba(34,197,94,0.18); transform: translateX(1px); }
-    .menu-item:hover:not(.active) { background: rgba(15,23,42,0.8); }
-
-    .sidebar-footer {
-      padding-top: 8px;
-      border-top: 1px solid rgba(148,163,184,0.25);
-      font-size: 0.7rem;
-      color: #9ca3af;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      padding-inline: 12px;
+    .ops{
+      border:1px solid var(--line);border-radius:16px;background:var(--card);padding:12px;display:grid;gap:10px
     }
-
-    .main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 14px 18px;
-      gap: 14px;
-      overflow-x: hidden;
+    .ops-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap}
+    .ops-head h3{margin:0;font-size:.95rem}
+    .ops-head p{margin:2px 0 0;color:var(--muted);font-size:.8rem}
+    .chips{display:flex;gap:6px;flex-wrap:wrap}
+    .chip{border:1px solid var(--line);border-radius:999px;background:#f8fafc;color:#475569;padding:5px 9px;font-size:.75rem}
+    .chip strong{color:#0f172a}
+    .ops-form{
+      border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;padding:10px;display:grid;
+      grid-template-columns:repeat(8,minmax(0,1fr));gap:7px
     }
-
-    .main-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
+    .field{display:grid;gap:4px;min-width:0}
+    .field label{font-size:.69rem;color:#64748b;font-weight:600}
+    .field input,.field select,.note-input,.note-area{
+      width:100%;min-width:0;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#0f172a;font-size:.8rem;padding:7px 9px;outline:none
     }
+    .field input:focus,.field select:focus,.note-input:focus,.note-area:focus{border-color:rgba(14,165,233,.6);box-shadow:0 0 0 3px rgba(14,165,233,.12)}
+    .span2{grid-column:span 2}
+    .span3{grid-column:span 3}
+    .form-actions{grid-column:span 2;display:flex;justify-content:flex-end;align-items:flex-end;gap:8px;flex-wrap:wrap}
+    .check{display:inline-flex;align-items:center;gap:5px;font-size:.75rem;color:#475569;font-weight:600}
 
-    .main-header-title h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
-    .main-header-title span { font-size: 0.8rem; color: var(--text-soft); }
+    .grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+    .grid2{display:grid;grid-template-columns:1.1fr .9fr;gap:8px}
+    .box{border:1px solid #dbe2ea;border-radius:12px;background:#fff;padding:8px;display:grid;gap:6px;align-content:start;min-height:145px}
+    .box-head{display:flex;justify-content:space-between;align-items:center;gap:6px}
+    .box-head h4{margin:0;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:#475569}
+    .count{border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:.69rem;font-weight:800;color:#475569;min-width:24px;text-align:center}
+    .list{display:grid;gap:6px;max-height:250px;overflow:auto;padding-right:2px}
+    .list::-webkit-scrollbar{width:7px}
+    .list::-webkit-scrollbar-thumb{background:rgba(148,163,184,.45);border-radius:999px}
+    .item{border:1px solid #dbe2ea;border-radius:10px;background:#f8fafc;padding:6px;display:grid;gap:4px}
+    .item-top{display:flex;justify-content:space-between;align-items:flex-start;gap:6px}
+    .item-title{font-size:.78rem;font-weight:800;line-height:1.2}
+    .status{border:1px solid #cbd5e1;border-radius:999px;padding:2px 6px;font-size:.66rem;font-weight:700;color:#475569;background:#fff;white-space:nowrap}
+    .status.ok{border-color:rgba(22,163,74,.35);color:#166534;background:#ecfdf5}
+    .status.warn{border-color:rgba(217,119,6,.35);color:#9a3412;background:#fff7ed}
+    .status.bad{border-color:rgba(220,38,38,.35);color:#991b1b;background:#fef2f2}
+    .desc,.meta,.msg{font-size:.72rem;color:#64748b;line-height:1.3}
+    .actions-mini{display:flex;gap:5px;flex-wrap:wrap}
+    .mini{border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#0f172a;padding:3px 7px;font-size:.7rem;font-weight:700;cursor:pointer}
+    .mini.danger{border-color:rgba(220,38,38,.4);color:#991b1b;background:#fef2f2}
+    .empty{padding:10px 6px;text-align:center;color:#94a3b8;font-size:.74rem}
+    .evo{display:grid;gap:6px;max-height:250px;overflow:auto}
+    .evo-row{border:1px solid #dbe2ea;border-radius:10px;background:#f8fafc;padding:6px;display:grid;gap:4px}
+    .evo-top{display:flex;justify-content:space-between;gap:8px;font-size:.72rem;color:#64748b}
+    .evo-top strong{font-size:.76rem;color:#0f172a}
+    .evo-bar{height:6px;border-radius:999px;background:#e2e8f0;overflow:hidden}
+    .evo-bar span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#22c55e,#0ea5e9)}
+    .note-form{display:grid;gap:6px}
+    .note-area{min-height:72px;resize:vertical;font-family:inherit}
+    .msg{min-height:14px;font-weight:600}
+    .msg.ok{color:var(--ok)}
+    .msg.err{color:var(--bad)}
 
-    .main-header-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
+    @media (max-width:1320px){
+      .grid4{grid-template-columns:repeat(2,minmax(0,1fr))}
     }
-
-    .search-input {
-      padding: 6px 9px;
-      border-radius: 999px;
-      border: 1px solid var(--border-soft);
-      background: #f9fafb;
-      font-size: 0.8rem;
-      min-width: 170px;
+    @media (max-width:980px){
+      .ops-form{grid-template-columns:repeat(4,minmax(0,1fr))}
+      .grid2{grid-template-columns:1fr}
+      .form-actions{grid-column:span 4;justify-content:flex-start}
     }
-
-    .btn {
-      border-radius: 999px;
-      border: 1px solid var(--border-soft);
-      background: #ffffff;
-      font-size: 0.78rem;
-      padding: 6px 11px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-      color: var(--text-soft);
-      text-decoration: none;
-      transition: background 0.12s ease, box-shadow 0.12s ease, transform 0.08s ease;
-      white-space: nowrap;
+    @media (max-width:768px){
+      .sidebar{display:none}
+      .layout{flex-direction:column}
+      .ops-form{grid-template-columns:1fr}
+      .span2,.span3,.form-actions{grid-column:auto}
+      .grid4{grid-template-columns:1fr}
     }
-
-    .btn-primary {
-      background: linear-gradient(90deg, #22c55e, #16a34a);
-      border-color: transparent;
-      color: #f9fafb;
-    }
-
-    .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 18px rgba(15,23,42,0.08); }
-
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
-      gap: 10px;
-    }
-
-    .summary-card {
-      background: var(--card-bg);
-      border-radius: 12px;
-      padding: 8px 10px;
-      border: 1px solid var(--border-soft);
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .summary-label {
-      font-size: 0.7rem;
-      color: var(--text-soft);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-    }
-
-    .summary-value { font-size: 1.2rem; font-weight: 600; }
-
-    .summary-tag {
-      align-self: flex-start;
-      font-size: 0.7rem;
-      padding: 2px 7px;
-      border-radius: 999px;
-      background: #eef2ff;
-      color: #4f46e5;
-    }
-
-    .summary-tag.orange { background: #fff7ed; color: #c2410c; }
-    .summary-tag.green { background: #ecfdf5; color: #16a34a; }
-
-    .kanban-wrapper {
-      background: linear-gradient(180deg,#e5e7eb 0%,#e2e8f0 12%,#e5e7eb 100%);
-      border-radius: 16px;
-      padding: 10px;
-      border: 1px solid var(--border-soft);
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .section-title-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 4px;
-    }
-
-    .section-title-row h2 {
-      margin: 0;
-      font-size: 0.95rem;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      color: var(--text-soft);
-    }
-
-    .section-title-row span { font-size: 0.8rem; color: var(--text-soft); }
-
-    .kanban-board {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-      align-items: flex-start;
-    }
-
-    .kanban-column {
-      background: #f8fafc;
-      border-radius: 14px;
-      border: 1px solid var(--border-soft);
-      display: flex;
-      flex-direction: column;
-      max-height: 470px;
-    }
-
-    .kanban-column-header {
-      padding: 8px 10px;
-      border-bottom: 1px solid #e5e7eb;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .kanban-column-title span:first-child {
-      font-size: 0.8rem;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .kanban-badge {
-      font-size: 0.7rem;
-      padding: 1px 6px;
-      border-radius: 999px;
-      background: #e5e7eb;
-      color: #4b5563;
-    }
-
-    .kanban-column-title span:last-child { font-size: 0.7rem; color: var(--text-soft); }
-    .kanban-count { font-size: 0.75rem; color: var(--text-soft); }
-
-    .kanban-list { padding: 6px 8px 8px; overflow-y: auto; }
-    .kanban-list::-webkit-scrollbar { width: 6px; }
-    .kanban-list::-webkit-scrollbar-thumb { background: #cbd5f5; border-radius: 999px; }
-
-    .kanban-card {
-      background: var(--card-bg);
-      border-radius: 12px;
-      padding: 7px 8px;
-      border: 1px solid var(--border-soft);
-      margin-bottom: 6px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      box-shadow: 0 4px 8px rgba(148,163,184,0.25);
-      font-size: 0.75rem;
-    }
-
-    .kanban-card-header { display: flex; justify-content: space-between; gap: 6px; align-items: center; }
-
-    .tag-chip {
-      font-size: 0.65rem;
-      padding: 2px 6px;
-      border-radius: 999px;
-      background: #eff6ff;
-      color: #1d4ed8;
-    }
-
-    .tag-chip.red { background: #fef2f2; color: #b91c1c; }
-    .tag-chip.green { background: #ecfdf5; color: #16a34a; }
-    .tag-chip.orange { background: #fff7ed; color: #c2410c; }
-
-    .kanban-card-title { font-weight: 600; font-size: 0.78rem; }
-    .kanban-meta { display: flex; flex-wrap: wrap; gap: 4px 8px; color: var(--text-soft); font-size: 0.7rem; }
-    .meta-label { font-weight: 500; }
-    .kanban-footer { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-top: 4px; }
-
-    .pill-small {
-      font-size: 0.65rem;
-      padding: 2px 6px;
-      border-radius: 999px;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      color: #4b5563;
-    }
-
-    .date-pill { font-size: 0.7rem; color: var(--text-soft); }
-
-    .kanban-column.todo    { border-top: 4px solid var(--kanban-todo); }
-    .kanban-column.email   { border-top: 4px solid var(--kanban-email); }
-    .kanban-column.pending { border-top: 4px solid var(--kanban-pendente); }
-    .kanban-column.done    { border-top: 4px solid var(--kanban-done); }
-
-    .phases-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 4px;
-    }
-
-    .phase-card {
-      background: var(--card-bg);
-      border-radius: 14px;
-      border: 1px solid var(--border-soft);
-      padding: 10px 12px;
-    }
-
-    .phase-card h3 { margin: 0 0 4px; font-size: 0.9rem; }
-    .phase-card span { font-size: 0.78rem; color: var(--text-soft); }
-
-    .phase-steps {
-      margin-top: 6px;
-      font-size: 0.78rem;
-      columns: 2;
-      column-gap: 14px;
-    }
-
-    .phase-steps ul { margin: 4px 0; padding-left: 16px; }
-    .phase-steps li { margin-bottom: 2px; }
-
-    .bottom-grid {
-      display: grid;
-      grid-template-columns: 2fr 1.4fr;
-      gap: 10px;
-      margin-top: 4px;
-    }
-
-    .card {
-      background: var(--card-bg);
-      border-radius: 14px;
-      border: 1px solid var(--border-soft);
-      padding: 10px 12px;
-    }
-
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 6px;
-    }
-
-    .card-header h3 { margin: 0; font-size: 0.9rem; }
-    .card-header span { font-size: 0.78rem; color: var(--text-soft); }
-
-    .tasks-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-    .tasks-table th, .tasks-table td {
-      padding: 5px 4px;
-      border-bottom: 1px solid #e5e7eb;
-      text-align: left;
-    }
-
-    .tasks-table th { font-size: 0.72rem; color: var(--text-soft); }
-
-    .calendar-grid {
-      display: grid;
-      grid-template-columns: repeat(7, minmax(0, 1fr));
-      gap: 4px;
-      font-size: 0.72rem;
-      margin-top: 6px;
-    }
-
-    .calendar-day-header { text-align: center; font-weight: 600; color: var(--text-soft); }
-
-    .calendar-day {
-      background: #f9fafb;
-      border-radius: 8px;
-      padding: 4px;
-      min-height: 40px;
-      border: 1px solid #e5e7eb;
-      text-align: right;
-    }
-
-    .calendar-day.today {
-      border-color: #22c55e;
-      box-shadow: 0 0 0 1px rgba(34,197,94,0.3);
-    }
-
-    .calendar-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 999px;
-      background: #22c55e;
-      display: inline-block;
-      margin-left: 3px;
-    }
-
-    .calendar-footnote { margin-top: 6px; font-size: 0.72rem; color: var(--text-soft); }
-
-    @media (max-width: 1200px) {
-      .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .kanban-board { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    }
-
-    @media (max-width: 960px) {
-      .bottom-grid { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 900px) {
-      .kanban-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .phases-grid { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 768px) {
-      .sidebar { display: none; }
-      .layout { flex-direction: column; }
-      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-
-    @media (max-width: 640px) {
-      .kanban-board { grid-template-columns: 1fr; }
-      .phase-steps { columns: 1; }
+    @media (prefers-reduced-motion: reduce){
+      body{transition:none;opacity:1;transform:none}
     }
   </style>
 </head>
 <body>
 <div class="layout">
   <aside class="sidebar">
-    <div class="sidebar-header">
-      <div class="sidebar-logo">CR</div>
-      <div class="sidebar-title">
-        <span>Credito e Repasse</span>
-        <span>Painel operacional</span>
-      </div>
+    <div class="brand">
+      <div class="brand-dot">CR</div>
+      <div><h1>Credito e Repasse</h1><p>Painel operacional</p></div>
     </div>
-
-    <nav class="sidebar-menu">
-      <div class="menu-section-label">Navegacao</div>
-      <a class="menu-item active" href="/app/analista/acompanhamento-operacional">
-        <div class="menu-item-icon">D</div>
-        <span>Entrega do dia</span>
-      </a>
-      <a class="menu-item" href="/app/analista">
-        <div class="menu-item-icon">P</div>
-        <span>Painel principal</span>
-      </a>
-      <a class="menu-item" href="/app/analista/acompanhamento">
-        <div class="menu-item-icon">K</div>
-        <span>Acompanhamento atual</span>
-      </a>
-      <a class="menu-item" href="/app/analista/repasse">
-        <div class="menu-item-icon">R</div>
-        <span>Repasse</span>
-      </a>
-
-      <div class="menu-section-label">Fases</div>
-      <a class="menu-item" href="#">
-        <div class="menu-item-icon">C</div>
-        <span>Fase Caixa</span>
-      </a>
-      <a class="menu-item" href="#">
-        <div class="menu-item-icon">A</div>
-        <span>Fase Agehab</span>
-      </a>
-      <a class="menu-item" href="/app/analista/arquivados">
-        <div class="menu-item-icon">AR</div>
-        <span>Arquivados</span>
-      </a>
+    <nav class="menu">
+      <div class="label">Navegacao</div>
+      <a class="active" href="/app/analista/acompanhamento-operacional"><b>OP</b><span>Painel Operacional</span></a>
+      <a href="/app/analista"><b>AN</b><span>Painel Analista</span></a>
+      <a href="/app/analista/acompanhamento"><b>AK</b><span>Acompanhamento</span></a>
+      <a href="/app/analista/repasse"><b>RP</b><span>Repasse</span></a>
+      <a href="/app/analista/arquivados"><b>AR</b><span>Arquivados</span></a>
     </nav>
-
-    <div class="sidebar-footer">
-      <span>Visao: kanban de pendencias, fases e agenda.</span>
-      <span>Finalizados saem da base ativa e vao para Arquivado.</span>
+    <div class="side-note">
+      <div>Cadastro e acompanhamento das tarefas operacionais do credito.</div>
+      <div>Atualizacoes feitas aqui aparecem na central do painel principal.</div>
     </div>
   </aside>
 
   <main class="main">
-    <header class="main-header">
-      <div class="main-header-title">
-        <h1>Entrega do dia - Painel Kanban</h1>
-        <span>Controle de nao iniciado, e-mail recebido, pendenciado, finalizado e arquivado.</span>
+    <header class="top">
+      <div>
+        <h2>Painel Operacional de Cadastro</h2>
+        <p>Cadastre tarefas, agenda, entregas, urgencias e anotacoes de operacao.</p>
       </div>
-      <div class="main-header-actions">
-        <input class="search-input" placeholder="Buscar cliente, corretor ou processo">
+      <div class="actions">
+        <input class="search" id="opsQuickSearch" placeholder="Buscar titulo ou responsavel..." />
         <a class="btn" href="/app/analista">Voltar painel</a>
-        <button class="btn btn-primary" type="button">Novo processo</button>
+        <a class="btn primary" href="/app/analista/acompanhamento">Kanban de acompanhamento</a>
       </div>
     </header>
 
-    <section class="summary-grid">
-      <div class="summary-card"><span class="summary-label">Pendencias Caixa</span><span class="summary-value">08</span><span class="summary-tag orange">Documentos Caixa</span></div>
-      <div class="summary-card"><span class="summary-label">Pendencias Agehab</span><span class="summary-value">05</span><span class="summary-tag orange">Fluxo Agehab</span></div>
-      <div class="summary-card"><span class="summary-label">Pendencias Sinal</span><span class="summary-value">03</span><span class="summary-tag">Aguardando pagamento</span></div>
-      <div class="summary-card"><span class="summary-label">Pendencias Fiador</span><span class="summary-value">04</span><span class="summary-tag">Dados e docs fiador</span></div>
-      <div class="summary-card"><span class="summary-label">Pendencias Produto</span><span class="summary-value">02</span><span class="summary-tag">Definicao de linha</span></div>
-      <div class="summary-card"><span class="summary-label">Finalizados hoje</span><span class="summary-value">06</span><span class="summary-tag green">Enviados para arquivado</span></div>
-    </section>
-
-    <section class="kanban-wrapper">
-      <div class="section-title-row">
-        <h2>Kanban - Fluxo diario</h2>
-        <span>Organize por estagio do processo e pendencias principais.</span>
-      </div>
-      <div class="kanban-board">
-        <div class="kanban-column todo">
-          <div class="kanban-column-header">
-            <div class="kanban-column-title"><span>Nao iniciado <span class="kanban-badge">3</span></span><span>Processos cadastrados sem tratamento ainda.</span></div>
-            <span class="kanban-count">Hoje</span>
-          </div>
-          <div class="kanban-list">
-            <article class="kanban-card"><div class="kanban-card-header"><div class="kanban-card-title">Joao Victor - Empreendimento A</div><span class="tag-chip">Novo cadastro</span></div><div class="kanban-meta"><span><span class="meta-label">Estagio:</span> Pre-cadastro</span><span><span class="meta-label">Produto:</span> Nao definido</span></div><div class="kanban-footer"><span class="pill-small">Pendencias: Caixa, Produto</span><span class="date-pill">Incluido 27/02</span></div></article>
-            <article class="kanban-card"><div class="kanban-card-header"><div class="kanban-card-title">Ana Paula - Empreendimento B</div><span class="tag-chip">Novo</span></div><div class="kanban-meta"><span><span class="meta-label">Estagio:</span> Aguardando e-mail corretor</span><span><span class="meta-label">Fiador:</span> Nao informado</span></div><div class="kanban-footer"><span class="pill-small">Pendencias: Fiador</span><span class="date-pill">Incluido 28/02</span></div></article>
-          </div>
+    <section class="ops" id="opsPanel">
+      <div class="ops-head">
+        <div>
+          <h3>Cadastro operacional do credito</h3>
+          <p>Registre atividades do dia e acompanhe o progresso da equipe em tempo real.</p>
         </div>
-
-        <div class="kanban-column email">
-          <div class="kanban-column-header">
-            <div class="kanban-column-title"><span>E-mail recebido <span class="kanban-badge">4</span></span><span>Docs chegaram, aguardando conferencia.</span></div>
-            <span class="kanban-count">Caixa e Agehab</span>
-          </div>
-          <div class="kanban-list">
-            <article class="kanban-card"><div class="kanban-card-header"><div class="kanban-card-title">Raimundo - Empreendimento C</div><span class="tag-chip">E-mail Caixa</span></div><div class="kanban-meta"><span><span class="meta-label">Estagio:</span> Conferir docs</span><span><span class="meta-label">Caixa:</span> Em analise interna</span></div><div class="kanban-footer"><span class="pill-small">Pendencias: Caixa</span><span class="date-pill">Recebido 28/02 09:40</span></div></article>
-            <article class="kanban-card"><div class="kanban-card-header"><div class="kanban-card-title">Maria Eduarda - Empreendimento D</div><span class="tag-chip">Docs Agehab</span></div><div class="kanban-meta"><span><span class="meta-label">Estagio:</span> Separar kit Agehab</span><span><span class="meta-label">Sinal:</span> Pago</span></div><div class="kanban-footer"><span class="pill-small">Pendencias: Agehab</span><span class="date-pill">Recebido 28/02 10:15</span></div></article>
-          </div>
-        </div>
-
-        <div class="kanban-column pending">
-          <div class="kanban-column-header">
-            <div class="kanban-column-title"><span>Pendenciado <span class="kanban-badge">6</span></span><span>Itens que travam o processo.</span></div>
-            <span class="kanban-count">Cobranca ativa</span>
-          </div>
-          <div class="kanban-list">
-            <article class="kanban-card"><div class="kanban-card-header"><div class="kanban-card-title">Carlos - Empreendimento E</div><span class="tag-chip orange">Cobrar corretor</span></div><div class="kanban-meta"><span><span class="meta-label">Pendencias:</span> Caixa, Fiador</span><span><span class="meta-label">Estagio:</span> Aguardando docs fiador</span></div><div class="kanban-footer"><span class="pill-small">Ultima cobranca: 27/02 16:00</span><span class="date-pill">Data finalizacao: -</span></div></article>
-            <article class="kanban-card"><div class="kanban-card-header"><div class="kanban-card-title">Larissa - Empreendimento F</div><span class="tag-chip red">Critico</span></div><div class="kanban-meta"><span><span class="meta-label">Pendencias:</span> Sinal</span><span><span class="meta-label">Estagio:</span> Aguardando pagamento</span></div><div class="kanban-footer"><span class="pill-small">Obs: cliente aguarda liberacao</span><span class="date-pill">Data finalizacao: -</span></div></article>
-            <article class="kanban-card"><div class="kanban-card-header"><div class="kanban-card-title">Diego - Empreendimento G</div><span class="tag-chip orange">Produto</span></div><div class="kanban-meta"><span><span class="meta-label">Pendencias:</span> Produto</span><span><span class="meta-label">Estagio:</span> Definir linha Caixa</span></div><div class="kanban-footer"><span class="pill-small">Obs: simulacao enviada</span><span class="date-pill">Data finalizacao: -</span></div></article>
-          </div>
-        </div>
-
-        <div class="kanban-column done">
-          <div class="kanban-column-header">
-            <div class="kanban-column-title"><span>Finalizado <span class="kanban-badge">4</span></span><span>Pronto para arquivar.</span></div>
-            <span class="kanban-count">Sai da base ativa</span>
-          </div>
-          <div class="kanban-list">
-            <article class="kanban-card"><div class="kanban-card-header"><div class="kanban-card-title">Gabriela - Empreendimento H</div><span class="tag-chip green">Concluido</span></div><div class="kanban-meta"><span><span class="meta-label">Caixa:</span> Contrato assinado</span><span><span class="meta-label">Agehab:</span> Liberado</span></div><div class="kanban-footer"><span class="pill-small">Obs: enviar para registro</span><span class="date-pill">Finalizacao: 27/02</span></div></article>
-            <article class="kanban-card"><div class="kanban-card-header"><div class="kanban-card-title">Alyce - Empreendimento I</div><span class="tag-chip green">Concluido</span></div><div class="kanban-meta"><span><span class="meta-label">Estagio:</span> Processo 100% finalizado</span><span><span class="meta-label">Arquivar em:</span> 30 dias</span></div><div class="kanban-footer"><span class="pill-small">Mover para Arquivado</span><span class="date-pill">Finalizacao: 26/02</span></div></article>
-          </div>
+        <div class="chips">
+          <span class="chip">Referencia: <strong id="opDateLabel">-</strong></span>
+          <span class="chip">Pendentes: <strong id="opPendentes">0</strong></span>
         </div>
       </div>
-    </section>
 
-    <section class="phases-grid">
-      <div class="phase-card">
-        <h3>Fase Caixa</h3>
-        <span>Resumo das etapas da Caixa para acompanhamento rapido.</span>
-        <div class="phase-steps">
-          <ul><li>1. Pre-cadastro e simulacao</li><li>2. Envio de documentacao basica</li><li>3. Analise de credito</li><li>4. Complemento de documentos</li><li>5. Aprovacao de credito</li></ul>
-          <ul><li>6. Emissao de contrato</li><li>7. Assinatura</li><li>8. Envio para registro</li><li>9. Baixa e retorno cartorio</li><li>10. Liberacao final</li></ul>
+      <div class="ops-form">
+        <div class="field">
+          <label>Tipo</label>
+          <select id="opTipo">
+            <option value="tarefa">Tarefa</option>
+            <option value="agendamento">Agendamento</option>
+            <option value="entrega">Entrega do dia</option>
+            <option value="urgente">Urgente</option>
+          </select>
+        </div>
+        <div class="field span3">
+          <label>Titulo</label>
+          <input id="opTitulo" placeholder="Ex: Conferir documentos da Caixa" maxlength="180" />
+        </div>
+        <div class="field span2">
+          <label>Responsavel</label>
+          <input id="opResponsavel" placeholder="Nome da pessoa" maxlength="120" />
+        </div>
+        <div class="field">
+          <label>Data</label>
+          <input id="opData" type="date" />
+        </div>
+        <div class="field">
+          <label>Hora inicio</label>
+          <input id="opHoraInicio" type="time" />
+        </div>
+        <div class="field">
+          <label>Hora fim</label>
+          <input id="opHoraFim" type="time" />
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="opStatus">
+            <option value="pendente">Pendente</option>
+            <option value="em_andamento">Em andamento</option>
+            <option value="concluido">Concluido</option>
+            <option value="atrasado">Atrasado</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Progresso (%)</label>
+          <input id="opProgresso" type="number" min="0" max="100" step="5" value="0" />
+        </div>
+        <div class="field span3">
+          <label>Descricao</label>
+          <input id="opDescricao" placeholder="Detalhes rapidos para o time" maxlength="2200" />
+        </div>
+        <div class="form-actions">
+          <label class="check"><input id="opUrgente" type="checkbox" />Urgente</label>
+          <button class="btn primary" id="btnOpsAdd" type="button">Adicionar</button>
         </div>
       </div>
-      <div class="phase-card">
-        <h3>Fase Agehab</h3>
-        <span>Etapas especificas da Agehab para nao perder nenhum passo.</span>
-        <div class="phase-steps">
-          <ul><li>1. Cadastro Agehab</li><li>2. Anexo de documentos exigidos</li><li>3. Conferencia interna</li><li>4. Ajuste de pendencias</li><li>5. Validacao cadastro</li></ul>
-          <ul><li>6. Enquadramento no programa</li><li>7. Aprovacao final</li><li>8. Integracao com Caixa</li><li>9. Liberacao de beneficio</li><li>10. Conclusao e arquivamento</li></ul>
-        </div>
-      </div>
-    </section>
 
-    <section class="bottom-grid">
-      <div class="card">
-        <div class="card-header"><div><h3>Tarefas do dia</h3><span>Rotina minima para manter o fluxo em dia.</span></div><button class="btn" type="button">Marcar tudo concluido</button></div>
-        <table class="tasks-table">
-          <thead><tr><th>Horario</th><th>Tarefa</th><th>Responsavel</th><th>Status</th></tr></thead>
-          <tbody>
-            <tr><td>09:00</td><td>Rodada de leitura de e-mails recebidos</td><td>Douglas</td><td>Em andamento</td></tr>
-            <tr><td>10:00</td><td>Primeira cobranca de pendenciados</td><td>Douglas</td><td>A fazer</td></tr>
-            <tr><td>14:30</td><td>Atualizar estagios Caixa e Agehab no sistema</td><td>Douglas</td><td>A fazer</td></tr>
-            <tr><td>16:00</td><td>Segunda rodada de cobranca pendente</td><td>Douglas</td><td>A fazer</td></tr>
-            <tr><td>17:30</td><td>Mover finalizados para Arquivado</td><td>Douglas</td><td>A fazer</td></tr>
-          </tbody>
-        </table>
+      <div class="grid4">
+        <article class="box"><div class="box-head"><h4>Tarefas do dia</h4><span class="count" id="opCountTarefas">0</span></div><div class="list" id="opListTarefas"></div></article>
+        <article class="box"><div class="box-head"><h4>Agendamentos</h4><span class="count" id="opCountAgendamentos">0</span></div><div class="list" id="opListAgendamentos"></div></article>
+        <article class="box"><div class="box-head"><h4>Entregas do dia</h4><span class="count" id="opCountEntregas">0</span></div><div class="list" id="opListEntregas"></div></article>
+        <article class="box"><div class="box-head"><h4>Urgentes</h4><span class="count" id="opCountUrgentes">0</span></div><div class="list" id="opListUrgentes"></div></article>
       </div>
 
-      <div class="card">
-        <div class="card-header"><div><h3>Calendario e Agenda</h3><span>Visao rapida dos dias com entrega importante.</span></div><span style="font-size:0.78rem;color:var(--text-soft);">Marco 2026</span></div>
-        <div class="calendar-grid">
-          <div class="calendar-day-header">D</div><div class="calendar-day-header">S</div><div class="calendar-day-header">T</div><div class="calendar-day-header">Q</div><div class="calendar-day-header">Q</div><div class="calendar-day-header">S</div><div class="calendar-day-header">S</div>
-          <div></div><div></div><div class="calendar-day">1</div><div class="calendar-day">2</div><div class="calendar-day">3</div><div class="calendar-day">4<span class="calendar-dot"></span></div><div class="calendar-day">5</div>
-          <div class="calendar-day">6</div><div class="calendar-day today">7<span class="calendar-dot"></span></div><div class="calendar-day">8</div><div class="calendar-day">9</div><div class="calendar-day">10</div><div class="calendar-day">11</div><div class="calendar-day">12<span class="calendar-dot"></span></div>
-          <div class="calendar-day">13</div><div class="calendar-day">14</div><div class="calendar-day">15</div><div class="calendar-day">16</div><div class="calendar-day">17</div><div class="calendar-day">18</div><div class="calendar-day">19</div>
-          <div class="calendar-day">20<span class="calendar-dot"></span></div><div class="calendar-day">21</div><div class="calendar-day">22</div><div class="calendar-day">23</div><div class="calendar-day">24</div><div class="calendar-day">25</div><div class="calendar-day">26</div>
-          <div class="calendar-day">27</div><div class="calendar-day">28</div><div class="calendar-day">29</div><div class="calendar-day">30</div><div class="calendar-day">31</div>
-        </div>
-        <div class="calendar-footnote">Pontos verdes indicam dias com prazos fortes (Caixa, Agehab, sinal ou assinatura).</div>
+      <div class="grid2">
+        <article class="box">
+          <div class="box-head"><h4>Evolucao da equipe</h4><span class="count" id="opCountEvolucao">0</span></div>
+          <div class="evo" id="opEvolucao"></div>
+        </article>
+        <article class="box">
+          <div class="box-head"><h4>Anotacoes</h4><span class="count" id="opCountNotas">0</span></div>
+          <div class="note-form">
+            <input class="note-input" id="opNoteTitle" placeholder="Titulo da anotacao" maxlength="180" />
+            <textarea class="note-area" id="opNoteText" placeholder="Registrar observacoes, pendencias ou recados para o time..."></textarea>
+            <button class="btn" id="btnOpAddNote" type="button">Salvar anotacao</button>
+          </div>
+          <div class="list" id="opListNotas"></div>
+        </article>
       </div>
+      <div class="msg" id="opMsg"></div>
     </section>
   </main>
 </div>
+
+<script>
+  const API_BASE = "/app/api";
+  const PLANNER_DAYS = 14;
+  const STATUS_LABELS = { pendente:"Pendente", em_andamento:"Em andamento", concluido:"Concluido", atrasado:"Atrasado" };
+  const TYPE_LABELS = { tarefa:"Tarefa", agendamento:"Agendamento", entrega:"Entrega", urgente:"Urgente", anotacao:"Anotacao" };
+  const $ = (id) => document.getElementById(id);
+  const norm = (v) => String(v || "").trim().toLowerCase();
+
+  function esc(value){
+    return String(value ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
+  }
+
+  async function api(path, options = {}){
+    const response = await fetch(`${API_BASE}${path}`, {
+      credentials:"same-origin",
+      headers:{ "Content-Type":"application/json", ...(options.headers || {}) },
+      ...options,
+    });
+    if (response.status === 401){ window.location.href = "/login"; throw new Error("Nao autenticado"); }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || "Falha ao carregar dados");
+    return data;
+  }
+
+  function setupPageTransitions(){
+    requestAnimationFrame(() => document.body.classList.add("page-ready"));
+    document.addEventListener("click", (event) => {
+      const anchor = event.target.closest("a[href]");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href") || "";
+      if (!href || href.startsWith("#")) return;
+      if (anchor.hasAttribute("download")) return;
+      if (anchor.target && anchor.target !== "_self") return;
+      if (/^(mailto:|tel:|javascript:)/i.test(href)) return;
+      let targetUrl = null;
+      try { targetUrl = new URL(href, window.location.origin); } catch (_) { return; }
+      if (targetUrl.origin !== window.location.origin) return;
+      if (targetUrl.href === window.location.href) return;
+      event.preventDefault();
+      document.body.classList.remove("page-ready");
+      document.body.classList.add("page-leaving");
+      window.setTimeout(() => { window.location.href = targetUrl.href; }, 140);
+    });
+  }
+
+  function setOpsMessage(message, tone = ""){
+    const node = $("opMsg");
+    if (!node) return;
+    node.classList.remove("ok","err");
+    if (tone === "ok" || tone === "err") node.classList.add(tone);
+    node.textContent = message || "";
+  }
+
+  function statusClass(status){
+    const value = norm(status).replace(/\s+/g, "_");
+    if (value === "concluido") return "ok";
+    if (value === "atrasado") return "bad";
+    if (value === "em_andamento") return "warn";
+    return "";
+  }
+  function statusLabel(status){ return STATUS_LABELS[norm(status).replace(/\s+/g, "_")] || "Pendente"; }
+  function typeLabel(tipo){ return TYPE_LABELS[norm(tipo).replace(/\s+/g, "_")] || "Item"; }
+  function dateLabel(value){
+    if (!value) return "Sem data";
+    const parsed = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return String(value);
+    return parsed.toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit" });
+  }
+  function dateLabelLong(value){
+    if (!value) return "-";
+    const parsed = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return String(value);
+    return parsed.toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric" });
+  }
+  function dateTimeLabel(value){
+    if (!value) return "-";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return String(value);
+    return parsed.toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
+  }
+  function timeWindow(item){
+    const start = String(item?.hora_inicio || "").trim();
+    const end = String(item?.hora_fim || "").trim();
+    if (start && end) return `${start}-${end}`;
+    return start || end || "";
+  }
+
+  function renderList(listId, countId, items, emptyText){
+    const listNode = $(listId);
+    const countNode = $(countId);
+    if (!listNode || !countNode) return;
+    const rows = Array.isArray(items) ? items : [];
+    const query = norm($("opsQuickSearch")?.value || "");
+    const filtered = !query ? rows : rows.filter((item) => `${item?.titulo || ""} ${item?.responsavel || ""} ${item?.descricao || ""}`.toLowerCase().includes(query));
+    countNode.textContent = `${filtered.length}`;
+    if (!filtered.length){ listNode.innerHTML = `<div class="empty">${esc(emptyText)}</div>`; return; }
+    listNode.innerHTML = filtered.map((item) => {
+      const done = norm(item?.status).replace(/\s+/g, "_") === "concluido";
+      const parts = [];
+      if (item?.responsavel) parts.push(`Resp: ${item.responsavel}`);
+      if (item?.data_referencia) parts.push(dateLabel(item.data_referencia));
+      const win = timeWindow(item);
+      if (win) parts.push(win);
+      parts.push(`${Math.max(0, Math.min(100, Number(item?.progresso || 0)))}%`);
+      return `
+        <article class="item">
+          <div class="item-top">
+            <div class="item-title">${esc(item?.titulo || "-")}</div>
+            <span class="status ${statusClass(item?.status)}">${esc(statusLabel(item?.status))}</span>
+          </div>
+          ${item?.descricao ? `<div class="desc">${esc(item.descricao)}</div>` : ""}
+          <div class="meta">${parts.map((entry) => esc(entry)).join(" | ")}</div>
+          <div class="actions-mini">
+            <button class="mini" data-op-action="set-status" data-op-status="${done ? "pendente" : "concluido"}" data-op-item-id="${esc(item?.id || "")}" type="button">${done ? "Reabrir" : "Concluir"}</button>
+            <button class="mini danger" data-op-action="delete-item" data-op-item-id="${esc(item?.id || "")}" type="button">Excluir</button>
+          </div>
+        </article>
+      `;
+    }).join("");
+  }
+
+  function renderEvolucao(rows){
+    const target = $("opEvolucao");
+    const countNode = $("opCountEvolucao");
+    if (!target || !countNode) return;
+    const items = Array.isArray(rows) ? rows : [];
+    countNode.textContent = `${items.length}`;
+    if (!items.length){ target.innerHTML = '<div class="empty">Sem dados de evolucao no momento.</div>'; return; }
+    target.innerHTML = items.map((row) => {
+      const taxa = Math.max(0, Math.min(100, Number(row?.taxa_conclusao || 0)));
+      const medio = Math.max(0, Math.min(100, Number(row?.progresso_medio || 0)));
+      return `
+        <article class="evo-row">
+          <div class="evo-top"><strong>${esc(row?.responsavel || "Sem responsavel")}</strong><span>${Number(row?.concluidas || 0)}/${Number(row?.total || 0)} concluidas</span></div>
+          <div class="evo-bar"><span style="width:${taxa.toFixed(1)}%"></span></div>
+          <div class="meta">${medio}% medio | ${Number(row?.pendentes || 0)} pendentes</div>
+        </article>
+      `;
+    }).join("");
+  }
+
+  function renderNotes(rows){
+    const listNode = $("opListNotas");
+    const countNode = $("opCountNotas");
+    if (!listNode || !countNode) return;
+    const items = Array.isArray(rows) ? rows : [];
+    const query = norm($("opsQuickSearch")?.value || "");
+    const filtered = !query ? items : items.filter((item) => `${item?.titulo || ""} ${item?.descricao || ""} ${item?.responsavel || ""}`.toLowerCase().includes(query));
+    countNode.textContent = `${filtered.length}`;
+    if (!filtered.length){ listNode.innerHTML = '<div class="empty">Nenhuma anotacao registrada.</div>'; return; }
+    listNode.innerHTML = filtered.map((item) => {
+      const parts = [];
+      if (item?.responsavel) parts.push(`Resp: ${item.responsavel}`);
+      parts.push(`Atualizado: ${dateTimeLabel(item?.updated_at)}`);
+      return `
+        <article class="item">
+          <div class="item-top">
+            <div class="item-title">${esc(item?.titulo || "Anotacao")}</div>
+            <span class="status">${esc(typeLabel(item?.tipo))}</span>
+          </div>
+          ${item?.descricao ? `<div class="desc">${esc(item.descricao)}</div>` : ""}
+          <div class="meta">${parts.map((entry) => esc(entry)).join(" | ")}</div>
+          <div class="actions-mini">
+            <button class="mini danger" data-op-action="delete-item" data-op-item-id="${esc(item?.id || "")}" type="button">Excluir</button>
+          </div>
+        </article>
+      `;
+    }).join("");
+  }
+
+  let plannerDashboard = null;
+  function renderDashboard(data){
+    plannerDashboard = data || null;
+    $("opDateLabel").textContent = dateLabelLong(data?.referencia);
+    $("opPendentes").textContent = `${Number(data?.pendentes_total || 0)}`;
+    renderList("opListTarefas","opCountTarefas", data?.tarefas_dia || [], "Sem tarefas para hoje.");
+    renderList("opListAgendamentos","opCountAgendamentos", data?.agendamentos_dia || [], "Sem agendamentos no dia.");
+    renderList("opListEntregas","opCountEntregas", data?.entregas_dia || [], "Sem entregas no dia.");
+    renderList("opListUrgentes","opCountUrgentes", data?.urgentes || [], "Sem urgencias em aberto.");
+    renderEvolucao(data?.evolucao_time || []);
+    renderNotes(data?.anotacoes || []);
+  }
+  async function loadPlannerDashboard(){
+    const data = await api(`/analista/planejamento?dias=${PLANNER_DAYS}`);
+    renderDashboard(data);
+  }
+
+  function resetItemForm(){
+    $("opTipo").value = "tarefa";
+    $("opTitulo").value = "";
+    $("opResponsavel").value = "";
+    $("opHoraInicio").value = "";
+    $("opHoraFim").value = "";
+    $("opStatus").value = "pendente";
+    $("opProgresso").value = "0";
+    $("opDescricao").value = "";
+    $("opUrgente").checked = false;
+  }
+  function resetNoteForm(){ $("opNoteTitle").value = ""; $("opNoteText").value = ""; }
+
+  async function createPlannerItem(){
+    const titulo = $("opTitulo").value.trim();
+    if (!titulo){ setOpsMessage("Informe um titulo para criar o item.", "err"); return; }
+    const payload = {
+      tipo: $("opTipo").value || "tarefa",
+      titulo,
+      descricao: $("opDescricao").value.trim() || null,
+      responsavel: $("opResponsavel").value.trim() || null,
+      data_referencia: $("opData").value || null,
+      hora_inicio: $("opHoraInicio").value || null,
+      hora_fim: $("opHoraFim").value || null,
+      status: $("opStatus").value || "pendente",
+      progresso: Number($("opProgresso").value || 0),
+      urgente: Boolean($("opUrgente").checked),
+    };
+    const button = $("btnOpsAdd");
+    button.disabled = true;
+    try {
+      await api("/analista/planejamento/itens", { method:"POST", body:JSON.stringify(payload) });
+      resetItemForm();
+      setOpsMessage("Item adicionado na operacao.", "ok");
+      await loadPlannerDashboard();
+    } catch (error){
+      setOpsMessage(`Erro ao adicionar item: ${error.message}`, "err");
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function createPlannerNote(){
+    const texto = $("opNoteText").value.trim();
+    const titulo = $("opNoteTitle").value.trim() || "Anotacao";
+    if (!texto){ setOpsMessage("Digite a anotacao antes de salvar.", "err"); return; }
+    const payload = {
+      tipo: "anotacao",
+      titulo,
+      descricao: texto,
+      responsavel: $("opResponsavel").value.trim() || null,
+      data_referencia: $("opData").value || null,
+    };
+    const button = $("btnOpAddNote");
+    button.disabled = true;
+    try {
+      await api("/analista/planejamento/itens", { method:"POST", body:JSON.stringify(payload) });
+      resetNoteForm();
+      setOpsMessage("Anotacao registrada.", "ok");
+      await loadPlannerDashboard();
+    } catch (error){
+      setOpsMessage(`Erro ao salvar anotacao: ${error.message}`, "err");
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function patchPlannerItem(itemId, payload){
+    await api(`/analista/planejamento/itens/${encodeURIComponent(itemId)}`, { method:"PATCH", body:JSON.stringify(payload) });
+  }
+  async function deletePlannerItem(itemId){
+    await api(`/analista/planejamento/itens/${encodeURIComponent(itemId)}`, { method:"DELETE" });
+  }
+  async function handleActionClick(event){
+    const button = event.target.closest("[data-op-action]");
+    if (!button) return;
+    const action = button.dataset.opAction;
+    const itemId = button.dataset.opItemId;
+    if (!itemId) return;
+    button.disabled = true;
+    try {
+      if (action === "set-status"){
+        await patchPlannerItem(itemId, { status: button.dataset.opStatus || "pendente" });
+        setOpsMessage("Status atualizado.", "ok");
+      } else if (action === "delete-item"){
+        await deletePlannerItem(itemId);
+        setOpsMessage("Item removido.", "ok");
+      }
+      await loadPlannerDashboard();
+    } catch (error){
+      setOpsMessage(`Falha na acao: ${error.message}`, "err");
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  $("btnOpsAdd")?.addEventListener("click", () => createPlannerItem().catch(() => null));
+  $("btnOpAddNote")?.addEventListener("click", () => createPlannerNote().catch(() => null));
+  $("opsPanel")?.addEventListener("click", (event) => handleActionClick(event).catch(() => null));
+  $("opTitulo")?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    createPlannerItem().catch(() => null);
+  });
+  $("opNoteText")?.addEventListener("keydown", (event) => {
+    if (!(event.ctrlKey || event.metaKey) || event.key !== "Enter") return;
+    event.preventDefault();
+    createPlannerNote().catch(() => null);
+  });
+  $("opStatus")?.addEventListener("change", () => {
+    if ($("opStatus").value === "concluido") $("opProgresso").value = "100";
+  });
+  $("opTipo")?.addEventListener("change", () => {
+    if ($("opTipo").value === "urgente") $("opUrgente").checked = true;
+  });
+  $("opsQuickSearch")?.addEventListener("input", () => {
+    if (plannerDashboard) renderDashboard(plannerDashboard);
+  });
+
+  if ($("opData")) $("opData").value = new Date().toISOString().slice(0, 10);
+  setupPageTransitions();
+  loadPlannerDashboard().catch((error) => setOpsMessage(`Erro ao carregar central: ${error.message}`, "err"));
+</script>
 </body>
 </html>

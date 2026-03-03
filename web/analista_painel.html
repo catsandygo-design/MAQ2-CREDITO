@@ -45,6 +45,17 @@
     background:
       radial-gradient(900px 650px at 20% 0%, rgba(31,41,55,.65) 0%, rgba(2,6,23,1) 60%),
       linear-gradient(180deg, var(--bg), var(--bg2));
+    opacity:0;
+    transform:translateY(6px);
+    transition:opacity .18s ease, transform .18s ease;
+  }
+  body.page-ready{
+    opacity:1;
+    transform:none;
+  }
+  body.page-leaving{
+    opacity:0;
+    transform:translateY(8px);
   }
 
   body.theme-corporate{
@@ -1092,6 +1103,11 @@
   @keyframes cheerLeg{0%,100%{transform:rotate(10deg)}50%{transform:rotate(-10deg)}}
   @keyframes cheerBody{0%,100%{transform:translateY(0)}50%{transform:translateY(-1px)}}
   @media (prefers-reduced-motion: reduce){
+    body{
+      transition:none;
+      opacity:1;
+      transform:none;
+    }
     .pill,
     .sla{
       animation: none;
@@ -1215,64 +1231,12 @@
     <div class="opsHead">
       <div>
         <h2>Central de Operacao do Credito</h2>
-        <p>Tarefas, agendamentos, entregas do dia, urgencias, evolucao do time e anotacoes compartilhadas.</p>
+        <p>Acompanhe tarefas, agenda, entregas e evolucao. O cadastro operacional agora fica na tela operacional.</p>
       </div>
       <div class="opsSummary">
+        <a class="btn primary" href="/app/analista/acompanhamento-operacional" data-nav-link>Cadastrar no Painel Operacional</a>
         <span class="chip">Referencia: <strong id="opDateLabel">-</strong></span>
         <span class="chip">Pendentes: <strong id="opPendentes">0</strong></span>
-      </div>
-    </div>
-
-    <div class="opsForm">
-      <div class="field">
-        <label>Tipo</label>
-        <select id="opTipo">
-          <option value="tarefa">Tarefa</option>
-          <option value="agendamento">Agendamento</option>
-          <option value="entrega">Entrega do dia</option>
-          <option value="urgente">Urgente</option>
-        </select>
-      </div>
-      <div class="field span3">
-        <label>Titulo</label>
-        <input id="opTitulo" placeholder="Ex: Conferir documentos da Caixa" maxlength="180" />
-      </div>
-      <div class="field span2">
-        <label>Responsavel</label>
-        <input id="opResponsavel" placeholder="Nome da pessoa" maxlength="120" />
-      </div>
-      <div class="field">
-        <label>Data</label>
-        <input id="opData" type="date" />
-      </div>
-      <div class="field">
-        <label>Hora inicio</label>
-        <input id="opHoraInicio" type="time" />
-      </div>
-      <div class="field">
-        <label>Hora fim</label>
-        <input id="opHoraFim" type="time" />
-      </div>
-      <div class="field">
-        <label>Status</label>
-        <select id="opStatus">
-          <option value="pendente">Pendente</option>
-          <option value="em_andamento">Em andamento</option>
-          <option value="concluido">Concluido</option>
-          <option value="atrasado">Atrasado</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Progresso (%)</label>
-        <input id="opProgresso" type="number" min="0" max="100" step="5" value="0" />
-      </div>
-      <div class="field span3">
-        <label>Descricao</label>
-        <input id="opDescricao" placeholder="Detalhes rapidos para o time" maxlength="2200" />
-      </div>
-      <div class="opsFormActions">
-        <label class="opsCheck"><input id="opUrgente" type="checkbox" />Urgente</label>
-        <button class="btn primary" id="btnOpsAdd" type="button">Adicionar</button>
       </div>
     </div>
 
@@ -1319,11 +1283,6 @@
         <div class="opsBoxHead">
           <h3>Anotacoes</h3>
           <span class="opsCount" id="opCountNotas">0</span>
-        </div>
-        <div class="opsNoteForm">
-          <input class="opsNoteInput" id="opNoteTitle" placeholder="Titulo da anotacao" maxlength="180" />
-          <textarea class="opsNoteArea" id="opNoteText" placeholder="Registrar observacoes, pendencias ou recados para o time..."></textarea>
-          <button class="btn" id="btnOpAddNote" type="button">Salvar anotacao</button>
         </div>
         <div class="opsList" id="opListNotas"></div>
       </article>
@@ -2436,6 +2395,33 @@
     }
   }
 
+  function setupPageTransitions(){
+    requestAnimationFrame(() => document.body.classList.add("page-ready"));
+    document.addEventListener("click", (event) => {
+      const anchor = event.target.closest("a[href]");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href") || "";
+      if (!href || href.startsWith("#")) return;
+      if (anchor.hasAttribute("download")) return;
+      if (anchor.target && anchor.target !== "_self") return;
+      if (/^(mailto:|tel:|javascript:)/i.test(href)) return;
+      let targetUrl = null;
+      try {
+        targetUrl = new URL(href, window.location.origin);
+      } catch (_) {
+        return;
+      }
+      if (targetUrl.origin !== window.location.origin) return;
+      if (targetUrl.href === window.location.href) return;
+      event.preventDefault();
+      document.body.classList.remove("page-ready");
+      document.body.classList.add("page-leaving");
+      window.setTimeout(() => {
+        window.location.href = targetUrl.href;
+      }, 140);
+    });
+  }
+
   let countdown = REFRESH_SECONDS;
   function tick(){
     if (document.hidden) {
@@ -2467,30 +2453,8 @@
   ["ccaFilter","stG","stC"].forEach(id=>{
     $(id).addEventListener("change", applyFilters);
   });
-  $("btnOpsAdd").addEventListener("click", createPlannerItem);
-  $("btnOpAddNote").addEventListener("click", createPlannerNote);
-  $("opsCentral").addEventListener("click", (event) => {
+  $("opsCentral")?.addEventListener("click", (event) => {
     handleOpsActionClick(event).catch(() => null);
-  });
-  $("opTitulo").addEventListener("keydown", (event) => {
-    if (event.key !== "Enter") return;
-    event.preventDefault();
-    createPlannerItem().catch(() => null);
-  });
-  $("opNoteText").addEventListener("keydown", (event) => {
-    if (!(event.ctrlKey || event.metaKey) || event.key !== "Enter") return;
-    event.preventDefault();
-    createPlannerNote().catch(() => null);
-  });
-  $("opStatus").addEventListener("change", () => {
-    if ($("opStatus").value === "concluido") {
-      $("opProgresso").value = "100";
-    }
-  });
-  $("opTipo").addEventListener("change", () => {
-    if ($("opTipo").value === "urgente") {
-      $("opUrgente").checked = true;
-    }
   });
 
   async function logout(){
@@ -2512,6 +2476,7 @@
     $("opData").value = new Date().toISOString().slice(0, 10);
   }
 
+  setupPageTransitions();
   loadMeAndToggleHubButton().catch(()=>null);
   refreshDataAndRender(true).catch(()=>null);
   setInterval(tick, 1000);
