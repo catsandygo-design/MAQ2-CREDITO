@@ -27,6 +27,7 @@
       transform:translateY(6px);
       transition:opacity .18s ease,transform .18s ease;
     }
+    html{scroll-behavior:smooth}
     body.page-ready{opacity:1;transform:none}
     body.page-leaving{opacity:0;transform:translateY(8px)}
     .layout{display:flex;min-height:100vh}
@@ -61,7 +62,69 @@
       width:20px;height:20px;border-radius:999px;background:rgba(15,23,42,.9);display:grid;place-items:center;
       font-size:.62rem
     }
-    .side-note{margin-top:auto;border-top:1px solid rgba(148,163,184,.25);padding:8px 12px 0;font-size:.7rem;color:#94a3b8;line-height:1.35}
+    .side-block{display:grid;gap:6px;padding:4px 4px 0}
+    .side-block .label{
+      font-size:.67rem;
+      letter-spacing:.15em;
+      text-transform:uppercase;
+      color:#94a3b8;
+      padding:2px 2px;
+    }
+    .side-btn{
+      border:1px solid rgba(148,163,184,.28);
+      border-radius:10px;
+      background:rgba(15,23,42,.72);
+      color:#e5e7eb;
+      font-size:.73rem;
+      font-weight:700;
+      padding:7px 9px;
+      text-align:left;
+      cursor:pointer;
+      transition:background .12s ease,border-color .12s ease,transform .08s ease;
+    }
+    .side-btn:hover{
+      background:rgba(30,41,59,.95);
+      border-color:rgba(34,197,94,.45);
+      transform:translateY(-1px);
+    }
+    .side-filters{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+    .side-filter{
+      border:1px solid rgba(148,163,184,.28);
+      border-radius:999px;
+      background:rgba(15,23,42,.72);
+      color:#cbd5e1;
+      font-size:.7rem;
+      font-weight:700;
+      padding:6px 8px;
+      cursor:pointer;
+      transition:background .12s ease,border-color .12s ease,color .12s ease;
+    }
+    .side-filter.active{
+      background:rgba(34,197,94,.2);
+      border-color:rgba(34,197,94,.6);
+      color:#dcfce7;
+    }
+    .side-note{
+      margin-top:auto;
+      border-top:1px solid rgba(148,163,184,.25);
+      padding:8px 12px 0;
+      font-size:.72rem;
+      color:#cbd5e1;
+      display:grid;
+      gap:6px;
+    }
+    .side-kpi{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      border:1px solid rgba(148,163,184,.22);
+      border-radius:10px;
+      padding:6px 8px;
+      background:rgba(15,23,42,.75);
+    }
+    .side-kpi span{color:#94a3b8}
+    .side-kpi strong{font-size:.85rem;color:#e5e7eb}
     .main{flex:1;padding:14px 18px;display:grid;gap:12px;align-content:start}
     .top{
       display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap
@@ -171,9 +234,27 @@
       <a href="/app/analista/repasse"><b>RP</b><span>Repasse</span></a>
       <a href="/app/analista/arquivados"><b>AR</b><span>Arquivados</span></a>
     </nav>
+    <div class="side-block">
+      <div class="label">Atalhos</div>
+      <button class="side-btn" type="button" data-side-action="new-task">Nova tarefa</button>
+      <button class="side-btn" type="button" data-side-action="new-schedule">Novo agendamento</button>
+      <button class="side-btn" type="button" data-side-action="new-note">Nova anotacao</button>
+      <button class="side-btn" type="button" data-side-action="refresh">Atualizar dados</button>
+    </div>
+    <div class="side-block">
+      <div class="label">Filtro rapido</div>
+      <div class="side-filters">
+        <button class="side-filter active" type="button" data-side-filter="all">Tudo</button>
+        <button class="side-filter" type="button" data-side-filter="pending">Pendentes</button>
+        <button class="side-filter" type="button" data-side-filter="urgent">Urgentes</button>
+        <button class="side-filter" type="button" data-side-filter="done">Concluidos</button>
+      </div>
+    </div>
     <div class="side-note">
-      <div>Cadastro e acompanhamento das tarefas operacionais do credito.</div>
-      <div>Atualizacoes feitas aqui aparecem na central do painel principal.</div>
+      <div class="side-kpi"><span>Total</span><strong id="sideTotal">0</strong></div>
+      <div class="side-kpi"><span>Pendentes</span><strong id="sidePendentes">0</strong></div>
+      <div class="side-kpi"><span>Urgentes</span><strong id="sideUrgentes">0</strong></div>
+      <div class="side-kpi"><span>Concluidos</span><strong id="sideConcluidos">0</strong></div>
     </div>
   </aside>
 
@@ -289,6 +370,7 @@
   const TYPE_LABELS = { tarefa:"Tarefa", agendamento:"Agendamento", entrega:"Entrega", urgente:"Urgente", anotacao:"Anotacao" };
   const $ = (id) => document.getElementById(id);
   const norm = (v) => String(v || "").trim().toLowerCase();
+  let sidebarQuickFilter = "all";
 
   function esc(value){
     return String(value ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
@@ -369,13 +451,43 @@
     return start || end || "";
   }
 
+  function itemMatchesSidebarFilter(item){
+    const status = norm(item?.status).replace(/\s+/g, "_");
+    const isUrgent = Boolean(item?.urgente) || norm(item?.tipo).replace(/\s+/g, "_") === "urgente";
+    if (sidebarQuickFilter === "urgent") return isUrgent && status !== "concluido";
+    if (sidebarQuickFilter === "pending") return status !== "concluido";
+    if (sidebarQuickFilter === "done") return status === "concluido";
+    return true;
+  }
+
+  function applySidebarFilterButtons(){
+    document.querySelectorAll("[data-side-filter]").forEach((button) => {
+      button.classList.toggle("active", button.dataset.sideFilter === sidebarQuickFilter);
+    });
+  }
+
+  function refreshSidebarKpis(data){
+    const rows = Array.isArray(data?.itens) ? data.itens : [];
+    const total = rows.length;
+    const pendentes = rows.filter((item) => norm(item?.status).replace(/\s+/g, "_") !== "concluido").length;
+    const urgentes = rows.filter((item) => (Boolean(item?.urgente) || norm(item?.tipo).replace(/\s+/g, "_") === "urgente") && norm(item?.status).replace(/\s+/g, "_") !== "concluido").length;
+    const concluidos = rows.filter((item) => norm(item?.status).replace(/\s+/g, "_") === "concluido").length;
+    if ($("sideTotal")) $("sideTotal").textContent = `${total}`;
+    if ($("sidePendentes")) $("sidePendentes").textContent = `${pendentes}`;
+    if ($("sideUrgentes")) $("sideUrgentes").textContent = `${urgentes}`;
+    if ($("sideConcluidos")) $("sideConcluidos").textContent = `${concluidos}`;
+  }
+
   function renderList(listId, countId, items, emptyText){
     const listNode = $(listId);
     const countNode = $(countId);
     if (!listNode || !countNode) return;
     const rows = Array.isArray(items) ? items : [];
     const query = norm($("opsQuickSearch")?.value || "");
-    const filtered = !query ? rows : rows.filter((item) => `${item?.titulo || ""} ${item?.responsavel || ""} ${item?.descricao || ""}`.toLowerCase().includes(query));
+    const filteredByMode = rows.filter((item) => itemMatchesSidebarFilter(item));
+    const filtered = !query
+      ? filteredByMode
+      : filteredByMode.filter((item) => `${item?.titulo || ""} ${item?.responsavel || ""} ${item?.descricao || ""}`.toLowerCase().includes(query));
     countNode.textContent = `${filtered.length}`;
     if (!filtered.length){ listNode.innerHTML = `<div class="empty">${esc(emptyText)}</div>`; return; }
     listNode.innerHTML = filtered.map((item) => {
@@ -429,7 +541,10 @@
     if (!listNode || !countNode) return;
     const items = Array.isArray(rows) ? rows : [];
     const query = norm($("opsQuickSearch")?.value || "");
-    const filtered = !query ? items : items.filter((item) => `${item?.titulo || ""} ${item?.descricao || ""} ${item?.responsavel || ""}`.toLowerCase().includes(query));
+    const filteredByMode = items.filter((item) => itemMatchesSidebarFilter(item));
+    const filtered = !query
+      ? filteredByMode
+      : filteredByMode.filter((item) => `${item?.titulo || ""} ${item?.descricao || ""} ${item?.responsavel || ""}`.toLowerCase().includes(query));
     countNode.textContent = `${filtered.length}`;
     if (!filtered.length){ listNode.innerHTML = '<div class="empty">Nenhuma anotacao registrada.</div>'; return; }
     listNode.innerHTML = filtered.map((item) => {
@@ -457,6 +572,7 @@
     plannerDashboard = data || null;
     $("opDateLabel").textContent = dateLabelLong(data?.referencia);
     $("opPendentes").textContent = `${Number(data?.pendentes_total || 0)}`;
+    refreshSidebarKpis(data);
     renderList("opListTarefas","opCountTarefas", data?.tarefas_dia || [], "Sem tarefas para hoje.");
     renderList("opListAgendamentos","opCountAgendamentos", data?.agendamentos_dia || [], "Sem agendamentos no dia.");
     renderList("opListEntregas","opCountEntregas", data?.entregas_dia || [], "Sem entregas no dia.");
@@ -587,8 +703,37 @@
   $("opsQuickSearch")?.addEventListener("input", () => {
     if (plannerDashboard) renderDashboard(plannerDashboard);
   });
+  document.querySelectorAll("[data-side-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      sidebarQuickFilter = button.dataset.sideFilter || "all";
+      applySidebarFilterButtons();
+      if (plannerDashboard) renderDashboard(plannerDashboard);
+    });
+  });
+  document.querySelectorAll("[data-side-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const action = button.dataset.sideAction || "";
+      if (action === "new-task") {
+        $("opTipo").value = "tarefa";
+        $("opStatus").value = "pendente";
+        $("opTitulo")?.focus();
+        $("opTitulo")?.scrollIntoView({ behavior:"smooth", block:"center" });
+      } else if (action === "new-schedule") {
+        $("opTipo").value = "agendamento";
+        $("opStatus").value = "pendente";
+        $("opTitulo")?.focus();
+        $("opTitulo")?.scrollIntoView({ behavior:"smooth", block:"center" });
+      } else if (action === "new-note") {
+        $("opNoteTitle")?.focus();
+        $("opNoteTitle")?.scrollIntoView({ behavior:"smooth", block:"center" });
+      } else if (action === "refresh") {
+        loadPlannerDashboard().catch((error) => setOpsMessage(`Erro ao carregar central: ${error.message}`, "err"));
+      }
+    });
+  });
 
   if ($("opData")) $("opData").value = new Date().toISOString().slice(0, 10);
+  applySidebarFilterButtons();
   setupPageTransitions();
   loadPlannerDashboard().catch((error) => setOpsMessage(`Erro ao carregar central: ${error.message}`, "err"));
 </script>
