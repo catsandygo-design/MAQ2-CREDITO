@@ -1118,9 +1118,306 @@
   td.statusTd{overflow:hidden}
 </style>
   <link rel="stylesheet" href="/assets/theme_techboard.css" />
+  <style>
+    body.analista-pro{
+      --fs-base:12px;
+      --fs-head:11px;
+      --fs-pill:10px;
+    }
+    body.analista-pro .wrap{
+      width:min(1940px, 100%);
+      max-width:100%;
+      padding:12px;
+      gap:10px;
+    }
+    body.analista-pro .topbar{
+      display:grid;
+      grid-template-columns:minmax(0, 1fr) auto;
+      align-items:center;
+      gap:12px;
+      padding:10px 12px;
+      border-radius:16px;
+    }
+    body.analista-pro .title{
+      gap:12px;
+      align-items:center;
+      min-width:0;
+    }
+    body.analista-pro .badgeA{
+      width:38px;
+      height:38px;
+      border-radius:12px;
+      font-size:15px;
+      font-weight:900;
+      flex:0 0 auto;
+    }
+    body.analista-pro .title h1{
+      font-size:23px;
+      line-height:1.05;
+      margin:0;
+      letter-spacing:.01em;
+      color:#062f53;
+    }
+    body.analista-pro .title p{
+      margin:4px 0 0;
+      font-size:12px;
+      color:#3f536b;
+    }
+    body.analista-pro .rightTop{
+      display:grid;
+      justify-items:end;
+      gap:8px;
+      min-width:0;
+    }
+    body.analista-pro .metaChips{
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    body.analista-pro .navActions{
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    body.theme-corporate.analista-pro .navActions .btn{
+      min-height:38px;
+      padding:8px 14px;
+      border-radius:14px;
+      font-size:12px;
+      font-weight:700;
+    }
+    body.theme-corporate.analista-pro .navActions .btn.activeNav{
+      border-color:rgba(14,165,233,.46) !important;
+      background:linear-gradient(180deg, #dff4ff, #c9eafe) !important;
+      color:#0b507f !important;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.65), 0 6px 14px rgba(14,116,144,.16) !important;
+    }
+    body.analista-pro .filters{
+      grid-template-columns:minmax(230px, 1.3fr) repeat(5, minmax(150px, 1fr)) minmax(130px, .8fr);
+      gap:8px;
+      align-items:end;
+      padding:8px;
+      border-radius:16px;
+    }
+    body.analista-pro .field{
+      gap:5px;
+    }
+    body.analista-pro .field label{
+      font-size:11px;
+      font-weight:600;
+      letter-spacing:.01em;
+    }
+    body.theme-corporate.analista-pro .field input,
+    body.theme-corporate.analista-pro .field select{
+      min-height:42px;
+      padding:8px 12px;
+      font-size:13px;
+      border-radius:13px;
+    }
+    body.theme-corporate.analista-pro #btnFiltrar{
+      min-height:42px;
+      font-size:13px;
+    }
+    body.analista-pro .insights{
+      display:grid;
+      grid-auto-flow:column;
+      grid-auto-columns:minmax(140px, 1fr);
+      gap:8px;
+      min-height:68px;
+      padding-bottom:2px;
+    }
+    body.analista-pro .kpi{
+      height:68px;
+      border-radius:14px;
+      padding:8px 10px;
+    }
+    body.analista-pro .kpi .k{
+      font-size:11px;
+      font-weight:600;
+      letter-spacing:.01em;
+    }
+    body.analista-pro .kpi .v{
+      font-size:20px;
+      line-height:1.05;
+      margin-top:2px;
+      font-weight:800;
+    }
+    body.analista-pro .opsCentral{
+      border-radius:16px;
+      padding:10px;
+      gap:10px;
+    }
+    body.analista-pro .opsHead{
+      align-items:center;
+    }
+    body.analista-pro .opsHead h2{
+      font-size:14px;
+      margin:0;
+      letter-spacing:.01em;
+      color:#0a3357;
+    }
+    body.analista-pro .opsHead p{
+      font-size:12px;
+      margin:4px 0 0;
+      color:#4a607a;
+    }
+    body.analista-pro .opsSummary{
+      gap:8px;
+    }
+    body.theme-corporate.analista-pro .opsSummary .btn{
+      min-height:38px;
+      padding:8px 14px;
+      border-radius:13px;
+    }
+    body.analista-pro .opsGrid{
+      gap:8px;
+    }
+    body.analista-pro .opsBottom{
+      gap:8px;
+      grid-template-columns:1fr 1fr;
+    }
+    body.analista-pro .opsBox{
+      min-height:154px;
+      border-radius:14px;
+      padding:10px;
+      gap:8px;
+    }
+    body.analista-pro .opsBoxHead h3{
+      font-size:11px;
+      letter-spacing:.08em;
+      font-weight:800;
+    }
+    body.analista-pro .opsList{
+      min-height:90px;
+      max-height:182px;
+      gap:7px;
+    }
+    body.analista-pro .opsItem{
+      padding:8px;
+      border-radius:10px;
+    }
+    body.analista-pro .opsItemTitle{
+      font-size:11px;
+      line-height:1.25;
+    }
+    body.analista-pro .opsDesc,
+    body.analista-pro .opsMeta{
+      font-size:10px;
+      line-height:1.3;
+    }
+    body.analista-pro .opsStatus{
+      font-size:10px;
+      padding:2px 7px;
+    }
+    body.analista-pro .opsMsg{
+      font-size:11px;
+      min-height:14px;
+    }
+    body.analista-pro .card{
+      border-radius:16px;
+      overflow:hidden;
+    }
+    body.analista-pro .toolbar{
+      padding:10px 12px;
+      gap:10px;
+    }
+    body.analista-pro .toolbar h2{
+      font-size:15px;
+      margin:0;
+      color:#0a3357;
+    }
+    body.analista-pro .toolbar .sub{
+      margin-top:4px;
+      font-size:11px;
+      line-height:1.45;
+      color:#455a73;
+    }
+    body.theme-corporate.analista-pro .count{
+      font-size:12px;
+      padding:7px 12px;
+    }
+    body.analista-pro table{
+      min-width:1280px;
+    }
+    body.analista-pro thead th{
+      padding:10px 12px;
+      font-size:11px;
+      letter-spacing:.03em;
+    }
+    body.analista-pro tbody td{
+      padding:10px 12px;
+      font-size:12px;
+      line-height:1.3;
+    }
+    body.analista-pro .cliente{
+      font-size:13px;
+      gap:6px;
+    }
+    body.analista-pro .empreendimento,
+    body.analista-pro .corretorLinha{
+      font-size:12px;
+      line-height:1.2;
+    }
+    body.theme-corporate.analista-pro .pill,
+    body.theme-corporate.analista-pro .sla{
+      font-size:10px;
+      padding:4px 9px;
+    }
+    body.theme-corporate.analista-pro .tableWrap{
+      min-height:420px;
+    }
+    @media (max-width: 1600px){
+      body.analista-pro .title h1{font-size:21px}
+      body.analista-pro .filters{
+        grid-template-columns:minmax(210px, 1.2fr) repeat(3, minmax(150px, 1fr));
+      }
+    }
+    @media (max-width: 1120px){
+      body.analista-pro .topbar{
+        grid-template-columns:1fr;
+      }
+      body.analista-pro .rightTop{
+        justify-items:start;
+      }
+      body.analista-pro .metaChips,
+      body.analista-pro .navActions{
+        justify-content:flex-start;
+      }
+      body.analista-pro .filters{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+      }
+      body.analista-pro .insights{
+        grid-auto-columns:minmax(170px, 1fr);
+      }
+      body.analista-pro .opsGrid{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+      }
+      body.analista-pro .opsBottom{
+        grid-template-columns:1fr;
+      }
+    }
+    @media (max-width: 760px){
+      body.analista-pro .filters,
+      body.analista-pro .opsGrid{
+        grid-template-columns:1fr;
+      }
+      body.analista-pro .title h1{font-size:18px}
+      body.analista-pro .title p{font-size:11px}
+      body.analista-pro .kpi{
+        height:64px;
+      }
+      body.analista-pro .kpi .v{
+        font-size:18px;
+      }
+    }
+  </style>
 </head>
 
-<body class="theme-corporate">
+<body class="theme-corporate analista-pro">
 <canvas id="bhCanvas" aria-hidden="true"></canvas>
 <script>
   window.__layoutPrefPromise = (async () => {
@@ -1153,20 +1450,25 @@
       <div class="badgeA">A</div>
       <div>
         <h1>Painel do Analista</h1>
-        <p>Fila | Filtros | Insights | Status | SLA</p>
+        <p>Fila, filtros, insights operacionais, status e SLA em uma visao unica.</p>
       </div>
     </div>
 
     <div class="rightTop">
-      <span class="chip"><span class="pulseDot"></span>Auto refresh: <strong id="refreshLabel">30s</strong></span>
-      <span class="chip">SLA alerta: <strong id="slaRuleLabel">>=48h</strong></span>
-      <a class="btn" id="btnHubCredito" href="/app/gestor-credito" style="display:none;">Voltar Hub Credito</a>
-      <a class="btn primary" href="/app/analista/acompanhamento">Acompanhamento</a>
-      <a class="btn" href="/app/analista/acompanhamento-operacional">Acompanhamento Operacional</a>
-      <a class="btn" href="/app/analista/repasse">Repasse</a>
-      <a class="btn" href="/app/analista/importacao">Importacao</a>
-      <a class="btn" href="/app/analista/arquivados">Arquivados</a>
-      <button class="btn danger" id="btnSair" type="button">Sair</button>
+      <div class="metaChips">
+        <span class="chip"><span class="pulseDot"></span>Auto refresh: <strong id="refreshLabel">30s</strong></span>
+        <span class="chip">SLA alerta: <strong id="slaRuleLabel">>=48h</strong></span>
+      </div>
+      <div class="navActions">
+        <a class="btn activeNav" href="/app/analista" aria-current="page">Painel</a>
+        <a class="btn" id="btnHubCredito" href="/app/gestor-credito" style="display:none;">Hub Credito</a>
+        <a class="btn" href="/app/analista/acompanhamento">Acompanhamento</a>
+        <a class="btn" href="/app/analista/acompanhamento-operacional">Operacional</a>
+        <a class="btn" href="/app/analista/repasse">Repasse</a>
+        <a class="btn" href="/app/analista/importacao">Importacao</a>
+        <a class="btn" href="/app/analista/arquivados">Arquivados</a>
+        <button class="btn danger" id="btnSair" type="button">Sair</button>
+      </div>
     </div>
   </div>
 
