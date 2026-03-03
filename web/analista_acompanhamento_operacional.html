@@ -1,0 +1,644 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel Operacional - Credito e Repasse</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --sidebar-bg: #0f172a;
+      --sidebar-bg-soft: #111827;
+      --sidebar-accent: #22c55e;
+      --bg: #f1f5f9;
+      --card-bg: #ffffff;
+      --border-soft: #d1d5db;
+      --text: #0f172a;
+      --text-soft: #6b7280;
+      --kanban-todo: #0ea5e9;
+      --kanban-email: #8b5cf6;
+      --kanban-pendente: #f97316;
+      --kanban-done: #22c55e;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .layout { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 260px;
+      background: linear-gradient(180deg, var(--sidebar-bg) 0%, var(--sidebar-bg-soft) 100%);
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 10px;
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 10px 18px;
+      border-bottom: 1px solid rgba(148,163,184,0.2);
+      margin-bottom: 8px;
+    }
+
+    .sidebar-logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      border: 2px solid var(--sidebar-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.95rem;
+      background: radial-gradient(circle at top, rgba(34,197,94,0.3), transparent);
+    }
+
+    .sidebar-title { display: flex; flex-direction: column; gap: 2px; }
+    .sidebar-title span:first-child { font-size: 0.9rem; font-weight: 600; }
+    .sidebar-title span:last-child {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9ca3af;
+    }
+
+    .sidebar-menu { margin-top: 6px; padding: 4px 0; flex: 1; overflow-y: auto; }
+    .menu-section-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: #9ca3af;
+      padding: 10px 12px 4px;
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      color: #e5e7eb;
+      font-size: 0.82rem;
+      margin: 1px 4px;
+      text-decoration: none;
+      transition: background 0.12s ease, transform 0.08s ease;
+    }
+
+    .menu-item-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      background: rgba(15,23,42,0.9);
+      font-weight: 700;
+    }
+
+    .menu-item.active { background: rgba(34,197,94,0.18); transform: translateX(1px); }
+    .menu-item:hover:not(.active) { background: rgba(15,23,42,0.8); }
+
+    .sidebar-footer {
+      padding-top: 8px;
+      border-top: 1px solid rgba(148,163,184,0.25);
+      font-size: 0.7rem;
+      color: #9ca3af;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding-inline: 12px;
+    }
+
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 14px 18px;
+      gap: 14px;
+      overflow-x: hidden;
+    }
+
+    .main-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .main-header-title h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
+    .main-header-title span { font-size: 0.8rem; color: var(--text-soft); }
+
+    .main-header-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .search-input {
+      padding: 6px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border-soft);
+      background: #f9fafb;
+      font-size: 0.8rem;
+      min-width: 170px;
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: 1px solid var(--border-soft);
+      background: #ffffff;
+      font-size: 0.78rem;
+      padding: 6px 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      color: var(--text-soft);
+      text-decoration: none;
+      transition: background 0.12s ease, box-shadow 0.12s ease, transform 0.08s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: linear-gradient(90deg, #22c55e, #16a34a);
+      border-color: transparent;
+      color: #f9fafb;
+    }
+
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 18px rgba(15,23,42,0.08); }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .summary-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 8px 10px;
+      border: 1px solid var(--border-soft);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .summary-label {
+      font-size: 0.7rem;
+      color: var(--text-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .summary-value { font-size: 1.2rem; font-weight: 600; }
+
+    .summary-tag {
+      align-self: flex-start;
+      font-size: 0.7rem;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #4f46e5;
+    }
+
+    .summary-tag.orange { background: #fff7ed; color: #c2410c; }
+    .summary-tag.green { background: #ecfdf5; color: #16a34a; }
+
+    .kanban-wrapper {
+      background: linear-gradient(180deg,#e5e7eb 0%,#e2e8f0 12%,#e5e7eb 100%);
+      border-radius: 16px;
+      padding: 10px;
+      border: 1px solid var(--border-soft);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .section-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+
+    .section-title-row h2 {
+      margin: 0;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--text-soft);
+    }
+
+    .section-title-row span { font-size: 0.8rem; color: var(--text-soft); }
+
+    .kanban-board {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .kanban-column {
+      background: #f8fafc;
+      border-radius: 14px;
+      border: 1px solid var(--border-soft);
+      display: flex;
+      flex-direction: column;
+      max-height: 470px;
+    }
+
+    .kanban-column-header {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .kanban-column-title span:first-child {
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .kanban-badge {
+      font-size: 0.7rem;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      color: #4b5563;
+    }
+
+    .kanban-column-title span:last-child { font-size: 0.7rem; color: var(--text-soft); }
+    .kanban-count { font-size: 0.75rem; color: var(--text-soft); }
+
+    .kanban-list { padding: 6px 8px 8px; overflow-y: auto; }
+    .kanban-list::-webkit-scrollbar { width: 6px; }
+    .kanban-list::-webkit-scrollbar-thumb { background: #cbd5f5; border-radius: 999px; }
+
+    .kanban-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 7px 8px;
+      border: 1px solid var(--border-soft);
+      margin-bottom: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      box-shadow: 0 4px 8px rgba(148,163,184,0.25);
+      font-size: 0.75rem;
+    }
+
+    .kanban-card-header { display: flex; justify-content: space-between; gap: 6px; align-items: center; }
+
+    .tag-chip {
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .tag-chip.red { background: #fef2f2; color: #b91c1c; }
+    .tag-chip.green { background: #ecfdf5; color: #16a34a; }
+    .tag-chip.orange { background: #fff7ed; color: #c2410c; }
+
+    .kanban-card-title { font-weight: 600; font-size: 0.78rem; }
+    .kanban-meta { display: flex; flex-wrap: wrap; gap: 4px 8px; color: var(--text-soft); font-size: 0.7rem; }
+    .meta-label { font-weight: 500; }
+    .kanban-footer { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-top: 4px; }
+
+    .pill-small {
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      color: #4b5563;
+    }
+
+    .date-pill { font-size: 0.7rem; color: var(--text-soft); }
+
+    .kanban-column.todo    { border-top: 4px solid var(--kanban-todo); }
+    .kanban-column.email   { border-top: 4px solid var(--kanban-email); }
+    .kanban-column.pending { border-top: 4px solid var(--kanban-pendente); }
+    .kanban-column.done    { border-top: 4px solid var(--kanban-done); }
+
+    .phases-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .phase-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      border: 1px solid var(--border-soft);
+      padding: 10px 12px;
+    }
+
+    .phase-card h3 { margin: 0 0 4px; font-size: 0.9rem; }
+    .phase-card span { font-size: 0.78rem; color: var(--text-soft); }
+
+    .phase-steps {
+      margin-top: 6px;
+      font-size: 0.78rem;
+      columns: 2;
+      column-gap: 14px;
+    }
+
+    .phase-steps ul { margin: 4px 0; padding-left: 16px; }
+    .phase-steps li { margin-bottom: 2px; }
+
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 2fr 1.4fr;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      border: 1px solid var(--border-soft);
+      padding: 10px 12px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .card-header h3 { margin: 0; font-size: 0.9rem; }
+    .card-header span { font-size: 0.78rem; color: var(--text-soft); }
+
+    .tasks-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    .tasks-table th, .tasks-table td {
+      padding: 5px 4px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+    }
+
+    .tasks-table th { font-size: 0.72rem; color: var(--text-soft); }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 4px;
+      font-size: 0.72rem;
+      margin-top: 6px;
+    }
+
+    .calendar-day-header { text-align: center; font-weight: 600; color: var(--text-soft); }
+
+    .calendar-day {
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 4px;
+      min-height: 40px;
+      border: 1px solid #e5e7eb;
+      text-align: right;
+    }
+
+    .calendar-day.today {
+      border-color: #22c55e;
+      box-shadow: 0 0 0 1px rgba(34,197,94,0.3);
+    }
+
+    .calendar-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #22c55e;
+      display: inline-block;
+      margin-left: 3px;
+    }
+
+    .calendar-footnote { margin-top: 6px; font-size: 0.72rem; color: var(--text-soft); }
+
+    @media (max-width: 1200px) {
+      .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .kanban-board { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 960px) {
+      .bottom-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 900px) {
+      .kanban-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .phases-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .layout { flex-direction: column; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 640px) {
+      .kanban-board { grid-template-columns: 1fr; }
+      .phase-steps { columns: 1; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">CR</div>
+      <div class="sidebar-title">
+        <span>Credito e Repasse</span>
+        <span>Painel operacional</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-menu">
+      <div class="menu-section-label">Navegacao</div>
+      <a class="menu-item active" href="/app/analista/acompanhamento-operacional">
+        <div class="menu-item-icon">D</div>
+        <span>Entrega do dia</span>
+      </a>
+      <a class="menu-item" href="/app/analista">
+        <div class="menu-item-icon">P</div>
+        <span>Painel principal</span>
+      </a>
+      <a class="menu-item" href="/app/analista/acompanhamento">
+        <div class="menu-item-icon">K</div>
+        <span>Acompanhamento atual</span>
+      </a>
+      <a class="menu-item" href="/app/analista/repasse">
+        <div class="menu-item-icon">R</div>
+        <span>Repasse</span>
+      </a>
+
+      <div class="menu-section-label">Fases</div>
+      <a class="menu-item" href="#">
+        <div class="menu-item-icon">C</div>
+        <span>Fase Caixa</span>
+      </a>
+      <a class="menu-item" href="#">
+        <div class="menu-item-icon">A</div>
+        <span>Fase Agehab</span>
+      </a>
+      <a class="menu-item" href="/app/analista/arquivados">
+        <div class="menu-item-icon">AR</div>
+        <span>Arquivados</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span>Visao: kanban de pendencias, fases e agenda.</span>
+      <span>Finalizados saem da base ativa e vao para Arquivado.</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="main-header">
+      <div class="main-header-title">
+        <h1>Entrega do dia - Painel Kanban</h1>
+        <span>Controle de nao iniciado, e-mail recebido, pendenciado, finalizado e arquivado.</span>
+      </div>
+      <div class="main-header-actions">
+        <input class="search-input" placeholder="Buscar cliente, corretor ou processo">
+        <a class="btn" href="/app/analista">Voltar painel</a>
+        <button class="btn btn-primary" type="button">Novo processo</button>
+      </div>
+    </header>
+
+    <section class="summary-grid">
+      <div class="summary-card"><span class="summary-label">Pendencias Caixa</span><span class="summary-value">08</span><span class="summary-tag orange">Documentos Caixa</span></div>
+      <div class="summary-card"><span class="summary-label">Pendencias Agehab</span><span class="summary-value">05</span><span class="summary-tag orange">Fluxo Agehab</span></div>
+      <div class="summary-card"><span class="summary-label">Pendencias Sinal</span><span class="summary-value">03</span><span class="summary-tag">Aguardando pagamento</span></div>
+      <div class="summary-card"><span class="summary-label">Pendencias Fiador</span><span class="summary-value">04</span><span class="summary-tag">Dados e docs fiador</span></div>
+      <div class="summary-card"><span class="summary-label">Pendencias Produto</span><span class="summary-value">02</span><span class="summary-tag">Definicao de linha</span></div>
+      <div class="summary-card"><span class="summary-label">Finalizados hoje</span><span class="summary-value">06</span><span class="summary-tag green">Enviados para arquivado</span></div>
+    </section>
+
+    <section class="kanban-wrapper">
+      <div class="section-title-row">
+        <h2>Kanban - Fluxo diario</h2>
+        <span>Organize por estagio do processo e pendencias principais.</span>
+      </div>
+      <div class="kanban-board">
+        <div class="kanban-column todo">
+          <div class="kanban-column-header">
+            <div class="kanban-column-title"><span>Nao iniciado <span class="kanban-badge">3</span></span><span>Processos cadastrados sem tratamento ainda.</span></div>
+            <span class="kanban-count">Hoje</span>
+          </div>
+          <div class="kanban-list">
+            <article class="kanban-card"><div class="kanban-card-header"><div class="kanban-card-title">Joao Victor - Empreendimento A</div><span class="tag-chip">Novo cadastro</span></div><div class="kanban-meta"><span><span class="meta-label">Estagio:</span> Pre-cadastro</span><span><span class="meta-label">Produto:</span> Nao definido</span></div><div class="kanban-footer"><span class="pill-small">Pendencias: Caixa, Produto</span><span class="date-pill">Incluido 27/02</span></div></article>
+            <article class="kanban-card"><div class="kanban-card-header"><div class="kanban-card-title">Ana Paula - Empreendimento B</div><span class="tag-chip">Novo</span></div><div class="kanban-meta"><span><span class="meta-label">Estagio:</span> Aguardando e-mail corretor</span><span><span class="meta-label">Fiador:</span> Nao informado</span></div><div class="kanban-footer"><span class="pill-small">Pendencias: Fiador</span><span class="date-pill">Incluido 28/02</span></div></article>
+          </div>
+        </div>
+
+        <div class="kanban-column email">
+          <div class="kanban-column-header">
+            <div class="kanban-column-title"><span>E-mail recebido <span class="kanban-badge">4</span></span><span>Docs chegaram, aguardando conferencia.</span></div>
+            <span class="kanban-count">Caixa e Agehab</span>
+          </div>
+          <div class="kanban-list">
+            <article class="kanban-card"><div class="kanban-card-header"><div class="kanban-card-title">Raimundo - Empreendimento C</div><span class="tag-chip">E-mail Caixa</span></div><div class="kanban-meta"><span><span class="meta-label">Estagio:</span> Conferir docs</span><span><span class="meta-label">Caixa:</span> Em analise interna</span></div><div class="kanban-footer"><span class="pill-small">Pendencias: Caixa</span><span class="date-pill">Recebido 28/02 09:40</span></div></article>
+            <article class="kanban-card"><div class="kanban-card-header"><div class="kanban-card-title">Maria Eduarda - Empreendimento D</div><span class="tag-chip">Docs Agehab</span></div><div class="kanban-meta"><span><span class="meta-label">Estagio:</span> Separar kit Agehab</span><span><span class="meta-label">Sinal:</span> Pago</span></div><div class="kanban-footer"><span class="pill-small">Pendencias: Agehab</span><span class="date-pill">Recebido 28/02 10:15</span></div></article>
+          </div>
+        </div>
+
+        <div class="kanban-column pending">
+          <div class="kanban-column-header">
+            <div class="kanban-column-title"><span>Pendenciado <span class="kanban-badge">6</span></span><span>Itens que travam o processo.</span></div>
+            <span class="kanban-count">Cobranca ativa</span>
+          </div>
+          <div class="kanban-list">
+            <article class="kanban-card"><div class="kanban-card-header"><div class="kanban-card-title">Carlos - Empreendimento E</div><span class="tag-chip orange">Cobrar corretor</span></div><div class="kanban-meta"><span><span class="meta-label">Pendencias:</span> Caixa, Fiador</span><span><span class="meta-label">Estagio:</span> Aguardando docs fiador</span></div><div class="kanban-footer"><span class="pill-small">Ultima cobranca: 27/02 16:00</span><span class="date-pill">Data finalizacao: -</span></div></article>
+            <article class="kanban-card"><div class="kanban-card-header"><div class="kanban-card-title">Larissa - Empreendimento F</div><span class="tag-chip red">Critico</span></div><div class="kanban-meta"><span><span class="meta-label">Pendencias:</span> Sinal</span><span><span class="meta-label">Estagio:</span> Aguardando pagamento</span></div><div class="kanban-footer"><span class="pill-small">Obs: cliente aguarda liberacao</span><span class="date-pill">Data finalizacao: -</span></div></article>
+            <article class="kanban-card"><div class="kanban-card-header"><div class="kanban-card-title">Diego - Empreendimento G</div><span class="tag-chip orange">Produto</span></div><div class="kanban-meta"><span><span class="meta-label">Pendencias:</span> Produto</span><span><span class="meta-label">Estagio:</span> Definir linha Caixa</span></div><div class="kanban-footer"><span class="pill-small">Obs: simulacao enviada</span><span class="date-pill">Data finalizacao: -</span></div></article>
+          </div>
+        </div>
+
+        <div class="kanban-column done">
+          <div class="kanban-column-header">
+            <div class="kanban-column-title"><span>Finalizado <span class="kanban-badge">4</span></span><span>Pronto para arquivar.</span></div>
+            <span class="kanban-count">Sai da base ativa</span>
+          </div>
+          <div class="kanban-list">
+            <article class="kanban-card"><div class="kanban-card-header"><div class="kanban-card-title">Gabriela - Empreendimento H</div><span class="tag-chip green">Concluido</span></div><div class="kanban-meta"><span><span class="meta-label">Caixa:</span> Contrato assinado</span><span><span class="meta-label">Agehab:</span> Liberado</span></div><div class="kanban-footer"><span class="pill-small">Obs: enviar para registro</span><span class="date-pill">Finalizacao: 27/02</span></div></article>
+            <article class="kanban-card"><div class="kanban-card-header"><div class="kanban-card-title">Alyce - Empreendimento I</div><span class="tag-chip green">Concluido</span></div><div class="kanban-meta"><span><span class="meta-label">Estagio:</span> Processo 100% finalizado</span><span><span class="meta-label">Arquivar em:</span> 30 dias</span></div><div class="kanban-footer"><span class="pill-small">Mover para Arquivado</span><span class="date-pill">Finalizacao: 26/02</span></div></article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="phases-grid">
+      <div class="phase-card">
+        <h3>Fase Caixa</h3>
+        <span>Resumo das etapas da Caixa para acompanhamento rapido.</span>
+        <div class="phase-steps">
+          <ul><li>1. Pre-cadastro e simulacao</li><li>2. Envio de documentacao basica</li><li>3. Analise de credito</li><li>4. Complemento de documentos</li><li>5. Aprovacao de credito</li></ul>
+          <ul><li>6. Emissao de contrato</li><li>7. Assinatura</li><li>8. Envio para registro</li><li>9. Baixa e retorno cartorio</li><li>10. Liberacao final</li></ul>
+        </div>
+      </div>
+      <div class="phase-card">
+        <h3>Fase Agehab</h3>
+        <span>Etapas especificas da Agehab para nao perder nenhum passo.</span>
+        <div class="phase-steps">
+          <ul><li>1. Cadastro Agehab</li><li>2. Anexo de documentos exigidos</li><li>3. Conferencia interna</li><li>4. Ajuste de pendencias</li><li>5. Validacao cadastro</li></ul>
+          <ul><li>6. Enquadramento no programa</li><li>7. Aprovacao final</li><li>8. Integracao com Caixa</li><li>9. Liberacao de beneficio</li><li>10. Conclusao e arquivamento</li></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="bottom-grid">
+      <div class="card">
+        <div class="card-header"><div><h3>Tarefas do dia</h3><span>Rotina minima para manter o fluxo em dia.</span></div><button class="btn" type="button">Marcar tudo concluido</button></div>
+        <table class="tasks-table">
+          <thead><tr><th>Horario</th><th>Tarefa</th><th>Responsavel</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>09:00</td><td>Rodada de leitura de e-mails recebidos</td><td>Douglas</td><td>Em andamento</td></tr>
+            <tr><td>10:00</td><td>Primeira cobranca de pendenciados</td><td>Douglas</td><td>A fazer</td></tr>
+            <tr><td>14:30</td><td>Atualizar estagios Caixa e Agehab no sistema</td><td>Douglas</td><td>A fazer</td></tr>
+            <tr><td>16:00</td><td>Segunda rodada de cobranca pendente</td><td>Douglas</td><td>A fazer</td></tr>
+            <tr><td>17:30</td><td>Mover finalizados para Arquivado</td><td>Douglas</td><td>A fazer</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div><h3>Calendario e Agenda</h3><span>Visao rapida dos dias com entrega importante.</span></div><span style="font-size:0.78rem;color:var(--text-soft);">Marco 2026</span></div>
+        <div class="calendar-grid">
+          <div class="calendar-day-header">D</div><div class="calendar-day-header">S</div><div class="calendar-day-header">T</div><div class="calendar-day-header">Q</div><div class="calendar-day-header">Q</div><div class="calendar-day-header">S</div><div class="calendar-day-header">S</div>
+          <div></div><div></div><div class="calendar-day">1</div><div class="calendar-day">2</div><div class="calendar-day">3</div><div class="calendar-day">4<span class="calendar-dot"></span></div><div class="calendar-day">5</div>
+          <div class="calendar-day">6</div><div class="calendar-day today">7<span class="calendar-dot"></span></div><div class="calendar-day">8</div><div class="calendar-day">9</div><div class="calendar-day">10</div><div class="calendar-day">11</div><div class="calendar-day">12<span class="calendar-dot"></span></div>
+          <div class="calendar-day">13</div><div class="calendar-day">14</div><div class="calendar-day">15</div><div class="calendar-day">16</div><div class="calendar-day">17</div><div class="calendar-day">18</div><div class="calendar-day">19</div>
+          <div class="calendar-day">20<span class="calendar-dot"></span></div><div class="calendar-day">21</div><div class="calendar-day">22</div><div class="calendar-day">23</div><div class="calendar-day">24</div><div class="calendar-day">25</div><div class="calendar-day">26</div>
+          <div class="calendar-day">27</div><div class="calendar-day">28</div><div class="calendar-day">29</div><div class="calendar-day">30</div><div class="calendar-day">31</div>
+        </div>
+        <div class="calendar-footnote">Pontos verdes indicam dias com prazos fortes (Caixa, Agehab, sinal ou assinatura).</div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>
