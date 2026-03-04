@@ -22,6 +22,8 @@ export function LoginPage() {
       const role = String(out.role || '').toLowerCase()
       if (role === 'gestor' || role === 'gestor_credito' || role === 'admin') {
         navigate('/gestor', { replace: true })
+      } else if (role === 'analista') {
+        navigate('/analista', { replace: true })
       } else if (out.home) {
         window.location.href = out.home
       } else {

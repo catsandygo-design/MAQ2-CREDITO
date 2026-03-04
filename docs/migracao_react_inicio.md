@@ -8,12 +8,17 @@ Iniciar a migracao incremental do frontend atual (HTML+JS) para React, mantendo 
 - Implementadas as primeiras rotas React:
   - `/app-react/login`
   - `/app-react/gestor`
+- Nova rota React em modo leitura:
+  - `/app-react/analista`
 - Integracao real com endpoints existentes:
   - `POST /auth/login`
   - `POST /auth/logout`
   - `GET /auth/me`
   - `GET /app/api/gestor/dashboard`
+  - `GET /app/api/processos`
+  - `GET /app/api/ccas`
 - Backend preparado para servir build React em `/app-react` quando `frontend-react/dist` existir.
+- Render blueprint ajustado para tentar build do frontend React durante o deploy quando `npm` estiver disponivel.
 
 ## Como executar local
 1. Backend:
