@@ -29,6 +29,7 @@ from sqlalchemy.sql import func
 logger = logging.getLogger("sistema_credito")
 
 WEB_DIR = Path(__file__).resolve().parent / "web"
+REACT_DIST_DIR = Path(__file__).resolve().parent / "frontend-react" / "dist"
 
 SESSION_COOKIE_NAME = "sc_session"
 SESSION_TTL_SECONDS = int(os.getenv("SESSION_TTL_SECONDS", "43200"))
@@ -4124,6 +4125,24 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="Sistema Credito API", lifespan=lifespan)
 app.mount("/assets", StaticFiles(directory=str(WEB_DIR)), name="web_assets")
+if REACT_DIST_DIR.exists():
+    app.mount("/app-react", StaticFiles(directory=str(REACT_DIST_DIR), html=True), name="react_app")
+else:
+    @app.get("/app-react")
+    @app.get("/app-react/{_path:path}")
+    def react_app_unavailable():
+        return HTMLResponse(
+            """
+            <!doctype html>
+            <html lang="pt-BR">
+              <head><meta charset="utf-8" /><title>React indisponivel</title></head>
+              <body style="font-family:Segoe UI, sans-serif; padding:24px;">
+                <h2>Frontend React ainda nao foi buildado no servidor.</h2>
+                <p>Execute <code>npm install && npm run build</code> em <code>frontend-react</code>.</p>
+              </body>
+            </html>
+            """
+        )
 
 
 @app.middleware("http")
