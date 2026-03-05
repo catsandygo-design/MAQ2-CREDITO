@@ -582,6 +582,7 @@
           <div class="chips">
             <span class="chip">Data: <strong id="opAgendaDate">-</strong></span>
             <span class="chip">Check-ins: <strong id="opAgendaDone">0</strong>/<strong id="opAgendaTotal">0</strong></span>
+            <span class="chip">Proximo: <strong id="opAgendaNext">-</strong></span>
             <button class="btn" id="btnAgendaAll" type="button">Marcar todos</button>
             <button class="btn" id="btnAgendaReset" type="button">Limpar</button>
           </div>
@@ -602,18 +603,44 @@
   const DIA_TODO_META_PREFIX = "__dia_todo_meta__:";
   const AGENDA_STORAGE_PREFIX = "credito_agenda_checkins:";
   const ENTREGA_STATUS_LABELS = { entregue:"Entregue", pendenciado:"Pendenciado", caixa:"Caixa", agehab:"Agehab" };
-  const DAILY_AGENDA = [
-    { hora:"09:00", tarefa:"Atualizar as bases CV/BI/Planilhas de controle Excel e bater MP de assinaturas com CCA." },
-    { hora:"10:00", tarefa:"Matinal com time de vendas." },
-    { hora:"11:00", tarefa:"FOLLOW-UP vendas novas (face a face com a central e canal virtual via Teams)." },
-    { hora:"12:00", tarefa:"Intervalo." },
-    { hora:"13:00", tarefa:"Revisao da MP de finalizacao e controle de entrega de documentos com vendas e assistente de credito." },
-    { hora:"14:00", tarefa:"Revisao da MP de finalizacao e validacoes com time de vendas e credito." },
-    { hora:"15:00", tarefa:"Conferir validacoes do kit Caixa e Agehab, envios para conformidade e Palladio (follow-up com Bianca)." },
-    { hora:"16:00", tarefa:"Revisao final da MP repasse e finalizacao de vendas (times de vendas, CCA e Bianca)." },
-    { hora:"17:00", tarefa:"Atualizacao final da base CV/BI/Planilhas de controle Excel." },
-    { hora:"18:00", tarefa:"Encerramento do expediente." },
-  ];
+  const WEEKLY_AGENDA = {
+    weekday: [
+      { hora:"09:00", tarefa:"Atualizar as bases CV/BI/Planilhas de controle Excel e bater MP de assinaturas com CCA." },
+      { hora:"10:00", tarefa:"Matinal com time de vendas." },
+      { hora:"11:00", tarefa:"FOLLOW-UP vendas novas (face a face com a central e canal virtual via Teams)." },
+      { hora:"12:00", tarefa:"Intervalo." },
+      { hora:"13:00", tarefa:"Revisao da MP de finalizacao e controle de entrega de documentos com vendas e assistente de credito." },
+      { hora:"14:00", tarefa:"Revisao da MP de finalizacao e validacoes com time de vendas e credito." },
+      { hora:"15:00", tarefa:"Conferir validacoes do kit Caixa e Agehab, envios para conformidade e Palladio (follow-up com Bianca)." },
+      { hora:"16:00", tarefa:"Revisao final da MP repasse e finalizacao de vendas (times de vendas, CCA e Bianca)." },
+      { hora:"17:00", tarefa:"Atualizacao final da base CV/BI/Planilhas de controle Excel." },
+      { hora:"18:00", tarefa:"Encerramento do expediente." },
+    ],
+    saturday: [
+      { hora:"09:00", tarefa:"Plantao: revisar pendencias criticas de Caixa e Agehab." },
+      { hora:"10:00", tarefa:"Alinhamento rapido de prioridades e retornos com o time de apoio." },
+      { hora:"11:00", tarefa:"Follow-up de urgencias e entregas com prazo curto." },
+      { hora:"12:00", tarefa:"Intervalo." },
+      { hora:"13:00", tarefa:"Revisao de documentos prioritarios para destravar segunda-feira." },
+      { hora:"14:00", tarefa:"Conferencia de pendencias de cliente/corretor." },
+      { hora:"15:00", tarefa:"Validacao de kit Caixa/Agehab e envio para conformidade." },
+      { hora:"16:00", tarefa:"Preparar repasse das pendencias para o proximo dia util." },
+      { hora:"17:00", tarefa:"Atualizacao final dos controles do plantao." },
+      { hora:"18:00", tarefa:"Encerramento do plantao." },
+    ],
+    sunday: [
+      { hora:"09:00", tarefa:"Planejamento semanal e leitura das pendencias criticas." },
+      { hora:"10:00", tarefa:"Checagem rapida de SLAs e entregas previstas para segunda." },
+      { hora:"11:00", tarefa:"Organizacao de follow-ups prioritarios." },
+      { hora:"12:00", tarefa:"Intervalo." },
+      { hora:"13:00", tarefa:"Revisao de documentos pendentes de Caixa e Agehab." },
+      { hora:"14:00", tarefa:"Ajustes finais na pauta semanal do time." },
+      { hora:"15:00", tarefa:"Conferencia de riscos e pendencias bloqueadoras." },
+      { hora:"16:00", tarefa:"Preparar comunicados e responsabilidades da abertura." },
+      { hora:"17:00", tarefa:"Atualizacao final da base para segunda-feira." },
+      { hora:"18:00", tarefa:"Fechamento do planejamento." },
+    ],
+  };
   const $ = (id) => document.getElementById(id);
   const norm = (v) => String(v || "").trim().toLowerCase();
   let sidebarQuickFilter = "all";
@@ -824,6 +851,20 @@
     }
     return slot.tarefa;
   }
+  function agendaSlotsForDate(dateIso){
+    const parsed = new Date(`${dateIso}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())){
+      return WEEKLY_AGENDA.weekday.map((slot) => ({ ...slot }));
+    }
+    const weekday = parsed.getDay();
+    const baseSlots = weekday === 6
+      ? WEEKLY_AGENDA.saturday
+      : (weekday === 0 ? WEEKLY_AGENDA.sunday : WEEKLY_AGENDA.weekday);
+    return baseSlots.map((slot) => ({
+      ...slot,
+      tarefa: agendaTaskByDate(slot, dateIso),
+    }));
+  }
 
   function itemMatchesSidebarFilter(item){
     const status = norm(item?.status).replace(/\s+/g, "_");
@@ -974,6 +1015,7 @@
               <button class="mini" data-op-action="set-entrega-status" data-op-status-oper="caixa" data-op-item-id="${esc(item?.id || "")}" type="button">Caixa</button>
               <button class="mini" data-op-action="set-entrega-status" data-op-status-oper="agehab" data-op-item-id="${esc(item?.id || "")}" type="button">Agehab</button>
               <button class="mini" data-op-action="set-entrega-status" data-op-status-oper="entregue" data-op-item-id="${esc(item?.id || "")}" type="button">Entregue</button>
+              <button class="mini" data-op-action="edit-entrega-meta" data-op-item-id="${esc(item?.id || "")}" type="button">Editar</button>
               <button class="mini danger" data-op-action="delete-item" data-op-item-id="${esc(item?.id || "")}" type="button">Excluir</button>
             </div>
           </td>
@@ -1023,9 +1065,10 @@
     const listNode = $("opAgendaList");
     if (!listNode) return;
     const dateIso = selectedAgendaDateIso();
+    const slots = agendaSlotsForDate(dateIso);
     const state = loadAgendaCheckins(dateIso);
     let doneCount = 0;
-    listNode.innerHTML = DAILY_AGENDA.map((slot) => {
+    listNode.innerHTML = slots.map((slot) => {
       const key = slot.hora;
       const checked = Boolean(state[key]);
       if (checked) doneCount += 1;
@@ -1042,7 +1085,19 @@
     }).join("");
     if ($("opAgendaDate")) $("opAgendaDate").textContent = `${dateLabelLong(dateIso)} (${weekdayNamePt(dateIso)})`;
     if ($("opAgendaDone")) $("opAgendaDone").textContent = `${doneCount}`;
-    if ($("opAgendaTotal")) $("opAgendaTotal").textContent = `${DAILY_AGENDA.length}`;
+    if ($("opAgendaTotal")) $("opAgendaTotal").textContent = `${slots.length}`;
+    if ($("opAgendaNext")){
+      const next = slots.find((slot) => !Boolean(state[slot.hora]));
+      if (!next){
+        $("opAgendaNext").textContent = "Agenda concluida";
+      } else {
+        const todayIso = new Date().toISOString().slice(0, 10);
+        const now = new Date();
+        const nowHHMM = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+        const delayed = dateIso === todayIso && next.hora < nowHHMM;
+        $("opAgendaNext").textContent = delayed ? `${next.hora} (atrasado)` : next.hora;
+      }
+    }
   }
 
   let plannerDashboard = null;
@@ -1245,6 +1300,10 @@
         setOpsMessage("Status atualizado.", "ok");
       } else if (action === "set-entrega-status"){
         const item = (plannerDashboard?.itens || []).find((row) => String(row?.id || "") === String(itemId || ""));
+        if (!item){
+          setOpsMessage("Entrega nao encontrada para atualizar.", "err");
+          return;
+        }
         const statusOper = normalizeEntregaStatus(button.dataset.opStatusOper || "pendenciado");
         const meta = parseEntregaMeta(item || {});
         meta.statusOper = statusOper;
@@ -1257,6 +1316,41 @@
           urgente: statusOper === "pendenciado" || Boolean(item?.urgente),
         });
         setOpsMessage("Estatus da entrega atualizado.", "ok");
+      } else if (action === "edit-entrega-meta"){
+        const item = (plannerDashboard?.itens || []).find((row) => String(row?.id || "") === String(itemId || ""));
+        if (!item){
+          setOpsMessage("Entrega nao encontrada para editar.", "err");
+          return;
+        }
+        const current = parseEntregaMeta(item);
+        const acao = window.prompt("Acao da entrega:", current.acao || "");
+        if (acao === null) return;
+        const observacao = window.prompt("Observacao da entrega:", current.observacao || "");
+        if (observacao === null) return;
+        const responsavel = window.prompt("Responsavel:", current.responsavel || item?.responsavel || "");
+        if (responsavel === null) return;
+        const statusInput = window.prompt(
+          "Estatus (entregue, pendenciado, caixa, agehab):",
+          current.statusOper || "pendenciado",
+        );
+        if (statusInput === null) return;
+        const statusOper = normalizeEntregaStatus(statusInput);
+        const meta = {
+          ...current,
+          acao: String(acao || "").trim(),
+          observacao: String(observacao || "").trim(),
+          responsavel: String(responsavel || "").trim(),
+          statusOper,
+        };
+        await patchPlannerItem(itemId, {
+          titulo: current.cliente || item?.titulo || "Entrega",
+          descricao: encodeEntregaMeta(meta),
+          responsavel: meta.responsavel || null,
+          status: plannerStatusFromEntregaStatus(statusOper),
+          progresso: statusOper === "entregue" ? 100 : (statusOper === "pendenciado" ? 25 : 65),
+          urgente: statusOper === "pendenciado" || Boolean(item?.urgente),
+        });
+        setOpsMessage("Entrega atualizada.", "ok");
       } else if (action === "delete-item"){
         await deletePlannerItem(itemId);
         setOpsMessage("Item removido.", "ok");
@@ -1306,8 +1400,9 @@
   });
   $("btnAgendaAll")?.addEventListener("click", () => {
     const dateIso = selectedAgendaDateIso();
+    const slots = agendaSlotsForDate(dateIso);
     const payload = {};
-    DAILY_AGENDA.forEach((slot) => { payload[slot.hora] = true; });
+    slots.forEach((slot) => { payload[slot.hora] = true; });
     saveAgendaCheckins(dateIso, payload);
     renderAgendaChecklist();
   });
