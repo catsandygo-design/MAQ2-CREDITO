@@ -275,6 +275,12 @@
     gap:8px;
     align-items:end;
   }
+  .filtersWrap{
+    display:block;
+  }
+  .filtersWrap[hidden]{
+    display:none !important;
+  }
   @media (max-width: 1200px){ .filters{grid-template-columns: 1fr 1fr 1fr} }
   @media (max-width: 760px){ .filters{grid-template-columns: 1fr} }
 
@@ -1196,6 +1202,12 @@
       color:#0b507f !important;
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.65), 0 6px 14px rgba(14,116,144,.16) !important;
     }
+    body.theme-corporate.analista-pro #btnToggleFilters[aria-expanded="true"]{
+      border-color:rgba(14,165,233,.46) !important;
+      background:linear-gradient(180deg, #dff4ff, #c9eafe) !important;
+      color:#0b507f !important;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.65), 0 6px 14px rgba(14,116,144,.16) !important;
+    }
     body.analista-pro .filters{
       grid-template-columns:minmax(230px, 1.3fr) repeat(5, minmax(150px, 1fr)) minmax(130px, .8fr);
       gap:8px;
@@ -1461,6 +1473,7 @@
       </div>
       <div class="navActions">
         <a class="btn activeNav" href="/app/analista" aria-current="page">Painel</a>
+        <button class="btn" id="btnToggleFilters" type="button" aria-expanded="false" aria-controls="filtersWrap">Pesquisar / Filtros</button>
         <a class="btn" id="btnHubCredito" href="/app/gestor-credito" style="display:none;">Hub Credito</a>
         <a class="btn" href="/app/analista/acompanhamento">Acompanhamento</a>
         <a class="btn" href="/app/analista/acompanhamento-operacional">Operacional</a>
@@ -1472,58 +1485,60 @@
     </div>
   </div>
 
-  <div class="filters">
-    <div class="field">
-      <label>Buscar (cliente / empreendimento / corretor)</label>
-      <input id="q" placeholder="Ex: REBECA, AGL30, Gabriela..." />
-    </div>
+  <div class="filtersWrap" id="filtersWrap" hidden>
+    <div class="filters">
+      <div class="field">
+        <label>Buscar (cliente / empreendimento / corretor)</label>
+        <input id="q" placeholder="Ex: REBECA, AGL30, Gabriela..." />
+      </div>
 
-    <div class="field">
-      <label>Empreendimento</label>
-      <input id="emp" placeholder="AGL30, FSA10..." />
-    </div>
+      <div class="field">
+        <label>Empreendimento</label>
+        <input id="emp" placeholder="AGL30, FSA10..." />
+      </div>
 
-    <div class="field">
-      <label>Corretor</label>
-      <input id="cor" placeholder="Gabriela, Lucas..." />
-    </div>
+      <div class="field">
+        <label>Corretor</label>
+        <input id="cor" placeholder="Gabriela, Lucas..." />
+      </div>
 
-    <div class="field">
-      <label>CCA</label>
-      <select id="ccaFilter">
-        <option value="">Todos</option>
-      </select>
-    </div>
+      <div class="field">
+        <label>CCA</label>
+        <select id="ccaFilter">
+          <option value="">Todos</option>
+        </select>
+      </div>
 
-    <div class="field">
-      <label>Comercial</label>
-      <select id="stG">
-        <option value="">Todos</option>
-        <option value="reserva">Reserva</option>
-        <option value="em_processo">Em Processo</option>
-        <option value="credito">Credito</option>
-        <option value="secretaria_vendas">Secretaria de Vendas</option>
-        <option value="assinatura_diretoria">Assinatura Diretoria</option>
-        <option value="autorizacao_diretoria">Aprovacao Diretoria</option>
-        <option value="envio_sienge">Envio Sienge</option>
-        <option value="venda_finalizada">Venda Finalizada</option>
-      </select>
-    </div>
+      <div class="field">
+        <label>Comercial</label>
+        <select id="stG">
+          <option value="">Todos</option>
+          <option value="reserva">Reserva</option>
+          <option value="em_processo">Em Processo</option>
+          <option value="credito">Credito</option>
+          <option value="secretaria_vendas">Secretaria de Vendas</option>
+          <option value="assinatura_diretoria">Assinatura Diretoria</option>
+          <option value="autorizacao_diretoria">Aprovacao Diretoria</option>
+          <option value="envio_sienge">Envio Sienge</option>
+          <option value="venda_finalizada">Venda Finalizada</option>
+        </select>
+      </div>
 
-    <div class="field">
-      <label>Etapa repasse</label>
-      <select id="stC">
-        <option value="">Todos</option>
-        <option value="em_repasse">Em Repasse</option>
-        <option value="inicio_repasse">Inicio Repasse</option>
-        <option value="assinatura_autorizada">Assinatura Autorizada</option>
-        <option value="sem_repasse">Sem Repasse</option>
-      </select>
-    </div>
+      <div class="field">
+        <label>Etapa repasse</label>
+        <select id="stC">
+          <option value="">Todos</option>
+          <option value="em_repasse">Em Repasse</option>
+          <option value="inicio_repasse">Inicio Repasse</option>
+          <option value="assinatura_autorizada">Assinatura Autorizada</option>
+          <option value="sem_repasse">Sem Repasse</option>
+        </select>
+      </div>
 
-    <div class="field">
-      <label>&nbsp;</label>
-      <button class="btn primary" id="btnFiltrar">Filtrar</button>
+      <div class="field">
+        <label>&nbsp;</label>
+        <button class="btn primary" id="btnFiltrar">Filtrar</button>
+      </div>
     </div>
   </div>
 
@@ -1533,7 +1548,6 @@
     <div class="opsHead">
       <div>
         <h2>Central de Operacao do Credito</h2>
-        <p>Acompanhe tarefas, agenda, entregas e evolucao. O cadastro operacional agora fica na tela operacional.</p>
       </div>
       <div class="opsSummary">
         <a class="btn primary" href="/app/analista/acompanhamento-operacional" data-nav-link>Cadastrar no Painel Operacional</a>
@@ -2737,6 +2751,21 @@
     }
     $("refreshLabel").textContent = `${countdown}s`;
   }
+
+  function setFiltersPanelVisible(visible){
+    const wrap = $("filtersWrap");
+    const toggle = $("btnToggleFilters");
+    if (!wrap || !toggle) return;
+    wrap.hidden = !visible;
+    toggle.setAttribute("aria-expanded", visible ? "true" : "false");
+    toggle.textContent = visible ? "Ocultar filtros" : "Pesquisar / Filtros";
+  }
+
+  setFiltersPanelVisible(false);
+  $("btnToggleFilters")?.addEventListener("click", () => {
+    const wrap = $("filtersWrap");
+    setFiltersPanelVisible(Boolean(wrap?.hidden));
+  });
 
   $("btnFiltrar").addEventListener("click", applyFilters);
   $("btnLimpar").addEventListener("click", ()=>{
