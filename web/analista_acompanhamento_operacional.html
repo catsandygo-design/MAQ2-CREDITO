@@ -182,6 +182,7 @@
     .status.ok{border-color:rgba(22,163,74,.35);color:#166534;background:#ecfdf5}
     .status.warn{border-color:rgba(217,119,6,.35);color:#9a3412;background:#fff7ed}
     .status.bad{border-color:rgba(220,38,38,.35);color:#991b1b;background:#fef2f2}
+    .status.info{border-color:rgba(14,165,233,.35);color:#0c4a6e;background:#eff6ff}
     .desc,.meta,.msg{font-size:.72rem;color:#64748b;line-height:1.3}
     .actions-mini{display:flex;gap:5px;flex-wrap:wrap}
     .mini{border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#0f172a;padding:3px 7px;font-size:.7rem;font-weight:700;cursor:pointer}
@@ -199,13 +200,140 @@
     .msg.ok{color:var(--ok)}
     .msg.err{color:var(--bad)}
 
+    .today-grid{
+      display:grid;
+      grid-template-columns:1.25fr .95fr;
+      gap:8px;
+    }
+    .entrega-panel,.taskday-panel,.agenda-panel{
+      border:1px solid #dbe2ea;
+      border-radius:12px;
+      background:#fff;
+      padding:10px;
+      display:grid;
+      gap:8px;
+      align-content:start;
+    }
+    .entrega-form{
+      display:grid;
+      grid-template-columns:1.25fr .78fr .95fr 1.15fr auto;
+      gap:6px;
+      align-items:end;
+    }
+    .taskday-form{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:6px;
+      align-items:end;
+    }
+    .table-mini-wrap{
+      border:1px solid #dbe2ea;
+      border-radius:10px;
+      overflow:auto;
+      max-height:320px;
+      background:#fff;
+    }
+    .table-mini{
+      width:100%;
+      min-width:760px;
+      border-collapse:collapse;
+      table-layout:fixed;
+    }
+    .table-mini th{
+      text-align:left;
+      padding:8px 9px;
+      font-size:.68rem;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:#64748b;
+      border-bottom:1px solid #e2e8f0;
+      background:#f8fafc;
+      position:sticky;
+      top:0;
+      z-index:1;
+    }
+    .table-mini td{
+      padding:7px 9px;
+      border-bottom:1px solid #edf2f7;
+      font-size:.75rem;
+      vertical-align:top;
+      color:#0f172a;
+      line-height:1.35;
+    }
+    .table-mini td .meta{
+      font-size:.69rem;
+      margin-top:3px;
+    }
+    .table-mini .actions-mini{
+      gap:4px;
+    }
+    .agenda-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .agenda-list{
+      display:grid;
+      gap:6px;
+      max-height:390px;
+      overflow:auto;
+      padding-right:2px;
+    }
+    .agenda-item{
+      border:1px solid #dbe2ea;
+      border-radius:10px;
+      background:#f8fafc;
+      padding:8px;
+      display:grid;
+      grid-template-columns:82px 1fr 135px;
+      gap:8px;
+      align-items:center;
+    }
+    .agenda-item.done{
+      border-color:rgba(22,163,74,.28);
+      background:#ecfdf5;
+    }
+    .agenda-time{
+      font-weight:800;
+      color:#0f172a;
+      font-size:.78rem;
+      letter-spacing:.03em;
+    }
+    .agenda-task{
+      font-size:.76rem;
+      color:#334155;
+      line-height:1.35;
+    }
+    .agenda-check{
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap:6px;
+      font-size:.71rem;
+      font-weight:700;
+      color:#475569;
+    }
+    .agenda-check input{
+      width:16px;
+      height:16px;
+      accent-color:#16a34a;
+      cursor:pointer;
+    }
+
     @media (max-width:1320px){
       .grid4{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .today-grid{grid-template-columns:1fr}
+      .entrega-form{grid-template-columns:1fr 1fr}
     }
     @media (max-width:980px){
       .ops-form{grid-template-columns:repeat(4,minmax(0,1fr))}
       .grid2{grid-template-columns:1fr}
       .form-actions{grid-column:span 4;justify-content:flex-start}
+      .taskday-form{grid-template-columns:1fr}
+      .agenda-item{grid-template-columns:78px 1fr}
+      .agenda-check{justify-content:flex-start}
     }
     @media (max-width:768px){
       .sidebar{display:none}
@@ -213,6 +341,9 @@
       .ops-form{grid-template-columns:1fr}
       .span2,.span3,.form-actions{grid-column:auto}
       .grid4{grid-template-columns:1fr}
+      .entrega-form{grid-template-columns:1fr}
+      .agenda-item{grid-template-columns:1fr}
+      .agenda-check{justify-content:flex-start}
     }
     @media (prefers-reduced-motion: reduce){
       body{transition:none;opacity:1;transform:none}
@@ -336,6 +467,89 @@
         </div>
       </div>
 
+      <div class="today-grid">
+        <article class="entrega-panel">
+          <div class="box-head">
+            <h4>Clientes que vao entregar no dia</h4>
+            <span class="count" id="opCountEntregaClientes">0</span>
+          </div>
+          <div class="entrega-form">
+            <div class="field">
+              <label>Cliente</label>
+              <input id="opEntregaCliente" placeholder="Nome do cliente" maxlength="180" />
+            </div>
+            <div class="field">
+              <label>Estatus</label>
+              <select id="opEntregaStatusOper">
+                <option value="pendenciado">Pendenciado</option>
+                <option value="caixa">Caixa</option>
+                <option value="agehab">Agehab</option>
+                <option value="entregue">Entregue</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Acao</label>
+              <input id="opEntregaAcao" placeholder="Proxima acao" maxlength="180" />
+            </div>
+            <div class="field">
+              <label>Observacao</label>
+              <input id="opEntregaObs" placeholder="Detalhe rapido" maxlength="320" />
+            </div>
+            <div class="field">
+              <label>&nbsp;</label>
+              <button class="btn primary" id="btnAddEntregaCliente" type="button">Adicionar</button>
+            </div>
+          </div>
+          <div class="table-mini-wrap">
+            <table class="table-mini">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Estatus</th>
+                  <th>Acao</th>
+                  <th>Observacao</th>
+                  <th>Acoes</th>
+                </tr>
+              </thead>
+              <tbody id="opEntregaClientesRows"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="taskday-panel">
+          <div class="box-head">
+            <h4>Cadastrador de tarefa do dia todo</h4>
+            <span class="count" id="opCountDiaTodo">0</span>
+          </div>
+          <div class="taskday-form">
+            <div class="field">
+              <label>Titulo da tarefa</label>
+              <input id="opDiaTodoTitulo" placeholder="Ex: Revisao de pendencias do dia" maxlength="180" />
+            </div>
+            <div class="field">
+              <label>Responsavel</label>
+              <input id="opDiaTodoResp" placeholder="Nome do responsavel" maxlength="120" />
+            </div>
+            <div class="field span2">
+              <label>Acao principal</label>
+              <input id="opDiaTodoAcao" placeholder="Acao esperada hoje" maxlength="180" />
+            </div>
+            <div class="field span2">
+              <label>Observacao</label>
+              <input id="opDiaTodoObs" placeholder="Observacao da tarefa do dia todo" maxlength="320" />
+            </div>
+            <div class="field">
+              <label class="check"><input id="opDiaTodoUrgente" type="checkbox" />Urgente</label>
+            </div>
+            <div class="field">
+              <label>&nbsp;</label>
+              <button class="btn primary" id="btnDiaTodoAdd" type="button">Adicionar</button>
+            </div>
+          </div>
+          <div class="list" id="opListDiaTodo"></div>
+        </article>
+      </div>
+
       <div class="grid4">
         <article class="box"><div class="box-head"><h4>Tarefas do dia</h4><span class="count" id="opCountTarefas">0</span></div><div class="list" id="opListTarefas"></div></article>
         <article class="box"><div class="box-head"><h4>Agendamentos</h4><span class="count" id="opCountAgendamentos">0</span></div><div class="list" id="opListAgendamentos"></div></article>
@@ -358,6 +572,22 @@
           <div class="list" id="opListNotas"></div>
         </article>
       </div>
+
+      <article class="agenda-panel">
+        <div class="agenda-head">
+          <div>
+            <h4>Minha agenda do dia (check-in por horario)</h4>
+            <p class="desc">Marque cada horario concluido para nao perder prazo.</p>
+          </div>
+          <div class="chips">
+            <span class="chip">Data: <strong id="opAgendaDate">-</strong></span>
+            <span class="chip">Check-ins: <strong id="opAgendaDone">0</strong>/<strong id="opAgendaTotal">0</strong></span>
+            <button class="btn" id="btnAgendaAll" type="button">Marcar todos</button>
+            <button class="btn" id="btnAgendaReset" type="button">Limpar</button>
+          </div>
+        </div>
+        <div class="agenda-list" id="opAgendaList"></div>
+      </article>
       <div class="msg" id="opMsg"></div>
     </section>
   </main>
@@ -368,6 +598,22 @@
   const PLANNER_DAYS = 14;
   const STATUS_LABELS = { pendente:"Pendente", em_andamento:"Em andamento", concluido:"Concluido", atrasado:"Atrasado" };
   const TYPE_LABELS = { tarefa:"Tarefa", agendamento:"Agendamento", entrega:"Entrega", urgente:"Urgente", anotacao:"Anotacao" };
+  const ENTREGA_META_PREFIX = "__entrega_meta__:";
+  const DIA_TODO_META_PREFIX = "__dia_todo_meta__:";
+  const AGENDA_STORAGE_PREFIX = "credito_agenda_checkins:";
+  const ENTREGA_STATUS_LABELS = { entregue:"Entregue", pendenciado:"Pendenciado", caixa:"Caixa", agehab:"Agehab" };
+  const DAILY_AGENDA = [
+    { hora:"09:00", tarefa:"Atualizar as bases CV/BI/Planilhas de controle Excel e bater MP de assinaturas com CCA." },
+    { hora:"10:00", tarefa:"Matinal com time de vendas." },
+    { hora:"11:00", tarefa:"FOLLOW-UP vendas novas (face a face com a central e canal virtual via Teams)." },
+    { hora:"12:00", tarefa:"Intervalo." },
+    { hora:"13:00", tarefa:"Revisao da MP de finalizacao e controle de entrega de documentos com vendas e assistente de credito." },
+    { hora:"14:00", tarefa:"Revisao da MP de finalizacao e validacoes com time de vendas e credito." },
+    { hora:"15:00", tarefa:"Conferir validacoes do kit Caixa e Agehab, envios para conformidade e Palladio (follow-up com Bianca)." },
+    { hora:"16:00", tarefa:"Revisao final da MP repasse e finalizacao de vendas (times de vendas, CCA e Bianca)." },
+    { hora:"17:00", tarefa:"Atualizacao final da base CV/BI/Planilhas de controle Excel." },
+    { hora:"18:00", tarefa:"Encerramento do expediente." },
+  ];
   const $ = (id) => document.getElementById(id);
   const norm = (v) => String(v || "").trim().toLowerCase();
   let sidebarQuickFilter = "all";
@@ -449,6 +695,134 @@
     const end = String(item?.hora_fim || "").trim();
     if (start && end) return `${start}-${end}`;
     return start || end || "";
+  }
+
+  function normalizeEntregaStatus(value){
+    const token = norm(value).replace(/\s+/g, "_");
+    if (["entregue", "concluido", "finalizado", "done"].includes(token)) return "entregue";
+    if (["caixa", "analise_caixa"].includes(token)) return "caixa";
+    if (["agehab", "analise_agehab"].includes(token)) return "agehab";
+    return "pendenciado";
+  }
+  function plannerStatusFromEntregaStatus(statusOper){
+    if (statusOper === "entregue") return "concluido";
+    if (statusOper === "pendenciado") return "pendente";
+    return "em_andamento";
+  }
+  function entregaStatusByPlannerStatus(status){
+    const token = norm(status).replace(/\s+/g, "_");
+    if (token === "concluido") return "entregue";
+    if (token === "em_andamento") return "caixa";
+    return "pendenciado";
+  }
+  function entregaStatusClass(statusOper){
+    if (statusOper === "entregue") return "ok";
+    if (statusOper === "pendenciado") return "bad";
+    if (statusOper === "caixa") return "warn";
+    if (statusOper === "agehab") return "info";
+    return "";
+  }
+  function encodeEntregaMeta(meta){
+    return `${ENTREGA_META_PREFIX}${JSON.stringify({
+      cliente: String(meta?.cliente || "").trim(),
+      statusOper: normalizeEntregaStatus(meta?.statusOper),
+      acao: String(meta?.acao || "").trim(),
+      observacao: String(meta?.observacao || "").trim(),
+      responsavel: String(meta?.responsavel || "").trim(),
+    })}`;
+  }
+  function parseEntregaMeta(item){
+    const rawDesc = String(item?.descricao || "");
+    if (!rawDesc.startsWith(ENTREGA_META_PREFIX)){
+      return {
+        cliente: String(item?.titulo || "").trim(),
+        statusOper: entregaStatusByPlannerStatus(item?.status),
+        acao: "",
+        observacao: rawDesc,
+        responsavel: String(item?.responsavel || "").trim(),
+      };
+    }
+    try{
+      const parsed = JSON.parse(rawDesc.slice(ENTREGA_META_PREFIX.length) || "{}");
+      return {
+        cliente: String(parsed?.cliente || item?.titulo || "").trim(),
+        statusOper: normalizeEntregaStatus(parsed?.statusOper || item?.status),
+        acao: String(parsed?.acao || "").trim(),
+        observacao: String(parsed?.observacao || "").trim(),
+        responsavel: String(parsed?.responsavel || item?.responsavel || "").trim(),
+      };
+    }catch(_){
+      return {
+        cliente: String(item?.titulo || "").trim(),
+        statusOper: entregaStatusByPlannerStatus(item?.status),
+        acao: "",
+        observacao: "",
+        responsavel: String(item?.responsavel || "").trim(),
+      };
+    }
+  }
+  function encodeDiaTodoMeta(meta){
+    return `${DIA_TODO_META_PREFIX}${JSON.stringify({
+      acao: String(meta?.acao || "").trim(),
+      observacao: String(meta?.observacao || "").trim(),
+    })}`;
+  }
+  function parseDiaTodoMeta(item){
+    const rawDesc = String(item?.descricao || "");
+    if (!rawDesc.startsWith(DIA_TODO_META_PREFIX)){
+      return { acao:"", observacao: rawDesc };
+    }
+    try{
+      const parsed = JSON.parse(rawDesc.slice(DIA_TODO_META_PREFIX.length) || "{}");
+      return {
+        acao: String(parsed?.acao || "").trim(),
+        observacao: String(parsed?.observacao || "").trim(),
+      };
+    }catch(_){
+      return { acao:"", observacao:"" };
+    }
+  }
+  function isDiaTodoItem(item){
+    if (norm(item?.tipo).replace(/\s+/g, "_") !== "tarefa") return false;
+    return String(item?.descricao || "").startsWith(DIA_TODO_META_PREFIX);
+  }
+  function selectedAgendaDateIso(){
+    const value = String($("opData")?.value || "").trim();
+    return value || new Date().toISOString().slice(0, 10);
+  }
+  function agendaStorageKey(dateIso){
+    return `${AGENDA_STORAGE_PREFIX}${dateIso}`;
+  }
+  function loadAgendaCheckins(dateIso){
+    try{
+      const raw = localStorage.getItem(agendaStorageKey(dateIso));
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") return {};
+      return parsed;
+    }catch(_){
+      return {};
+    }
+  }
+  function saveAgendaCheckins(dateIso, payload){
+    try{
+      localStorage.setItem(agendaStorageKey(dateIso), JSON.stringify(payload || {}));
+    }catch(_){
+      // silencioso em caso de bloqueio do storage
+    }
+  }
+  function weekdayNamePt(dateIso){
+    const parsed = new Date(`${dateIso}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return "";
+    return parsed.toLocaleDateString("pt-BR", { weekday:"long" });
+  }
+  function agendaTaskByDate(slot, dateIso){
+    const parsed = new Date(`${dateIso}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return slot.tarefa;
+    if (slot.hora === "13:00" && parsed.getDay() === 3){
+      return "Quarta-feira: follow-up com coordenador de garantias Caixa e Agehab.";
+    }
+    return slot.tarefa;
   }
 
   function itemMatchesSidebarFilter(item){
@@ -567,15 +941,123 @@
     }).join("");
   }
 
+  function renderEntregaClientes(rows){
+    const bodyNode = $("opEntregaClientesRows");
+    const countNode = $("opCountEntregaClientes");
+    if (!bodyNode || !countNode) return;
+    const query = norm($("opsQuickSearch")?.value || "");
+    const filteredByMode = (Array.isArray(rows) ? rows : []).filter((item) => itemMatchesSidebarFilter(item));
+    const parsed = filteredByMode.map((item) => ({ item, meta: parseEntregaMeta(item) }));
+    const filtered = !query
+      ? parsed
+      : parsed.filter(({ meta }) => `${meta.cliente} ${meta.acao} ${meta.observacao} ${meta.responsavel}`.toLowerCase().includes(query));
+    countNode.textContent = `${filtered.length}`;
+    if (!filtered.length){
+      bodyNode.innerHTML = '<tr><td colspan="5" class="empty">Sem clientes de entrega para hoje.</td></tr>';
+      return;
+    }
+    bodyNode.innerHTML = filtered.map(({ item, meta }) => {
+      const statusOper = normalizeEntregaStatus(meta.statusOper);
+      const statusLabelOper = ENTREGA_STATUS_LABELS[statusOper] || "Pendenciado";
+      return `
+        <tr>
+          <td>
+            <strong>${esc(meta.cliente || item?.titulo || "-")}</strong>
+            ${meta.responsavel ? `<div class="meta">Resp: ${esc(meta.responsavel)}</div>` : ""}
+          </td>
+          <td><span class="status ${entregaStatusClass(statusOper)}">${esc(statusLabelOper)}</span></td>
+          <td>${esc(meta.acao || "-")}</td>
+          <td>${esc(meta.observacao || "-")}</td>
+          <td>
+            <div class="actions-mini">
+              <button class="mini" data-op-action="set-entrega-status" data-op-status-oper="pendenciado" data-op-item-id="${esc(item?.id || "")}" type="button">Pendenciar</button>
+              <button class="mini" data-op-action="set-entrega-status" data-op-status-oper="caixa" data-op-item-id="${esc(item?.id || "")}" type="button">Caixa</button>
+              <button class="mini" data-op-action="set-entrega-status" data-op-status-oper="agehab" data-op-item-id="${esc(item?.id || "")}" type="button">Agehab</button>
+              <button class="mini" data-op-action="set-entrega-status" data-op-status-oper="entregue" data-op-item-id="${esc(item?.id || "")}" type="button">Entregue</button>
+              <button class="mini danger" data-op-action="delete-item" data-op-item-id="${esc(item?.id || "")}" type="button">Excluir</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  function renderDiaTodo(rows){
+    const listNode = $("opListDiaTodo");
+    const countNode = $("opCountDiaTodo");
+    if (!listNode || !countNode) return;
+    const query = norm($("opsQuickSearch")?.value || "");
+    const filteredByMode = (Array.isArray(rows) ? rows : [])
+      .filter((item) => isDiaTodoItem(item))
+      .filter((item) => itemMatchesSidebarFilter(item));
+    const filtered = !query
+      ? filteredByMode
+      : filteredByMode.filter((item) => `${item?.titulo || ""} ${item?.responsavel || ""} ${item?.descricao || ""}`.toLowerCase().includes(query));
+    countNode.textContent = `${filtered.length}`;
+    if (!filtered.length){
+      listNode.innerHTML = '<div class="empty">Sem tarefa cadastrada para o dia todo.</div>';
+      return;
+    }
+    listNode.innerHTML = filtered.map((item) => {
+      const done = norm(item?.status).replace(/\s+/g, "_") === "concluido";
+      const meta = parseDiaTodoMeta(item);
+      return `
+        <article class="item">
+          <div class="item-top">
+            <div class="item-title">${esc(item?.titulo || "-")}</div>
+            <span class="status ${statusClass(item?.status)}">${esc(statusLabel(item?.status))}</span>
+          </div>
+          ${meta.acao ? `<div class="desc"><strong>Acao:</strong> ${esc(meta.acao)}</div>` : ""}
+          ${meta.observacao ? `<div class="desc"><strong>Observacao:</strong> ${esc(meta.observacao)}</div>` : ""}
+          <div class="meta">${item?.responsavel ? `Resp: ${esc(item.responsavel)} | ` : ""}${dateLabel(item?.data_referencia)} | 09:00-18:00</div>
+          <div class="actions-mini">
+            <button class="mini" data-op-action="set-status" data-op-status="${done ? "pendente" : "concluido"}" data-op-item-id="${esc(item?.id || "")}" type="button">${done ? "Reabrir" : "Concluir"}</button>
+            <button class="mini danger" data-op-action="delete-item" data-op-item-id="${esc(item?.id || "")}" type="button">Excluir</button>
+          </div>
+        </article>
+      `;
+    }).join("");
+  }
+
+  function renderAgendaChecklist(){
+    const listNode = $("opAgendaList");
+    if (!listNode) return;
+    const dateIso = selectedAgendaDateIso();
+    const state = loadAgendaCheckins(dateIso);
+    let doneCount = 0;
+    listNode.innerHTML = DAILY_AGENDA.map((slot) => {
+      const key = slot.hora;
+      const checked = Boolean(state[key]);
+      if (checked) doneCount += 1;
+      return `
+        <label class="agenda-item ${checked ? "done" : ""}">
+          <div class="agenda-time">${esc(slot.hora)}</div>
+          <div class="agenda-task">${esc(agendaTaskByDate(slot, dateIso))}</div>
+          <div class="agenda-check">
+            <input type="checkbox" data-op-action="agenda-checkin" data-op-agenda-slot="${esc(key)}" ${checked ? "checked" : ""} />
+            <span>${checked ? "Check-in feito" : "Pendente"}</span>
+          </div>
+        </label>
+      `;
+    }).join("");
+    if ($("opAgendaDate")) $("opAgendaDate").textContent = `${dateLabelLong(dateIso)} (${weekdayNamePt(dateIso)})`;
+    if ($("opAgendaDone")) $("opAgendaDone").textContent = `${doneCount}`;
+    if ($("opAgendaTotal")) $("opAgendaTotal").textContent = `${DAILY_AGENDA.length}`;
+  }
+
   let plannerDashboard = null;
   function renderDashboard(data){
     plannerDashboard = data || null;
     $("opDateLabel").textContent = dateLabelLong(data?.referencia);
     $("opPendentes").textContent = `${Number(data?.pendentes_total || 0)}`;
     refreshSidebarKpis(data);
-    renderList("opListTarefas","opCountTarefas", data?.tarefas_dia || [], "Sem tarefas para hoje.");
+    const tarefasDia = (data?.tarefas_dia || []).filter((item) => !isDiaTodoItem(item));
+    renderList("opListTarefas","opCountTarefas", tarefasDia, "Sem tarefas para hoje.");
     renderList("opListAgendamentos","opCountAgendamentos", data?.agendamentos_dia || [], "Sem agendamentos no dia.");
     renderList("opListEntregas","opCountEntregas", data?.entregas_dia || [], "Sem entregas no dia.");
+    renderEntregaClientes(data?.entregas_dia || []);
+    renderDiaTodo(data?.tarefas_dia || []);
+    renderAgendaChecklist();
     renderList("opListUrgentes","opCountUrgentes", data?.urgentes || [], "Sem urgencias em aberto.");
     renderEvolucao(data?.evolucao_time || []);
     renderNotes(data?.anotacoes || []);
@@ -652,6 +1134,86 @@
     }
   }
 
+  async function createEntregaCliente(){
+    const cliente = $("opEntregaCliente")?.value.trim() || "";
+    if (!cliente){
+      setOpsMessage("Informe o cliente para registrar a entrega do dia.", "err");
+      return;
+    }
+    const statusOper = normalizeEntregaStatus($("opEntregaStatusOper")?.value || "pendenciado");
+    const meta = {
+      cliente,
+      statusOper,
+      acao: $("opEntregaAcao")?.value.trim() || "",
+      observacao: $("opEntregaObs")?.value.trim() || "",
+      responsavel: $("opResponsavel")?.value.trim() || "",
+    };
+    const payload = {
+      tipo: "entrega",
+      titulo: cliente,
+      descricao: encodeEntregaMeta(meta),
+      responsavel: meta.responsavel || null,
+      data_referencia: $("opData")?.value || new Date().toISOString().slice(0, 10),
+      status: plannerStatusFromEntregaStatus(statusOper),
+      progresso: statusOper === "entregue" ? 100 : (statusOper === "pendenciado" ? 25 : 65),
+      urgente: statusOper === "pendenciado",
+    };
+    const button = $("btnAddEntregaCliente");
+    if (button) button.disabled = true;
+    try{
+      await api("/analista/planejamento/itens", { method:"POST", body:JSON.stringify(payload) });
+      $("opEntregaCliente").value = "";
+      $("opEntregaAcao").value = "";
+      $("opEntregaObs").value = "";
+      $("opEntregaStatusOper").value = "pendenciado";
+      setOpsMessage("Cliente de entrega registrado.", "ok");
+      await loadPlannerDashboard();
+    }catch(error){
+      setOpsMessage(`Erro ao registrar cliente de entrega: ${error.message}`, "err");
+    }finally{
+      if (button) button.disabled = false;
+    }
+  }
+
+  async function createDiaTodoTask(){
+    const titulo = $("opDiaTodoTitulo")?.value.trim() || "";
+    if (!titulo){
+      setOpsMessage("Informe o titulo da tarefa do dia todo.", "err");
+      return;
+    }
+    const payload = {
+      tipo: "tarefa",
+      titulo,
+      descricao: encodeDiaTodoMeta({
+        acao: $("opDiaTodoAcao")?.value.trim() || "",
+        observacao: $("opDiaTodoObs")?.value.trim() || "",
+      }),
+      responsavel: $("opDiaTodoResp")?.value.trim() || null,
+      data_referencia: $("opData")?.value || new Date().toISOString().slice(0, 10),
+      hora_inicio: "09:00",
+      hora_fim: "18:00",
+      status: "pendente",
+      progresso: 0,
+      urgente: Boolean($("opDiaTodoUrgente")?.checked),
+    };
+    const button = $("btnDiaTodoAdd");
+    if (button) button.disabled = true;
+    try{
+      await api("/analista/planejamento/itens", { method:"POST", body:JSON.stringify(payload) });
+      $("opDiaTodoTitulo").value = "";
+      $("opDiaTodoResp").value = "";
+      $("opDiaTodoAcao").value = "";
+      $("opDiaTodoObs").value = "";
+      $("opDiaTodoUrgente").checked = false;
+      setOpsMessage("Tarefa do dia todo registrada.", "ok");
+      await loadPlannerDashboard();
+    }catch(error){
+      setOpsMessage(`Erro ao registrar tarefa do dia todo: ${error.message}`, "err");
+    }finally{
+      if (button) button.disabled = false;
+    }
+  }
+
   async function patchPlannerItem(itemId, payload){
     await api(`/analista/planejamento/itens/${encodeURIComponent(itemId)}`, { method:"PATCH", body:JSON.stringify(payload) });
   }
@@ -662,13 +1224,39 @@
     const button = event.target.closest("[data-op-action]");
     if (!button) return;
     const action = button.dataset.opAction;
+    if (action === "agenda-checkin"){
+      const slot = button.dataset.opAgendaSlot;
+      if (!slot) return;
+      const dateIso = selectedAgendaDateIso();
+      const state = loadAgendaCheckins(dateIso);
+      state[slot] = Boolean(button.checked);
+      saveAgendaCheckins(dateIso, state);
+      renderAgendaChecklist();
+      return;
+    }
+
     const itemId = button.dataset.opItemId;
     if (!itemId) return;
+
     button.disabled = true;
     try {
       if (action === "set-status"){
         await patchPlannerItem(itemId, { status: button.dataset.opStatus || "pendente" });
         setOpsMessage("Status atualizado.", "ok");
+      } else if (action === "set-entrega-status"){
+        const item = (plannerDashboard?.itens || []).find((row) => String(row?.id || "") === String(itemId || ""));
+        const statusOper = normalizeEntregaStatus(button.dataset.opStatusOper || "pendenciado");
+        const meta = parseEntregaMeta(item || {});
+        meta.statusOper = statusOper;
+        await patchPlannerItem(itemId, {
+          titulo: meta.cliente || item?.titulo || "Entrega",
+          descricao: encodeEntregaMeta(meta),
+          responsavel: meta.responsavel || item?.responsavel || null,
+          status: plannerStatusFromEntregaStatus(statusOper),
+          progresso: statusOper === "entregue" ? 100 : (statusOper === "pendenciado" ? 25 : 65),
+          urgente: statusOper === "pendenciado" || Boolean(item?.urgente),
+        });
+        setOpsMessage("Estatus da entrega atualizado.", "ok");
       } else if (action === "delete-item"){
         await deletePlannerItem(itemId);
         setOpsMessage("Item removido.", "ok");
@@ -683,11 +1271,24 @@
 
   $("btnOpsAdd")?.addEventListener("click", () => createPlannerItem().catch(() => null));
   $("btnOpAddNote")?.addEventListener("click", () => createPlannerNote().catch(() => null));
+  $("btnAddEntregaCliente")?.addEventListener("click", () => createEntregaCliente().catch(() => null));
+  $("btnDiaTodoAdd")?.addEventListener("click", () => createDiaTodoTask().catch(() => null));
   $("opsPanel")?.addEventListener("click", (event) => handleActionClick(event).catch(() => null));
+  $("opsPanel")?.addEventListener("change", (event) => handleActionClick(event).catch(() => null));
   $("opTitulo")?.addEventListener("keydown", (event) => {
     if (event.key !== "Enter") return;
     event.preventDefault();
     createPlannerItem().catch(() => null);
+  });
+  $("opEntregaCliente")?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    createEntregaCliente().catch(() => null);
+  });
+  $("opDiaTodoTitulo")?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    createDiaTodoTask().catch(() => null);
   });
   $("opNoteText")?.addEventListener("keydown", (event) => {
     if (!(event.ctrlKey || event.metaKey) || event.key !== "Enter") return;
@@ -703,6 +1304,21 @@
   $("opsQuickSearch")?.addEventListener("input", () => {
     if (plannerDashboard) renderDashboard(plannerDashboard);
   });
+  $("btnAgendaAll")?.addEventListener("click", () => {
+    const dateIso = selectedAgendaDateIso();
+    const payload = {};
+    DAILY_AGENDA.forEach((slot) => { payload[slot.hora] = true; });
+    saveAgendaCheckins(dateIso, payload);
+    renderAgendaChecklist();
+  });
+  $("btnAgendaReset")?.addEventListener("click", () => {
+    const dateIso = selectedAgendaDateIso();
+    saveAgendaCheckins(dateIso, {});
+    renderAgendaChecklist();
+  });
+  $("opData")?.addEventListener("change", () => {
+    renderAgendaChecklist();
+  });
   document.querySelectorAll("[data-side-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       sidebarQuickFilter = button.dataset.sideFilter || "all";
@@ -714,10 +1330,8 @@
     button.addEventListener("click", () => {
       const action = button.dataset.sideAction || "";
       if (action === "new-task") {
-        $("opTipo").value = "tarefa";
-        $("opStatus").value = "pendente";
-        $("opTitulo")?.focus();
-        $("opTitulo")?.scrollIntoView({ behavior:"smooth", block:"center" });
+        $("opDiaTodoTitulo")?.focus();
+        $("opDiaTodoTitulo")?.scrollIntoView({ behavior:"smooth", block:"center" });
       } else if (action === "new-schedule") {
         $("opTipo").value = "agendamento";
         $("opStatus").value = "pendente";
@@ -734,6 +1348,7 @@
 
   if ($("opData")) $("opData").value = new Date().toISOString().slice(0, 10);
   applySidebarFilterButtons();
+  renderAgendaChecklist();
   setupPageTransitions();
   loadPlannerDashboard().catch((error) => setOpsMessage(`Erro ao carregar central: ${error.message}`, "err"));
 </script>
