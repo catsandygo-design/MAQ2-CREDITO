@@ -98,19 +98,19 @@
   }
 
   body.theme-corporate .btn{
-    color:#0f172a;
-    background:linear-gradient(180deg, #f7fbff, #ecf4ff);
-    border-color: rgba(30,64,105,.22);
+    color:#11355a;
+    background:linear-gradient(180deg, #eef6ff, #deebfb);
+    border-color: rgba(37,99,235,.35);
   }
   body.theme-corporate .btn:hover{
-    background:linear-gradient(180deg, #ffffff, #e7f1ff);
-    border-color: rgba(30,64,105,.3);
+    background:linear-gradient(180deg, #f8fbff, #d6e8ff);
+    border-color: rgba(37,99,235,.52);
   }
 
   body.theme-corporate .btn.primary{
-    color:#075985;
-    background:linear-gradient(180deg, #d9f3ff, #c7eaff);
-    border-color: rgba(14,165,233,.50);
+    color:#0b507f;
+    background:linear-gradient(180deg, #d5edff, #bfddff);
+    border-color: rgba(14,165,233,.62);
   }
 
   body.theme-corporate input,
@@ -215,8 +215,11 @@
     animation:none;
   }
   body.theme-corporate .pill{
-    color:#334155;
+    color:#1e3a5f;
     padding:3px 8px;
+    background:#ecf4ff;
+    border-color:rgba(30,64,105,.34);
+    font-weight:700;
   }
   body.theme-corporate .pill.ok{
     color:#166534;
@@ -234,14 +237,17 @@
     background:#fee2e2;
   }
   body.theme-corporate .pill.neutral{
-    color:#334155;
-    border-color:rgba(100,116,139,.35);
-    background:#f8fafc;
+    color:#1e3a5f;
+    border-color:rgba(30,64,105,.34);
+    background:#ecf4ff;
   }
   body.theme-corporate .sla{
-    color:#334155;
+    color:#1e3a5f;
     min-width:52px;
     padding:3px 8px;
+    background:#ecf4ff;
+    border-color:rgba(30,64,105,.34);
+    font-weight:700;
   }
   body.theme-corporate .sla.ok{
     color:#166534;
@@ -257,6 +263,12 @@
     color:#991b1b;
     border-color:rgba(220,38,38,.35);
     background:#fee2e2;
+  }
+  body.theme-corporate .count{
+    background:#eaf2ff;
+    border-color:rgba(30,64,105,.3);
+    color:#1e3a5f;
+    font-weight:700;
   }
 
   #bhCanvas{
@@ -814,7 +826,8 @@
     overflow:auto;
     flex: 1 1 auto;
     min-height:0;
-    padding-bottom:10px;
+    padding-bottom:16px;
+    scrollbar-gutter: stable both-edges;
   }
 
   .scroll::-webkit-scrollbar{width:10px}
@@ -825,6 +838,12 @@
     border: 2px solid rgba(2,6,23,.35);
   }
   .scroll::-webkit-scrollbar-thumb:hover{background: rgba(148,163,184,.32)}
+  .tableSpacer td{
+    height:22px !important;
+    padding:0 !important;
+    border-bottom:0 !important;
+    background:transparent !important;
+  }
 
   .cliente{
     font-weight:900;
@@ -2810,7 +2829,7 @@
       return;
     }
 
-    tb.innerHTML = rows.map(r=>{
+    const bodyRowsHtml = rows.map(r=>{
       const animState = clientAnimState(r);
       const animTitle = clientAnimTitle(animState);
 
@@ -2855,6 +2874,8 @@
         </tr>
       `;
     }).join("");
+
+    tb.innerHTML = `${bodyRowsHtml}<tr class="tableSpacer" aria-hidden="true"><td colspan="${TABLE_COLSPAN}"></td></tr>`;
   }
 
   function showError(message){
