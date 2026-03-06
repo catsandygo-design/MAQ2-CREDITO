@@ -71,6 +71,13 @@
     --led-bad:#dc2626;
     --led-neutral:#64748b;
     --border: rgba(15,23,42,.14);
+    --surface-1: #f7fbff;
+    --surface-2: #edf4fd;
+    --surface-3: #dce8f7;
+    --line-1: rgba(30,64,105,.18);
+    --line-2: rgba(30,64,105,.30);
+    --shadow-1: 0 8px 18px rgba(30,64,105,.08);
+    --shadow-2: 0 10px 22px rgba(30,64,105,.10);
     background:
       radial-gradient(1300px 620px at 8% -18%, rgba(59,130,246,.12), transparent 60%),
       radial-gradient(980px 520px at 96% 3%, rgba(14,165,233,.10), transparent 58%),
@@ -84,27 +91,38 @@
   body.theme-corporate .chip,
   body.theme-corporate .kpi,
   body.theme-corporate .tableWrap{
-    background: linear-gradient(180deg, rgba(246,250,255,.95), rgba(236,243,252,.93));
-    border-color: rgba(30,64,105,.18);
+    background: linear-gradient(180deg, var(--surface-1), var(--surface-2));
+    border-color: var(--line-1);
     color:#0f172a;
+  }
+  body.theme-corporate .card,
+  body.theme-corporate .kpi{
+    box-shadow: var(--shadow-1);
   }
   body.theme-corporate .topbar{
     background: linear-gradient(180deg, rgba(244,249,255,.96), rgba(232,241,252,.95));
-    border:1px solid rgba(30,64,105,.18);
-    box-shadow: 0 8px 18px rgba(30,64,105,.08);
+    border:1px solid var(--line-1);
+    box-shadow: var(--shadow-2);
   }
   body.theme-corporate .toolbar{
     background: linear-gradient(180deg, rgba(245,250,255,.96), rgba(236,244,253,.93));
+  }
+  body.theme-corporate .chip{
+    background: linear-gradient(180deg, #f3f9ff, #e8f2ff);
+    border-color: var(--line-1);
+    color:#1e3a5f;
+    font-weight:600;
   }
 
   body.theme-corporate .btn{
     color:#11355a;
     background:linear-gradient(180deg, #eef6ff, #deebfb);
-    border-color: rgba(37,99,235,.35);
+    border-color: rgba(37,99,235,.38);
   }
   body.theme-corporate .btn:hover{
     background:linear-gradient(180deg, #f8fbff, #d6e8ff);
     border-color: rgba(37,99,235,.52);
+    box-shadow: 0 4px 12px rgba(37,99,235,.18);
   }
 
   body.theme-corporate .btn.primary{
@@ -118,6 +136,13 @@
     color:#0f172a;
     background:#f7fbff;
     border-color: rgba(30,64,105,.2);
+  }
+  body.theme-corporate .btn:focus-visible,
+  body.theme-corporate input:focus-visible,
+  body.theme-corporate select:focus-visible{
+    outline: none;
+    border-color: rgba(14,116,144,.58);
+    box-shadow: 0 0 0 3px rgba(14,116,144,.16);
   }
   body.theme-corporate thead th{
     color:#334155;
@@ -146,7 +171,10 @@
   body.theme-corporate tbody tr.finalizadoRow:hover{
     background:#dcfce7;
   }
-  body.theme-corporate tbody tr:hover{
+  body.theme-corporate tbody tr:nth-child(2n):not(.outCountRow):not(.finalizadoRow){
+    background:rgba(219,231,247,.45);
+  }
+  body.theme-corporate tbody tr:not(.outCountRow):not(.finalizadoRow):hover{
     background:rgba(59,130,246,.10);
   }
   body.theme-corporate .foraCountBadge{
@@ -169,6 +197,7 @@
     background:#f4f8fe;
     border-color:rgba(30,64,105,.24);
     color:#0f172a;
+    font-weight:700;
   }
   body.theme-corporate .opsMini.danger{
     background:#fee2e2;
@@ -1289,7 +1318,7 @@
       min-height:34px;
       padding:6px 11px;
       border-radius:12px;
-      font-size:11px;
+      font-size:12px;
       font-weight:700;
     }
     body.theme-corporate.analista-pro .navActions .btn.activeNav{
@@ -1428,13 +1457,14 @@
       line-height:1.3;
     }
     body.analista-pro .opsStatus{
-      font-size:8px;
-      padding:1px 6px;
+      font-size:9px;
+      padding:2px 7px;
     }
     body.analista-pro .opsMini{
-      font-size:8px;
-      padding:2px 6px;
-      border-radius:7px;
+      font-size:9px;
+      padding:3px 8px;
+      border-radius:8px;
+      min-height:22px;
     }
     body.analista-pro .opsMsg{
       font-size:10px;
