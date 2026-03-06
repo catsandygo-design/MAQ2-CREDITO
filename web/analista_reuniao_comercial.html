@@ -555,6 +555,8 @@
         <a class="btn active" href="/app/analista/reuniao-comercial">Reuniao Comercial</a>
         <a class="btn" href="/app/analista/acompanhamento-operacional">Operacional</a>
         <a class="btn" href="/app/analista/repasse">Repasse</a>
+        <a class="btn" href="/app/analista/importacao">Importacao</a>
+        <a class="btn" href="/app/analista/arquivados">Arquivados</a>
         <button class="btn" id="btnRefresh" type="button">Atualizar</button>
         <button class="btn danger" id="btnLogout" type="button">Sair</button>
       </div>
@@ -902,6 +904,16 @@
       } finally {
         button.disabled = false;
       }
+    });
+
+    $("rows").addEventListener("change", (event) => {
+      const input = event.target;
+      if (!input || !input.matches('[data-field="solicitar_cancelamento"]')) return;
+      if (!input.checked) return;
+      const row = input.closest(".row");
+      const contaNoMes = row?.querySelector('[data-field="conta_no_mes"]');
+      if (contaNoMes) contaNoMes.checked = false;
+      setMessage('Cancelamento marcado: "Conta no mes" foi desmarcado automaticamente.');
     });
 
     $("q").addEventListener("input", renderRows);

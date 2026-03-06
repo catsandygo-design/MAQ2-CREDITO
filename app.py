@@ -2646,6 +2646,8 @@ def _analista_reuniao_cliente_out(
     status_followup = _analista_reuniao_followup_status(getattr(followup, "status_followup", None), fallback="seguir")
     data_prevista_entrega = getattr(followup, "data_prevista_entrega", None)
     entrega_hoje = bool(data_prevista_entrega and data_prevista_entrega == referencia)
+    solicitar_cancelamento = bool(getattr(followup, "solicitar_cancelamento", False))
+    conta_no_mes = bool(getattr(followup, "conta_no_mes", True)) and not solicitar_cancelamento
     compromissos_sorted = sorted(
         compromissos,
         key=lambda row: (
@@ -2666,11 +2668,11 @@ def _analista_reuniao_cliente_out(
         status_cca=_process_caixa_status(processo.status_cca),
         data_cadastro_origem=data_base,
         sla_dias=sla_dias,
-        conta_no_mes=bool(getattr(followup, "conta_no_mes", True)),
+        conta_no_mes=conta_no_mes,
         data_prevista_entrega=data_prevista_entrega,
         entrega_hoje=entrega_hoje,
         probabilidade_queda=bool(getattr(followup, "probabilidade_queda", False)),
-        solicitar_cancelamento=bool(getattr(followup, "solicitar_cancelamento", False)),
+        solicitar_cancelamento=solicitar_cancelamento,
         status_followup=status_followup,
         observacao=getattr(followup, "observacao", None),
         justificativa_reincidencia=getattr(followup, "justificativa_reincidencia", None),
@@ -8129,6 +8131,12 @@ def app_update_analista_reuniao_comercial_item(
         item.probabilidade_queda = bool(changes.get("probabilidade_queda"))
     if "solicitar_cancelamento" in changes:
         item.solicitar_cancelamento = bool(changes.get("solicitar_cancelamento"))
+    if item.solicitar_cancelamento:
+        item.conta_no_mes = False
+        processo.nao_contar_mes = True
+        ano_ref, mes_ref = _current_meta_period()
+        processo.nao_contar_mes_ref_ano = ano_ref
+        processo.nao_contar_mes_ref_mes = mes_ref
     if "status_followup" in changes:
         item.status_followup = _analista_reuniao_followup_status(changes.get("status_followup"), fallback=item.status_followup or "seguir")
     if "observacao" in changes:
