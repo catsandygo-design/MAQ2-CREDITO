@@ -1,6 +1,7 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError, fetchCCAs, fetchProcessosPaged, fetchSession, logout } from '../lib/api'
+import { TimelineLane, type TimelineStep } from '../components/TimelineLane'
 import type { ProcessoApiItem, ProcessoLinha } from '../types'
 
 const REFRESH_SECONDS = 60
@@ -17,6 +18,17 @@ const INSIGHT_REPASSE_STAGES = new Set([
   'envio_sienge',
   'venda_finalizada',
 ])
+
+const COMMERCIAL_FLOW_STEPS: TimelineStep[] = [
+  { key: 'reserva', label: 'Reserva' },
+  { key: 'em_processo', label: 'Em Processo' },
+  { key: 'credito', label: 'Credito' },
+  { key: 'secretaria_vendas', label: 'Secretaria' },
+  { key: 'assinatura_diretoria', label: 'Assinatura' },
+  { key: 'autorizacao_diretoria', label: 'Aprovacao' },
+  { key: 'envio_sienge', label: 'Sienge' },
+  { key: 'venda_finalizada', label: 'Finalizada' },
+]
 
 const LABELS: Record<string, Record<string, string>> = {
   geral: {
@@ -393,6 +405,45 @@ export function AnalistaPainelPage() {
     }
   }, [filteredRows])
 
+  const laneSnapshot = useMemo(() => {
+    const counts = Object.fromEntries(COMMERCIAL_FLOW_STEPS.map((step) => [step.key, 0])) as Record<string, number>
+    const stageIndex = new Map(COMMERCIAL_FLOW_STEPS.map((step, index) => [step.key, index]))
+
+    for (const row of filteredRows) {
+      if (row.foraContagemMes) continue
+      const key = statusFromBackend(row.geral)
+      if (Object.prototype.hasOwnProperty.call(counts, key)) {
+        counts[key] += 1
+      }
+    }
+
+    const activeEntries = COMMERCIAL_FLOW_STEPS.map((step) => ({
+      key: step.key,
+      value: counts[step.key] || 0,
+    })).filter((entry) => entry.value > 0)
+
+    if (activeEntries.length === 0) {
+      return {
+        counts,
+        currentKey: COMMERCIAL_FLOW_STEPS[0]?.key ?? '',
+        doneKeys: [] as string[],
+      }
+    }
+
+    activeEntries.sort((a, b) => {
+      if (b.value !== a.value) return b.value - a.value
+      const ai = stageIndex.get(a.key) ?? 0
+      const bi = stageIndex.get(b.key) ?? 0
+      return ai - bi
+    })
+
+    const currentKey = activeEntries[0].key
+    const currentIdx = stageIndex.get(currentKey) ?? 0
+    const doneKeys = COMMERCIAL_FLOW_STEPS.slice(0, currentIdx).map((step) => step.key)
+
+    return { counts, currentKey, doneKeys }
+  }, [filteredRows])
+
   const onChangeFilter = (key: keyof FiltersState, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
   }
@@ -543,6 +594,29 @@ export function AnalistaPainelPage() {
           <span className="metric-label">SLA medio credito</span>
           <span className="metric-value">{kpis.avgSlaCred}h</span>
           <span className="metric-subtitle">Media do filtro</span>
+        </div>
+      </section>
+
+      <section className="panel timeline-strip">
+        <div className="timeline-strip-head">
+          <h2>Fluxo comercial</h2>
+          <span>
+            Etapa foco: <strong>{labelFor('geral', laneSnapshot.currentKey)}</strong>
+          </span>
+        </div>
+        <TimelineLane
+          title="Etapas"
+          steps={COMMERCIAL_FLOW_STEPS}
+          currentKey={laneSnapshot.currentKey}
+          doneKeys={laneSnapshot.doneKeys}
+          height={62}
+        />
+        <div className="timeline-legend">
+          {COMMERCIAL_FLOW_STEPS.map((step) => (
+            <span key={step.key} className={`timeline-chip ${step.key === laneSnapshot.currentKey ? 'active' : ''}`}>
+              {step.label}: <strong>{laneSnapshot.counts[step.key] ?? 0}</strong>
+            </span>
+          ))}
         </div>
       </section>
 
