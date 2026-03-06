@@ -71,7 +71,10 @@
     --led-bad:#dc2626;
     --led-neutral:#64748b;
     --border: rgba(15,23,42,.14);
-    background: linear-gradient(180deg, #f4f7fb, #e9eff8);
+    background:
+      radial-gradient(1300px 620px at 8% -18%, rgba(59,130,246,.12), transparent 60%),
+      radial-gradient(980px 520px at 96% 3%, rgba(14,165,233,.10), transparent 58%),
+      linear-gradient(180deg, #e7eef8, #d9e5f4);
   }
 
   body.theme-corporate #bhCanvas{display:none !important}
@@ -81,33 +84,45 @@
   body.theme-corporate .chip,
   body.theme-corporate .kpi,
   body.theme-corporate .tableWrap{
-    background: rgba(255,255,255,.94);
-    border-color: rgba(15,23,42,.14);
+    background: linear-gradient(180deg, rgba(246,250,255,.95), rgba(236,243,252,.93));
+    border-color: rgba(30,64,105,.18);
     color:#0f172a;
+  }
+  body.theme-corporate .topbar{
+    background: linear-gradient(180deg, rgba(244,249,255,.96), rgba(232,241,252,.95));
+    border:1px solid rgba(30,64,105,.18);
+    box-shadow: 0 8px 18px rgba(30,64,105,.08);
+  }
+  body.theme-corporate .toolbar{
+    background: linear-gradient(180deg, rgba(245,250,255,.96), rgba(236,244,253,.93));
   }
 
   body.theme-corporate .btn{
     color:#0f172a;
-    background:#ffffff;
-    border-color: rgba(15,23,42,.18);
+    background:linear-gradient(180deg, #f7fbff, #ecf4ff);
+    border-color: rgba(30,64,105,.22);
+  }
+  body.theme-corporate .btn:hover{
+    background:linear-gradient(180deg, #ffffff, #e7f1ff);
+    border-color: rgba(30,64,105,.3);
   }
 
   body.theme-corporate .btn.primary{
     color:#075985;
-    background:#e0f2fe;
-    border-color: rgba(14,165,233,.45);
+    background:linear-gradient(180deg, #d9f3ff, #c7eaff);
+    border-color: rgba(14,165,233,.50);
   }
 
   body.theme-corporate input,
   body.theme-corporate select{
     color:#0f172a;
-    background:#ffffff;
-    border-color: rgba(15,23,42,.18);
+    background:#f7fbff;
+    border-color: rgba(30,64,105,.2);
   }
   body.theme-corporate thead th{
     color:#334155;
-    background:#dbe5f2;
-    border-bottom-color: rgba(15,23,42,.16);
+    background:#c8d7ea;
+    border-bottom-color: rgba(30,64,105,.24);
   }
   body.theme-corporate .empreendimento,
   body.theme-corporate .corretorLinha,
@@ -131,6 +146,9 @@
   body.theme-corporate tbody tr.finalizadoRow:hover{
     background:#dcfce7;
   }
+  body.theme-corporate tbody tr:hover{
+    background:rgba(59,130,246,.10);
+  }
   body.theme-corporate .foraCountBadge{
     color:#9f1239;
     background:#ffe4e6;
@@ -143,13 +161,13 @@
   body.theme-corporate .opsForm .field select,
   body.theme-corporate .opsNoteInput,
   body.theme-corporate .opsNoteArea{
-    background:#ffffff;
-    border-color:rgba(15,23,42,.16);
+    background:linear-gradient(180deg, #f8fbff, #edf4fd);
+    border-color:rgba(30,64,105,.18);
     color:#0f172a;
   }
   body.theme-corporate .opsMini{
-    background:#ffffff;
-    border-color:rgba(15,23,42,.2);
+    background:#f4f8fe;
+    border-color:rgba(30,64,105,.24);
     color:#0f172a;
   }
   body.theme-corporate .opsMini.danger{
@@ -1462,6 +1480,53 @@
     }
     body.theme-corporate.analista-pro .tableWrap{
       min-height:clamp(260px, 38vh, 430px);
+    }
+    @media (max-width: 1366px), (max-height: 800px){
+      body.analista-pro .wrap{
+        padding:6px;
+        gap:5px;
+      }
+      body.analista-pro .topbar{
+        padding:6px 8px;
+        gap:6px;
+      }
+      body.analista-pro .insights{
+        min-height:54px;
+        gap:5px;
+      }
+      body.analista-pro .kpi{
+        height:54px;
+        padding:4px 6px;
+      }
+      body.analista-pro .kpi .v{
+        font-size:16px;
+      }
+      body.analista-pro .opsCentral{
+        padding:6px;
+        gap:6px;
+      }
+      body.analista-pro .opsBox{
+        min-height:78px;
+        padding:6px;
+      }
+      body.analista-pro .opsList{
+        min-height:48px;
+        max-height:92px;
+      }
+      body.analista-pro tbody td{
+        padding:7px 9px;
+      }
+      body.analista-pro .cliente,
+      body.analista-pro .cliente a{
+        font-size:10px;
+      }
+      body.analista-pro .empreendimento,
+      body.analista-pro .corretorLinha{
+        font-size:9px;
+      }
+      body.theme-corporate.analista-pro .tableWrap{
+        min-height:clamp(236px, 34vh, 360px);
+      }
     }
     @media (max-width: 1600px){
       body.analista-pro .title h1{font-size:18px}
