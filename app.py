@@ -124,6 +124,9 @@ PROCESS_LIST_CACHE: dict[str, dict[str, Any]] = {}
 SEED_USERS_READY = False
 CREDITO_PLANEJAMENTO_TIPOS = {"tarefa", "agendamento", "entrega", "urgente", "anotacao"}
 CREDITO_PLANEJAMENTO_STATUS = {"pendente", "em_andamento", "concluido", "atrasado"}
+ANALISTA_REUNIAO_FOLLOWUP_STATUS = {"seguir", "finalizar_hoje", "assinado"}
+ANALISTA_REUNIAO_COMPROMISSO_STATUS = {"pendente", "nao_entregue", "entregue"}
+ANALISTA_REUNIAO_ESTAGIOS = {"EM_PROCESSO", "CREDITO", "SECRETARIA_VENDAS"}
 
 
 def _normalize_username(value: Optional[str]) -> str:
@@ -1660,6 +1663,56 @@ class CreditoPlanejamentoItem(Base):
     )
 
 
+class AnalistaReuniaoComercial(Base):
+    __tablename__ = "analista_reuniao_comercial"
+
+    processo_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("processos.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    conta_no_mes: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    data_prevista_entrega: Mapped[Optional[date]] = mapped_column(Date, index=True)
+    probabilidade_queda: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    solicitar_cancelamento: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    status_followup: Mapped[str] = mapped_column(String(20), nullable=False, default="seguir", index=True)
+    observacao: Mapped[Optional[str]] = mapped_column(Text)
+    justificativa_reincidencia: Mapped[Optional[str]] = mapped_column(Text)
+    updated_by_username: Mapped[Optional[str]] = mapped_column(String(120), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        index=True,
+    )
+
+
+class AnalistaReuniaoCompromisso(Base):
+    __tablename__ = "analista_reuniao_comercial_compromissos"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    processo_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("processos.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    data_prometida: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pendente", index=True)
+    justificativa: Mapped[Optional[str]] = mapped_column(Text)
+    observacao: Mapped[Optional[str]] = mapped_column(Text)
+    created_by_username: Mapped[Optional[str]] = mapped_column(String(120), index=True)
+    updated_by_username: Mapped[Optional[str]] = mapped_column(String(120), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        index=True,
+    )
+
+
 class ClienteCreate(BaseModel):
     nome: str
     corretor: Optional[str] = None
@@ -2334,6 +2387,75 @@ class CreditoPlanejamentoDashboardOut(BaseModel):
     itens: list[CreditoPlanejamentoItemOut]
 
 
+class AnalistaReuniaoCompromissoCreate(BaseModel):
+    data_prometida: date
+    observacao: Optional[str] = None
+
+
+class AnalistaReuniaoCompromissoNaoEntreguePayload(BaseModel):
+    justificativa: str
+    nova_data_prometida: Optional[date] = None
+    nova_observacao: Optional[str] = None
+
+
+class AnalistaReuniaoComercialUpdate(BaseModel):
+    conta_no_mes: Optional[bool] = None
+    data_prevista_entrega: Optional[date] = None
+    probabilidade_queda: Optional[bool] = None
+    solicitar_cancelamento: Optional[bool] = None
+    status_followup: Optional[str] = None
+    observacao: Optional[str] = None
+    justificativa_reincidencia: Optional[str] = None
+
+
+class AnalistaReuniaoCompromissoOut(BaseModel):
+    id: uuid.UUID
+    processo_id: uuid.UUID
+    data_prometida: date
+    status: str
+    justificativa: Optional[str] = None
+    observacao: Optional[str] = None
+    created_by_username: Optional[str] = None
+    updated_by_username: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class AnalistaReuniaoClienteOut(BaseModel):
+    processo_id: uuid.UUID
+    cliente_nome: str
+    empreendimento: Optional[str] = None
+    corretor: Optional[str] = None
+    imobiliaria: Optional[str] = None
+    estagio_comercial: str
+    status_cca: str
+    data_cadastro_origem: Optional[date] = None
+    sla_dias: int
+    conta_no_mes: bool
+    data_prevista_entrega: Optional[date] = None
+    entrega_hoje: bool
+    probabilidade_queda: bool
+    solicitar_cancelamento: bool
+    status_followup: str
+    observacao: Optional[str] = None
+    justificativa_reincidencia: Optional[str] = None
+    nao_entregou_count: int
+    compromissos: list[AnalistaReuniaoCompromissoOut]
+
+
+class AnalistaReuniaoComercialDashboardOut(BaseModel):
+    referencia: date
+    total_clientes: int
+    assinados: int
+    seguir: int
+    finalizar_hoje: int
+    entrega_hoje: int
+    risco_queda: int
+    solicitar_cancelamento: int
+    clientes_entrega_hoje: list[str]
+    clientes: list[AnalistaReuniaoClienteOut]
+
+
 class ProcessoFullOut(BaseModel):
     processo: ProcessoOut
     cliente: ClienteOut
@@ -2444,6 +2566,116 @@ def _credito_planejamento_item_out(item: CreditoPlanejamentoItem) -> CreditoPlan
         updated_by_username=item.updated_by_username,
         created_at=item.created_at,
         updated_at=item.updated_at,
+    )
+
+
+def _analista_reuniao_followup_status(value: Optional[str], *, fallback: str = "seguir") -> str:
+    raw = (
+        str(value or "")
+        .strip()
+        .lower()
+        .replace("-", "_")
+        .replace(" ", "_")
+    )
+    aliases = {
+        "assinado": "assinado",
+        "seguir_fluxo": "seguir",
+        "seguir_no_fluxo": "seguir",
+        "finalizar": "finalizar_hoje",
+        "finalizar_no_dia": "finalizar_hoje",
+    }
+    status = aliases.get(raw, raw)
+    if status in ANALISTA_REUNIAO_FOLLOWUP_STATUS:
+        return status
+    return fallback if fallback in ANALISTA_REUNIAO_FOLLOWUP_STATUS else "seguir"
+
+
+def _analista_reuniao_compromisso_status(value: Optional[str], *, fallback: str = "pendente") -> str:
+    raw = (
+        str(value or "")
+        .strip()
+        .lower()
+        .replace("-", "_")
+        .replace(" ", "_")
+    )
+    aliases = {
+        "naoentregue": "nao_entregue",
+        "nao_entregou": "nao_entregue",
+        "entregou": "entregue",
+        "done": "entregue",
+    }
+    status = aliases.get(raw, raw)
+    if status in ANALISTA_REUNIAO_COMPROMISSO_STATUS:
+        return status
+    return fallback if fallback in ANALISTA_REUNIAO_COMPROMISSO_STATUS else "pendente"
+
+
+def _analista_reuniao_compromisso_out(item: AnalistaReuniaoCompromisso) -> AnalistaReuniaoCompromissoOut:
+    return AnalistaReuniaoCompromissoOut(
+        id=item.id,
+        processo_id=item.processo_id,
+        data_prometida=item.data_prometida,
+        status=_analista_reuniao_compromisso_status(item.status, fallback="pendente"),
+        justificativa=item.justificativa,
+        observacao=item.observacao,
+        created_by_username=item.created_by_username,
+        updated_by_username=item.updated_by_username,
+        created_at=item.created_at,
+        updated_at=item.updated_at,
+    )
+
+
+def _analista_reuniao_data_base(processo: Processo, cliente: Cliente) -> date:
+    base = getattr(cliente, "data_cadastro_origem", None) or getattr(cliente, "data_reserva_origem", None)
+    if isinstance(base, date):
+        return base
+    created = _as_utc(getattr(processo, "created_at", None)) or _utcnow()
+    return created.date()
+
+
+def _analista_reuniao_cliente_out(
+    processo: Processo,
+    cliente: Cliente,
+    followup: Optional[AnalistaReuniaoComercial],
+    compromissos: list[AnalistaReuniaoCompromisso],
+    *,
+    referencia: date,
+) -> AnalistaReuniaoClienteOut:
+    data_base = _analista_reuniao_data_base(processo, cliente)
+    sla_dias = max(0, (referencia - data_base).days)
+    status_followup = _analista_reuniao_followup_status(getattr(followup, "status_followup", None), fallback="seguir")
+    data_prevista_entrega = getattr(followup, "data_prevista_entrega", None)
+    entrega_hoje = bool(data_prevista_entrega and data_prevista_entrega == referencia)
+    compromissos_sorted = sorted(
+        compromissos,
+        key=lambda row: (
+            row.data_prometida,
+            row.created_at or _utcnow(),
+        ),
+        reverse=True,
+    )
+    compromissos_out = [_analista_reuniao_compromisso_out(item) for item in compromissos_sorted]
+    nao_entregou_count = sum(1 for item in compromissos_out if item.status == "nao_entregue")
+    return AnalistaReuniaoClienteOut(
+        processo_id=processo.id,
+        cliente_nome=cliente.nome,
+        empreendimento=cliente.obra,
+        corretor=cliente.corretor,
+        imobiliaria=getattr(cliente, "imobiliaria", None),
+        estagio_comercial=_process_estagio_comercial(processo.estagio_comercial),
+        status_cca=_process_caixa_status(processo.status_cca),
+        data_cadastro_origem=data_base,
+        sla_dias=sla_dias,
+        conta_no_mes=bool(getattr(followup, "conta_no_mes", True)),
+        data_prevista_entrega=data_prevista_entrega,
+        entrega_hoje=entrega_hoje,
+        probabilidade_queda=bool(getattr(followup, "probabilidade_queda", False)),
+        solicitar_cancelamento=bool(getattr(followup, "solicitar_cancelamento", False)),
+        status_followup=status_followup,
+        observacao=getattr(followup, "observacao", None),
+        justificativa_reincidencia=getattr(followup, "justificativa_reincidencia", None),
+        nao_entregou_count=nao_entregou_count,
+        compromissos=compromissos_out,
     )
 
 
@@ -3400,6 +3632,43 @@ def _ensure_runtime_schema(db: Session) -> None:
             """
         )
     )
+    db.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS analista_reuniao_comercial (
+                processo_id UUID PRIMARY KEY REFERENCES processos(id) ON DELETE CASCADE,
+                conta_no_mes BOOLEAN NOT NULL DEFAULT TRUE,
+                data_prevista_entrega DATE,
+                probabilidade_queda BOOLEAN NOT NULL DEFAULT FALSE,
+                solicitar_cancelamento BOOLEAN NOT NULL DEFAULT FALSE,
+                status_followup VARCHAR(20) NOT NULL DEFAULT 'seguir',
+                observacao TEXT,
+                justificativa_reincidencia TEXT,
+                updated_by_username VARCHAR(120),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS analista_reuniao_comercial_compromissos (
+                id UUID PRIMARY KEY,
+                processo_id UUID NOT NULL REFERENCES processos(id) ON DELETE CASCADE,
+                data_prometida DATE NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'pendente',
+                justificativa TEXT,
+                observacao TEXT,
+                created_by_username VARCHAR(120),
+                updated_by_username VARCHAR(120),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+    )
 
     statements = [
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS status_credito VARCHAR(30) DEFAULT 'EM_ANALISE'",
@@ -3690,6 +3959,38 @@ def _ensure_runtime_schema(db: Session) -> None:
             """
             CREATE INDEX IF NOT EXISTS ix_credito_planejamento_itens_updated_at
             ON credito_planejamento_itens (updated_at DESC)
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            CREATE INDEX IF NOT EXISTS ix_analista_reuniao_comercial_status_followup
+            ON analista_reuniao_comercial (status_followup)
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            CREATE INDEX IF NOT EXISTS ix_analista_reuniao_comercial_data_prevista
+            ON analista_reuniao_comercial (data_prevista_entrega)
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            CREATE INDEX IF NOT EXISTS ix_analista_reuniao_compromissos_processo_data
+            ON analista_reuniao_comercial_compromissos (processo_id, data_prometida DESC)
+            """
+        )
+    )
+    db.execute(
+        text(
+            """
+            CREATE INDEX IF NOT EXISTS ix_analista_reuniao_compromissos_status
+            ON analista_reuniao_comercial_compromissos (status)
             """
         )
     )
@@ -4334,6 +4635,19 @@ def app_analista_acompanhamento_operacional_page(request: Request):
     if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
     return _html_page("analista_acompanhamento_operacional.html")
+
+
+@app.get("/app/analista/reuniao-comercial")
+def app_analista_reuniao_comercial_page(request: Request):
+    session = _read_session(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=302)
+    if bool(session.get("must_change_password")):
+        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+    role = _normalize_role(str(session.get("role", "")))
+    if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN}:
+        return RedirectResponse(url=_home_for_role(role), status_code=302)
+    return _html_page("analista_reuniao_comercial.html")
 
 
 @app.get("/app/analista/repasse")
@@ -7673,6 +7987,302 @@ def app_delete_credito_planejamento_item(
         details=f"tipo={item.tipo}; titulo={item.titulo}; status={item.status}; urgente={item.urgente}",
     )
     db.delete(item)
+    db.commit()
+    return {"ok": True}
+
+
+@app.get("/app/api/analista/reuniao-comercial", response_model=AnalistaReuniaoComercialDashboardOut)
+def app_get_analista_reuniao_comercial_dashboard(
+    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+    limit: int = Query(default=400, ge=1, le=1000),
+):
+    _ensure_monthly_repasse_archiving(db, _utcnow())
+    referencia = _utcnow().date()
+    role = _normalize_role(str(session.get("role", "")))
+    username = _normalize_username(str(session.get("username", "")))
+
+    query = (
+        db.query(Processo, Cliente)
+        .join(Cliente, Processo.cliente_id == Cliente.id)
+        .filter(
+            _processos_ativos_clause(),
+            func.upper(func.coalesce(Processo.estagio_comercial, "")).in_(tuple(ANALISTA_REUNIAO_ESTAGIOS)),
+        )
+    )
+    if role == ROLE_CCA:
+        if not username:
+            return AnalistaReuniaoComercialDashboardOut(
+                referencia=referencia,
+                total_clientes=0,
+                assinados=0,
+                seguir=0,
+                finalizar_hoje=0,
+                entrega_hoje=0,
+                risco_queda=0,
+                solicitar_cancelamento=0,
+                clientes_entrega_hoje=[],
+                clientes=[],
+            )
+        query = query.filter(func.lower(func.trim(func.coalesce(Processo.cca_responsavel, ""))) == username)
+
+    rows = query.order_by(Processo.created_at.asc()).limit(limit).all()
+    processo_ids = [processo.id for processo, _ in rows]
+
+    followup_map: dict[uuid.UUID, AnalistaReuniaoComercial] = {}
+    compromissos_map: dict[uuid.UUID, list[AnalistaReuniaoCompromisso]] = {}
+    if processo_ids:
+        followups = (
+            db.query(AnalistaReuniaoComercial)
+            .filter(AnalistaReuniaoComercial.processo_id.in_(processo_ids))
+            .all()
+        )
+        followup_map = {item.processo_id: item for item in followups}
+
+        compromissos = (
+            db.query(AnalistaReuniaoCompromisso)
+            .filter(AnalistaReuniaoCompromisso.processo_id.in_(processo_ids))
+            .order_by(AnalistaReuniaoCompromisso.data_prometida.desc(), AnalistaReuniaoCompromisso.created_at.desc())
+            .all()
+        )
+        for compromisso in compromissos:
+            compromissos_map.setdefault(compromisso.processo_id, []).append(compromisso)
+
+    clientes_out: list[AnalistaReuniaoClienteOut] = []
+    for processo, cliente in rows:
+        cliente_out = _analista_reuniao_cliente_out(
+            processo,
+            cliente,
+            followup_map.get(processo.id),
+            compromissos_map.get(processo.id, []),
+            referencia=referencia,
+        )
+        clientes_out.append(cliente_out)
+
+    clientes_out.sort(key=lambda row: (-row.sla_dias, row.cliente_nome.lower()))
+
+    assinados = sum(1 for row in clientes_out if row.status_followup == "assinado")
+    seguir = sum(1 for row in clientes_out if row.status_followup == "seguir")
+    finalizar_hoje = sum(1 for row in clientes_out if row.status_followup == "finalizar_hoje")
+    entrega_hoje = sum(1 for row in clientes_out if row.entrega_hoje)
+    risco_queda = sum(1 for row in clientes_out if row.probabilidade_queda)
+    solicitar_cancelamento = sum(1 for row in clientes_out if row.solicitar_cancelamento)
+    clientes_entrega_hoje = [row.cliente_nome for row in clientes_out if row.entrega_hoje]
+
+    return AnalistaReuniaoComercialDashboardOut(
+        referencia=referencia,
+        total_clientes=len(clientes_out),
+        assinados=assinados,
+        seguir=seguir,
+        finalizar_hoje=finalizar_hoje,
+        entrega_hoje=entrega_hoje,
+        risco_queda=risco_queda,
+        solicitar_cancelamento=solicitar_cancelamento,
+        clientes_entrega_hoje=clientes_entrega_hoje,
+        clientes=clientes_out,
+    )
+
+
+@app.patch("/app/api/analista/reuniao-comercial/{processo_id}", response_model=AnalistaReuniaoClienteOut)
+def app_update_analista_reuniao_comercial_item(
+    processo_id: uuid.UUID,
+    payload: AnalistaReuniaoComercialUpdate,
+    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    processo = db.get(Processo, processo_id)
+    if not processo:
+        raise HTTPException(status_code=404, detail="Processo nao encontrado.")
+
+    cliente = db.get(Cliente, processo.cliente_id)
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente do processo nao encontrado.")
+
+    estagio = _process_estagio_comercial(getattr(processo, "estagio_comercial", None))
+    if estagio not in ANALISTA_REUNIAO_ESTAGIOS:
+        raise HTTPException(status_code=422, detail="Processo fora das fases da reuniao comercial.")
+
+    actor_username = _normalize_username(str(session.get("username", "")))
+    actor_role = _normalize_role(str(session.get("role", "")))
+    changes = payload.model_dump(exclude_unset=True)
+
+    item = db.get(AnalistaReuniaoComercial, processo_id)
+    if not item:
+        item = AnalistaReuniaoComercial(processo_id=processo_id)
+        db.add(item)
+        db.flush()
+
+    if "conta_no_mes" in changes:
+        conta_no_mes = bool(changes.get("conta_no_mes"))
+        item.conta_no_mes = conta_no_mes
+        processo.nao_contar_mes = not conta_no_mes
+        if not conta_no_mes:
+            ano_ref, mes_ref = _current_meta_period()
+            processo.nao_contar_mes_ref_ano = ano_ref
+            processo.nao_contar_mes_ref_mes = mes_ref
+        else:
+            processo.nao_contar_mes_ref_ano = None
+            processo.nao_contar_mes_ref_mes = None
+    if "data_prevista_entrega" in changes:
+        item.data_prevista_entrega = changes.get("data_prevista_entrega")
+    if "probabilidade_queda" in changes:
+        item.probabilidade_queda = bool(changes.get("probabilidade_queda"))
+    if "solicitar_cancelamento" in changes:
+        item.solicitar_cancelamento = bool(changes.get("solicitar_cancelamento"))
+    if "status_followup" in changes:
+        item.status_followup = _analista_reuniao_followup_status(changes.get("status_followup"), fallback=item.status_followup or "seguir")
+    if "observacao" in changes:
+        item.observacao = _normalize_credito_planejamento_text(changes.get("observacao"), max_len=2500)
+    if "justificativa_reincidencia" in changes:
+        item.justificativa_reincidencia = _normalize_credito_planejamento_text(changes.get("justificativa_reincidencia"), max_len=2000)
+
+    item.updated_by_username = actor_username or None
+    _record_system_log(
+        db,
+        actor_username=actor_username,
+        actor_role=actor_role,
+        tela="analista_reuniao_comercial",
+        acao="REUNIAO_COMERCIAL_ITEM_ATUALIZADO",
+        entidade_tipo="processo",
+        entidade_id=str(processo_id),
+        details=(
+            f"conta_no_mes={item.conta_no_mes}; status_followup={item.status_followup}; "
+            f"entrega_prevista={item.data_prevista_entrega or '-'}; risco_queda={item.probabilidade_queda}; "
+            f"cancelamento={item.solicitar_cancelamento}"
+        ),
+    )
+
+    db.commit()
+
+    compromissos = (
+        db.query(AnalistaReuniaoCompromisso)
+        .filter(AnalistaReuniaoCompromisso.processo_id == processo_id)
+        .order_by(AnalistaReuniaoCompromisso.data_prometida.desc(), AnalistaReuniaoCompromisso.created_at.desc())
+        .all()
+    )
+    return _analista_reuniao_cliente_out(processo, cliente, item, compromissos, referencia=_utcnow().date())
+
+
+@app.post("/app/api/analista/reuniao-comercial/{processo_id}/compromissos", response_model=AnalistaReuniaoCompromissoOut)
+def app_create_analista_reuniao_compromisso(
+    processo_id: uuid.UUID,
+    payload: AnalistaReuniaoCompromissoCreate,
+    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    processo = db.get(Processo, processo_id)
+    if not processo:
+        raise HTTPException(status_code=404, detail="Processo nao encontrado.")
+
+    estagio = _process_estagio_comercial(getattr(processo, "estagio_comercial", None))
+    if estagio not in ANALISTA_REUNIAO_ESTAGIOS:
+        raise HTTPException(status_code=422, detail="Processo fora das fases da reuniao comercial.")
+
+    actor_username = _normalize_username(str(session.get("username", "")))
+    actor_role = _normalize_role(str(session.get("role", "")))
+    observacao = _normalize_credito_planejamento_text(payload.observacao, max_len=900)
+    compromisso = AnalistaReuniaoCompromisso(
+        processo_id=processo_id,
+        data_prometida=payload.data_prometida,
+        status="pendente",
+        observacao=observacao,
+        created_by_username=actor_username or None,
+        updated_by_username=actor_username or None,
+    )
+    db.add(compromisso)
+    db.flush()
+    _record_system_log(
+        db,
+        actor_username=actor_username,
+        actor_role=actor_role,
+        tela="analista_reuniao_comercial",
+        acao="REUNIAO_COMERCIAL_COMPROMISSO_CRIADO",
+        entidade_tipo="processo",
+        entidade_id=str(processo_id),
+        details=f"data_prometida={payload.data_prometida.isoformat()}; status=pendente",
+    )
+    db.commit()
+    db.refresh(compromisso)
+    return _analista_reuniao_compromisso_out(compromisso)
+
+
+@app.post("/app/api/analista/reuniao-comercial/compromissos/{compromisso_id}/nao-entregue")
+def app_mark_analista_reuniao_compromisso_nao_entregue(
+    compromisso_id: uuid.UUID,
+    payload: AnalistaReuniaoCompromissoNaoEntreguePayload,
+    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    compromisso = db.get(AnalistaReuniaoCompromisso, compromisso_id)
+    if not compromisso:
+        raise HTTPException(status_code=404, detail="Compromisso nao encontrado.")
+
+    justificativa = _normalize_credito_planejamento_text(payload.justificativa, max_len=1400)
+    if not justificativa:
+        raise HTTPException(status_code=422, detail="Justificativa obrigatoria para nao entregue.")
+
+    actor_username = _normalize_username(str(session.get("username", "")))
+    actor_role = _normalize_role(str(session.get("role", "")))
+
+    compromisso.status = "nao_entregue"
+    compromisso.justificativa = justificativa
+    compromisso.updated_by_username = actor_username or None
+
+    novo_compromisso_id: Optional[uuid.UUID] = None
+    if payload.nova_data_prometida:
+        novo = AnalistaReuniaoCompromisso(
+            processo_id=compromisso.processo_id,
+            data_prometida=payload.nova_data_prometida,
+            status="pendente",
+            observacao=_normalize_credito_planejamento_text(payload.nova_observacao, max_len=900),
+            created_by_username=actor_username or None,
+            updated_by_username=actor_username or None,
+        )
+        db.add(novo)
+        db.flush()
+        novo_compromisso_id = novo.id
+
+    _record_system_log(
+        db,
+        actor_username=actor_username,
+        actor_role=actor_role,
+        tela="analista_reuniao_comercial",
+        acao="REUNIAO_COMERCIAL_COMPROMISSO_NAO_ENTREGUE",
+        entidade_tipo="processo",
+        entidade_id=str(compromisso.processo_id),
+        details=(
+            f"compromisso_id={compromisso.id}; justificativa={justificativa}; "
+            f"nova_data={payload.nova_data_prometida or '-'}; novo_compromisso_id={novo_compromisso_id or '-'}"
+        ),
+    )
+    db.commit()
+    return {"ok": True, "novo_compromisso_id": str(novo_compromisso_id) if novo_compromisso_id else None}
+
+
+@app.post("/app/api/analista/reuniao-comercial/compromissos/{compromisso_id}/entregue")
+def app_mark_analista_reuniao_compromisso_entregue(
+    compromisso_id: uuid.UUID,
+    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    compromisso = db.get(AnalistaReuniaoCompromisso, compromisso_id)
+    if not compromisso:
+        raise HTTPException(status_code=404, detail="Compromisso nao encontrado.")
+
+    actor_username = _normalize_username(str(session.get("username", "")))
+    actor_role = _normalize_role(str(session.get("role", "")))
+    compromisso.status = "entregue"
+    compromisso.updated_by_username = actor_username or None
+    _record_system_log(
+        db,
+        actor_username=actor_username,
+        actor_role=actor_role,
+        tela="analista_reuniao_comercial",
+        acao="REUNIAO_COMERCIAL_COMPROMISSO_ENTREGUE",
+        entidade_tipo="processo",
+        entidade_id=str(compromisso.processo_id),
+        details=f"compromisso_id={compromisso.id}",
+    )
     db.commit()
     return {"ok": True}
 
