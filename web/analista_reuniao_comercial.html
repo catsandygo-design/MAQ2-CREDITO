@@ -39,9 +39,202 @@
         linear-gradient(180deg, var(--bg2), var(--bg));
     }
 
+    .layout {
+      height: 100%;
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      gap: 10px;
+      padding: 10px;
+    }
+
+    .glassSidebar {
+      min-width: 0;
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background:
+        radial-gradient(circle at 12% 20%, rgba(16,185,129,.35), transparent 45%),
+        radial-gradient(circle at 90% 86%, rgba(14,165,233,.28), transparent 48%),
+        linear-gradient(165deg, rgba(10,18,32,.86), rgba(13,23,42,.72));
+      color: #e2e8f0;
+      box-shadow:
+        0 16px 30px rgba(2, 6, 23, 0.36),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      padding: 14px 12px;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .glassSidebar::before,
+    .glassSidebar::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(18px);
+      pointer-events: none;
+    }
+
+    .glassSidebar::before {
+      width: 130px;
+      height: 130px;
+      left: -32px;
+      top: -22px;
+      background: rgba(52, 211, 153, 0.2);
+    }
+
+    .glassSidebar::after {
+      width: 150px;
+      height: 150px;
+      right: -36px;
+      bottom: -50px;
+      background: rgba(56, 189, 248, 0.18);
+    }
+
+    .railBrand {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: 2px;
+      padding: 4px 6px 8px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+    }
+
+    .railBrand strong {
+      font-size: 19px;
+      font-weight: 900;
+      letter-spacing: .01em;
+      color: #f0f9ff;
+      text-shadow: 0 4px 14px rgba(14,165,233,.25);
+    }
+
+    .railBrand span {
+      font-size: 11px;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+
+    .railTag {
+      position: relative;
+      z-index: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-self: start;
+      border-radius: 999px;
+      border: 1px solid rgba(52,211,153,.45);
+      background: rgba(16,185,129,.18);
+      color: #d1fae5;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      padding: 4px 10px;
+      text-transform: uppercase;
+    }
+
+    .railNav {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: 7px;
+      align-content: start;
+    }
+
+    .railLink {
+      display: grid;
+      grid-template-columns: 22px minmax(0, 1fr);
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      border-radius: 11px;
+      border: 1px solid transparent;
+      background: rgba(15, 23, 42, 0.48);
+      color: #cbd5e1;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      transition: .15s ease;
+    }
+
+    .railLink:hover {
+      transform: translateY(-1px);
+      border-color: rgba(148, 163, 184, 0.36);
+      background: rgba(30, 41, 59, 0.62);
+      color: #f1f5f9;
+    }
+
+    .railLink b {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      font-size: 10px;
+      font-weight: 900;
+      color: #c7d2fe;
+      background: rgba(30, 41, 59, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.24);
+    }
+
+    .railLink.active {
+      border-color: rgba(52,211,153,.55);
+      background: linear-gradient(90deg, rgba(34,197,94,.94), rgba(16,185,129,.9));
+      color: #052e16;
+      box-shadow:
+        0 10px 18px rgba(16, 185, 129, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    }
+
+    .railLink.active b {
+      color: #14532d;
+      background: rgba(236, 253, 245, 0.8);
+      border-color: rgba(34, 197, 94, 0.4);
+    }
+
+    .railBottom {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: 8px;
+      border-top: 1px solid rgba(148, 163, 184, 0.24);
+      padding-top: 10px;
+    }
+
+    .railAction {
+      border: 1px solid rgba(148, 163, 184, 0.34);
+      background: rgba(15, 23, 42, 0.55);
+      color: #e2e8f0;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 8px 10px;
+      cursor: pointer;
+      text-align: left;
+      transition: .15s ease;
+    }
+
+    .railAction:hover {
+      transform: translateY(-1px);
+      background: rgba(30, 41, 59, 0.78);
+      border-color: rgba(148, 163, 184, 0.44);
+    }
+
+    .railAction.danger {
+      border-color: rgba(248, 113, 113, 0.45);
+      background: rgba(127, 29, 29, 0.35);
+      color: #fecaca;
+    }
+
+    .railAction.danger:hover {
+      border-color: rgba(248, 113, 113, 0.6);
+      background: rgba(153, 27, 27, 0.45);
+    }
+
     .wrap {
       height: 100%;
-      padding: 10px;
+      padding: 0;
       display: grid;
       grid-template-rows: auto auto auto minmax(0, 1fr);
       gap: 10px;
@@ -573,6 +766,13 @@
     }
 
     @media (max-width: 1100px) {
+      .layout {
+        grid-template-columns: 1fr;
+        padding: 8px;
+      }
+      .glassSidebar {
+        display: none;
+      }
       .topbar { grid-template-columns: 1fr; }
       .actions { justify-content: flex-start; }
       .summary { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
@@ -592,7 +792,29 @@
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div class="layout">
+    <aside class="glassSidebar">
+      <div class="railBrand">
+        <strong>Reuniao Comercial</strong>
+        <span>Modern Glass Sidebar</span>
+      </div>
+      <span class="railTag">Analista</span>
+      <nav class="railNav">
+        <a class="railLink" href="/app/analista"><b>PN</b><span>Painel</span></a>
+        <a class="railLink" href="/app/analista/acompanhamento"><b>AK</b><span>Acompanhamento</span></a>
+        <a class="railLink active" href="/app/analista/reuniao-comercial"><b>RC</b><span>Reuniao Comercial</span></a>
+        <a class="railLink" href="/app/analista/acompanhamento-operacional"><b>OP</b><span>Operacional</span></a>
+        <a class="railLink" href="/app/analista/repasse"><b>RP</b><span>Repasse</span></a>
+        <a class="railLink" href="/app/analista/importacao"><b>IM</b><span>Importacao</span></a>
+        <a class="railLink" href="/app/analista/arquivados"><b>AR</b><span>Arquivados</span></a>
+      </nav>
+      <div class="railBottom">
+        <button class="railAction" id="btnRefreshRail" type="button">Atualizar painel</button>
+        <button class="railAction danger" id="btnLogoutRail" type="button">Sair</button>
+      </div>
+    </aside>
+
+    <div class="wrap">
     <header class="topbar">
       <div class="title">
         <h1>Reuniao Comercial (Analista)</h1>
@@ -631,6 +853,7 @@
       </div>
       <div class="rows" id="rows"></div>
     </section>
+    </div>
   </div>
 
   <script>
@@ -970,7 +1193,14 @@
     $("btnRefresh").addEventListener("click", () => {
       void loadDashboard();
     });
+    $("btnRefreshRail")?.addEventListener("click", () => {
+      void loadDashboard();
+    });
     $("btnLogout").addEventListener("click", async () => {
+      await fetch("/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => null);
+      window.location.href = "/login";
+    });
+    $("btnLogoutRail")?.addEventListener("click", async () => {
       await fetch("/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => null);
       window.location.href = "/login";
     });
