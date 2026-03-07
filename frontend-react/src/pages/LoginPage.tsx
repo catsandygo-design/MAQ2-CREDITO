@@ -1,5 +1,6 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { reactHomeForRole } from '../config/reactHome'
 import { ApiError, login } from '../lib/api'
 
 export function LoginPage() {
@@ -19,11 +20,9 @@ export function LoginPage() {
     setError('')
     try {
       const out = await login(username.trim(), password)
-      const role = String(out.role || '').toLowerCase()
-      if (role === 'gestor' || role === 'gestor_credito' || role === 'admin') {
-        navigate('/gestor', { replace: true })
-      } else if (role === 'analista') {
-        navigate('/analista', { replace: true })
+      const target = reactHomeForRole(out.role)
+      if (target) {
+        navigate(target, { replace: true })
       } else if (out.home) {
         window.location.href = out.home
       } else {
@@ -73,3 +72,4 @@ export function LoginPage() {
     </div>
   )
 }
+

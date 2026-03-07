@@ -346,25 +346,25 @@ def _home_for_session(session: Optional[dict[str, Any]]) -> str:
     if not session:
         return "/login"
     if bool(session.get("must_change_password")):
-        return "/app/trocar-senha"
+        return "/app-react/trocar-senha"
     return _home_for_role(str(session.get("role", "")))
 
 
 def _home_for_role(role: Optional[str]) -> str:
     role_key = (role or "").strip().lower()
     if role_key == ROLE_ADMIN:
-        return "/app/admin"
+        return "/app-react/admin"
     if role_key == ROLE_GESTOR:
-        return "/app/gestor"
+        return "/app-react/gestor"
     if role_key == ROLE_GESTOR_CREDITO:
-        return "/app/gestor-credito"
+        return "/app-react/gestor-credito"
     if role_key == ROLE_ANALISTA:
-        return "/app/analista"
+        return "/app-react/analista"
     if role_key == ROLE_CCA:
-        return "/app/cca"
+        return "/app-react/cca"
     if role_key == ROLE_CORRETOR:
-        return "/app/corretor" if CORRETOR_ROUTE_ENABLED else "/login"
-    return "/app/analista"
+        return "/app-react/corretor" if CORRETOR_ROUTE_ENABLED else "/login"
+    return "/app-react/analista"
 
 
 def _new_session(user_id: uuid.UUID, username: str, role: str, must_change_password: bool) -> str:
@@ -4501,7 +4501,7 @@ def app_cca_page(request: Request):
     if not session:
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+        return RedirectResponse(url="/app-react/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
     if role not in {ROLE_CCA, ROLE_ANALISTA}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
@@ -4514,7 +4514,7 @@ def app_cca_analise_page(request: Request):
     if not session:
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+        return RedirectResponse(url="/app-react/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
     if role not in {ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
@@ -4527,7 +4527,7 @@ def app_checklist_page(request: Request):
     if not session:
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+        return RedirectResponse(url="/app-react/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
     if role not in {ROLE_ANALISTA, ROLE_CCA, ROLE_ADMIN}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
@@ -4540,7 +4540,7 @@ def app_corretor_page(request: Request):
     if not session:
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+        return RedirectResponse(url="/app-react/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
     if role != ROLE_CORRETOR:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
@@ -4560,7 +4560,7 @@ def app_corretor_precadastro_page(request: Request):
     if not session:
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+        return RedirectResponse(url="/app-react/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
     if role != ROLE_CORRETOR:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
@@ -4580,7 +4580,7 @@ def app_corretor_apresentacao_page(request: Request):
     if not session:
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+        return RedirectResponse(url="/app-react/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
     if role != ROLE_CORRETOR:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
@@ -4600,7 +4600,7 @@ def app_analista_page(request: Request):
     if not session:
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+        return RedirectResponse(url="/app-react/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
     if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
@@ -4619,7 +4619,7 @@ def app_analista_acompanhamento_page(request: Request):
     if not session:
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+        return RedirectResponse(url="/app-react/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
     if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
@@ -4632,7 +4632,7 @@ def app_analista_acompanhamento_operacional_page(request: Request):
     if not session:
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+        return RedirectResponse(url="/app-react/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
     if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
@@ -4645,7 +4645,7 @@ def app_analista_reuniao_comercial_page(request: Request):
     if not session:
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+        return RedirectResponse(url="/app-react/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
     if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
@@ -4658,7 +4658,7 @@ def app_analista_repasse_page(request: Request):
     if not session:
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+        return RedirectResponse(url="/app-react/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
     if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
@@ -4671,7 +4671,7 @@ def app_analista_arquivados_page(request: Request):
     if not session:
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+        return RedirectResponse(url="/app-react/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
     if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
@@ -4684,7 +4684,7 @@ def app_analise_page(request: Request):
     if not session:
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+        return RedirectResponse(url="/app-react/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
     if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
@@ -4697,7 +4697,7 @@ def app_analista_importacao_page(request: Request):
     if not session:
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+        return RedirectResponse(url="/app-react/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
     if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
@@ -4710,7 +4710,7 @@ def app_gestor_credito_page(request: Request):
     if not session:
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+        return RedirectResponse(url="/app-react/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
     if role not in {ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
@@ -4723,7 +4723,7 @@ def app_admin_page(request: Request):
     if not session:
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+        return RedirectResponse(url="/app-react/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
     if role != ROLE_ADMIN:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
@@ -4736,7 +4736,7 @@ def app_gestor_page(request: Request):
     if not session:
         return RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+        return RedirectResponse(url="/app-react/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
     if role not in {ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
@@ -4807,7 +4807,7 @@ def auth_login(payload: LoginPayload, db: Session = Depends(get_db)):
         role=normalized_role,
         must_change_password=bool(user.must_change_password),
     )
-    home = "/app/trocar-senha" if user.must_change_password else _home_for_role(user.role)
+    home = "/app-react/trocar-senha" if user.must_change_password else _home_for_role(user.role)
     response = JSONResponse(
         {
             "ok": True,
@@ -4847,7 +4847,7 @@ def auth_me(request: Request):
     username = str(session.get("username", ""))
     role = _normalize_role(str(session.get("role", "")))
     must_change_password = bool(session.get("must_change_password"))
-    home = "/app/trocar-senha" if must_change_password else _home_for_role(role)
+    home = "/app-react/trocar-senha" if must_change_password else _home_for_role(role)
     return {
         "ok": True,
         "username": username,
@@ -9475,4 +9475,5 @@ def app_bulk_upsert_documentos(
         .all()
     )
     return documentos
+
 
