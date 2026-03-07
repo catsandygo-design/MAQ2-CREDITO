@@ -30,6 +30,28 @@ const COMMERCIAL_FLOW_STEPS: TimelineStep[] = [
   { key: 'venda_finalizada', label: 'Finalizada' },
 ]
 
+type RowTimelineState = 'done' | 'current' | 'future'
+
+interface RowTimelinePoint {
+  key: string
+  label: string
+  shortLabel: string
+  state: RowTimelineState
+}
+
+const COMMERCIAL_FLOW_INDEX = new Map(COMMERCIAL_FLOW_STEPS.map((step, index) => [step.key, index]))
+
+const COMMERCIAL_FLOW_SHORT_LABELS: Record<string, string> = {
+  reserva: 'RSV',
+  em_processo: 'PROC',
+  credito: 'CRD',
+  secretaria_vendas: 'SECR',
+  assinatura_diretoria: 'ASS',
+  autorizacao_diretoria: 'APR',
+  envio_sienge: 'SIE',
+  venda_finalizada: 'FIM',
+}
+
 const LABELS: Record<string, Record<string, string>> = {
   geral: {
     reserva: 'Reserva',
@@ -276,6 +298,23 @@ function kpiToneByHours(hours: number): 'ok' | 'warn' | 'danger' {
   if (hours >= SLA_BAD) return 'danger'
   if (hours >= SLA_WARN) return 'warn'
   return 'ok'
+}
+
+function buildRowTimeline(row: ProcessoLinha): RowTimelinePoint[] {
+  const currentKey = statusFromBackend(row.geral)
+  const currentIndex = COMMERCIAL_FLOW_INDEX.get(currentKey) ?? -1
+
+  return COMMERCIAL_FLOW_STEPS.map((step, index) => {
+    const state: RowTimelineState =
+      currentIndex < 0 ? 'future' : index < currentIndex ? 'done' : index === currentIndex ? 'current' : 'future'
+
+    return {
+      key: step.key,
+      label: step.label,
+      shortLabel: COMMERCIAL_FLOW_SHORT_LABELS[step.key] || step.label.slice(0, 3).toUpperCase(),
+      state,
+    }
+  })
 }
 
 export function AnalistaPainelPage() {
@@ -657,6 +696,7 @@ export function AnalistaPainelPage() {
                   const sinalClass = classForStatus(row.sinal)
                   const fiadorClass = classForStatus(row.fiador)
                   const rowClass = row.foraContagemMes ? 'row-out' : isFinalizadoRow(row) ? 'row-final' : ''
+                  const rowTimeline = buildRowTimeline(row)
 
                   return (
                     <tr key={row.processoId} className={rowClass}>
@@ -668,6 +708,18 @@ export function AnalistaPainelPage() {
                           </div>
                           <span className="meta-line">{row.emp}</span>
                           <span className="meta-line">{row.corretor}</span>
+                          <div className="row-timeline" aria-label={`Fluxo da venda de ${row.cliente}`}>
+                            {rowTimeline.map((point) => (
+                              <div
+                                key={`${row.processoId}-${point.key}`}
+                                className={`row-timeline-step ${point.state}`}
+                                title={point.label}
+                              >
+                                <span className="row-timeline-dot" />
+                                <span className="row-timeline-label">{point.shortLabel}</span>
+                              </div>
+                            ))}
+                          </div>
                           <div className="badges-row">
                             {row.foraContagemMes ? <span className="chip bad">Fora da contagem do mes</span> : null}
                             {isHighPriority(row) ? <span className="chip danger">Prioridade alta</span> : null}
