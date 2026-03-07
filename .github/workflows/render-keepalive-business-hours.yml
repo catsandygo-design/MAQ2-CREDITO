@@ -1,0 +1,36 @@
+﻿name: Render Keepalive (Business Hours)
+
+on:
+  schedule:
+    # 08:00-18:55 America/Sao_Paulo (UTC-3) => 11:00-21:55 UTC
+    - cron: "*/5 11-21 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping-render:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.RENDER_KEEPALIVE_URL != '' }}
+    steps:
+      - name: Build keepalive URL
+        id: url
+        shell: bash
+        run: |
+          BASE="${RENDER_KEEPALIVE_URL%/}"
+          if [[ "$BASE" == */health/keepalive ]]; then
+            echo "target=$BASE" >> "$GITHUB_OUTPUT"
+          else
+            echo "target=$BASE/health/keepalive" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          RENDER_KEEPALIVE_URL: ${{ secrets.RENDER_KEEPALIVE_URL }}
+
+      - name: Ping Render keepalive endpoint
+        shell: bash
+        run: |
+          echo "Pinging $TARGET"
+          curl --fail --silent --show-error --max-time 20 "$TARGET" > /dev/null
+        env:
+          TARGET: ${{ steps.url.outputs.target }}
