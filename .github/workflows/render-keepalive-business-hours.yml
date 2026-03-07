@@ -5,6 +5,9 @@ on:
     # 08:00-18:55 America/Sao_Paulo (UTC-3) => 11:00-21:55 UTC
     - cron: "*/5 11-21 * * *"
   workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/render-keepalive-business-hours.yml"
 
 permissions:
   contents: read
