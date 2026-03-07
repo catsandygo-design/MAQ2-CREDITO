@@ -34,7 +34,26 @@ jobs:
         id: url
         shell: bash
         run: |
-          BASE="${RENDER_KEEPALIVE_URL%/}"
+          RAW="${RENDER_KEEPALIVE_URL//$'\r'/}"
+          RAW="${RAW//$'\n'/}"
+          RAW="$(echo "$RAW" | xargs)"
+          if [[ -z "$RAW" ]]; then
+            echo "RENDER_KEEPALIVE_URL vazio apos normalizacao."
+            exit 1
+          fi
+
+          if [[ "$RAW" =~ ^https?:// ]]; then
+            BASE="${RAW%/}"
+          else
+            BASE="https://${RAW%/}"
+          fi
+
+          if ! [[ "$BASE" =~ ^https?://[A-Za-z0-9.-]+(:[0-9]+)?(/.*)?$ ]]; then
+            echo "Formato invalido para RENDER_KEEPALIVE_URL. Valor informado nao parece URL."
+            echo "Use formato: https://seu-app.onrender.com"
+            exit 1
+          fi
+
           if [[ "$BASE" == */health/keepalive ]]; then
             echo "target=$BASE" >> "$GITHUB_OUTPUT"
           else
@@ -48,6 +67,6 @@ jobs:
         shell: bash
         run: |
           echo "Pinging $TARGET"
-          curl --fail --silent --show-error --max-time 120 --retry 2 --retry-delay 5 --retry-all-errors "$TARGET" > /dev/null
+          curl --fail --silent --show-error --location --max-time 120 --retry 2 --retry-delay 5 --retry-all-errors "$TARGET" > /dev/null
         env:
           TARGET: ${{ steps.url.outputs.target }}
