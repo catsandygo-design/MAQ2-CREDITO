@@ -6449,6 +6449,20 @@ def health():
     }
 
 
+@app.get("/health/keepalive")
+def health_keepalive():
+    now = _utcnow().isoformat()
+    return JSONResponse(
+        {
+            "ok": True,
+            "service": "sistema-credito-api",
+            "purpose": "keepalive",
+            "ts_utc": now,
+        },
+        headers={"Cache-Control": "no-store, max-age=0"},
+    )
+
+
 @app.get("/health/db")
 def health_db(db: Session = Depends(get_db)):
     try:
