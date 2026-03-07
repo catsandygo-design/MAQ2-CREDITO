@@ -2,8 +2,11 @@
 
 on:
   schedule:
-    # 08:00-18:59 America/Sao_Paulo (UTC-3) => 11:00-21:59 UTC
-    - cron: "*/3 11-21 * * *"
+    # America/Sao_Paulo (UTC-3)
+    # 08:00-17:59 BRT => 11:00-20:59 UTC
+    - cron: "*/3 11-20 * * *"
+    # 18:00-18:30 BRT => 21:00-21:30 UTC
+    - cron: "0-30/3 21 * * *"
   workflow_dispatch:
   push:
     paths:
