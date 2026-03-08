@@ -664,7 +664,7 @@ export function AnalistaPainelPage() {
                         <div className="client-col">
                           <div className="client-name-row">
                             <span className={`anim-dot ${animState}`} aria-hidden="true" />
-                            <a href={`/app-react/analise?processo_id=${encodeURIComponent(row.processoId)}`}>{row.cliente}</a>
+                            <a href={`/app/analise?processo_id=${encodeURIComponent(row.processoId)}`}>{row.cliente}</a>
                           </div>
                           <span className="meta-line">{row.emp}</span>
                           <span className="meta-line">{row.corretor}</span>
