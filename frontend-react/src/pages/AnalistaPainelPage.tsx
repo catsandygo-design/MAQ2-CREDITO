@@ -30,13 +30,6 @@ const COMMERCIAL_FLOW_STEPS: TimelineStep[] = [
   { key: 'venda_finalizada', label: 'Finalizada' },
 ]
 
-const REPASSE_FLOW_STEPS: TimelineStep[] = [
-  { key: 'em_repasse', label: 'Em Repasse' },
-  { key: 'inicio_repasse', label: 'Inicio Repasse' },
-  { key: 'assinatura_caixa', label: 'Assinatura Caixa' },
-  { key: 'inicio_garantia', label: 'Inicio Garantia' },
-]
-
 type RowTimelineState = 'done' | 'current' | 'future'
 
 interface RowTimelinePoint {
@@ -324,18 +317,6 @@ function buildRowTimeline(row: ProcessoLinha): RowTimelinePoint[] {
   })
 }
 
-function repasseStageKey(row: ProcessoLinha): string | null {
-  const repasse = statusFromBackend(row.repasse)
-  const caixa = statusFromBackend(row.statusCaixa)
-  const agehab = statusFromBackend(row.statusAgehab)
-
-  if (agehab === 'validado_agehab' || caixa === 'finalizado') return 'inicio_garantia'
-  if (caixa === 'assinatura_caixa' || repasse === 'assinatura_autorizada') return 'assinatura_caixa'
-  if (repasse === 'inicio_repasse') return 'inicio_repasse'
-  if (repasse === 'em_repasse') return 'em_repasse'
-  return null
-}
-
 export function AnalistaPainelPage() {
   const navigate = useNavigate()
   const [rows, setRows] = useState<ProcessoLinha[]>([])
@@ -498,45 +479,6 @@ export function AnalistaPainelPage() {
     const currentKey = activeEntries[0].key
     const currentIdx = stageIndex.get(currentKey) ?? 0
     const doneKeys = COMMERCIAL_FLOW_STEPS.slice(0, currentIdx).map((step) => step.key)
-
-    return { counts, currentKey, doneKeys }
-  }, [filteredRows])
-
-  const repasseLaneSnapshot = useMemo(() => {
-    const counts = Object.fromEntries(REPASSE_FLOW_STEPS.map((step) => [step.key, 0])) as Record<string, number>
-    const stageIndex = new Map(REPASSE_FLOW_STEPS.map((step, index) => [step.key, index]))
-
-    for (const row of filteredRows) {
-      if (row.foraContagemMes) continue
-      const key = repasseStageKey(row)
-      if (key && Object.prototype.hasOwnProperty.call(counts, key)) {
-        counts[key] += 1
-      }
-    }
-
-    const activeEntries = REPASSE_FLOW_STEPS.map((step) => ({
-      key: step.key,
-      value: counts[step.key] || 0,
-    })).filter((entry) => entry.value > 0)
-
-    if (activeEntries.length === 0) {
-      return {
-        counts,
-        currentKey: REPASSE_FLOW_STEPS[0]?.key ?? '',
-        doneKeys: [] as string[],
-      }
-    }
-
-    activeEntries.sort((a, b) => {
-      if (b.value !== a.value) return b.value - a.value
-      const ai = stageIndex.get(a.key) ?? 0
-      const bi = stageIndex.get(b.key) ?? 0
-      return ai - bi
-    })
-
-    const currentKey = activeEntries[0].key
-    const currentIdx = stageIndex.get(currentKey) ?? 0
-    const doneKeys = REPASSE_FLOW_STEPS.slice(0, currentIdx).map((step) => step.key)
 
     return { counts, currentKey, doneKeys }
   }, [filteredRows])
@@ -708,19 +650,13 @@ export function AnalistaPainelPage() {
           doneKeys={laneSnapshot.doneKeys}
           height={62}
         />
-        <div className="timeline-strip-subhead">
-          <span>Fluxo repasse</span>
-          <span>
-            Etapa foco: <strong>{labelFor('repasse', repasseLaneSnapshot.currentKey)}</strong>
-          </span>
+        <div className="timeline-legend">
+          {COMMERCIAL_FLOW_STEPS.map((step) => (
+            <span key={step.key} className={`timeline-chip ${step.key === laneSnapshot.currentKey ? 'active' : ''}`}>
+              {step.label}: <strong>{laneSnapshot.counts[step.key] ?? 0}</strong>
+            </span>
+          ))}
         </div>
-        <TimelineLane
-          title="Repasse"
-          steps={REPASSE_FLOW_STEPS}
-          currentKey={repasseLaneSnapshot.currentKey}
-          doneKeys={repasseLaneSnapshot.doneKeys}
-          height={62}
-        />
       </section>
 
       <section className="panel">
