@@ -66,8 +66,6 @@ ROLE_GESTOR_CREDITO = "gestor_credito"
 
 VALID_ROLES = {ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN, ROLE_GESTOR, ROLE_GESTOR_CREDITO}
 
-LEGACY_LOGIN_ALIASES: dict[str, str] = {}
-
 APP_CCA_USER = os.getenv("APP_CCA_USER", os.getenv("APP_LOGIN_USER", "cca"))
 APP_CCA_PASSWORD = os.getenv("APP_CCA_PASSWORD", os.getenv("APP_LOGIN_PASSWORD", "Troque#Cca123"))
 APP_ANALISTA_USER = os.getenv("APP_ANALISTA_USER", "analista")
@@ -191,22 +189,6 @@ def _build_app_users() -> dict[str, dict[str, str]]:
 
 
 APP_USERS = _build_app_users()
-
-
-def _build_login_aliases() -> dict[str, str]:
-    aliases: dict[str, str] = {}
-
-    admin_target = _normalize_username(APP_ADMIN_USER) or _normalize_username(RESET_ADMIN_USERNAME)
-    if admin_target:
-        for legacy_name in ("douglas",):
-            source = _normalize_username(legacy_name)
-            if source and source != admin_target:
-                aliases[source] = admin_target
-
-    return aliases
-
-
-LEGACY_LOGIN_ALIASES = _build_login_aliases()
 
 
 def _normalize_database_url(raw_url: str) -> str:
@@ -2796,14 +2778,6 @@ def _get_user_by_username(db: Session, username: str) -> Optional[AppUser]:
     return db.query(AppUser).filter(func.lower(AppUser.username) == username_key).first()
 
 
-def _resolve_login_username(username: str) -> str:
-    normalized = _normalize_username(username)
-    if not normalized:
-        return ""
-    alias_target = LEGACY_LOGIN_ALIASES.get(normalized, "")
-    return alias_target or normalized
-
-
 def _ensure_seed_users(db: Session, force: bool = False) -> None:
     global SEED_USERS_READY
     if SEED_USERS_READY and not force:
@@ -4820,17 +4794,11 @@ def app_change_password_page(request: Request):
 def auth_login(payload: LoginPayload, db: Session = Depends(get_db)):
     _ensure_seed_users(db)
 
-    input_username = _normalize_username(payload.username)
-    if not input_username:
+    username = _normalize_username(payload.username)
+    if not username:
         raise HTTPException(status_code=401, detail="Credenciais invalidas")
 
-    lookup_username = input_username
-    user = _get_user_by_username(db, lookup_username)
-    if not user:
-        aliased = _resolve_login_username(input_username)
-        if aliased and aliased != input_username:
-            lookup_username = aliased
-            user = _get_user_by_username(db, lookup_username)
+    user = _get_user_by_username(db, username)
     if not user:
         # Auto-recupera seed full caso o runtime tenha ficado em admin_only apos manutencao.
         seed_mode_raw = (_get_runtime_meta(db, USERS_SEED_MODE_RUNTIME_KEY) or USERS_SEED_MODE_FULL).strip().lower()
@@ -4841,7 +4809,7 @@ def auth_login(payload: LoginPayload, db: Session = Depends(get_db)):
                 global SEED_USERS_READY
                 SEED_USERS_READY = False
                 _ensure_seed_users(db, force=True)
-                user = _get_user_by_username(db, lookup_username) or _get_user_by_username(db, input_username)
+                user = _get_user_by_username(db, username)
             except Exception:
                 db.rollback()
 
