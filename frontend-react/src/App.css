@@ -475,6 +475,22 @@ tbody td small {
   color: #0f172a;
 }
 
+.timeline-strip-subhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.timeline-strip-subhead span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.timeline-strip-subhead strong {
+  color: #0f172a;
+}
+
 .timeline-legend {
   display: flex;
   align-items: center;
