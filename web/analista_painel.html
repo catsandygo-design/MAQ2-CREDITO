@@ -99,6 +99,11 @@
   body.theme-corporate .kpi{
     box-shadow: var(--shadow-1);
   }
+  body.theme-corporate .flowStrip{
+    background: linear-gradient(180deg, var(--surface-1), var(--surface-2));
+    border-color: var(--line-1);
+    box-shadow: var(--shadow-1);
+  }
   body.theme-corporate .topbar{
     background: linear-gradient(180deg, rgba(244,249,255,.96), rgba(232,241,252,.95));
     border:1px solid var(--line-1);
@@ -449,9 +454,15 @@
     align-items:stretch;
   }
   .flowStrip{
+    border:1px solid rgba(148,163,184,.14);
+    border-radius:14px;
+    overflow:visible;
+    background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
     padding:8px 10px;
     display:grid;
     gap:8px;
+    flex:0 0 auto;
+    min-height:auto;
   }
   .flowLane{
     display:grid;
@@ -1478,6 +1489,51 @@
       min-height:58px;
       padding-bottom:1px;
     }
+    body.analista-pro .flowStrip{
+      padding:6px 8px;
+      gap:6px;
+      border-radius:12px;
+    }
+    body.analista-pro .flowLane{
+      gap:4px;
+    }
+    body.analista-pro .flowLaneHead h3{
+      font-size:10px;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+    }
+    body.analista-pro .flowLaneHead span{
+      font-size:10px;
+    }
+    body.analista-pro .flowLineWrap{
+      grid-template-columns:56px 1fr;
+      gap:7px;
+    }
+    body.analista-pro .flowLineTitle{
+      font-size:9px;
+    }
+    body.analista-pro .flowStep{
+      min-width:88px;
+      flex-basis:88px;
+      gap:2px;
+    }
+    body.analista-pro .flowStepLabel{
+      font-size:9px;
+      min-height:18px;
+    }
+    body.analista-pro .flowStep::after{
+      top:17px;
+      height:2px;
+    }
+    body.analista-pro .flowStepDot{
+      width:12px;
+      height:12px;
+      border-width:2px;
+    }
+    body.analista-pro .flowStep.current .flowStepDot{
+      width:14px;
+      height:14px;
+    }
     body.analista-pro .kpi{
       height:58px;
       border-radius:12px;
@@ -1648,6 +1704,21 @@
       body.analista-pro .insights{
         min-height:54px;
         gap:5px;
+      }
+      body.analista-pro .flowStrip{
+        padding:6px 7px;
+        gap:5px;
+      }
+      body.analista-pro .flowLineWrap{
+        grid-template-columns:52px 1fr;
+        gap:6px;
+      }
+      body.analista-pro .flowStep{
+        min-width:78px;
+        flex-basis:78px;
+      }
+      body.analista-pro .flowStepLabel{
+        font-size:8px;
       }
       body.analista-pro .kpi{
         height:54px;
@@ -1845,7 +1916,7 @@
   </div>
 
   <div class="insights" id="insights"></div>
-  <div class="card flowStrip" id="flowStrip"></div>
+  <div class="flowStrip" id="flowStrip"></div>
 
   <div class="card opsCentral" id="opsCentral">
     <div class="opsHead">
