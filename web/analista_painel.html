@@ -2269,27 +2269,64 @@
 
   const $ = (id) => document.getElementById(id);
   const norm = (s) => String(s || "").trim().toLowerCase();
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   $("refreshLabel").textContent = `${REFRESH_SECONDS}s`;
   $("slaRuleLabel").textContent = `>=${SLA_BAD}h`;
 
   async function api(path, options = {}) {
-    const response = await fetch(`${API_BASE}${path}`, {
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-      ...options,
-    });
+    const method = String(options.method || "GET").toUpperCase();
+    const maxAttempts = method === "GET" ? 4 : 1;
+    let lastError = null;
 
-    if (response.status === 401) {
-      window.location.href = "/login";
-      throw new Error("Nao autenticado");
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const response = await fetch(`${API_BASE}${path}`, {
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+          ...options,
+        });
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+          throw new Error("Nao autenticado");
+        }
+
+        const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+        let data = null;
+        let rawText = "";
+        if (contentType.includes("application/json")) {
+          data = await response.json().catch(() => ({}));
+        } else {
+          rawText = (await response.text().catch(() => "")).trim();
+        }
+
+        if (response.ok) {
+          return data ?? {};
+        }
+
+        const detail = data && typeof data === "object" && data.detail
+          ? String(data.detail)
+          : (rawText ? rawText.slice(0, 180) : "");
+
+        const transient = [408, 425, 429, 500, 502, 503, 504, 520, 521, 522, 523, 524].includes(response.status);
+        if (transient && attempt < maxAttempts && method === "GET") {
+          await sleep(700 * attempt);
+          continue;
+        }
+
+        throw new Error(detail || `Falha ao carregar dados (HTTP ${response.status})`);
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error("Falha ao carregar dados");
+        if (attempt < maxAttempts && method === "GET") {
+          await sleep(700 * attempt);
+          continue;
+        }
+        throw lastError;
+      }
     }
 
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.detail || "Falha ao carregar dados");
-    }
-    return data;
+    throw lastError || new Error("Falha ao carregar dados");
   }
 
   function esc(value){
