@@ -477,21 +477,20 @@ def _extract_origin_host(value: Optional[str]) -> str:
     if not raw:
         return ""
     parsed = urlparse(raw)
-    candidate = (parsed.netloc or raw).strip().lower()
-    if "," in candidate:
-        candidate = candidate.split(",", 1)[0].strip()
-    if candidate.endswith(":80"):
-        candidate = candidate[:-3]
-    if candidate.endswith(":443"):
-        candidate = candidate[:-4]
-    return candidate
+    host = (parsed.netloc or "").strip().lower()
+    if host.endswith(":80"):
+        host = host[:-3]
+    if host.endswith(":443"):
+        host = host[:-4]
+    return host
 
 
 def _request_host(request: Request) -> str:
-    raw = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc or ""
-    host = raw.strip().lower()
-    if "," in host:
-        host = host.split(",", 1)[0].strip()
+    host = (
+        (request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc or "")
+        .strip()
+        .lower()
+    )
     if host.endswith(":80"):
         host = host[:-3]
     if host.endswith(":443"):
@@ -4478,13 +4477,6 @@ async def enforce_same_origin_for_write_requests(request: Request, call_next):
         if origin_host:
             req_host = _request_host(request)
             if req_host and origin_host != req_host:
-                logger.warning(
-                    "Bloqueio same-origin em escrita autenticada: method=%s path=%s origin=%s host=%s",
-                    method,
-                    path,
-                    origin_host,
-                    req_host,
-                )
                 return JSONResponse(status_code=403, content={"detail": "Origem invalida para operacao autenticada."})
     return await call_next(request)
 
