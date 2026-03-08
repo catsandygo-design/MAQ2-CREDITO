@@ -19,7 +19,6 @@ from urllib.parse import urlparse
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, and_, create_engine, or_, text
 from sqlalchemy.dialects.postgresql import UUID
@@ -4427,27 +4426,10 @@ async def lifespan(_: FastAPI):
                 db.close()
 
 
-class ReactSPAStaticFiles(StaticFiles):
-    async def get_response(self, path: str, scope):  # type: ignore[override]
-        try:
-            return await super().get_response(path, scope)
-        except StarletteHTTPException as exc:
-            if exc.status_code != 404:
-                raise
-            if (scope.get("method") or "").upper() not in {"GET", "HEAD"}:
-                raise
-
-            clean_path = (path or "").split("?", 1)[0].strip("/")
-            if clean_path and "." in Path(clean_path).name:
-                raise
-
-            return await super().get_response("index.html", scope)
-
-
 app = FastAPI(title="Sistema Credito API", lifespan=lifespan)
 app.mount("/assets", StaticFiles(directory=str(WEB_DIR)), name="web_assets")
 if REACT_DIST_DIR.exists():
-    app.mount("/app-react", ReactSPAStaticFiles(directory=str(REACT_DIST_DIR), html=True), name="react_app")
+    app.mount("/app-react", StaticFiles(directory=str(REACT_DIST_DIR), html=True), name="react_app")
 else:
     @app.get("/app-react")
     @app.get("/app-react/{_path:path}")
