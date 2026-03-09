@@ -466,7 +466,7 @@
   }
   .flowLane{
     display:grid;
-    gap:5px;
+    gap:4px;
   }
   .flowLaneHead{
     display:flex;
@@ -477,7 +477,9 @@
   .flowLaneHead h3{
     margin:0;
     font-size:11px;
-    letter-spacing:.14px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:#0284c7;
   }
   .flowLaneHead span{
     color:var(--muted);
@@ -501,7 +503,7 @@
   }
   .flowLine{
     display:flex;
-    align-items:flex-start;
+    align-items:flex-end;
     min-width:0;
     overflow-x:auto;
     padding-bottom:2px;
@@ -513,30 +515,31 @@
     display:inline-flex;
     flex-direction:column;
     align-items:center;
-    gap:3px;
+    gap:2px;
+    cursor:help;
   }
   .flowStep::after{
     content:"";
     position:absolute;
-    left:calc(50% + 8px);
-    right:calc(-50% + 8px);
-    top:19px;
-    height:3px;
+    left:calc(50% + 7px);
+    right:calc(-50% + 7px);
+    top:16px;
+    height:2px;
     border-radius:99px;
-    background:rgba(148,163,184,.35);
+    background:rgba(45,212,191,.55);
   }
   .flowStep:last-child::after{
     display:none;
   }
   .flowStep.done::after{
-    background:rgba(34,197,94,.65);
+    background:rgba(45,212,191,.72);
   }
   .flowStepLabel{
     color:var(--muted);
-    font-size:10px;
+    font-size:9px;
     text-align:center;
-    line-height:1.05;
-    min-height:20px;
+    line-height:1.08;
+    min-height:16px;
     display:flex;
     align-items:flex-end;
     justify-content:center;
@@ -547,23 +550,31 @@
     font-weight:700;
   }
   .flowStepDot{
-    width:14px;
-    height:14px;
+    width:12px;
+    height:12px;
     border-radius:999px;
-    border:2px solid rgba(148,163,184,.75);
-    background:rgba(15,23,42,.18);
+    border:2px solid rgba(45,212,191,.42);
+    background:#ffffff;
     position:relative;
     z-index:1;
+    box-shadow:0 0 0 2px rgba(255,255,255,.32);
+  }
+  .flowStep.future .flowStepDot{
+    border-color:rgba(148,163,184,.38);
+    background:rgba(255,255,255,.65);
+    box-shadow:none;
+    opacity:.7;
   }
   .flowStep.done .flowStepDot{
-    border-color:rgba(34,197,94,.9);
-    background:rgba(34,197,94,.82);
+    border-color:rgba(52,211,153,.88);
+    background:rgba(52,211,153,.9);
   }
   .flowStep.current .flowStepDot{
-    width:16px;
-    height:16px;
-    border-color:rgba(14,165,233,.95);
+    width:13px;
+    height:13px;
+    border-color:rgba(6,182,212,.95);
     background:#ffffff;
+    box-shadow:0 0 0 2px rgba(6,182,212,.14);
   }
   .insights::-webkit-scrollbar{height:8px}
   .insights::-webkit-scrollbar-track{background: rgba(2,6,23,.35)}
@@ -2950,6 +2961,99 @@
     return "Em analise";
   }
 
+  const READY_STATUS = {
+    statusCaixa: new Set(["aprovado", "dar_qv", "conforme", "assinatura_caixa", "finalizado"]),
+    statusAgehab: new Set(["validado_agehab", "conforme", "finalizado"]),
+    sinal: new Set(["pago"]),
+    fiador: new Set(["finalizado"]),
+  };
+
+  function normalizeTitleText(text){
+    return esc(String(text || "")).replaceAll("\n", "&#10;");
+  }
+
+  function isResolved(area, value){
+    const key = statusFromBackend(value);
+    const ready = READY_STATUS[area];
+    if (!ready) return false;
+    return ready.has(key);
+  }
+
+  function pendingItems(row){
+    const items = [];
+    if (!isResolved("statusCaixa", row.statusCaixa)) {
+      items.push(`CCA: ${labelFor("statusCaixa", row.statusCaixa)}`);
+    }
+    if (!isResolved("statusAgehab", row.statusAgehab)) {
+      items.push(`Agehab: ${labelFor("statusAgehab", row.statusAgehab)}`);
+    }
+    if (!isResolved("sinal", row.sinal)) {
+      items.push(`Sinal: ${labelFor("sinal", row.sinal)}`);
+    }
+    if (!isResolved("fiador", row.fiador)) {
+      items.push(`Fiador: ${labelFor("fiador", row.fiador)}`);
+    }
+    return items;
+  }
+
+  function summarizeAreaStatus(rows, area){
+    const counter = new Map();
+    rows.forEach((row) => {
+      const label = labelFor(area, row[area]);
+      counter.set(label, (counter.get(label) || 0) + 1);
+    });
+    return [...counter.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([label, qty]) => `${label} (${qty})`)
+      .join(", ");
+  }
+
+  function buildLaneStepTooltip(stepLabel, stepRows){
+    if (!stepRows.length) {
+      return `${stepLabel}\nSem processos nesta etapa.`;
+    }
+    const pendCca = stepRows.filter((row) => !isResolved("statusCaixa", row.statusCaixa)).length;
+    const pendAgehab = stepRows.filter((row) => !isResolved("statusAgehab", row.statusAgehab)).length;
+    const pendSinal = stepRows.filter((row) => !isResolved("sinal", row.sinal)).length;
+    const pendFiador = stepRows.filter((row) => !isResolved("fiador", row.fiador)).length;
+    const pendLines = [
+      `- CCA: ${pendCca}`,
+      `- Agehab: ${pendAgehab}`,
+      `- Sinal: ${pendSinal}`,
+      `- Fiador: ${pendFiador}`,
+    ];
+    return [
+      `${stepLabel}`,
+      `Processos na etapa: ${stepRows.length}`,
+      "Falta para avancar:",
+      ...pendLines,
+      `CCA (top): ${summarizeAreaStatus(stepRows, "statusCaixa") || "-"}`,
+      `Agehab (top): ${summarizeAreaStatus(stepRows, "statusAgehab") || "-"}`,
+      `Sinal (top): ${summarizeAreaStatus(stepRows, "sinal") || "-"}`,
+      `Fiador (top): ${summarizeAreaStatus(stepRows, "fiador") || "-"}`,
+    ].join("\n");
+  }
+
+  function buildProcessTooltip(row, stateText){
+    const pendencias = pendingItems(row);
+    const pendenciaText = pendencias.length
+      ? pendencias.map((item) => `- ${item}`).join("\n")
+      : "- Sem pendencias principais";
+    return [
+      `${row.cliente || "Processo"}`,
+      `Status: ${stateText}`,
+      `Comercial: ${labelFor("geral", row.geral)}`,
+      `Repasse: ${labelFor("repasse", row.repasse)}`,
+      `CCA: ${labelFor("statusCaixa", row.statusCaixa)}`,
+      `Agehab: ${labelFor("statusAgehab", row.statusAgehab)}`,
+      `Sinal: ${labelFor("sinal", row.sinal)}`,
+      `Fiador: ${labelFor("fiador", row.fiador)}`,
+      "Falta para avancar:",
+      pendenciaText,
+    ].join("\n");
+  }
+
   function slaClass(hours){
     const h = Number(hours||0);
     if(h >= SLA_BAD) return "bad";
@@ -3013,13 +3117,17 @@
     return "";
   }
 
-  function buildLaneSnapshot(rows, steps, valueGetter){
+  function buildLaneSnapshot(rows, area, steps, valueGetter){
     const counts = Object.fromEntries(steps.map((step) => [step.key, 0]));
+    const rowsByStep = Object.fromEntries(steps.map((step) => [step.key, []]));
     const indexes = new Map(steps.map((step, idx) => [step.key, idx]));
 
     rows.forEach((row) => {
       const key = statusFromBackend(valueGetter(row));
-      if (Object.prototype.hasOwnProperty.call(counts, key)) counts[key] += 1;
+      if (Object.prototype.hasOwnProperty.call(counts, key)) {
+        counts[key] += 1;
+        rowsByStep[key].push(row);
+      }
     });
 
     const active = steps
@@ -3027,10 +3135,14 @@
       .filter((entry) => entry.value > 0);
 
     if (!active.length) {
+      const tooltips = Object.fromEntries(
+        steps.map((step) => [step.key, buildLaneStepTooltip(labelFor(area, step.key), [])])
+      );
       return {
         counts,
         currentKey: steps[0]?.key || "",
         doneKeys: [],
+        tooltips,
       };
     }
 
@@ -3039,10 +3151,14 @@
       return (indexes.get(a.key) || 0) - (indexes.get(b.key) || 0);
     });
 
+    const tooltips = Object.fromEntries(
+      steps.map((step) => [step.key, buildLaneStepTooltip(labelFor(area, step.key), rowsByStep[step.key] || [])])
+    );
+
     const currentKey = active[0].key;
     const currentIndex = indexes.get(currentKey) || 0;
     const doneKeys = steps.slice(0, currentIndex).map((step) => step.key);
-    return { counts, currentKey, doneKeys };
+    return { counts, currentKey, doneKeys, tooltips };
   }
 
   function renderLaneHtml(title, area, steps, laneSnapshot){
@@ -3050,8 +3166,9 @@
       const isDone = laneSnapshot.doneKeys.includes(step.key);
       const isCurrent = step.key === laneSnapshot.currentKey;
       const cls = isDone ? "done" : (isCurrent ? "current" : "future");
+      const titleAttr = normalizeTitleText(laneSnapshot.tooltips?.[step.key] || step.label);
       return `
-        <div class="flowStep ${cls}">
+        <div class="flowStep ${cls}" title="${titleAttr}" aria-label="${esc(step.label)}">
           <span class="flowStepLabel">${esc(step.label)}</span>
           <span class="flowStepDot"></span>
         </div>
@@ -3076,8 +3193,8 @@
     const node = $("flowStrip");
     if (!node) return;
     const countedRows = rows.filter((row) => !row.foraContagemMes);
-    const comercial = buildLaneSnapshot(countedRows, FLOW_COMMERCIAL_STEPS, (row) => row.geral);
-    const repasse = buildLaneSnapshot(countedRows, FLOW_REPASSE_STEPS, repasseTimelineKey);
+    const comercial = buildLaneSnapshot(countedRows, "geral", FLOW_COMMERCIAL_STEPS, (row) => row.geral);
+    const repasse = buildLaneSnapshot(countedRows, "repasse", FLOW_REPASSE_STEPS, repasseTimelineKey);
 
     node.innerHTML = `
       ${renderLaneHtml("Fluxo comercial", "geral", FLOW_COMMERCIAL_STEPS, comercial)}
@@ -3180,6 +3297,7 @@
     const bodyRowsHtml = rows.map(r=>{
       const animState = clientAnimState(r);
       const animTitle = clientAnimTitle(animState);
+      const processTooltip = normalizeTitleText(buildProcessTooltip(r, animTitle));
 
       const [gTxt,gCls] = statusText("geral", r.geral);
       const [rTxt,rCls] = statusText("repasse", r.repasse);
@@ -3204,7 +3322,7 @@
           <td>
             <div class="cliente">
               <div class="clienteHead">
-                <span class="clienteAnim ${animState}" title="${esc(animTitle)}" aria-hidden="true"></span>
+                <span class="clienteAnim ${animState}" title="${processTooltip}" aria-hidden="true"></span>
                 <a href="${url}" title="Abrir atualizacao">${esc(r.cliente)}</a>
               </div>
             </div>
