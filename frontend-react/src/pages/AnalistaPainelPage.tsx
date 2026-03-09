@@ -30,13 +30,6 @@ const COMMERCIAL_FLOW_STEPS: TimelineStep[] = [
   { key: 'venda_finalizada', label: 'Finalizada' },
 ]
 
-const REPASSE_FLOW_STEPS: TimelineStep[] = [
-  { key: 'em_repasse', label: 'Em Repasse' },
-  { key: 'inicio_repasse', label: 'Inicio Repasse' },
-  { key: 'assinatura_caixa', label: 'Assinatura Caixa' },
-  { key: 'inicio_garantia', label: 'Inicio Garantia' },
-]
-
 const LABELS: Record<string, Record<string, string>> = {
   geral: {
     reserva: 'Reserva',
@@ -52,8 +45,6 @@ const LABELS: Record<string, Record<string, string>> = {
     em_repasse: 'Em Repasse',
     inicio_repasse: 'Inicio Repasse',
     assinatura_autorizada: 'Assinatura Autorizada',
-    assinatura_caixa: 'Assinatura Caixa',
-    inicio_garantia: 'Inicio Garantia',
     sem_repasse: 'Sem Repasse',
   },
   statusCaixa: {
@@ -221,146 +212,6 @@ function classForStatus(value: string): 'neutral' | 'ok' | 'warn' | 'bad' {
   return 'neutral'
 }
 
-type DiagnosticArea = 'statusCaixa' | 'statusAgehab' | 'sinal' | 'fiador'
-type LaneArea = 'geral' | 'repasse'
-
-const READY_STATUS: Record<DiagnosticArea, Set<string>> = {
-  statusCaixa: new Set(['aprovado', 'dar_qv', 'conforme', 'assinatura_caixa', 'finalizado']),
-  statusAgehab: new Set(['validado_agehab', 'conforme', 'finalizado']),
-  sinal: new Set(['pago']),
-  fiador: new Set(['finalizado']),
-}
-
-function isResolved(area: DiagnosticArea, value: string): boolean {
-  return READY_STATUS[area].has(statusFromBackend(value))
-}
-
-function pendingItems(row: ProcessoLinha): string[] {
-  const items: string[] = []
-  if (!isResolved('statusCaixa', row.statusCaixa)) items.push(`CCA: ${labelFor('statusCaixa', row.statusCaixa)}`)
-  if (!isResolved('statusAgehab', row.statusAgehab)) items.push(`Agehab: ${labelFor('statusAgehab', row.statusAgehab)}`)
-  if (!isResolved('sinal', row.sinal)) items.push(`Sinal: ${labelFor('sinal', row.sinal)}`)
-  if (!isResolved('fiador', row.fiador)) items.push(`Fiador: ${labelFor('fiador', row.fiador)}`)
-  return items
-}
-
-function summarizeAreaStatus(rows: ProcessoLinha[], area: DiagnosticArea): string {
-  const counter = new Map<string, number>()
-  rows.forEach((row) => {
-    const label = labelFor(area, row[area])
-    counter.set(label, (counter.get(label) || 0) + 1)
-  })
-  return [...counter.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([label, qty]) => `${label} (${qty})`)
-    .join(', ')
-}
-
-function buildLaneStepTooltip(area: LaneArea, stepKey: string, stepRows: ProcessoLinha[]): string {
-  const stepLabel = labelFor(area, stepKey)
-  if (!stepRows.length) {
-    return `${stepLabel}\nSem processos nesta etapa.`
-  }
-
-  const pendCca = stepRows.filter((row) => !isResolved('statusCaixa', row.statusCaixa)).length
-  const pendAgehab = stepRows.filter((row) => !isResolved('statusAgehab', row.statusAgehab)).length
-  const pendSinal = stepRows.filter((row) => !isResolved('sinal', row.sinal)).length
-  const pendFiador = stepRows.filter((row) => !isResolved('fiador', row.fiador)).length
-
-  return [
-    `${stepLabel}`,
-    `Processos na etapa: ${stepRows.length}`,
-    'Falta para avancar:',
-    `- CCA: ${pendCca}`,
-    `- Agehab: ${pendAgehab}`,
-    `- Sinal: ${pendSinal}`,
-    `- Fiador: ${pendFiador}`,
-    `CCA (top): ${summarizeAreaStatus(stepRows, 'statusCaixa') || '-'}`,
-    `Agehab (top): ${summarizeAreaStatus(stepRows, 'statusAgehab') || '-'}`,
-    `Sinal (top): ${summarizeAreaStatus(stepRows, 'sinal') || '-'}`,
-    `Fiador (top): ${summarizeAreaStatus(stepRows, 'fiador') || '-'}`,
-  ].join('\n')
-}
-
-function buildProcessTooltip(row: ProcessoLinha, stateText: string): string {
-  const pendencias = pendingItems(row)
-  const pendenciasText = pendencias.length ? pendencias.map((item) => `- ${item}`).join('\n') : '- Sem pendencias principais'
-  return [
-    `${row.cliente || 'Processo'}`,
-    `Status: ${stateText}`,
-    `Comercial: ${labelFor('geral', row.geral)}`,
-    `Repasse: ${labelFor('repasse', row.repasse)}`,
-    `CCA: ${labelFor('statusCaixa', row.statusCaixa)}`,
-    `Agehab: ${labelFor('statusAgehab', row.statusAgehab)}`,
-    `Sinal: ${labelFor('sinal', row.sinal)}`,
-    `Fiador: ${labelFor('fiador', row.fiador)}`,
-    'Falta para avancar:',
-    pendenciasText,
-  ].join('\n')
-}
-
-function repasseTimelineKey(row: ProcessoLinha): string {
-  const repasse = statusFromBackend(row.repasse)
-  const caixa = statusFromBackend(row.statusCaixa)
-  const agehab = statusFromBackend(row.statusAgehab)
-
-  if (agehab === 'validado_agehab' || caixa === 'finalizado') return 'inicio_garantia'
-  if (caixa === 'assinatura_caixa' || repasse === 'assinatura_autorizada') return 'assinatura_caixa'
-  if (repasse === 'inicio_repasse') return 'inicio_repasse'
-  if (repasse === 'em_repasse') return 'em_repasse'
-  return ''
-}
-
-function buildLaneSnapshot(
-  rows: ProcessoLinha[],
-  area: LaneArea,
-  steps: TimelineStep[],
-  valueGetter: (row: ProcessoLinha) => string,
-): { counts: Record<string, number>; currentKey: string; doneKeys: string[]; tooltips: Record<string, string> } {
-  const counts = Object.fromEntries(steps.map((step) => [step.key, 0])) as Record<string, number>
-  const rowsByStep = Object.fromEntries(steps.map((step) => [step.key, [] as ProcessoLinha[]])) as Record<string, ProcessoLinha[]>
-  const stageIndex = new Map(steps.map((step, index) => [step.key, index]))
-
-  for (const row of rows) {
-    if (row.foraContagemMes) continue
-    const key = statusFromBackend(valueGetter(row))
-    if (Object.prototype.hasOwnProperty.call(counts, key)) {
-      counts[key] += 1
-      rowsByStep[key].push(row)
-    }
-  }
-
-  const tooltips = Object.fromEntries(
-    steps.map((step) => [step.key, buildLaneStepTooltip(area, step.key, rowsByStep[step.key] || [])]),
-  ) as Record<string, string>
-
-  const activeEntries = steps
-    .map((step) => ({ key: step.key, value: counts[step.key] || 0 }))
-    .filter((entry) => entry.value > 0)
-
-  if (activeEntries.length === 0) {
-    return {
-      counts,
-      currentKey: steps[0]?.key ?? '',
-      doneKeys: [],
-      tooltips,
-    }
-  }
-
-  activeEntries.sort((a, b) => {
-    if (b.value !== a.value) return b.value - a.value
-    const ai = stageIndex.get(a.key) ?? 0
-    const bi = stageIndex.get(b.key) ?? 0
-    return ai - bi
-  })
-
-  const currentKey = activeEntries[0].key
-  const currentIdx = stageIndex.get(currentKey) ?? 0
-  const doneKeys = steps.slice(0, currentIdx).map((step) => step.key)
-  return { counts, currentKey, doneKeys, tooltips }
-}
-
 function isHighPriority(row: ProcessoLinha): boolean {
   return statusFromBackend(row.geral) === 'em_processo' && openDays(row) > 15
 }
@@ -402,14 +253,6 @@ function clientAnimState(row: ProcessoLinha): 'pause' | 'rest' | 'panic' | 'wait
   if (isPendingRow(row)) return 'panic'
   if (isWaitingDocs(row)) return 'wait'
   return 'progress'
-}
-
-function clientAnimTitle(state: 'pause' | 'rest' | 'panic' | 'wait' | 'progress'): string {
-  if (state === 'pause') return 'Fora da contagem do mes atual'
-  if (state === 'wait') return 'Aguardando documento'
-  if (state === 'panic') return 'Pendenciado'
-  if (state === 'rest') return 'Processo finalizado'
-  return 'Em analise'
 }
 
 function severityScore(row: ProcessoLinha): number {
@@ -562,14 +405,44 @@ export function AnalistaPainelPage() {
     }
   }, [filteredRows])
 
-  const laneSnapshot = useMemo(
-    () => buildLaneSnapshot(filteredRows, 'geral', COMMERCIAL_FLOW_STEPS, (row) => row.geral),
-    [filteredRows],
-  )
-  const repasseLaneSnapshot = useMemo(
-    () => buildLaneSnapshot(filteredRows, 'repasse', REPASSE_FLOW_STEPS, repasseTimelineKey),
-    [filteredRows],
-  )
+  const laneSnapshot = useMemo(() => {
+    const counts = Object.fromEntries(COMMERCIAL_FLOW_STEPS.map((step) => [step.key, 0])) as Record<string, number>
+    const stageIndex = new Map(COMMERCIAL_FLOW_STEPS.map((step, index) => [step.key, index]))
+
+    for (const row of filteredRows) {
+      if (row.foraContagemMes) continue
+      const key = statusFromBackend(row.geral)
+      if (Object.prototype.hasOwnProperty.call(counts, key)) {
+        counts[key] += 1
+      }
+    }
+
+    const activeEntries = COMMERCIAL_FLOW_STEPS.map((step) => ({
+      key: step.key,
+      value: counts[step.key] || 0,
+    })).filter((entry) => entry.value > 0)
+
+    if (activeEntries.length === 0) {
+      return {
+        counts,
+        currentKey: COMMERCIAL_FLOW_STEPS[0]?.key ?? '',
+        doneKeys: [] as string[],
+      }
+    }
+
+    activeEntries.sort((a, b) => {
+      if (b.value !== a.value) return b.value - a.value
+      const ai = stageIndex.get(a.key) ?? 0
+      const bi = stageIndex.get(b.key) ?? 0
+      return ai - bi
+    })
+
+    const currentKey = activeEntries[0].key
+    const currentIdx = stageIndex.get(currentKey) ?? 0
+    const doneKeys = COMMERCIAL_FLOW_STEPS.slice(0, currentIdx).map((step) => step.key)
+
+    return { counts, currentKey, doneKeys }
+  }, [filteredRows])
 
   const onChangeFilter = (key: keyof FiltersState, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
@@ -732,29 +605,19 @@ export function AnalistaPainelPage() {
           </span>
         </div>
         <TimelineLane
-          hideTitle
+          title="Etapas"
           steps={COMMERCIAL_FLOW_STEPS}
           currentKey={laneSnapshot.currentKey}
           doneKeys={laneSnapshot.doneKeys}
-          stepTooltips={laneSnapshot.tooltips}
-          height={58}
-          showArrow={false}
+          height={62}
         />
-        <div className="timeline-strip-head repasse">
-          <h2>Fluxo repasse</h2>
-          <span>
-            Etapa foco: <strong>{labelFor('repasse', repasseLaneSnapshot.currentKey)}</strong>
-          </span>
+        <div className="timeline-legend">
+          {COMMERCIAL_FLOW_STEPS.map((step) => (
+            <span key={step.key} className={`timeline-chip ${step.key === laneSnapshot.currentKey ? 'active' : ''}`}>
+              {step.label}: <strong>{laneSnapshot.counts[step.key] ?? 0}</strong>
+            </span>
+          ))}
         </div>
-        <TimelineLane
-          hideTitle
-          steps={REPASSE_FLOW_STEPS}
-          currentKey={repasseLaneSnapshot.currentKey}
-          doneKeys={repasseLaneSnapshot.doneKeys}
-          stepTooltips={repasseLaneSnapshot.tooltips}
-          height={58}
-          showArrow={false}
-        />
       </section>
 
       <section className="panel">
@@ -787,7 +650,6 @@ export function AnalistaPainelPage() {
               <tbody>
                 {filteredRows.map((row) => {
                   const animState = clientAnimState(row)
-                  const processTooltip = buildProcessTooltip(row, clientAnimTitle(animState))
                   const geralClass = classForStatus(row.geral)
                   const repasseClass = classForStatus(row.repasse)
                   const caixaClass = classForStatus(row.statusCaixa)
@@ -801,7 +663,7 @@ export function AnalistaPainelPage() {
                       <td>
                         <div className="client-col">
                           <div className="client-name-row">
-                            <span className={`anim-dot ${animState}`} title={processTooltip} aria-hidden="true" />
+                            <span className={`anim-dot ${animState}`} aria-hidden="true" />
                             <a href={`/app/analise?processo_id=${encodeURIComponent(row.processoId)}`}>{row.cliente}</a>
                           </div>
                           <span className="meta-line">{row.emp}</span>

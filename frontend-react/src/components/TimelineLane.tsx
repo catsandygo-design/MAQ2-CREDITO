@@ -8,34 +8,28 @@ export interface TimelineStep {
 }
 
 interface TimelineLaneProps {
-  title?: string
+  title: string
   steps: TimelineStep[]
   currentKey?: string
   doneKeys?: string[]
   height?: number
   showArrow?: boolean
-  hideTitle?: boolean
-  titleWidth?: number
-  stepTooltips?: Record<string, string>
   className?: string
 }
 
 export function TimelineLane({
-  title = '',
+  title,
   steps,
   currentKey,
   doneKeys = [],
   height = 56,
   showArrow = true,
-  hideTitle = false,
-  titleWidth = 140,
-  stepTooltips = {},
   className = '',
 }: TimelineLaneProps) {
   const W = 980
   const paddingX = 24
   const lineY = Math.round(height / 2)
-  const startX = paddingX + (hideTitle ? 0 : titleWidth)
+  const startX = paddingX + 140
   const endX = W - paddingX
 
   const n = steps.length
@@ -67,14 +61,14 @@ export function TimelineLane({
 
   const colorFor = (state: 'done' | 'current' | 'future') => {
     if (state === 'done') return '#34d399'
-    if (state === 'current') return '#ffffff'
-    return '#e2e8f0'
+    if (state === 'current') return '#0f172a'
+    return '#94a3b8'
   }
 
   const strokeFor = (state: 'done' | 'current' | 'future') => {
     if (state === 'done') return '#10b981'
-    if (state === 'current') return '#06b6d4'
-    return '#cbd5e1'
+    if (state === 'current') return '#0f172a'
+    return '#64748b'
   }
 
   const textFor = (state: 'done' | 'current' | 'future') => {
@@ -88,35 +82,32 @@ export function TimelineLane({
   return (
     <div className={`w-full overflow-x-auto ${className}`}>
       <svg className="h-auto min-w-[980px] w-full" viewBox={`0 0 ${W} ${height}`} preserveAspectRatio="xMinYMid meet">
-        {!hideTitle ? (
-          <text x={paddingX} y={lineY + 5} fill="#334155" fontSize="12" fontWeight="600">
-            {title}
-          </text>
-        ) : null}
+        <text x={paddingX} y={lineY + 5} fill="#334155" fontSize="12" fontWeight="600">
+          {title}
+        </text>
 
-        <line x1={startX} y1={lineY} x2={endX} y2={lineY} stroke="#99f6e4" strokeWidth="2" strokeLinecap="round" />
+        <line x1={startX} y1={lineY} x2={endX} y2={lineY} stroke="#cbd5e1" strokeWidth="3" strokeLinecap="round" />
 
         <line
           x1={startX}
           y1={lineY}
           x2={progressEndX}
           y2={lineY}
-          stroke="#2dd4bf"
-          strokeWidth="2"
+          stroke="#0f172a"
+          strokeWidth="3"
           strokeLinecap="round"
         />
 
         {showArrow && hasCurrent ? (
           <polygon
             points={`${arrowTip},${lineY} ${arrowTip - 8},${lineY - 5} ${arrowTip - 8},${lineY + 5}`}
-            fill="#2dd4bf"
+            fill="#0f172a"
             opacity="0.9"
           />
         ) : null}
 
         {points.map((p) => (
           <g key={p.key}>
-            <title>{stepTooltips[p.key] || p.label}</title>
             <text
               x={p.x}
               y={lineY - 14}
