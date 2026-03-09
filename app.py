@@ -9,6 +9,7 @@ import hmac
 import secrets
 import calendar
 import unicodedata
+from collections import deque
 from contextlib import asynccontextmanager
 from datetime import date, datetime, time, timedelta, timezone
 from email.message import EmailMessage
@@ -127,6 +128,13 @@ CREDITO_PLANEJAMENTO_STATUS = {"pendente", "em_andamento", "concluido", "atrasad
 ANALISTA_REUNIAO_FOLLOWUP_STATUS = {"seguir", "finalizar_hoje", "assinado"}
 ANALISTA_REUNIAO_COMPROMISSO_STATUS = {"pendente", "nao_entregue", "entregue"}
 ANALISTA_REUNIAO_ESTAGIOS = {"EM_PROCESSO", "CREDITO", "SECRETARIA_VENDAS"}
+KEEPALIVE_TELA = "health_keepalive"
+KEEPALIVE_BRT_TZ = timezone(timedelta(hours=-3))
+try:
+    KEEPALIVE_LOG_MEMORY_LIMIT = max(50, int(os.getenv("KEEPALIVE_LOG_MEMORY_LIMIT", "500")))
+except ValueError:
+    KEEPALIVE_LOG_MEMORY_LIMIT = 500
+KEEPALIVE_RECENT: deque[dict[str, Any]] = deque(maxlen=KEEPALIVE_LOG_MEMORY_LIMIT)
 
 
 def _normalize_username(value: Optional[str]) -> str:
@@ -494,6 +502,23 @@ def _request_host(request: Request) -> str:
         host = host[:-3]
     if host.endswith(":443"):
         host = host[:-4]
+    return host
+
+
+def _request_client_ip(request: Request) -> str:
+    forwarded_for = (request.headers.get("x-forwarded-for") or "").strip()
+    if forwarded_for:
+        candidate = forwarded_for.split(",")[0].strip()
+        if candidate:
+            return candidate
+
+    for header_name in ("cf-connecting-ip", "true-client-ip", "x-real-ip"):
+        candidate = (request.headers.get(header_name) or "").strip()
+        if candidate:
+            return candidate
+
+    client = getattr(request, "client", None)
+    host = (getattr(client, "host", "") or "").strip()
     return host
 
 
@@ -2731,6 +2756,91 @@ def _record_system_log(
             details=(details or "").strip() or None,
         )
     )
+
+
+def _record_keepalive_ping(request: Request) -> dict[str, Any]:
+    now = _utcnow()
+    ts_utc = now.isoformat()
+    ts_brt = now.astimezone(KEEPALIVE_BRT_TZ).isoformat()
+    ip = _request_client_ip(request)
+    host = _request_host(request)
+    user_agent = (request.headers.get("user-agent") or "").strip()
+    forwarded_for = (request.headers.get("x-forwarded-for") or "").strip()
+    forward_proto = (request.headers.get("x-forwarded-proto") or "").strip()
+
+    event: dict[str, Any] = {
+        "ts_utc": ts_utc,
+        "ts_brt": ts_brt,
+        "client_ip": ip or "",
+        "host": host or "",
+        "user_agent": user_agent[:240],
+        "x_forwarded_for": forwarded_for[:240],
+        "x_forwarded_proto": forward_proto[:40],
+        "db_logged": False,
+    }
+    KEEPALIVE_RECENT.append(event.copy())
+
+    if SessionLocal is None or DB_URL_HAS_PLACEHOLDERS:
+        return event
+
+    db = SessionLocal()
+    try:
+        details = (
+            f"ts_utc={ts_utc}; ts_brt={ts_brt}; ip={ip or '-'}; host={host or '-'}; "
+            f"x_forwarded_for={forwarded_for or '-'}; x_forwarded_proto={forward_proto or '-'}; "
+            f"user_agent={user_agent or '-'}"
+        )
+        _record_system_log(
+            db,
+            actor_username="keepalive",
+            actor_role="system",
+            tela=KEEPALIVE_TELA,
+            acao="PING",
+            entidade_tipo="health",
+            entidade_id=(ip or None),
+            details=details[:1800],
+        )
+        db.commit()
+        event["db_logged"] = True
+        if KEEPALIVE_RECENT:
+            KEEPALIVE_RECENT[-1]["db_logged"] = True
+    except Exception as exc:
+        db.rollback()
+        logger.warning("Falha ao gravar keepalive em sistema_logs: %s", exc.__class__.__name__)
+    finally:
+        db.close()
+
+    return event
+
+
+def _fetch_keepalive_db_logs(limit: int) -> list[dict[str, Any]]:
+    if SessionLocal is None or DB_URL_HAS_PLACEHOLDERS:
+        return []
+
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(SistemaLog)
+            .filter(func.lower(func.trim(SistemaLog.tela)) == KEEPALIVE_TELA)
+            .filter(SistemaLog.acao == "PING")
+            .order_by(SistemaLog.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+        return [
+            {
+                "id": str(row.id),
+                "ts_utc": (_as_utc(row.created_at) or _utcnow()).isoformat(),
+                "actor_username": row.actor_username,
+                "details": row.details or "",
+            }
+            for row in rows
+        ]
+    except Exception as exc:
+        logger.warning("Falha ao consultar logs keepalive: %s", exc.__class__.__name__)
+        return []
+    finally:
+        db.close()
 
 
 def _processo_has_pendencia(processo: "Processo") -> bool:
@@ -6450,17 +6560,39 @@ def health():
 
 
 @app.get("/health/keepalive")
-def health_keepalive():
-    now = _utcnow().isoformat()
+def health_keepalive(request: Request):
+    event = _record_keepalive_ping(request)
     return JSONResponse(
         {
             "ok": True,
             "service": "sistema-credito-api",
             "purpose": "keepalive",
-            "ts_utc": now,
+            "ts_utc": event["ts_utc"],
+            "ts_brt": event["ts_brt"],
+            "client_ip": event["client_ip"],
+            "logged_memory": True,
+            "logged_db": bool(event.get("db_logged")),
         },
         headers={"Cache-Control": "no-store, max-age=0"},
     )
+
+
+@app.get("/health/keepalive/logs")
+def health_keepalive_logs(
+    limit: int = Query(default=30, ge=1, le=200),
+    include_db: bool = Query(default=True),
+):
+    recent_memory = list(KEEPALIVE_RECENT)[-limit:]
+    recent_memory.reverse()
+    db_logs = _fetch_keepalive_db_logs(limit) if include_db else []
+    return {
+        "ok": True,
+        "memory_limit": KEEPALIVE_LOG_MEMORY_LIMIT,
+        "memory_count": len(KEEPALIVE_RECENT),
+        "recent_memory": recent_memory,
+        "db_logs": db_logs,
+        "db_count": len(db_logs),
+    }
 
 
 @app.get("/health/db")
