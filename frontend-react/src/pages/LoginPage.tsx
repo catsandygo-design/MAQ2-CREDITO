@@ -45,7 +45,7 @@ export function LoginPage() {
       <div className="auth-card">
         <div className="auth-brand">SioCred</div>
         <h1>Sistema de Credito</h1>
-        <p>Acesso React em migracao. Login usa a mesma base do sistema atual.</p>
+        <p>Acesso oficial do sistema com a mesma base e as mesmas permissoes da operacao.</p>
 
         <form onSubmit={onSubmit} className="auth-form">
           <label>

@@ -46,14 +46,13 @@ const REPASSE_FLOW_STEPS: TimelineStep[] = [
 ]
 
 const ANALISTA_NAV: ReadonlyArray<{ label: string; href: string; active?: boolean }> = [
-  { label: 'Painel React', href: '/app/analista', active: true },
+  { label: 'Painel', href: '/app/analista', active: true },
   { label: 'Acompanhamento', href: '/app/analista/acompanhamento' },
   { label: 'Reuniao Comercial', href: '/app/analista/reuniao-comercial' },
   { label: 'Operacional', href: '/app/analista/acompanhamento-operacional' },
   { label: 'Repasse', href: '/app/analista/repasse' },
   { label: 'Importacao', href: '/app/analista/importacao' },
   { label: 'Arquivados', href: '/app/analista/arquivados' },
-  { label: 'Legado', href: '/app/analista/legado' },
 ]
 
 const FLOW_COMMERCIAL_KEYS = new Set(COMMERCIAL_FLOW_STEPS.map((step) => step.key))
@@ -662,7 +661,7 @@ export function AnalistaPainelPage() {
         <div className="analista-hero">
           <span className="hero-kicker">Operacao de credito</span>
           <h1>Painel do Analista</h1>
-          <p>Painel React com profundidade visual, blocos recolhiveis e leitura mais profissional da fila.</p>
+          <p>Visao operacional consolidada com leitura rapida da fila, prioridades e avancos por cliente.</p>
         </div>
 
         <div className="top-actions">

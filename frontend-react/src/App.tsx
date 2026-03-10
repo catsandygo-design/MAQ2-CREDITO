@@ -14,7 +14,7 @@ function LegacyRedirect({ to }: { to: string }) {
       <div className="auth-card">
         <div className="auth-brand">SioCred</div>
         <h1>Redirecionando</h1>
-        <p>A rota React do gestor foi isolada. Abrindo a tela oficial.</p>
+        <p>Abrindo a tela oficial do gestor.</p>
       </div>
     </div>
   )
