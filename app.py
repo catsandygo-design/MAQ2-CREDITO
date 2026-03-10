@@ -4654,6 +4654,10 @@ def _serve_react_app(path: str = ""):
     if not REACT_DIST_DIR.exists():
         return _react_app_unavailable_response()
 
+    normalized_path = path.strip("/")
+    if normalized_path == "gestor" or normalized_path.startswith("gestor/"):
+        return RedirectResponse(url="/app/gestor", status_code=302)
+
     index_file = REACT_DIST_DIR / "index.html"
     if not path:
         return FileResponse(index_file)

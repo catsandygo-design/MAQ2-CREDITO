@@ -21,7 +21,7 @@ export function LoginPage() {
       const out = await login(username.trim(), password)
       const role = String(out.role || '').toLowerCase()
       if (role === 'gestor' || role === 'gestor_credito' || role === 'admin') {
-        navigate('/gestor', { replace: true })
+        window.location.href = out.home || '/app/gestor'
       } else if (role === 'analista') {
         navigate('/analista', { replace: true })
       } else if (out.home) {
