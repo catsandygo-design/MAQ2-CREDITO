@@ -4800,21 +4800,45 @@ def app_corretor_apresentacao_page(request: Request):
     return _html_page("corretor_apresentacao.html")
 
 
-@app.get("/app/analista")
-def app_analista_page(request: Request):
+def _ensure_analista_page_access(request: Request):
     session = _read_session(request)
     if not session:
-        return RedirectResponse(url="/login", status_code=302)
+        return None, RedirectResponse(url="/login", status_code=302)
     if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+        return None, RedirectResponse(url="/app/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
     if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO}:
-        return RedirectResponse(url=_home_for_role(role), status_code=302)
+        return None, RedirectResponse(url=_home_for_role(role), status_code=302)
+    return session, None
+
+
+@app.get("/app/analista/legado")
+def app_analista_legacy_page(request: Request):
+    _, denied = _ensure_analista_page_access(request)
+    if denied:
+        return denied
 
     processo_id = (request.query_params.get("processo_id") or "").strip()
     if processo_id:
         target = f"/app/analise?processo_id={processo_id}"
         return RedirectResponse(url=target, status_code=302)
+
+    return _html_page("analista_painel.html")
+
+
+@app.get("/app/analista")
+def app_analista_page(request: Request):
+    _, denied = _ensure_analista_page_access(request)
+    if denied:
+        return denied
+
+    processo_id = (request.query_params.get("processo_id") or "").strip()
+    if processo_id:
+        target = f"/app/analise?processo_id={processo_id}"
+        return RedirectResponse(url=target, status_code=302)
+
+    if REACT_DIST_DIR.exists():
+        return RedirectResponse(url="/app-react/analista", status_code=302)
 
     return _html_page("analista_painel.html")
 
