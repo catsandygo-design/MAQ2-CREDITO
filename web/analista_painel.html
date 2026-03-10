@@ -1418,20 +1418,37 @@
     min-width:0;
     vertical-align:middle;
   }
-  .clientTimeline{
-    --timeline-done:rgba(14,165,233,.72);
-    --timeline-current:rgba(14,165,233,.96);
-    --timeline-border:rgba(14,165,233,.34);
-    --timeline-track:rgba(148,163,184,.28);
+  .timelineStack{
     display:flex;
     flex-direction:column;
-    gap:6px;
+    gap:8px;
     min-width:0;
+  }
+  .clientTimeline{
+    --timeline-track:rgba(148,163,184,.24);
+    --timeline-done:rgba(14,165,233,.72);
+    --timeline-current:rgba(14,165,233,.96);
+    --timeline-border:rgba(14,165,233,.30);
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+    min-width:0;
+    padding:8px 10px;
+    border-radius:12px;
+    border:1px solid rgba(148,163,184,.18);
+    background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(239,246,255,.56));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.6);
+  }
+  .clientTimeline.commercial{
+    --timeline-done:rgba(14,165,233,.72);
+    --timeline-current:rgba(14,165,233,.96);
+    --timeline-border:rgba(14,165,233,.30);
   }
   .clientTimeline.repasse{
     --timeline-done:rgba(34,197,94,.74);
     --timeline-current:rgba(34,197,94,.94);
     --timeline-border:rgba(34,197,94,.34);
+    background:linear-gradient(180deg, rgba(240,253,244,.88), rgba(236,253,245,.62));
   }
   .clientTimelineMeta{
     display:flex;
@@ -1439,6 +1456,24 @@
     justify-content:space-between;
     gap:6px;
     min-width:0;
+  }
+  .clientTimelineLane{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:84px;
+    padding:4px 10px;
+    border-radius:999px;
+    background:rgba(14,165,233,.10);
+    color:#0c4a6e;
+    font-size:10px;
+    font-weight:800;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+  }
+  .clientTimeline.repasse .clientTimelineLane{
+    background:rgba(34,197,94,.12);
+    color:#166534;
   }
   .clientTimelineCurrent{
     font-size:10px;
@@ -1452,6 +1487,7 @@
     display:flex;
     align-items:flex-start;
     min-width:0;
+    padding-top:1px;
   }
   .clientTimelineStep{
     flex:1 1 0;
@@ -1465,10 +1501,10 @@
   .clientTimelineStep::after{
     content:"";
     position:absolute;
-    top:16px;
+    top:19px;
     left:50%;
     width:100%;
-    height:3px;
+    height:4px;
     border-radius:999px;
     background:var(--timeline-track);
     z-index:0;
@@ -1480,10 +1516,10 @@
     background:var(--timeline-done);
   }
   .clientTimelineLabel{
-    min-height:18px;
+    min-height:22px;
     padding:0 2px;
     font-size:8px;
-    line-height:1.08;
+    line-height:1.12;
     text-align:center;
     color:#64748b;
     display:flex;
@@ -1496,8 +1532,8 @@
     font-weight:700;
   }
   .clientTimelineDot{
-    width:11px;
-    height:11px;
+    width:12px;
+    height:12px;
     border-radius:999px;
     border:2px solid var(--timeline-border);
     background:#ffffff;
@@ -1515,8 +1551,8 @@
     border-color:var(--timeline-done);
   }
   .clientTimelineStep.current .clientTimelineDot{
-    width:12px;
-    height:12px;
+    width:13px;
+    height:13px;
     border-color:var(--timeline-current);
     box-shadow:0 0 0 2px rgba(255,255,255,.34), 0 0 0 4px rgba(14,165,233,.10);
   }
@@ -1845,14 +1881,24 @@
       font-size:9px;
       padding:3px 8px;
     }
+    body.analista-pro .timelineStack{
+      gap:7px;
+    }
     body.analista-pro .clientTimeline{
-      gap:5px;
+      gap:6px;
+      padding:7px 9px;
+      border-radius:11px;
+    }
+    body.analista-pro .clientTimelineLane{
+      min-width:76px;
+      padding:3px 9px;
+      font-size:9px;
     }
     body.analista-pro .clientTimelineCurrent{
       font-size:10px;
     }
     body.analista-pro .clientTimelineLabel{
-      min-height:18px;
+      min-height:20px;
       font-size:8px;
     }
     body.theme-corporate.analista-pro .tableWrap{
@@ -1908,7 +1954,18 @@
       body.analista-pro tbody td{
         padding:7px 9px;
       }
+      body.analista-pro .timelineStack{
+        gap:6px;
+      }
+      body.analista-pro .clientTimeline{
+        padding:6px 8px;
+      }
+      body.analista-pro .clientTimelineLane{
+        min-width:70px;
+        font-size:8px;
+      }
       body.analista-pro .clientTimelineLabel{
+        min-height:18px;
         font-size:7px;
       }
       body.analista-pro .clientTimelineCurrent{
@@ -2172,15 +2229,13 @@
           <colgroup>
             <col style="width:31%">
             <col style="width:9%">
-            <col style="width:30%">
-            <col style="width:30%">
+            <col style="width:60%">
           </colgroup>
           <thead>
             <tr>
               <th>Cliente</th>
               <th>CCA</th>
-              <th>Timeline Comercial</th>
-              <th>Timeline Repasse</th>
+              <th>Fluxo do Cliente</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -2395,7 +2450,7 @@
   const PLANNER_DAYS = 14;
 
   const UPDATE_PAGE_URL = (row) => `/app/analise?processo_id=${encodeURIComponent(row.processo_id)}`;
-  const TABLE_COLSPAN = 4;
+  const TABLE_COLSPAN = 3;
   const COMERCIAL_STAGES = new Set(["reserva", "em_processo", "credito", "secretaria_vendas"]);
   const INSIGHT_COMERCIAL_STAGES = new Set(["em_processo", "venda_finalizada"]);
   const INSIGHT_CREDITO_STAGES = new Set(["credito", "secretaria_vendas"]);
@@ -3287,7 +3342,7 @@
     };
   }
 
-  function renderClientTimelineHtml(tone, steps, currentKey, currentLabel, tooltipAttr){
+  function renderClientTimelineHtml(tone, laneLabel, steps, currentKey, currentLabel, tooltipAttr){
     const snapshot = buildClientTimelineSnapshot(steps, currentKey);
     const stepsHtml = steps.map((step) => {
       const isDone = snapshot.doneKeys.includes(step.key);
@@ -3304,6 +3359,7 @@
     return `
       <div class="clientTimeline ${tone} hintTip" data-tip="${tooltipAttr}" title="${tooltipAttr}">
         <div class="clientTimelineMeta">
+          <span class="clientTimelineLane">${esc(laneLabel)}</span>
           <span class="clientTimelineCurrent">${esc(currentLabel)}</span>
         </div>
         <div class="clientTimelineTrack">
@@ -3497,8 +3553,14 @@
       const repasseKey = repasseTimelineKey(r);
       const comercialLabel = comercialKey ? labelFor("geral", comercialKey) : labelFor("geral", r.geral);
       const repasseLabel = repasseKey ? labelFor("repasse", repasseKey) : labelFor("repasse", r.repasse);
-      const timelineComercial = renderClientTimelineHtml("commercial", FLOW_COMMERCIAL_STEPS, comercialKey, comercialLabel, processTooltip);
-      const timelineRepasse = renderClientTimelineHtml("repasse", FLOW_REPASSE_STEPS, repasseKey, repasseLabel, processTooltip);
+      const timelineComercial = renderClientTimelineHtml("commercial", "Comercial", FLOW_COMMERCIAL_STEPS, comercialKey, comercialLabel, processTooltip);
+      const timelineRepasse = renderClientTimelineHtml("repasse", "Repasse", FLOW_REPASSE_STEPS, repasseKey, repasseLabel, processTooltip);
+      const timelineStack = `
+        <div class="timelineStack">
+          ${timelineComercial}
+          ${timelineRepasse}
+        </div>
+      `;
 
       const badges = [];
       if (r.foraContagemMes) badges.push(outCountBadge());
@@ -3525,8 +3587,7 @@
             ${badgesHtml}
           </td>
           <td>${esc(r.cca)}</td>
-          <td class="timelineTd">${timelineComercial}</td>
-          <td class="timelineTd">${timelineRepasse}</td>
+          <td class="timelineTd">${timelineStack}</td>
         </tr>
       `;
     }).join("");
