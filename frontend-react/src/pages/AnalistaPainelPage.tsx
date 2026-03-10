@@ -150,6 +150,7 @@ interface MiniTimelineProps {
   currentLabel: string
   currentKey: string
   steps: TimelineStep[]
+  tooltipForStep?: (step: TimelineStep) => string
 }
 
 function norm(value: unknown): string {
@@ -230,6 +231,9 @@ function fromBackend(item: ProcessoApiItem): ProcessoLinha {
     slaCca: readSlaHours(item, 'sla_cca_horas', 'sla_cca_dias'),
     dataCadastroOrigem: item.data_reserva_origem || item.data_cadastro_origem || null,
     createdAt: item.created_at || null,
+    observacao: String(item.observacao || '').trim(),
+    docsTotal: Math.max(0, Number(item.docs_total || 0)),
+    docsRecebidos: Math.max(0, Number(item.docs_recebidos || 0)),
     semDocumento,
     foraContagemMes: Boolean(item?.nao_contar_mes),
     avisoContratoAgehab:
@@ -403,6 +407,43 @@ function pendingItems(row: ProcessoLinha): string[] {
   return items
 }
 
+function summarizeObservation(row: ProcessoLinha): string {
+  const raw = String(row.observacao || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!raw) return 'Sem observacao registrada'
+  return raw.length > 140 ? `${raw.slice(0, 137)}...` : raw
+}
+
+function documentsSummary(row: ProcessoLinha): string {
+  if (row.semDocumento || row.docsTotal <= 0) return 'Documentos: nenhum enviado'
+  const pendentes = Math.max(0, row.docsTotal - row.docsRecebidos)
+  if (pendentes <= 0) return 'Documentos: OK, todos aprovados'
+  return `Documentos pendentes: ${pendentes} de ${row.docsTotal}`
+}
+
+function statusSummary(row: ProcessoLinha): string {
+  const items = pendingItems(row)
+  if (!items.length) return 'Status OK: caixa, agehab, sinal e fiador alinhados'
+  return `Pendencias: ${items.join('; ')}`
+}
+
+function timelineTooltip(row: ProcessoLinha, laneLabel: string, step: TimelineStep): string {
+  const comercialKey = commercialTimelineKey(row)
+  const repasseKey = repasseTimelineKey(row)
+  const resumo = `Resumo: Comercial ${labelFor('geral', comercialKey || row.geral)} | Repasse ${labelFor('repasse', repasseKey || row.repasse)}`
+
+  return [
+    `${laneLabel} • ${step.label}`,
+    resumo,
+    `Observacao: ${summarizeObservation(row)}`,
+    documentsSummary(row),
+    statusSummary(row),
+    `Sinal: ${labelFor('sinal', row.sinal)}`,
+    `Fiador: ${labelFor('fiador', row.fiador)}`,
+  ].join('\n')
+}
+
 function commercialTimelineKey(row: ProcessoLinha): string {
   const geral = statusFromBackend(row.geral)
   return FLOW_COMMERCIAL_KEYS.has(geral) ? geral : ''
@@ -462,7 +503,7 @@ function SectionShell({
   )
 }
 
-function MiniTimeline({ tone, laneLabel, currentLabel, currentKey, steps }: MiniTimelineProps) {
+function MiniTimeline({ tone, laneLabel, currentLabel, currentKey, steps, tooltipForStep }: MiniTimelineProps) {
   const snapshot = buildMiniTimelineSnapshot(steps, currentKey)
 
   return (
@@ -476,9 +517,16 @@ function MiniTimeline({ tone, laneLabel, currentLabel, currentKey, steps }: Mini
           const isDone = snapshot.doneKeys.includes(step.key)
           const isCurrent = step.key === snapshot.currentKey
           const state = isDone ? 'done' : isCurrent ? 'current' : 'future'
+          const tooltip = tooltipForStep?.(step)
 
           return (
-            <div key={step.key} className={`mini-flow-step ${state}`}>
+            <div
+              key={step.key}
+              className={`mini-flow-step ${state} ${tooltip ? 'has-tooltip' : ''}`.trim()}
+              title={tooltip}
+              aria-label={tooltip}
+              tabIndex={tooltip ? 0 : -1}
+            >
               <span className="mini-flow-label">{step.label}</span>
               <span className="mini-flow-dot" />
             </div>
@@ -1053,6 +1101,7 @@ export function AnalistaPainelPage() {
                       currentLabel={comercialLabel}
                       currentKey={comercialKey}
                       steps={COMMERCIAL_FLOW_STEPS}
+                      tooltipForStep={(step) => timelineTooltip(row, 'Comercial', step)}
                     />
                     <MiniTimeline
                       tone="repasse"
@@ -1060,6 +1109,7 @@ export function AnalistaPainelPage() {
                       currentLabel={repasseLabel}
                       currentKey={repasseKey}
                       steps={REPASSE_FLOW_STEPS}
+                      tooltipForStep={(step) => timelineTooltip(row, 'Repasse', step)}
                     />
                   </div>
 

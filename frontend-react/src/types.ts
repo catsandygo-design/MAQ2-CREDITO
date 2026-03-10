@@ -131,6 +131,9 @@ export interface ProcessoApiItem {
   data_reserva_origem?: string | null
   data_cadastro_origem?: string | null
   created_at?: string | null
+  observacao?: string | null
+  docs_total?: number | null
+  docs_recebidos?: number | null
   sem_documento_enviado?: boolean | null
   nao_contar_mes?: boolean | null
   aviso_gerar_contrato_agehab?: boolean | null
@@ -153,6 +156,9 @@ export interface ProcessoLinha {
   slaCca: number
   dataCadastroOrigem: string | null
   createdAt: string | null
+  observacao: string
+  docsTotal: number
+  docsRecebidos: number
   semDocumento: boolean
   foraContagemMes: boolean
   avisoContratoAgehab: boolean

@@ -1383,6 +1383,14 @@ tr.row-final {
   gap: 10px;
 }
 
+.mini-flow-step.has-tooltip {
+  cursor: help;
+}
+
+.mini-flow-step.has-tooltip:focus-visible {
+  outline: none;
+}
+
 .mini-flow-label {
   min-height: 24px;
   text-align: center;
@@ -1398,6 +1406,11 @@ tr.row-final {
   background: #ffffff;
   border: 2px solid #cbd5e1;
   box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.88);
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease;
 }
 
 .mini-flow-step.done .mini-flow-label {
@@ -1421,6 +1434,15 @@ tr.row-final {
   box-shadow:
     0 0 0 4px rgba(255, 255, 255, 0.9),
     0 0 0 8px rgba(14, 165, 233, 0.16);
+}
+
+.mini-flow-step.has-tooltip:hover .mini-flow-dot,
+.mini-flow-step.has-tooltip:focus-visible .mini-flow-dot {
+  transform: translateY(-1px) scale(1.06);
+  box-shadow:
+    0 0 0 4px rgba(255, 255, 255, 0.92),
+    0 0 0 8px rgba(14, 165, 233, 0.12),
+    0 10px 22px rgba(14, 165, 233, 0.18);
 }
 
 .mini-flow-step.future .mini-flow-dot {

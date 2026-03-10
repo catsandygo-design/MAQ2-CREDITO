@@ -2206,6 +2206,7 @@ class ProcessoOverviewOut(BaseModel):
     data_reserva_origem: Optional[date] = None
     data_cadastro_origem: Optional[date] = None
     created_at: Optional[datetime] = None
+    observacao: Optional[str] = None
     docs_total: int = 0
     docs_recebidos: int = 0
     sem_documento_enviado: bool = True
@@ -7066,6 +7067,7 @@ def app_list_processos(
                 data_reserva_origem=getattr(cliente, "data_reserva_origem", None),
                 data_cadastro_origem=getattr(cliente, "data_cadastro_origem", None),
                 created_at=processo.created_at,
+                observacao=processo.observacao,
                 docs_total=docs_total,
                 docs_recebidos=docs_recebidos,
                 sem_documento_enviado=sem_documento_enviado,

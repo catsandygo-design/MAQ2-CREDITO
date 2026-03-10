@@ -315,6 +315,21 @@
       word-break: break-word;
     }
 
+    .identity .nameLink {
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: color .15s ease, border-color .15s ease, text-shadow .15s ease;
+    }
+
+    .identity .nameLink:hover,
+    .identity .nameLink:focus-visible {
+      color: #0a5f95;
+      border-color: rgba(2,132,199,.48);
+      text-shadow: 0 1px 0 rgba(255,255,255,.72);
+      outline: none;
+    }
+
     .identity .meta {
       font-size: 12px;
       color: #2f4b69;
@@ -838,7 +853,7 @@
         return `
           <article class="row ${row.entrega_hoje ? "today" : ""}" data-processo-id="${row.processo_id}">
             <div class="identity">
-              <h3 class="name">${esc(row.cliente_nome)}</h3>
+              <h3 class="name"><a class="nameLink" href="/app/analista?processo_id=${encodeURIComponent(row.processo_id || "")}">${esc(row.cliente_nome)}</a></h3>
               <div class="meta">${esc(row.empreendimento || "-")}</div>
               <div class="meta">${esc(row.corretor || "-")} - ${esc(row.imobiliaria || "-")}</div>
               <span class="stage">${esc(String(row.estagio_comercial || "").replaceAll("_", " "))}</span>
@@ -884,6 +899,10 @@
                     <input class="miniField" style="max-width:170px;" type="date" data-field="nova_data_promessa" />
                     <button class="btnMini" data-action="add-comp" type="button">Registrar promessa</button>
                   </div>
+                </div>
+                <div class="ctrl" style="grid-column: span 2;">
+                  <label>Observacoes da nova promessa</label>
+                  <textarea data-field="nova_observacao_promessa" placeholder="Descreva o combinado desta promessa..."></textarea>
                 </div>
               </div>
 
@@ -956,12 +975,16 @@
     async function addCompromisso(row) {
       const processoId = row.dataset.processoId;
       const dateValue = rowField(row, '[data-field="nova_data_promessa"]')?.value || "";
+      const observacao = rowField(row, '[data-field="nova_observacao_promessa"]')?.value || "";
       if (!dateValue) {
         throw new Error("Informe a data da promessa.");
       }
       await api(`/app/api/analista/reuniao-comercial/${encodeURIComponent(processoId)}/compromissos`, {
         method: "POST",
-        body: JSON.stringify({ data_prometida: dateValue }),
+        body: JSON.stringify({
+          data_prometida: dateValue,
+          observacao,
+        }),
       });
     }
 
