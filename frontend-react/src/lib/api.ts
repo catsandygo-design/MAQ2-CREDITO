@@ -1,5 +1,6 @@
-﻿import type {
+import type {
   AuthSession,
+  CreditoPlanejamentoDashboard,
   GestorDashboardResponse,
   LoginResponse,
   ProcessoApiItem,
@@ -73,6 +74,14 @@ export async function fetchCCAs(): Promise<string[]> {
     cache: 'no-store',
   })
   return parseResponse<string[]>(res)
+}
+
+export async function fetchAnalistaPlannerDashboard(days = 14): Promise<CreditoPlanejamentoDashboard> {
+  const res = await fetch(`${API_BASE}/analista/planejamento?dias=${days}`, {
+    credentials: 'same-origin',
+    cache: 'no-store',
+  })
+  return parseResponse<CreditoPlanejamentoDashboard>(res)
 }
 
 export async function fetchProcessosPaged(

@@ -69,6 +69,45 @@ export interface GestorDashboardResponse {
   imobiliarias: ImobiliariaResumo[]
 }
 
+export interface CreditoPlanejamentoItem {
+  id: string
+  tipo: string
+  titulo: string
+  descricao?: string | null
+  responsavel?: string | null
+  data_referencia?: string | null
+  hora_inicio?: string | null
+  hora_fim?: string | null
+  status: string
+  progresso: number
+  urgente: boolean
+  created_by_username?: string | null
+  updated_by_username?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CreditoPlanejamentoEvolucao {
+  responsavel: string
+  total: number
+  concluidas: number
+  pendentes: number
+  progresso_medio: number
+  taxa_conclusao: number
+}
+
+export interface CreditoPlanejamentoDashboard {
+  referencia: string
+  pendentes_total: number
+  tarefas_dia: CreditoPlanejamentoItem[]
+  agendamentos_dia: CreditoPlanejamentoItem[]
+  entregas_dia: CreditoPlanejamentoItem[]
+  urgentes: CreditoPlanejamentoItem[]
+  evolucao_time: CreditoPlanejamentoEvolucao[]
+  anotacoes: CreditoPlanejamentoItem[]
+  itens: CreditoPlanejamentoItem[]
+}
+
 export interface ProcessoApiItem {
   processo_id: string
   cliente_nome?: string | null

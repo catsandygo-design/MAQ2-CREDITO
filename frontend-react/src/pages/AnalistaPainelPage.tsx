@@ -8,13 +8,14 @@ import {
   type ReactNode,
 } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ApiError, fetchCCAs, fetchProcessosPaged, fetchSession, logout } from '../lib/api'
+import { ApiError, fetchAnalistaPlannerDashboard, fetchCCAs, fetchProcessosPaged, fetchSession, logout } from '../lib/api'
 import { TimelineLane, type TimelineStep } from '../components/TimelineLane'
-import type { ProcessoApiItem, ProcessoLinha } from '../types'
+import type { CreditoPlanejamentoDashboard, CreditoPlanejamentoItem, ProcessoApiItem, ProcessoLinha } from '../types'
 
 const REFRESH_SECONDS = 60
 const PAGE_SIZE = 120
 const MAX_PAGES = 20
+const PLANNER_DAYS = 14
 const SLA_WARN = 24
 const SLA_BAD = 48
 
@@ -239,6 +240,45 @@ function fromBackend(item: ProcessoApiItem): ProcessoLinha {
 function labelFor(area: keyof typeof LABELS, value: string): string {
   const key = statusFromBackend(value)
   return LABELS[area]?.[key] || value || '-'
+}
+
+function formatDateLabel(value: string | null | undefined): string {
+  if (!value) return '-'
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return '-'
+  return parsed.toLocaleDateString('pt-BR')
+}
+
+function plannerStatusLabel(value: string | null | undefined): string {
+  const key = statusFromBackend(value)
+  if (key === 'concluido') return 'Concluido'
+  if (key === 'em_andamento') return 'Em andamento'
+  if (key === 'cancelado') return 'Cancelado'
+  return 'Pendente'
+}
+
+function plannerStatusTone(value: string | null | undefined): 'ok' | 'warn' | 'bad' | 'neutral' {
+  const key = statusFromBackend(value)
+  if (key === 'concluido') return 'ok'
+  if (key === 'em_andamento') return 'warn'
+  if (key === 'cancelado') return 'bad'
+  return 'neutral'
+}
+
+function plannerTimeWindow(item: CreditoPlanejamentoItem): string {
+  const start = String(item.hora_inicio || '').slice(0, 5)
+  const end = String(item.hora_fim || '').slice(0, 5)
+  if (start && end) return `${start} - ${end}`
+  if (start) return start
+  if (end) return end
+  return ''
+}
+
+function plannerMeta(item: CreditoPlanejamentoItem): string {
+  const parts = [item.responsavel || '', plannerTimeWindow(item), formatDateLabel(item.data_referencia)]
+    .map((part) => String(part || '').trim())
+    .filter((part) => part && part !== '-')
+  return parts.join(' • ')
 }
 
 function classForStatus(value: string): 'neutral' | 'ok' | 'warn' | 'bad' {
@@ -479,12 +519,15 @@ export function AnalistaPainelPage() {
   const navigate = useNavigate()
   const [rows, setRows] = useState<ProcessoLinha[]>([])
   const [ccas, setCcas] = useState<string[]>([])
+  const [planner, setPlanner] = useState<CreditoPlanejamentoDashboard | null>(null)
+  const [plannerError, setPlannerError] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [refreshTick, setRefreshTick] = useState(REFRESH_SECONDS)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
   const [sections, setSections] = useState({
     overview: true,
+    operational: true,
     filters: true,
     queue: true,
   })
@@ -502,13 +545,23 @@ export function AnalistaPainelPage() {
   const loadData = useCallback(async () => {
     setError('')
     try {
-      const [processos, ccasOut] = await Promise.all([
+      const plannerPromise = fetchAnalistaPlannerDashboard(PLANNER_DAYS).catch((err) => {
+        if (err instanceof ApiError && err.status === 401) throw err
+        setPlanner(null)
+        setPlannerError(err instanceof Error ? err.message : 'Erro ao carregar central operacional')
+        return null
+      })
+
+      const [processos, ccasOut, plannerOut] = await Promise.all([
         fetchProcessosPaged(PAGE_SIZE, MAX_PAGES),
         fetchCCAs(),
+        plannerPromise,
       ])
 
       setRows(processos.filter(isVisibleInAnalista).map(fromBackend))
       setCcas(ccasOut)
+      setPlanner(plannerOut)
+      if (plannerOut) setPlannerError('')
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 401) {
@@ -827,7 +880,7 @@ export function AnalistaPainelPage() {
               steps={COMMERCIAL_FLOW_STEPS}
               currentKey={laneSnapshot.currentKey}
               doneKeys={laneSnapshot.doneKeys}
-              height={62}
+              height={54}
             />
             <div className="timeline-legend">
               {COMMERCIAL_FLOW_STEPS.map((step) => (
@@ -850,7 +903,7 @@ export function AnalistaPainelPage() {
               steps={REPASSE_FLOW_STEPS}
               currentKey={repasseSnapshot.currentKey}
               doneKeys={repasseSnapshot.doneKeys}
-              height={62}
+              height={54}
             />
             <div className="timeline-legend">
               {REPASSE_FLOW_STEPS.map((step) => (
@@ -861,6 +914,124 @@ export function AnalistaPainelPage() {
             </div>
           </section>
         </div>
+      </SectionShell>
+
+      <SectionShell
+        eyebrow="Operacional"
+        title="Central de Operacao do Credito"
+        description="Resumo oficial do painel operacional, com leitura compacta para nao roubar altura da fila."
+        open={sections.operational}
+        onToggle={() => toggleSection('operational')}
+        aside={
+          <div className="section-actions-inline">
+            <a className="section-link" href="/app/analista/acompanhamento-operacional">
+              Abrir painel operacional
+            </a>
+            <span className="section-inline-note">Referencia: {formatDateLabel(planner?.referencia)}</span>
+            <span className="section-inline-note">Pendentes: {planner?.pendentes_total ?? 0}</span>
+          </div>
+        }
+      >
+        {plannerError ? <div className="error-banner">{plannerError}</div> : null}
+
+        {!planner && !plannerError ? <div className="empty">Carregando central operacional...</div> : null}
+
+        {planner ? (
+          <>
+            <div className="ops-summary-grid">
+              {[
+                { title: 'Tarefas do dia', items: planner.tarefas_dia, empty: 'Sem tarefas para hoje.' },
+                { title: 'Agendamentos', items: planner.agendamentos_dia, empty: 'Sem agendamentos no dia.' },
+                { title: 'Entregas do dia', items: planner.entregas_dia, empty: 'Sem entregas no dia.' },
+                { title: 'Tarefas urgentes', items: planner.urgentes, empty: 'Sem urgencias em aberto.' },
+              ].map((group) => (
+                <article key={group.title} className="ops-summary-card">
+                  <div className="ops-summary-head">
+                    <h3>{group.title}</h3>
+                    <span className="ops-summary-count">{group.items.length}</span>
+                  </div>
+
+                  {group.items.length > 0 ? (
+                    <div className="ops-summary-list">
+                      {group.items.slice(0, 2).map((item) => (
+                        <div key={item.id} className="ops-summary-item">
+                          <div className="ops-summary-title-row">
+                            <strong>{item.titulo}</strong>
+                            <span className={`ops-state ${plannerStatusTone(item.status)}`}>
+                              {plannerStatusLabel(item.status)}
+                            </span>
+                          </div>
+                          {item.descricao ? <p>{item.descricao}</p> : null}
+                          <span className="ops-summary-meta">{plannerMeta(item)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="ops-empty">{group.empty}</div>
+                  )}
+                </article>
+              ))}
+            </div>
+
+            <div className="ops-summary-bottom">
+              <article className="ops-summary-card ops-summary-card-wide">
+                <div className="ops-summary-head">
+                  <h3>Evolucao da equipe</h3>
+                  <span className="ops-summary-count">{planner.evolucao_time.length}</span>
+                </div>
+
+                {planner.evolucao_time.length > 0 ? (
+                  <div className="ops-evolution-list">
+                    {planner.evolucao_time.slice(0, 4).map((item) => (
+                      <div key={item.responsavel} className="ops-evolution-row">
+                        <div className="ops-evolution-top">
+                          <strong>{item.responsavel}</strong>
+                          <span>
+                            {item.concluidas}/{item.total} concluidas
+                          </span>
+                        </div>
+                        <div className="ops-evolution-bar">
+                          <span style={{ width: `${Math.max(0, Math.min(100, Number(item.taxa_conclusao || 0)))}%` }} />
+                        </div>
+                        <span className="ops-summary-meta">
+                          {item.progresso_medio}% medio | {item.pendentes} pendentes
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="ops-empty">Sem dados de evolucao no momento.</div>
+                )}
+              </article>
+
+              <article className="ops-summary-card">
+                <div className="ops-summary-head">
+                  <h3>Anotacoes</h3>
+                  <span className="ops-summary-count">{planner.anotacoes.length}</span>
+                </div>
+
+                {planner.anotacoes.length > 0 ? (
+                  <div className="ops-summary-list">
+                    {planner.anotacoes.slice(0, 3).map((item) => (
+                      <div key={item.id} className="ops-summary-item">
+                        <div className="ops-summary-title-row">
+                          <strong>{item.titulo}</strong>
+                          <span className="ops-state neutral">Anotacao</span>
+                        </div>
+                        {item.descricao ? <p>{item.descricao}</p> : null}
+                        <span className="ops-summary-meta">
+                          {item.updated_by_username || item.created_by_username || '-'} • {formatDateLabel(item.updated_at)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="ops-empty">Nenhuma anotacao registrada.</div>
+                )}
+              </article>
+            </div>
+          </>
+        ) : null}
       </SectionShell>
 
       <SectionShell

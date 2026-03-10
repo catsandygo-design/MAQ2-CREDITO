@@ -22,14 +22,14 @@ export function TimelineLane({
   steps,
   currentKey,
   doneKeys = [],
-  height = 56,
+  height = 52,
   showArrow = true,
   className = '',
 }: TimelineLaneProps) {
   const W = 980
   const paddingX = 24
   const lineY = Math.round(height / 2)
-  const startX = paddingX + 140
+  const startX = paddingX + 124
   const endX = W - paddingX
 
   const n = steps.length
@@ -82,7 +82,7 @@ export function TimelineLane({
   return (
     <div className={`w-full overflow-x-auto ${className}`}>
       <svg className="h-auto min-w-[980px] w-full" viewBox={`0 0 ${W} ${height}`} preserveAspectRatio="xMinYMid meet">
-        <text x={paddingX} y={lineY + 5} fill="#334155" fontSize="12" fontWeight="600">
+        <text x={paddingX} y={lineY + 4} fill="#334155" fontSize="11" fontWeight="600">
           {title}
         </text>
 
@@ -110,9 +110,9 @@ export function TimelineLane({
           <g key={p.key}>
             <text
               x={p.x}
-              y={lineY - 14}
+              y={lineY - 12}
               fill={textFor(p.state)}
-              fontSize="11"
+              fontSize="10"
               textAnchor="middle"
               fontWeight={p.state === 'current' ? '700' : '500'}
             >
@@ -122,7 +122,7 @@ export function TimelineLane({
             <circle
               cx={p.x}
               cy={p.y}
-              r={p.state === 'current' ? 7 : 6}
+              r={p.state === 'current' ? 6.5 : 5.5}
               fill={colorFor(p.state)}
               stroke={strokeFor(p.state)}
               strokeWidth={p.state === 'future' ? 2 : 0}
