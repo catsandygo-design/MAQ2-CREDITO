@@ -30,101 +30,388 @@
     html{scroll-behavior:smooth}
     body.page-ready{opacity:1;transform:none}
     body.page-leaving{opacity:0;transform:translateY(8px)}
-    .layout{display:flex;min-height:100vh}
+    .layout{display:flex;min-height:100vh;position:relative}
+    .sidebar-scrim{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,.46);
+      backdrop-filter:blur(2px);
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .18s ease;
+      z-index:18;
+    }
     .sidebar{
-      width:252px;
-      background:linear-gradient(180deg,var(--nav),var(--nav-soft));
+      width:278px;
+      background:
+        radial-gradient(520px 220px at 0% 0%, rgba(34,197,94,.14), transparent 60%),
+        linear-gradient(180deg,var(--nav),var(--nav-soft));
       color:#e5e7eb;
       padding:14px 10px;
       display:flex;
       flex-direction:column;
+      gap:10px;
+      position:relative;
+      z-index:19;
+      transition:width .18s ease,transform .2s ease,padding .18s ease,box-shadow .18s ease;
+      box-shadow:inset -1px 0 0 rgba(148,163,184,.14);
+    }
+    .sidebar-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
       gap:8px;
+      padding:0 4px 0 6px;
     }
     .brand{
-      display:flex;align-items:center;gap:10px;padding:8px 10px 14px;
+      flex:1;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:8px 10px 14px;
       border-bottom:1px solid rgba(148,163,184,.22)
     }
     .brand-dot{
-      width:34px;height:34px;border-radius:999px;border:2px solid var(--accent);
-      display:grid;place-items:center;font-weight:800;font-size:.82rem
+      width:36px;height:36px;border-radius:999px;border:2px solid var(--accent);
+      display:grid;place-items:center;font-weight:800;font-size:.82rem;
+      background:rgba(15,23,42,.88);
+      box-shadow:0 0 0 4px rgba(34,197,94,.08);
+      flex:0 0 auto;
     }
-    .brand h1{margin:0;font-size:.93rem}
+    .brand-copy{min-width:0}
+    .brand h1{margin:0;font-size:.98rem;line-height:1.2}
     .brand p{margin:2px 0 0;font-size:.67rem;letter-spacing:.14em;text-transform:uppercase;color:#94a3b8}
-    .menu{display:grid;gap:2px}
-    .menu .label{font-size:.67rem;letter-spacing:.15em;text-transform:uppercase;color:#94a3b8;padding:9px 12px 3px}
-    .menu a{
-      margin:0 4px;padding:7px 11px;border-radius:999px;color:#e5e7eb;text-decoration:none;font-size:.8rem;
-      display:flex;align-items:center;gap:8px;transition:background .12s ease,transform .08s ease
+    .sidebar-toggle{
+      width:34px;
+      height:34px;
+      border-radius:12px;
+      border:1px solid rgba(148,163,184,.24);
+      background:rgba(15,23,42,.78);
+      color:#e5e7eb;
+      display:grid;
+      place-items:center;
+      cursor:pointer;
+      transition:transform .12s ease,border-color .12s ease,background .12s ease;
+      flex:0 0 auto;
+      margin-top:8px;
     }
-    .menu a:hover{background:rgba(15,23,42,.84)}
-    .menu a.active{background:rgba(34,197,94,.2);transform:translateX(1px)}
-    .menu b{
-      width:20px;height:20px;border-radius:999px;background:rgba(15,23,42,.9);display:grid;place-items:center;
-      font-size:.62rem
+    .sidebar-toggle:hover{
+      transform:translateY(-1px);
+      border-color:rgba(34,197,94,.42);
+      background:rgba(30,41,59,.95);
     }
-    .side-block{display:grid;gap:6px;padding:4px 4px 0}
-    .side-block .label{
-      font-size:.67rem;
-      letter-spacing:.15em;
+    .sidebar-toggle svg,
+    .nav-icon svg,
+    .side-btn-icon svg,
+    .side-filter-icon svg,
+    .side-kpi-icon svg,
+    .mobile-nav-toggle svg{
+      width:16px;
+      height:16px;
+      stroke:currentColor;
+      fill:none;
+      stroke-width:1.9;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+      transition:transform .16s ease;
+    }
+    .menu{display:grid;gap:4px}
+    .menu .label{
+      font-size:.66rem;
+      letter-spacing:.18em;
       text-transform:uppercase;
       color:#94a3b8;
-      padding:2px 2px;
+      padding:8px 12px 4px;
+      transition:opacity .14s ease;
     }
-    .side-btn{
-      border:1px solid rgba(148,163,184,.28);
+    .side-section-toggle{
+      width:100%;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:8px 12px 4px;
+      border:0;
+      background:transparent;
+      color:#94a3b8;
+      font-size:.66rem;
+      font-weight:700;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      cursor:pointer;
+      transition:color .12s ease,transform .08s ease;
+    }
+    .side-section-toggle:hover{
+      color:#dbeafe;
+      transform:translateX(1px);
+    }
+    .side-section-toggle svg{
+      width:14px;
+      height:14px;
+      stroke:currentColor;
+      fill:none;
+      stroke-width:2;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+      transition:transform .16s ease;
+      flex:0 0 auto;
+    }
+    .side-section-body{
+      display:grid;
+      gap:6px;
+      overflow:hidden;
+      max-height:420px;
+      opacity:1;
+      transform:translateY(0);
+      transition:max-height .18s ease,opacity .14s ease,transform .14s ease;
+    }
+    .side-block.collapsed .side-section-body,
+    .side-note.collapsed .side-section-body{
+      max-height:0;
+      opacity:0;
+      transform:translateY(-4px);
+      pointer-events:none;
+    }
+    .side-block.collapsed .side-section-toggle svg,
+    .side-note.collapsed .side-section-toggle svg{
+      transform:rotate(-90deg);
+    }
+    .nav-link{
+      margin:0 4px;
+      padding:8px 11px;
+      border-radius:16px;
+      color:#e5e7eb;
+      text-decoration:none;
+      font-size:.8rem;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      transition:background .12s ease,transform .08s ease,border-color .12s ease,box-shadow .12s ease;
+      border:1px solid transparent;
+      position:relative;
+    }
+    .nav-link:hover{
+      background:rgba(15,23,42,.84);
+      border-color:rgba(148,163,184,.18);
+      transform:translateX(1px);
+    }
+    .nav-link.active{
+      background:linear-gradient(90deg, rgba(16,185,129,.22), rgba(34,197,94,.12));
+      border-color:rgba(34,197,94,.28);
+      box-shadow:0 10px 18px rgba(2,6,23,.18);
+    }
+    .nav-link.active::before{
+      content:"";
+      position:absolute;
+      left:0;
+      top:10px;
+      bottom:10px;
+      width:3px;
+      border-radius:999px;
+      background:linear-gradient(180deg,#34d399,#22c55e);
+    }
+    .nav-icon,
+    .side-btn-icon,
+    .side-filter-icon,
+    .side-kpi-icon{
+      width:28px;
+      height:28px;
       border-radius:10px;
+      display:grid;
+      place-items:center;
+      background:rgba(15,23,42,.86);
+      color:#dbeafe;
+      border:1px solid rgba(148,163,184,.14);
+      flex:0 0 auto;
+    }
+    .nav-text,
+    .side-btn-label,
+    .side-filter-label{
+      flex:1;
+      min-width:0;
+      white-space:nowrap;
+    }
+    .nav-code{
+      font-size:.63rem;
+      font-weight:800;
+      letter-spacing:.12em;
+      color:#94a3b8;
+    }
+    .side-block{display:grid;gap:6px;padding:4px 4px 0}
+    .side-btn{
+      border:1px solid rgba(148,163,184,.2);
+      border-radius:14px;
       background:rgba(15,23,42,.72);
       color:#e5e7eb;
       font-size:.73rem;
       font-weight:700;
-      padding:7px 9px;
+      padding:8px 9px;
       text-align:left;
       cursor:pointer;
-      transition:background .12s ease,border-color .12s ease,transform .08s ease;
+      transition:background .12s ease,border-color .12s ease,transform .08s ease,box-shadow .12s ease;
+      display:flex;
+      align-items:center;
+      gap:10px;
     }
     .side-btn:hover{
       background:rgba(30,41,59,.95);
-      border-color:rgba(34,197,94,.45);
+      border-color:rgba(34,197,94,.35);
+      box-shadow:0 10px 18px rgba(2,6,23,.14);
       transform:translateY(-1px);
     }
     .side-filters{display:grid;grid-template-columns:1fr 1fr;gap:6px}
     .side-filter{
-      border:1px solid rgba(148,163,184,.28);
-      border-radius:999px;
+      border:1px solid rgba(148,163,184,.22);
+      border-radius:14px;
       background:rgba(15,23,42,.72);
       color:#cbd5e1;
       font-size:.7rem;
       font-weight:700;
-      padding:6px 8px;
+      padding:7px 8px;
       cursor:pointer;
-      transition:background .12s ease,border-color .12s ease,color .12s ease;
+      transition:background .12s ease,border-color .12s ease,color .12s ease,transform .08s ease;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      justify-content:flex-start;
+    }
+    .side-filter:hover{
+      transform:translateY(-1px);
+      border-color:rgba(34,197,94,.28);
     }
     .side-filter.active{
-      background:rgba(34,197,94,.2);
-      border-color:rgba(34,197,94,.6);
+      background:linear-gradient(90deg, rgba(16,185,129,.22), rgba(34,197,94,.12));
+      border-color:rgba(34,197,94,.58);
       color:#dcfce7;
     }
     .side-note{
       margin-top:auto;
-      border-top:1px solid rgba(148,163,184,.25);
-      padding:8px 12px 0;
+      border-top:1px solid rgba(148,163,184,.2);
+      padding:10px 8px 0;
       font-size:.72rem;
       color:#cbd5e1;
       display:grid;
-      gap:6px;
+      gap:8px;
+    }
+    .side-note .side-section-body{
+      gap:8px;
     }
     .side-kpi{
       display:flex;
-      justify-content:space-between;
       align-items:center;
       gap:8px;
-      border:1px solid rgba(148,163,184,.22);
-      border-radius:10px;
-      padding:6px 8px;
-      background:rgba(15,23,42,.75);
+      border:1px solid rgba(148,163,184,.18);
+      border-radius:14px;
+      padding:8px 9px;
+      background:rgba(15,23,42,.72);
+      transition:border-color .12s ease,transform .12s ease;
     }
-    .side-kpi span{color:#94a3b8}
-    .side-kpi strong{font-size:.85rem;color:#e5e7eb}
+    .side-kpi:hover{
+      border-color:rgba(34,197,94,.25);
+      transform:translateY(-1px);
+    }
+    .side-kpi-text{
+      display:grid;
+      gap:1px;
+      min-width:0;
+      flex:1;
+    }
+    .side-kpi span{color:#94a3b8;font-size:.66rem;text-transform:uppercase;letter-spacing:.14em}
+    .side-kpi strong{font-size:.9rem;color:#e5e7eb}
+    .mobile-nav-toggle{
+      display:none;
+      width:38px;
+      height:38px;
+      border-radius:12px;
+      border:1px solid #cbd5e1;
+      background:#fff;
+      color:#0f172a;
+      cursor:pointer;
+      align-items:center;
+      justify-content:center;
+      flex:0 0 auto;
+      box-shadow:0 10px 18px rgba(15,23,42,.08);
+    }
+    .mobile-nav-toggle:hover{
+      transform:translateY(-1px);
+      box-shadow:0 12px 22px rgba(15,23,42,.12);
+    }
+    .sidebar a:focus-visible,
+    .sidebar button:focus-visible{
+      outline:none;
+      box-shadow:0 0 0 2px rgba(56,189,248,.55);
+    }
+    body.sidebar-collapsed .sidebar-toggle svg{
+      transform:rotate(180deg);
+    }
+    body.sidebar-collapsed .sidebar{
+      width:92px;
+      padding-inline:8px;
+    }
+    body.sidebar-collapsed .brand{
+      padding-inline:8px;
+    }
+    body.sidebar-collapsed .brand-copy,
+    body.sidebar-collapsed .menu .label,
+    body.sidebar-collapsed .nav-text,
+    body.sidebar-collapsed .nav-code,
+    body.sidebar-collapsed .side-btn-label,
+    body.sidebar-collapsed .side-filter-label,
+    body.sidebar-collapsed .side-kpi-text{
+      display:none;
+    }
+    body.sidebar-collapsed .nav-link,
+    body.sidebar-collapsed .side-btn,
+    body.sidebar-collapsed .side-filter,
+    body.sidebar-collapsed .side-kpi{
+      justify-content:center;
+      padding-inline:8px;
+    }
+    body.sidebar-collapsed .side-filters{
+      grid-template-columns:1fr;
+    }
+    body.sidebar-collapsed .side-section-toggle{
+      display:none;
+    }
+    body.sidebar-collapsed .side-block.collapsed .side-section-body,
+    body.sidebar-collapsed .side-note.collapsed .side-section-body{
+      max-height:none;
+      opacity:1;
+      transform:none;
+      pointer-events:auto;
+    }
+    body.sidebar-collapsed .sidebar [data-tip]{
+      position:relative;
+    }
+    body.sidebar-collapsed .sidebar [data-tip]:hover::after{
+      content:attr(data-tip);
+      position:absolute;
+      left:calc(100% + 12px);
+      top:50%;
+      transform:translateY(-50%);
+      white-space:nowrap;
+      padding:8px 10px;
+      border-radius:10px;
+      background:#0f172a;
+      color:#f8fafc;
+      border:1px solid rgba(148,163,184,.2);
+      box-shadow:0 14px 24px rgba(2,6,23,.25);
+      font-size:.74rem;
+      z-index:30;
+      pointer-events:none;
+    }
+    body.sidebar-collapsed .sidebar [data-tip]:hover::before{
+      content:"";
+      position:absolute;
+      left:calc(100% + 6px);
+      top:50%;
+      transform:translateY(-50%);
+      border-width:6px;
+      border-style:solid;
+      border-color:transparent #0f172a transparent transparent;
+      z-index:31;
+      pointer-events:none;
+    }
     .main{flex:1;padding:14px 18px;display:grid;gap:12px;align-content:start}
     .top{
       display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap
@@ -336,8 +623,31 @@
       .agenda-check{justify-content:flex-start}
     }
     @media (max-width:768px){
-      .sidebar{display:none}
       .layout{flex-direction:column}
+      .sidebar-scrim{display:block}
+      .sidebar{
+        position:fixed;
+        left:0;
+        top:0;
+        bottom:0;
+        transform:translateX(-100%);
+        width:min(86vw, 292px);
+        max-width:292px;
+        box-shadow:18px 0 38px rgba(2,6,23,.28);
+      }
+      body.sidebar-open .sidebar{
+        transform:translateX(0);
+      }
+      body.sidebar-open .sidebar-scrim{
+        opacity:1;
+        pointer-events:auto;
+      }
+      .mobile-nav-toggle{
+        display:inline-flex;
+      }
+      .main{
+        padding:12px;
+      }
       .ops-form{grid-template-columns:1fr}
       .span2,.span3,.form-actions{grid-column:auto}
       .grid4{grid-template-columns:1fr}
@@ -352,41 +662,123 @@
 </head>
 <body>
 <div class="layout">
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="brand-dot">CR</div>
-      <div><h1>Credito e Repasse</h1><p>Painel operacional</p></div>
+  <div class="sidebar-scrim" id="sidebarScrim"></div>
+  <aside class="sidebar" id="sidebar" aria-label="Barra lateral de navegacao">
+    <div class="sidebar-head">
+      <div class="brand">
+        <div class="brand-dot">CR</div>
+        <div class="brand-copy"><h1>Credito e Repasse</h1><p>Painel operacional</p></div>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Retrair barra lateral" aria-expanded="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+      </button>
     </div>
     <nav class="menu">
       <div class="label">Navegacao</div>
-      <a class="active" href="/app/analista/acompanhamento-operacional"><b>OP</b><span>Painel Operacional</span></a>
-      <a href="/app/analista"><b>AN</b><span>Painel Analista</span></a>
-      <a href="/app/analista/acompanhamento"><b>AK</b><span>Acompanhamento</span></a>
-      <a href="/app/analista/reuniao-comercial"><b>RC</b><span>Reuniao Comercial</span></a>
-      <a href="/app/analista/repasse"><b>RP</b><span>Repasse</span></a>
-      <a href="/app/analista/arquivados"><b>AR</b><span>Arquivados</span></a>
+      <a class="nav-link active" href="/app/analista/acompanhamento-operacional" data-tip="Painel Operacional">
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"></rect><rect x="13" y="4" width="7" height="7" rx="1.5"></rect><rect x="4" y="13" width="7" height="7" rx="1.5"></rect><rect x="13" y="13" width="7" height="7" rx="1.5"></rect></svg></span>
+        <span class="nav-text">Painel Operacional</span>
+        <span class="nav-code">OP</span>
+      </a>
+      <a class="nav-link" href="/app/analista" data-tip="Painel Analista">
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19h16"></path><path d="M6 17V9"></path><path d="M12 17V5"></path><path d="M18 17v-6"></path></svg></span>
+        <span class="nav-text">Painel Analista</span>
+        <span class="nav-code">AN</span>
+      </a>
+      <a class="nav-link" href="/app/analista/acompanhamento" data-tip="Acompanhamento">
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h10"></path><path d="M4 12h16"></path><path d="M4 17h8"></path><circle cx="17" cy="7" r="2"></circle><circle cx="14" cy="17" r="2"></circle></svg></span>
+        <span class="nav-text">Acompanhamento</span>
+        <span class="nav-code">AK</span>
+      </a>
+      <a class="nav-link" href="/app/analista/reuniao-comercial" data-tip="Reuniao Comercial">
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 10h8"></path><path d="M8 14h5"></path><path d="M6 5h12a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-4l-4 3v-3H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"></path></svg></span>
+        <span class="nav-text">Reuniao Comercial</span>
+        <span class="nav-code">RC</span>
+      </a>
+      <a class="nav-link" href="/app/analista/repasse" data-tip="Repasse">
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path><path d="M5 7v10"></path></svg></span>
+        <span class="nav-text">Repasse</span>
+        <span class="nav-code">RP</span>
+      </a>
+      <a class="nav-link" href="/app/analista/arquivados" data-tip="Arquivados">
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16"></path><path d="M6 7v11a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7"></path><path d="M9 11h6"></path><path d="M10 4h4"></path></svg></span>
+        <span class="nav-text">Arquivados</span>
+        <span class="nav-code">AR</span>
+      </a>
     </nav>
-    <div class="side-block">
-      <div class="label">Atalhos</div>
-      <button class="side-btn" type="button" data-side-action="new-task">Nova tarefa</button>
-      <button class="side-btn" type="button" data-side-action="new-schedule">Novo agendamento</button>
-      <button class="side-btn" type="button" data-side-action="new-note">Nova anotacao</button>
-      <button class="side-btn" type="button" data-side-action="refresh">Atualizar dados</button>
-    </div>
-    <div class="side-block">
-      <div class="label">Filtro rapido</div>
-      <div class="side-filters">
-        <button class="side-filter active" type="button" data-side-filter="all">Tudo</button>
-        <button class="side-filter" type="button" data-side-filter="pending">Pendentes</button>
-        <button class="side-filter" type="button" data-side-filter="urgent">Urgentes</button>
-        <button class="side-filter" type="button" data-side-filter="done">Concluidos</button>
+    <div class="side-block" data-side-section="shortcuts">
+      <button class="side-section-toggle" type="button" data-side-section-toggle="shortcuts" aria-expanded="true">
+        <span>Atalhos</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+      <div class="side-section-body">
+        <button class="side-btn" type="button" data-side-action="new-task" data-tip="Nova tarefa">
+          <span class="side-btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg></span>
+          <span class="side-btn-label">Nova tarefa</span>
+        </button>
+        <button class="side-btn" type="button" data-side-action="new-schedule" data-tip="Novo agendamento">
+          <span class="side-btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><path d="M8 3v4"></path><path d="M16 3v4"></path><path d="M4 10h16"></path></svg></span>
+          <span class="side-btn-label">Novo agendamento</span>
+        </button>
+        <button class="side-btn" type="button" data-side-action="new-note" data-tip="Nova anotacao">
+          <span class="side-btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg></span>
+          <span class="side-btn-label">Nova anotacao</span>
+        </button>
+        <button class="side-btn" type="button" data-side-action="refresh" data-tip="Atualizar dados">
+          <span class="side-btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path></svg></span>
+          <span class="side-btn-label">Atualizar dados</span>
+        </button>
       </div>
     </div>
-    <div class="side-note">
-      <div class="side-kpi"><span>Total</span><strong id="sideTotal">0</strong></div>
-      <div class="side-kpi"><span>Pendentes</span><strong id="sidePendentes">0</strong></div>
-      <div class="side-kpi"><span>Urgentes</span><strong id="sideUrgentes">0</strong></div>
-      <div class="side-kpi"><span>Concluidos</span><strong id="sideConcluidos">0</strong></div>
+    <div class="side-block" data-side-section="filters">
+      <button class="side-section-toggle" type="button" data-side-section-toggle="filters" aria-expanded="true">
+        <span>Filtro rapido</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+      <div class="side-section-body">
+        <div class="side-filters">
+          <button class="side-filter active" type="button" data-side-filter="all" data-tip="Tudo">
+            <span class="side-filter-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"></circle></svg></span>
+            <span class="side-filter-label">Tudo</span>
+          </button>
+          <button class="side-filter" type="button" data-side-filter="pending" data-tip="Pendentes">
+            <span class="side-filter-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 6v6l4 2"></path><circle cx="12" cy="12" r="8"></circle></svg></span>
+            <span class="side-filter-label">Pendentes</span>
+          </button>
+          <button class="side-filter" type="button" data-side-filter="urgent" data-tip="Urgentes">
+            <span class="side-filter-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l8 14H4l8-14z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></span>
+            <span class="side-filter-label">Urgentes</span>
+          </button>
+          <button class="side-filter" type="button" data-side-filter="done" data-tip="Concluidos">
+            <span class="side-filter-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+            <span class="side-filter-label">Concluidos</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="side-note" data-side-section="kpis">
+      <button class="side-section-toggle" type="button" data-side-section-toggle="kpis" aria-expanded="true">
+        <span>Indicadores</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+      <div class="side-section-body">
+        <div class="side-kpi" data-tip="Total de itens visiveis na central">
+          <span class="side-kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16"></path><path d="M4 12h16"></path><path d="M4 17h16"></path></svg></span>
+          <div class="side-kpi-text"><span>Total</span><strong id="sideTotal">0</strong></div>
+        </div>
+        <div class="side-kpi" data-tip="Itens pendentes">
+          <span class="side-kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 6v6l4 2"></path><circle cx="12" cy="12" r="8"></circle></svg></span>
+          <div class="side-kpi-text"><span>Pendentes</span><strong id="sidePendentes">0</strong></div>
+        </div>
+        <div class="side-kpi" data-tip="Itens urgentes">
+          <span class="side-kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l8 14H4l8-14z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></span>
+          <div class="side-kpi-text"><span>Urgentes</span><strong id="sideUrgentes">0</strong></div>
+        </div>
+        <div class="side-kpi" data-tip="Itens concluidos">
+          <span class="side-kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+          <div class="side-kpi-text"><span>Concluidos</span><strong id="sideConcluidos">0</strong></div>
+        </div>
+      </div>
     </div>
   </aside>
 
@@ -397,6 +789,9 @@
         <p>Cadastre tarefas, agenda, entregas, urgencias e anotacoes de operacao.</p>
       </div>
       <div class="actions">
+        <button class="mobile-nav-toggle" id="sidebarMobileToggle" type="button" aria-label="Abrir navegacao lateral" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M4 12h16"></path><path d="M4 17h16"></path></svg>
+        </button>
         <input class="search" id="opsQuickSearch" placeholder="Buscar titulo ou responsavel..." />
         <a class="btn" href="/app/analista">Voltar painel</a>
         <a class="btn" href="/app/analista/reuniao-comercial">Reuniao Comercial</a>
@@ -646,6 +1041,9 @@
   const $ = (id) => document.getElementById(id);
   const norm = (v) => String(v || "").trim().toLowerCase();
   let sidebarQuickFilter = "all";
+  const SIDEBAR_PREF_KEY = "ops_sidebar_collapsed_v1";
+  const SIDEBAR_SECTION_PREF_KEY = "ops_sidebar_sections_v1";
+  const MOBILE_SIDEBAR_MAX = 768;
 
   function esc(value){
     return String(value ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
@@ -681,6 +1079,103 @@
       document.body.classList.remove("page-ready");
       document.body.classList.add("page-leaving");
       window.setTimeout(() => { window.location.href = targetUrl.href; }, 140);
+    });
+  }
+
+  function isMobileSidebarViewport(){
+    return window.innerWidth <= MOBILE_SIDEBAR_MAX;
+  }
+
+  function syncSidebarControls(){
+    const collapsed = document.body.classList.contains("sidebar-collapsed");
+    const open = document.body.classList.contains("sidebar-open");
+    const toggle = $("sidebarToggle");
+    const mobileToggle = $("sidebarMobileToggle");
+    if (toggle){
+      toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      toggle.setAttribute("aria-label", collapsed ? "Expandir barra lateral" : "Retrair barra lateral");
+    }
+    if (mobileToggle){
+      mobileToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      mobileToggle.setAttribute("aria-label", open ? "Fechar navegacao lateral" : "Abrir navegacao lateral");
+    }
+  }
+
+  function setSidebarCollapsed(next){
+    if (isMobileSidebarViewport()) return;
+    const collapsed = Boolean(next);
+    document.body.classList.toggle("sidebar-collapsed", collapsed);
+    try {
+      localStorage.setItem(SIDEBAR_PREF_KEY, collapsed ? "1" : "0");
+    } catch (_) {
+      // sem bloqueio caso o navegador recuse storage
+    }
+    syncSidebarControls();
+  }
+
+  function setSidebarOpen(next){
+    document.body.classList.toggle("sidebar-open", Boolean(next));
+    syncSidebarControls();
+  }
+
+  function initSidebarState(){
+    let collapsed = false;
+    try {
+      collapsed = localStorage.getItem(SIDEBAR_PREF_KEY) === "1";
+    } catch (_) {
+      collapsed = false;
+    }
+    if (isMobileSidebarViewport()){
+      document.body.classList.remove("sidebar-collapsed");
+      document.body.classList.remove("sidebar-open");
+    } else {
+      document.body.classList.toggle("sidebar-collapsed", collapsed);
+      document.body.classList.remove("sidebar-open");
+    }
+    syncSidebarControls();
+  }
+
+  function loadSidebarSectionPrefs(){
+    try {
+      return JSON.parse(localStorage.getItem(SIDEBAR_SECTION_PREF_KEY) || "{}") || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function saveSidebarSectionPrefs(nextPrefs){
+    try {
+      localStorage.setItem(SIDEBAR_SECTION_PREF_KEY, JSON.stringify(nextPrefs || {}));
+    } catch (_) {
+      // segue sem storage persistente
+    }
+  }
+
+  function setSidebarSectionCollapsed(name, collapsed){
+    if (!name) return;
+    const section = document.querySelector(`[data-side-section="${name}"]`);
+    if (!section) return;
+    const next = Boolean(collapsed);
+    section.classList.toggle("collapsed", next);
+    const toggle = section.querySelector("[data-side-section-toggle]");
+    if (toggle){
+      toggle.setAttribute("aria-expanded", next ? "false" : "true");
+    }
+    const prefs = loadSidebarSectionPrefs();
+    prefs[name] = next ? 1 : 0;
+    saveSidebarSectionPrefs(prefs);
+  }
+
+  function initSidebarSections(){
+    const prefs = loadSidebarSectionPrefs();
+    document.querySelectorAll("[data-side-section]").forEach((section) => {
+      const name = section.getAttribute("data-side-section") || "";
+      const collapsed = prefs[name] === 1;
+      section.classList.toggle("collapsed", collapsed);
+      const toggle = section.querySelector("[data-side-section-toggle]");
+      if (toggle){
+        toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      }
     });
   }
 
@@ -1421,6 +1916,7 @@
       sidebarQuickFilter = button.dataset.sideFilter || "all";
       applySidebarFilterButtons();
       if (plannerDashboard) renderDashboard(plannerDashboard);
+      if (isMobileSidebarViewport()) setSidebarOpen(false);
     });
   });
   document.querySelectorAll("[data-side-action]").forEach((button) => {
@@ -1440,10 +1936,47 @@
       } else if (action === "refresh") {
         loadPlannerDashboard().catch((error) => setOpsMessage(`Erro ao carregar central: ${error.message}`, "err"));
       }
+      if (isMobileSidebarViewport()) setSidebarOpen(false);
     });
+  });
+  $("sidebarToggle")?.addEventListener("click", () => {
+    setSidebarCollapsed(!document.body.classList.contains("sidebar-collapsed"));
+  });
+  $("sidebarMobileToggle")?.addEventListener("click", () => {
+    setSidebarOpen(!document.body.classList.contains("sidebar-open"));
+  });
+  $("sidebarScrim")?.addEventListener("click", () => {
+    setSidebarOpen(false);
+  });
+  document.querySelectorAll("[data-side-section-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const name = button.getAttribute("data-side-section-toggle") || "";
+      const section = document.querySelector(`[data-side-section="${name}"]`);
+      if (!section) return;
+      setSidebarSectionCollapsed(name, !section.classList.contains("collapsed"));
+    });
+  });
+  document.querySelectorAll(".sidebar a[href]").forEach((anchor) => {
+    anchor.addEventListener("click", () => {
+      if (isMobileSidebarViewport()) setSidebarOpen(false);
+    });
+  });
+  window.addEventListener("resize", () => {
+    if (isMobileSidebarViewport()) {
+      document.body.classList.remove("sidebar-collapsed");
+      syncSidebarControls();
+      return;
+    }
+    document.body.classList.remove("sidebar-open");
+    initSidebarState();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setSidebarOpen(false);
   });
 
   if ($("opData")) $("opData").value = new Date().toISOString().slice(0, 10);
+  initSidebarState();
+  initSidebarSections();
   applySidebarFilterButtons();
   renderAgendaChecklist();
   setupPageTransitions();
