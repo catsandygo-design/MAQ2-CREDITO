@@ -472,12 +472,13 @@
           <table>
             <thead>
               <tr>
-                <th style="width:26%">Cliente</th>
-                <th style="width:16%">Empreendimento</th>
-                <th style="width:16%">Corretor / Imobiliaria</th>
-                <th style="width:12%">Comercial</th>
-                <th style="width:12%">Repasse</th>
-                <th style="width:12%">Caixa</th>
+                <th style="width:22%">Cliente</th>
+                <th style="width:15%">Empreendimento</th>
+                <th style="width:15%">Corretor / Imobiliaria</th>
+                <th style="width:11%">Status geral</th>
+                <th style="width:11%">Comercial</th>
+                <th style="width:11%">Repasse</th>
+                <th style="width:11%">Caixa</th>
                 <th style="width:12%">Arquivado em</th>
                 <th style="width:10%">Referencia</th>
               </tr>
@@ -754,6 +755,7 @@
               <div>${esc(item.corretor || "-")}</div>
               <div class="sub">${esc(item.imobiliaria || "Sem imobiliaria")}</div>
             </td>
+            <td><span class="pill ${statusClass(item.status_geral)}">${esc(label(item.status_geral))}</span></td>
             <td><span class="pill ${statusClass(item.estagio_comercial)}">${esc(label(item.estagio_comercial))}</span></td>
             <td><span class="pill ${statusClass(repasse)}">${esc(label(repasse))}</span></td>
             <td><span class="pill ${statusClass(caixa)}">${esc(label(caixa))}</span></td>

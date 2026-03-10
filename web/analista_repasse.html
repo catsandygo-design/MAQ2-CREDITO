@@ -1191,6 +1191,14 @@
           method: "PATCH",
           body: JSON.stringify(payloadForStage(targetStage)),
         });
+        const statusFinal = keyOf(updated.status_geral);
+        if (statusFinal === "cancelado" || statusFinal === "distrato") {
+          DATA = DATA.filter((item) => item.id !== processoId);
+          filtered = filtered.filter((item) => item.id !== processoId);
+          setMsg(`Cliente arquivado como ${stageLabel(targetStage)}.`, "ok");
+          applyFilters();
+          return;
+        }
         row.estagioComercial = updated.estagio_comercial || row.estagioComercial;
         if (Object.prototype.hasOwnProperty.call(updated, "etapa_repasse")) {
           row.etapaRepasse = updated.etapa_repasse || "-";

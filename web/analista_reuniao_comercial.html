@@ -335,6 +335,56 @@
       padding: 4px 9px;
     }
 
+    .flowMini {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .flowMiniStep {
+      min-width: 76px;
+      flex: 1 1 84px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .flowMiniStep i {
+      display: block;
+      height: 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(30,64,105,.18);
+      background: #dbeafe;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+    }
+
+    .flowMiniStep b {
+      font-size: 9px;
+      line-height: 1.15;
+      color: #4b647f;
+      font-weight: 800;
+      letter-spacing: .01em;
+    }
+
+    .flowMiniStep.done i {
+      border-color: rgba(22,163,74,.3);
+      background: linear-gradient(90deg, #86efac, #16a34a);
+    }
+
+    .flowMiniStep.done b {
+      color: #166534;
+    }
+
+    .flowMiniStep.current i {
+      border-color: rgba(2,132,199,.35);
+      background: linear-gradient(90deg, #7dd3fc, #0284c7);
+      box-shadow: 0 0 0 2px rgba(2,132,199,.12);
+    }
+
+    .flowMiniStep.current b {
+      color: #075985;
+    }
+
     .slaCircle {
       width: 58px;
       height: 58px;
@@ -636,6 +686,15 @@
   <script>
     const $ = (id) => document.getElementById(id);
     const norm = (v) => String(v || "").trim().toLowerCase();
+    const FLOW_STEPS = [
+      { key: "EM_PROCESSO", label: "Em Processo" },
+      { key: "CREDITO", label: "Credito" },
+      { key: "SECRETARIA_VENDAS", label: "Secretaria" },
+      { key: "ASSINATURA_DIRETORIA", label: "Assinatura" },
+      { key: "AUTORIZACAO_DIRETORIA", label: "Aprovacao" },
+      { key: "ENVIO_SIENGE", label: "Sienge" },
+      { key: "VENDA_FINALIZADA", label: "Finalizada" },
+    ];
     let DASHBOARD = null;
     let BUSY = false;
 
@@ -693,6 +752,23 @@
       if (token === "entregue") return '<span class="badge ok">ENTREGUE</span>';
       if (token === "nao_entregue") return '<span class="badge bad">NAO ENTREGUE</span>';
       return '<span class="badge warn">PENDENTE</span>';
+    }
+
+    function stageToken(value) {
+      return String(value || "").trim().toUpperCase().replace(/\s+/g, "_");
+    }
+
+    function stageTimelineHtml(stageValue) {
+      const currentToken = stageToken(stageValue);
+      const currentIndex = FLOW_STEPS.findIndex((step) => step.key === currentToken);
+      return `
+        <div class="flowMini" aria-label="Timeline comercial">
+          ${FLOW_STEPS.map((step, index) => {
+            const state = currentIndex < 0 ? "future" : (index < currentIndex ? "done" : index === currentIndex ? "current" : "future");
+            return `<span class="flowMiniStep ${state}"><i></i><b>${esc(step.label)}</b></span>`;
+          }).join("")}
+        </div>
+      `;
     }
 
     function rowMatchesFilter(row, query, stage) {
@@ -766,6 +842,7 @@
               <div class="meta">${esc(row.empreendimento || "-")}</div>
               <div class="meta">${esc(row.corretor || "-")} - ${esc(row.imobiliaria || "-")}</div>
               <span class="stage">${esc(String(row.estagio_comercial || "").replaceAll("_", " "))}</span>
+              ${stageTimelineHtml(row.estagio_comercial)}
             </div>
             <div class="slaCircle ${tone}">
               <div>${Number(row.sla_dias || 0)}</div>

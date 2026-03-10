@@ -1505,21 +1505,27 @@ DIVORCIADO: Certidão averbada.</td>
           <div class="fg">
             <label for="status-caixa">Status Caixa</label>
             <select id="status-caixa">
-              <option value="nao_enviado">Nao enviado</option>
-              <option value="analise_cca">Em analise CCA</option>
-              <option value="pendenciado_cca">Pendenciado CCA</option>
-              <option value="enviado_conformidade">Enviado Conformidade</option>
+              <option value="analise_credito">Analise Credito</option>
+              <option value="pendente_credito">Pendente Credito</option>
+              <option value="analise_cca">Analise CCA</option>
+              <option value="pendente_cca">Pendente CCA</option>
+              <option value="aprovado">Aprovado</option>
+              <option value="reprovado">Reprovado</option>
+              <option value="condicionado">Condicionado</option>
+              <option value="bloqueado">Bloqueado</option>
+              <option value="dar_qv">Dar QV</option>
+              <option value="aguardando_conformidade">Aguardando Conformidade</option>
               <option value="conforme">Conforme</option>
               <option value="tratando_produto">Tratando Produto</option>
               <option value="agendado">Agendado</option>
-              <option value="assinado">Assinado</option>
+              <option value="assinatura_caixa">Assinatura Caixa</option>
+              <option value="finalizado">Finalizado</option>
             </select>
           </div>
 
           <div class="fg">
             <label for="status-agehab">Status Agehab</label>
             <select id="status-agehab">
-              <option value="aguardando">Aguardando</option>
               <option value="analise_credito">Analise Credito</option>
               <option value="pendente_credito">Pendente Credito</option>
               <option value="envio_agehab">Envio Agehab</option>
@@ -1531,7 +1537,6 @@ DIVORCIADO: Certidão averbada.</td>
           <div class="fg">
             <label for="status-sinal">Status sinal</label>
             <select id="status-sinal">
-              <option value="aguardando">Aguardando</option>
               <option value="nao_tem">Nao tem</option>
               <option value="pendente">Pendente</option>
               <option value="pago">Pago</option>
@@ -1545,7 +1550,6 @@ DIVORCIADO: Certidão averbada.</td>
           <div class="fg">
             <label for="status-fiador">Status fiador</label>
             <select id="status-fiador">
-              <option value="aguardando">Aguardando</option>
               <option value="nao_tem">Nao tem</option>
               <option value="pendente">Pendente</option>
               <option value="finalizado">Finalizado</option>
@@ -1814,29 +1818,28 @@ DIVORCIADO: Certidão averbada.</td>
   // =========================
   const STATUS_LABELS = {
     caixa: {
-      aguardando: "Nao enviado",
-      analise_credito: "Nao enviado",
-      nao_enviado: "Nao enviado",
-      analise_cca: "Em analise CCA",
-      pendente_credito: "Pendenciado CCA",
-      pendente_cca: "Pendenciado CCA",
-      pendenciado_cca: "Pendenciado CCA",
-      condicionado: "Pendenciado CCA",
-      bloqueado: "Pendenciado CCA",
-      reprovado: "Pendenciado CCA",
-      aguardando_conformidade: "Enviado Conformidade",
-      enviado_conformidade: "Enviado Conformidade",
+      aguardando: "Analise Credito",
+      analise_credito: "Analise Credito",
+      nao_enviado: "Analise Credito",
+      analise_cca: "Analise CCA",
+      pendente_credito: "Pendente Credito",
+      pendente_cca: "Pendente CCA",
+      pendenciado_cca: "Pendente CCA",
+      condicionado: "Condicionado",
+      bloqueado: "Bloqueado",
+      reprovado: "Reprovado",
+      aguardando_conformidade: "Aguardando Conformidade",
+      enviado_conformidade: "Aguardando Conformidade",
       conforme: "Conforme",
-      aprovado: "Conforme",
+      aprovado: "Aprovado",
       tratando_produto: "Tratando Produto",
       agendado: "Agendado",
-      dar_qv: "Agendado",
-      assinatura_caixa: "Assinado",
-      assinado: "Assinado",
-      finalizado: "Assinado",
+      dar_qv: "Dar QV",
+      assinatura_caixa: "Assinatura Caixa",
+      assinado: "Assinatura Caixa",
+      finalizado: "Finalizado",
     },
     agehab: {
-      aguardando: "Aguardando",
       analise_credito: "Analise Credito",
       pendente_credito: "Pendente Credito",
       envio_agehab: "Envio Agehab",
@@ -1844,13 +1847,11 @@ DIVORCIADO: Certidão averbada.</td>
       validado_agehab: "Validado Agehab",
     },
     sinal: {
-      aguardando: "Aguardando",
       nao_tem: "Nao tem",
       pendente: "Pendente",
       pago: "Pago",
     },
     fiador: {
-      aguardando: "Aguardando",
       nao_tem: "Nao tem",
       pendente: "Pendente",
       finalizado: "Finalizado",
@@ -1861,7 +1862,7 @@ DIVORCIADO: Certidão averbada.</td>
     const status = toLower(v);
     if (["assinado", "assinatura_caixa", "finalizado", "conforme", "aprovado", "validado_agehab", "pago"].includes(status)) return "ok";
     if (["pendenciado_cca", "pendenciado", "reprovado", "bloqueado", "cancelado", "distrato", "pendente_credito", "pendente_cca", "pendente_agehab", "pendente"].includes(status)) return "bad";
-    if (["agendado", "dar_qv", "enviado_conformidade", "aguardando_conformidade", "tratando_produto", "analise_cca"].includes(status)) return "warn";
+    if (["agendado", "dar_qv", "enviado_conformidade", "aguardando_conformidade", "tratando_produto", "analise_cca", "condicionado"].includes(status)) return "warn";
     if (["nao_enviado", "analise_credito", "aguardando", "novo", "nao_tem"].includes(status)) return "neutral";
     return "warn";
   }
@@ -2505,14 +2506,32 @@ DIVORCIADO: Certidão averbada.</td>
 
     function backendFromUiCaixa(value) {
       const v = norm(value);
-      if (v === "nao_enviado" || v === "aguardando" || v === "analise_credito") return "ANALISE_CREDITO";
-      if (v === "analise_cca") return "ANALISE_CCA";
-      if (v === "pendenciado_cca" || v === "pendente_cca" || v === "pendente_credito" || v === "condicionado" || v === "reprovado" || v === "bloqueado") return "PENDENTE_CCA";
-      if (v === "enviado_conformidade" || v === "aguardando_conformidade") return "AGUARDANDO_CONFORMIDADE";
-      if (v === "conforme" || v === "aprovado") return "CONFORME";
-      if (v === "tratando_produto") return "TRATANDO_PRODUTO";
-      if (v === "agendado" || v === "dar_qv") return "AGENDADO";
-      if (v === "assinado" || v === "assinatura_caixa" || v === "finalizado") return "ASSINATURA_CAIXA";
+      const aliases = {
+        nao_enviado: "analise_credito",
+        aguardando: "analise_credito",
+        pendenciado_cca: "pendente_cca",
+        enviado_conformidade: "aguardando_conformidade",
+        assinado: "assinatura_caixa",
+      };
+      const key = aliases[v] || v;
+      const direct = {
+        analise_credito: "ANALISE_CREDITO",
+        pendente_credito: "PENDENTE_CREDITO",
+        analise_cca: "ANALISE_CCA",
+        pendente_cca: "PENDENTE_CCA",
+        aprovado: "APROVADO",
+        reprovado: "REPROVADO",
+        condicionado: "CONDICIONADO",
+        bloqueado: "BLOQUEADO",
+        dar_qv: "DAR_QV",
+        aguardando_conformidade: "AGUARDANDO_CONFORMIDADE",
+        conforme: "CONFORME",
+        tratando_produto: "TRATANDO_PRODUTO",
+        agendado: "AGENDADO",
+        assinatura_caixa: "ASSINATURA_CAIXA",
+        finalizado: "FINALIZADO",
+      };
+      if (direct[key]) return direct[key];
       return "ANALISE_CREDITO";
     }
 
@@ -2528,7 +2547,6 @@ DIVORCIADO: Certidão averbada.</td>
 
     function backendFromUiSinal(value) {
       const v = norm(value);
-      if (v === "aguardando") return "PENDENTE";
       if (v === "pendente") return "PENDENTE";
       if (v === "pago") return "PAGO";
       return "NAO_TEM";
@@ -2536,7 +2554,6 @@ DIVORCIADO: Certidão averbada.</td>
 
     function backendFromUiFiador(value) {
       const v = norm(value);
-      if (v === "aguardando") return "PENDENTE";
       if (v === "pendente") return "PENDENTE";
       if (v === "finalizado") return "FINALIZADO";
       return "NAO_TEM";
@@ -2544,25 +2561,37 @@ DIVORCIADO: Certidão averbada.</td>
 
     function uiFromBackendCaixa(value) {
       const v = norm(value);
-      if (v === "analise_credito" || v === "aguardando") return "nao_enviado";
-      if (v === "analise_cca") return "analise_cca";
-      if (["pendente_credito", "pendente_cca", "pendente", "condicionado", "bloqueado", "reprovado"].includes(v)) return "pendenciado_cca";
-      if (v === "aguardando_conformidade") return "enviado_conformidade";
-      if (v === "conforme" || v === "aprovado") return "conforme";
-      if (v === "tratando_produto") return "tratando_produto";
-      if (v === "dar_qv" || v === "agendado") return "agendado";
-      if (v === "assinatura_caixa" || v === "finalizado") return "assinado";
-      return "nao_enviado";
+      if (v === "aguardando" || v === "nao_enviado") return "analise_credito";
+      if (v === "pendenciado_cca") return "pendente_cca";
+      if (v === "enviado_conformidade") return "aguardando_conformidade";
+      if (v === "assinado") return "assinatura_caixa";
+      const direct = new Set([
+        "analise_credito",
+        "pendente_credito",
+        "analise_cca",
+        "pendente_cca",
+        "aprovado",
+        "reprovado",
+        "condicionado",
+        "bloqueado",
+        "dar_qv",
+        "aguardando_conformidade",
+        "conforme",
+        "tratando_produto",
+        "agendado",
+        "assinatura_caixa",
+        "finalizado",
+      ]);
+      return direct.has(v) ? v : "analise_credito";
     }
 
     function uiFromBackendAgehab(value) {
       const v = norm(value);
-      if (v === "analise_credito") return "aguardando";
       if (v === "pendente_credito") return "pendente_credito";
       if (v === "envio_agehab" || v === "envio_agehag") return "envio_agehab";
       if (v === "pendente_agehab" || v === "pendente") return "pendente_agehab";
       if (v === "validado_agehab" || v === "aprovado") return "validado_agehab";
-      return "aguardando";
+      return "analise_credito";
     }
 
     function uiDocStatusFromBackend(doc) {
@@ -2738,7 +2767,7 @@ DIVORCIADO: Certidão averbada.</td>
         return;
       }
 
-      const statusCaixa = byId("status-caixa")?.value || "nao_enviado";
+      const statusCaixa = byId("status-caixa")?.value || "analise_credito";
       const statusAgehab = byId("status-agehab")?.value || "analise_credito";
       const statusSinal = byId("status-sinal")?.value || "nao_tem";
       const valorSinalRaw = byId("valor-sinal")?.value;
@@ -2750,9 +2779,8 @@ DIVORCIADO: Certidão averbada.</td>
       const naoContarMes = Boolean(byId("nao-contar-mes")?.checked);
 
       const temPendencia =
-        statusCaixa === "pendenciado_cca" ||
-        statusAgehab === "pendente_credito" ||
-        statusAgehab === "pendente_agehab" ||
+        ["pendente_credito", "pendente_cca", "condicionado", "reprovado", "bloqueado"].includes(statusCaixa) ||
+        ["pendente_credito", "pendente_agehab"].includes(statusAgehab) ||
         statusSinal === "pendente" ||
         statusFiador === "pendente";
 

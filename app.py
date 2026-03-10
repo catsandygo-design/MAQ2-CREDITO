@@ -639,6 +639,7 @@ PROCESS_SINAL_STATUSES = {"NAO_TEM", "PENDENTE", "PAGO"}
 PROCESS_FIADOR_STATUSES = {"NAO_TEM", "PENDENTE", "FINALIZADO"}
 PROCESS_RECOLHA_FGTS_STATUSES = {"OK", "NAO_RECOLHIDO", "VALIDADO_PELO_BANCO", "RECOLHENDO"}
 PROCESS_GERAL_FINAL_STATUSES = {"APROVADO", "REPROVADO", "DISTRATO", "CANCELADO"}
+PROCESS_GERAL_ARQUIVO_IMEDIATO = {"CANCELADO", "DISTRATO"}
 PROCESS_CCA_FINAL_STATUSES = {"ASSINATURA_CAIXA", "FINALIZADO"}
 CAIXA_ASSINATURA_APTA_STATUSES = {
     "APROVADO",
@@ -906,10 +907,7 @@ def _sync_estagio_repasse_rules(processo: "Processo", now: Optional[datetime] = 
 
     # Se o processo voltar para status nao final da Caixa, sai do arquivo mensal.
     if _status_token(getattr(processo, "status_cca", None)) not in PROCESS_CCA_FINAL_STATUSES:
-        processo.arquivado = False
-        processo.arquivado_em = None
-        processo.arquivado_ref_ano = None
-        processo.arquivado_ref_mes = None
+        _clear_processo_archived(processo)
 
 
 def _normalize_sla_owner(value: Optional[str], fallback: str = SLA_OWNER_NONE) -> str:
@@ -2266,6 +2264,7 @@ class ProcessoArquivadoOut(BaseModel):
     corretor: Optional[str] = None
     obra: Optional[str] = None
     imobiliaria: Optional[str] = None
+    status_geral: str
     estagio_comercial: str
     etapa_repasse: Optional[str] = None
     status_cca: str
@@ -2672,7 +2671,9 @@ def _analista_reuniao_cliente_out(
     data_prevista_entrega = getattr(followup, "data_prevista_entrega", None)
     entrega_hoje = bool(data_prevista_entrega and data_prevista_entrega == referencia)
     solicitar_cancelamento = bool(getattr(followup, "solicitar_cancelamento", False))
-    conta_no_mes = bool(getattr(followup, "conta_no_mes", True)) and not solicitar_cancelamento
+    referencia_dt = datetime.combine(referencia, time.min, tzinfo=timezone.utc)
+    fora_contagem_mes = _is_nao_contar_mes_active(processo, referencia_dt)
+    conta_no_mes = (not fora_contagem_mes) and not solicitar_cancelamento
     compromissos_sorted = sorted(
         compromissos,
         key=lambda row: (
@@ -3414,6 +3415,27 @@ def _set_nao_contar_mes_period(processo: "Processo", marcado: bool, now: Optiona
     processo.nao_contar_mes_ref_mes = ref_now.month
 
 
+def _set_processo_archived(
+    processo: "Processo",
+    *,
+    archived_at: Optional[datetime] = None,
+    reference_date: Optional[date] = None,
+) -> None:
+    ref_archived_at = _as_utc(archived_at) or _utcnow()
+    ref_period = reference_date or ref_archived_at.date()
+    processo.arquivado = True
+    processo.arquivado_em = ref_archived_at
+    processo.arquivado_ref_ano = ref_period.year
+    processo.arquivado_ref_mes = ref_period.month
+
+
+def _clear_processo_archived(processo: "Processo") -> None:
+    processo.arquivado = False
+    processo.arquivado_em = None
+    processo.arquivado_ref_ano = None
+    processo.arquivado_ref_mes = None
+
+
 def _is_nao_contar_mes_active(processo: "Processo", now: Optional[datetime] = None) -> bool:
     if not bool(getattr(processo, "nao_contar_mes", False)):
         return False
@@ -3434,6 +3456,72 @@ def _is_nao_contar_mes_active(processo: "Processo", now: Optional[datetime] = No
 
 def _processos_ativos_clause():
     return or_(Processo.arquivado.is_(False), Processo.arquivado.is_(None))
+
+
+def _sync_reuniao_conta_no_mes_with_processo(
+    db: Session,
+    processo: "Processo",
+    now: Optional[datetime] = None,
+) -> None:
+    processo_id = getattr(processo, "id", None)
+    if not processo_id:
+        return
+    item = db.get(AnalistaReuniaoComercial, processo_id)
+    if not item:
+        return
+    conta_no_mes = not _is_nao_contar_mes_active(processo, now)
+    if bool(getattr(item, "solicitar_cancelamento", False)):
+        conta_no_mes = False
+    item.conta_no_mes = conta_no_mes
+
+
+def _ensure_terminal_status_archiving(db: Session, now: Optional[datetime] = None) -> int:
+    ref_now = _as_utc(now) or _utcnow()
+    processos_ativos = (
+        db.query(Processo)
+        .filter(
+            _processos_ativos_clause(),
+            func.upper(func.coalesce(Processo.status_geral, "")).in_(tuple(PROCESS_GERAL_ARQUIVO_IMEDIATO)),
+        )
+        .all()
+    )
+    processo_ids = [processo.id for processo in processos_ativos]
+    status_final_evento_por_processo: dict[uuid.UUID, datetime] = {}
+    if processo_ids:
+        status_rows = (
+            db.query(ProcessoEvento.processo_id, func.max(ProcessoEvento.created_at))
+            .filter(
+                ProcessoEvento.processo_id.in_(processo_ids),
+                func.lower(func.coalesce(ProcessoEvento.field_name, "")) == "status_geral",
+                func.upper(func.coalesce(ProcessoEvento.new_value, "")).in_(tuple(PROCESS_GERAL_ARQUIVO_IMEDIATO)),
+            )
+            .group_by(ProcessoEvento.processo_id)
+            .all()
+        )
+        for processo_id, created_at in status_rows:
+            status_final_evento_por_processo[processo_id] = created_at
+
+    arquivados = 0
+    for processo in processos_ativos:
+        referencia_dt = (
+            _as_utc(status_final_evento_por_processo.get(processo.id))
+            or _as_utc(getattr(processo, "updated_at", None))
+            or _as_utc(getattr(processo, "created_at", None))
+            or ref_now
+        )
+        _set_nao_contar_mes_period(processo, True, ref_now)
+        _set_processo_archived(
+            processo,
+            archived_at=ref_now,
+            reference_date=referencia_dt.date(),
+        )
+        _sync_reuniao_conta_no_mes_with_processo(db, processo, ref_now)
+        arquivados += 1
+
+    if arquivados > 0:
+        _invalidate_process_list_cache()
+        db.commit()
+    return arquivados
 
 
 def _ensure_monthly_repasse_archiving(db: Session, now: Optional[datetime] = None) -> int:
@@ -3471,16 +3559,24 @@ def _ensure_monthly_repasse_archiving(db: Session, now: Optional[datetime] = Non
         if referencia is None:
             continue
         if (referencia.year, referencia.month) < (ref_now.year, ref_now.month):
-            processo.arquivado = True
-            processo.arquivado_em = ref_now
-            processo.arquivado_ref_ano = referencia.year
-            processo.arquivado_ref_mes = referencia.month
+            _set_processo_archived(
+                processo,
+                archived_at=ref_now,
+                reference_date=referencia.date(),
+            )
             arquivados += 1
 
     _set_runtime_meta(db, REPASSE_ARQUIVO_PERIODO_RUNTIME_KEY, periodo_atual)
     if arquivados > 0:
         _invalidate_process_list_cache()
     db.commit()
+    return arquivados
+
+
+def _ensure_process_archiving(db: Session, now: Optional[datetime] = None) -> int:
+    ref_now = _as_utc(now) or _utcnow()
+    arquivados = _ensure_terminal_status_archiving(db, ref_now)
+    arquivados += _ensure_monthly_repasse_archiving(db, ref_now)
     return arquivados
 
 
@@ -4509,7 +4605,7 @@ async def lifespan(_: FastAPI):
                 try:
                     _ensure_seed_users(db)
                     _ensure_runtime_schema(db)
-                    _ensure_monthly_repasse_archiving(db, _utcnow())
+                    _ensure_process_archiving(db, _utcnow())
                     now_utc = _utcnow()
                     _set_runtime_meta(db, "sla_runtime_started_at", now_utc.isoformat())
                     reconciled = _reconcile_active_sla_timers(db, now_utc)
@@ -6071,7 +6167,7 @@ def admin_storage_summary(
     _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
-    _ensure_monthly_repasse_archiving(db, _utcnow())
+    _ensure_process_archiving(db, _utcnow())
 
     total_clientes = int(db.query(func.count(Cliente.id)).scalar() or 0)
     total_processos = int(db.query(func.count(Processo.id)).scalar() or 0)
@@ -6808,7 +6904,7 @@ def app_list_processos(
     limit: Optional[int] = Query(default=120, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ):
-    _ensure_monthly_repasse_archiving(db, _utcnow())
+    _ensure_process_archiving(db, _utcnow())
     role = _normalize_role(str(session.get("role", "")))
     username = _normalize_username(str(session.get("username", "")))
     cache_key = _process_list_cache_key(role, username, limit, offset)
@@ -6930,7 +7026,7 @@ def app_list_cca_analise(
     status_cca: Optional[str] = Query(default=None),
     limit: int = Query(default=250, ge=1, le=1000),
 ):
-    _ensure_monthly_repasse_archiving(db, _utcnow())
+    _ensure_process_archiving(db, _utcnow())
     role = _normalize_role(str(session.get("role", "")))
     username = _normalize_username(str(session.get("username", "")))
 
@@ -7257,7 +7353,7 @@ def app_list_processos_arquivados(
     limit: Optional[int] = Query(default=120, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ):
-    _ensure_monthly_repasse_archiving(db, _utcnow())
+    _ensure_process_archiving(db, _utcnow())
 
     query = (
         db.query(Processo, Cliente)
@@ -7328,6 +7424,7 @@ def app_list_processos_arquivados(
             corretor=cliente.corretor,
             obra=cliente.obra,
             imobiliaria=getattr(cliente, "imobiliaria", None),
+            status_geral=_process_geral_status(getattr(processo, "status_geral", None)),
             estagio_comercial=_process_estagio_comercial(getattr(processo, "estagio_comercial", None)),
             etapa_repasse=_process_etapa_repasse(getattr(processo, "etapa_repasse", None)),
             status_cca=processo.status_cca,
@@ -7373,7 +7470,7 @@ def app_gestor_dashboard(
     _: dict[str, Any] = Depends(require_roles(ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
-    _ensure_monthly_repasse_archiving(db, _utcnow())
+    _ensure_process_archiving(db, _utcnow())
     rows = (
         db.query(Processo, Cliente)
         .join(Cliente, Processo.cliente_id == Cliente.id)
@@ -8145,7 +8242,7 @@ def app_get_analista_reuniao_comercial_dashboard(
     db: Session = Depends(get_db),
     limit: int = Query(default=400, ge=1, le=1000),
 ):
-    _ensure_monthly_repasse_archiving(db, _utcnow())
+    _ensure_process_archiving(db, _utcnow())
     referencia = _utcnow().date()
     role = _normalize_role(str(session.get("role", "")))
     username = _normalize_username(str(session.get("username", "")))
@@ -8253,24 +8350,21 @@ def app_update_analista_reuniao_comercial_item(
     actor_username = _normalize_username(str(session.get("username", "")))
     actor_role = _normalize_role(str(session.get("role", "")))
     changes = payload.model_dump(exclude_unset=True)
+    ref_now = _utcnow()
 
     item = db.get(AnalistaReuniaoComercial, processo_id)
     if not item:
-        item = AnalistaReuniaoComercial(processo_id=processo_id)
+        item = AnalistaReuniaoComercial(
+            processo_id=processo_id,
+            conta_no_mes=not _is_nao_contar_mes_active(processo, ref_now),
+        )
         db.add(item)
         db.flush()
 
     if "conta_no_mes" in changes:
         conta_no_mes = bool(changes.get("conta_no_mes"))
         item.conta_no_mes = conta_no_mes
-        processo.nao_contar_mes = not conta_no_mes
-        if not conta_no_mes:
-            ano_ref, mes_ref = _current_meta_period()
-            processo.nao_contar_mes_ref_ano = ano_ref
-            processo.nao_contar_mes_ref_mes = mes_ref
-        else:
-            processo.nao_contar_mes_ref_ano = None
-            processo.nao_contar_mes_ref_mes = None
+        _set_nao_contar_mes_period(processo, not conta_no_mes, ref_now)
     if "data_prevista_entrega" in changes:
         item.data_prevista_entrega = changes.get("data_prevista_entrega")
     if "probabilidade_queda" in changes:
@@ -8278,11 +8372,7 @@ def app_update_analista_reuniao_comercial_item(
     if "solicitar_cancelamento" in changes:
         item.solicitar_cancelamento = bool(changes.get("solicitar_cancelamento"))
     if item.solicitar_cancelamento:
-        item.conta_no_mes = False
-        processo.nao_contar_mes = True
-        ano_ref, mes_ref = _current_meta_period()
-        processo.nao_contar_mes_ref_ano = ano_ref
-        processo.nao_contar_mes_ref_mes = mes_ref
+        _set_nao_contar_mes_period(processo, True, ref_now)
     if "status_followup" in changes:
         item.status_followup = _analista_reuniao_followup_status(changes.get("status_followup"), fallback=item.status_followup or "seguir")
     if "observacao" in changes:
@@ -8290,6 +8380,7 @@ def app_update_analista_reuniao_comercial_item(
     if "justificativa_reincidencia" in changes:
         item.justificativa_reincidencia = _normalize_credito_planejamento_text(changes.get("justificativa_reincidencia"), max_len=2000)
 
+    item.conta_no_mes = (not _is_nao_contar_mes_active(processo, ref_now)) and not item.solicitar_cancelamento
     item.updated_by_username = actor_username or None
     _record_system_log(
         db,
@@ -8307,6 +8398,7 @@ def app_update_analista_reuniao_comercial_item(
     )
 
     db.commit()
+    _invalidate_process_list_cache()
 
     compromissos = (
         db.query(AnalistaReuniaoCompromisso)
@@ -8314,7 +8406,7 @@ def app_update_analista_reuniao_comercial_item(
         .order_by(AnalistaReuniaoCompromisso.data_prometida.desc(), AnalistaReuniaoCompromisso.created_at.desc())
         .all()
     )
-    return _analista_reuniao_cliente_out(processo, cliente, item, compromissos, referencia=_utcnow().date())
+    return _analista_reuniao_cliente_out(processo, cliente, item, compromissos, referencia=ref_now.date())
 
 
 @app.post("/app/api/analista/reuniao-comercial/{processo_id}/compromissos", response_model=AnalistaReuniaoCompromissoOut)
@@ -8817,7 +8909,7 @@ def app_get_metricas_processos(
     session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
-    _ensure_monthly_repasse_archiving(db, _utcnow())
+    _ensure_process_archiving(db, _utcnow())
     role = _normalize_role(str(session.get("role", "")))
     username = _normalize_username(str(session.get("username", "")))
     processos = _query_processos_by_scope(db, role, username).order_by(Processo.created_at.desc()).all()
@@ -9269,6 +9361,30 @@ def app_patch_processo(
         trigger=sla_trigger,
         has_enviado_docs=_process_has_enviado_docs(db, processo.id),
     )
+    ref_now = _utcnow()
+    status_geral_token = _status_token(getattr(processo, "status_geral", None))
+    if status_geral_token in PROCESS_GERAL_ARQUIVO_IMEDIATO:
+        old_nao_contar_mes = _is_nao_contar_mes_active(processo, ref_now)
+        _set_nao_contar_mes_period(processo, True, ref_now)
+        if not old_nao_contar_mes:
+            _record_processo_event(
+                db,
+                processo_id=processo.id,
+                actor_username=actor_username,
+                actor_role=actor_role,
+                event_type="PROCESSO_UPDATE",
+                field_name="nao_contar_mes",
+                old_value=old_nao_contar_mes,
+                new_value=True,
+                details=f"auto_arquivado_status_geral={status_geral_token.lower()}",
+            )
+        _set_processo_archived(
+            processo,
+            archived_at=ref_now,
+            reference_date=ref_now.date(),
+        )
+    if "nao_contar_mes" in changes or status_geral_token in PROCESS_GERAL_ARQUIVO_IMEDIATO:
+        _sync_reuniao_conta_no_mes_with_processo(db, processo, ref_now)
     new_sla_owner = _normalize_sla_owner(processo.sla_owner)
     if old_sla_owner != new_sla_owner:
         _record_processo_event(
