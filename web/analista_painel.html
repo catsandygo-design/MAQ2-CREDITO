@@ -1416,7 +1416,11 @@
   td.statusTd{overflow:hidden}
   td.timelineTd{
     min-width:0;
-    vertical-align:middle;
+    vertical-align:top;
+    position:relative;
+    overflow:visible;
+    padding-top:10px;
+    padding-bottom:10px;
   }
   .timelineStack{
     display:flex;
@@ -1476,9 +1480,13 @@
     color:#166534;
   }
   .clientTimelineCurrent{
+    flex:1 1 auto;
+    display:inline-flex;
+    justify-content:flex-end;
     font-size:10px;
     font-weight:800;
     color:#0f172a;
+    text-align:right;
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
@@ -1487,7 +1495,7 @@
     display:flex;
     align-items:flex-start;
     min-width:0;
-    padding-top:1px;
+    padding:2px 8px 0 10px;
   }
   .clientTimelineStep{
     flex:1 1 0;
@@ -1558,6 +1566,28 @@
   }
   .clientTimeline.repasse .clientTimelineStep.current .clientTimelineDot{
     box-shadow:0 0 0 2px rgba(255,255,255,.34), 0 0 0 4px rgba(34,197,94,.10);
+  }
+  .clientTimeline.hintTip{
+    position:relative;
+    z-index:1;
+  }
+  .clientTimeline.hintTip:hover{
+    z-index:32;
+  }
+  .clientTimeline.hintTip[data-tip]:hover::after{
+    left:12px;
+    top:calc(100% + 10px);
+    bottom:auto;
+    transform:none;
+    min-width:260px;
+    max-width:340px;
+  }
+  .clientTimeline.hintTip[data-tip]:hover::before{
+    left:22px;
+    top:calc(100% + 4px);
+    bottom:auto;
+    transform:none;
+    border-color:transparent transparent #ffffff transparent;
   }
 </style>
   <link rel="stylesheet" href="/assets/theme_techboard.css" />
