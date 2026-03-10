@@ -6901,6 +6901,8 @@ def patch_processo(
             processo,
             has_enviado_docs=_process_has_enviado_docs(db, processo.id),
         )
+    if "nao_contar_mes" in changes:
+        _sync_reuniao_conta_no_mes_with_processo(db, processo, _utcnow())
 
     db.commit()
     db.refresh(processo)

@@ -529,18 +529,28 @@ tbody td small {
   font-size: 12px;
 }
 
-.client-context-row,
 .badges-row {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.client-context-row {
+.client-assignee-row {
+  display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.context-pill,
+.client-assignee-label {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.client-assignee-value,
 .client-focus-flag {
   display: inline-flex;
   align-items: center;
@@ -556,29 +566,10 @@ tbody td small {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
-.context-pill strong {
-  color: #0f172a;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.context-pill-cca {
+.client-assignee-value {
   border-color: rgba(14, 165, 233, 0.18);
   background: linear-gradient(180deg, #f0f9ff, #ffffff);
   color: #075985;
-}
-
-.context-pill-danger {
-  border-color: rgba(220, 38, 38, 0.22);
-  background: #fff1f2;
-  color: #9f1239;
-}
-
-.context-pill-warn {
-  border-color: rgba(217, 119, 6, 0.24);
-  background: #fef3c7;
-  color: #92400e;
 }
 
 .client-focus-flag {

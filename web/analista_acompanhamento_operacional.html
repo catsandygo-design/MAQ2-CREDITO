@@ -438,6 +438,68 @@
     .chips{display:flex;gap:6px;flex-wrap:wrap}
     .chip{border:1px solid var(--line);border-radius:999px;background:#f8fafc;color:#475569;padding:5px 9px;font-size:.75rem}
     .chip strong{color:#0f172a}
+    .ops-alert-board{display:grid;grid-template-columns:1.12fr .88fr;gap:8px}
+    .ops-now-card,.ops-alert-card{
+      border:1px solid #dbe2ea;border-radius:14px;background:#fff;padding:12px;display:grid;gap:8px;
+      box-shadow:0 10px 22px rgba(15,23,42,.05),inset 0 1px 0 rgba(255,255,255,.92)
+    }
+    .ops-now-card{
+      background:radial-gradient(420px 140px at 0% 0%, rgba(14,165,233,.12), transparent 65%),linear-gradient(180deg,#f8fcff,#ffffff)
+    }
+    .ops-now-card.warn{
+      background:radial-gradient(420px 140px at 0% 0%, rgba(245,158,11,.14), transparent 65%),linear-gradient(180deg,#fffaf0,#ffffff)
+    }
+    .ops-now-card.bad{
+      background:radial-gradient(420px 140px at 0% 0%, rgba(239,68,68,.14), transparent 65%),linear-gradient(180deg,#fff6f6,#ffffff)
+    }
+    .ops-now-top,.ops-alert-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap}
+    .ops-kicker{
+      display:inline-flex;align-items:center;gap:6px;width:fit-content;border-radius:999px;padding:4px 9px;
+      border:1px solid rgba(14,165,233,.18);background:#eff6ff;color:#0369a1;font-size:.66rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase
+    }
+    .ops-now-time{
+      border:1px solid rgba(15,23,42,.1);border-radius:999px;padding:4px 9px;background:#fff;color:#0f172a;font-size:.72rem;font-weight:800
+    }
+    .ops-now-card h4,.ops-alert-card h4{margin:0;color:#0f172a;font-size:.95rem;line-height:1.2}
+    .ops-now-copy,.ops-alert-copy{display:grid;gap:6px}
+    .ops-now-copy p,.ops-alert-copy p{margin:0;color:#475569;font-size:.78rem;line-height:1.45}
+    .ops-hint,.ops-alert-meta{color:#64748b;font-size:.72rem;line-height:1.35}
+    .ops-alert-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .ops-alert-card.info{background:linear-gradient(180deg,#f8fcff,#ffffff)}
+    .ops-alert-card.warn{background:linear-gradient(180deg,#fffaf0,#ffffff)}
+    .ops-alert-card.bad{background:linear-gradient(180deg,#fff5f5,#ffffff)}
+    .ops-alert-card.ok{background:linear-gradient(180deg,#f3fff7,#ffffff)}
+    .ops-alert-tag{
+      display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 8px;border:1px solid #dbe2ea;background:#f8fafc;
+      color:#475569;font-size:.64rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase
+    }
+    .ops-alert-card.bad .ops-alert-tag{border-color:rgba(239,68,68,.18);background:#fef2f2;color:#991b1b}
+    .ops-alert-card.warn .ops-alert-tag{border-color:rgba(245,158,11,.2);background:#fff7ed;color:#9a3412}
+    .ops-alert-card.ok .ops-alert-tag{border-color:rgba(34,197,94,.2);background:#ecfdf5;color:#166534}
+    .ops-alert-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+    .ops-alert-btn{
+      border:1px solid #cbd5e1;border-radius:999px;background:#fff;color:#0f172a;padding:6px 10px;font-size:.72rem;font-weight:800;cursor:pointer;
+      transition:transform .08s ease,box-shadow .12s ease,border-color .12s ease
+    }
+    .ops-alert-btn:hover{transform:translateY(-1px);box-shadow:0 10px 16px rgba(15,23,42,.08);border-color:rgba(14,165,233,.28)}
+    .ops-alert-btn.primary{border-color:transparent;background:linear-gradient(90deg,#0ea5e9,#0284c7);color:#f8fafc}
+    @keyframes neonPulseBlue{
+      0%,100%{box-shadow:0 0 0 rgba(14,165,233,0)}
+      50%{box-shadow:0 0 0 1px rgba(14,165,233,.16),0 0 18px rgba(14,165,233,.22)}
+    }
+    @keyframes neonPulseAmber{
+      0%,100%{box-shadow:0 0 0 rgba(245,158,11,0)}
+      50%{box-shadow:0 0 0 1px rgba(245,158,11,.14),0 0 18px rgba(245,158,11,.2)}
+    }
+    @keyframes neonPulseRed{
+      0%,100%{box-shadow:0 0 0 rgba(239,68,68,0)}
+      50%{box-shadow:0 0 0 1px rgba(239,68,68,.16),0 0 20px rgba(239,68,68,.2)}
+    }
+    .ops-now-card.warn .ops-kicker,
+    .ops-alert-card.warn .ops-alert-tag{animation:neonPulseAmber 1.9s ease-in-out infinite}
+    .ops-now-card.bad .ops-kicker,
+    .ops-alert-card.bad .ops-alert-tag{animation:neonPulseRed 1.6s ease-in-out infinite}
+    .ops-alert-card.info .ops-alert-tag{animation:neonPulseBlue 2.2s ease-in-out infinite}
     .ops-form{
       border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;padding:10px;display:grid;
       grid-template-columns:repeat(8,minmax(0,1fr));gap:7px
@@ -463,6 +525,8 @@
     .list::-webkit-scrollbar{width:7px}
     .list::-webkit-scrollbar-thumb{background:rgba(148,163,184,.45);border-radius:999px}
     .item{border:1px solid #dbe2ea;border-radius:10px;background:#f8fafc;padding:6px;display:grid;gap:4px}
+    .item.item-urgent{border-color:rgba(245,158,11,.22);background:linear-gradient(180deg,#fffaf0,#ffffff)}
+    .item.item-hot{border-color:rgba(239,68,68,.2);background:linear-gradient(180deg,#fff5f5,#ffffff);box-shadow:0 0 0 1px rgba(239,68,68,.06)}
     .item-top{display:flex;justify-content:space-between;align-items:flex-start;gap:6px}
     .item-title{font-size:.78rem;font-weight:800;line-height:1.2}
     .status{border:1px solid #cbd5e1;border-radius:999px;padding:2px 6px;font-size:.66rem;font-weight:700;color:#475569;background:#fff;white-space:nowrap}
@@ -608,8 +672,15 @@
       accent-color:#16a34a;
       cursor:pointer;
     }
+    .section-focus{
+      position:relative;
+      border-color:rgba(14,165,233,.32) !important;
+      box-shadow:0 0 0 3px rgba(14,165,233,.12),0 14px 28px rgba(14,165,233,.08) !important;
+      transition:box-shadow .18s ease,border-color .18s ease;
+    }
 
     @media (max-width:1320px){
+      .ops-alert-board,.ops-alert-grid{grid-template-columns:1fr}
       .grid4{grid-template-columns:repeat(2,minmax(0,1fr))}
       .today-grid{grid-template-columns:1fr}
       .entrega-form{grid-template-columns:1fr 1fr}
@@ -811,6 +882,11 @@
         </div>
       </div>
 
+      <section class="ops-alert-board" aria-label="Painel de acao operacional">
+        <article class="ops-now-card" id="opNowCard"></article>
+        <div class="ops-alert-grid" id="opAlertGrid"></div>
+      </section>
+
       <div class="ops-form">
         <div class="field">
           <label>Tipo</label>
@@ -865,7 +941,7 @@
       </div>
 
       <div class="today-grid">
-        <article class="entrega-panel">
+        <article class="entrega-panel" id="opEntregaPanel">
           <div class="box-head">
             <h4>Clientes que vao entregar no dia</h4>
             <span class="count" id="opCountEntregaClientes">0</span>
@@ -913,7 +989,7 @@
           </div>
         </article>
 
-        <article class="taskday-panel">
+        <article class="taskday-panel" id="opDiaTodoPanel">
           <div class="box-head">
             <h4>Cadastrador de tarefa do dia todo</h4>
             <span class="count" id="opCountDiaTodo">0</span>
@@ -948,10 +1024,10 @@
       </div>
 
       <div class="grid4">
-        <article class="box"><div class="box-head"><h4>Tarefas do dia</h4><span class="count" id="opCountTarefas">0</span></div><div class="list" id="opListTarefas"></div></article>
-        <article class="box"><div class="box-head"><h4>Agendamentos</h4><span class="count" id="opCountAgendamentos">0</span></div><div class="list" id="opListAgendamentos"></div></article>
-        <article class="box"><div class="box-head"><h4>Entregas do dia</h4><span class="count" id="opCountEntregas">0</span></div><div class="list" id="opListEntregas"></div></article>
-        <article class="box"><div class="box-head"><h4>Urgentes</h4><span class="count" id="opCountUrgentes">0</span></div><div class="list" id="opListUrgentes"></div></article>
+        <article class="box" id="opBoxTarefas"><div class="box-head"><h4>Tarefas do dia</h4><span class="count" id="opCountTarefas">0</span></div><div class="list" id="opListTarefas"></div></article>
+        <article class="box" id="opBoxAgendamentos"><div class="box-head"><h4>Agendamentos</h4><span class="count" id="opCountAgendamentos">0</span></div><div class="list" id="opListAgendamentos"></div></article>
+        <article class="box" id="opBoxEntregas"><div class="box-head"><h4>Entregas do dia</h4><span class="count" id="opCountEntregas">0</span></div><div class="list" id="opListEntregas"></div></article>
+        <article class="box" id="opBoxUrgentes"><div class="box-head"><h4>Urgentes</h4><span class="count" id="opCountUrgentes">0</span></div><div class="list" id="opListUrgentes"></div></article>
       </div>
 
       <div class="grid2">
@@ -970,7 +1046,7 @@
         </article>
       </div>
 
-      <article class="agenda-panel">
+      <article class="agenda-panel" id="opAgendaPanel">
         <div class="agenda-head">
           <div>
             <h4>Minha agenda do dia (check-in por horario)</h4>
@@ -1362,6 +1438,218 @@
       tarefa: agendaTaskByDate(slot, dateIso),
     }));
   }
+  function hhmmNow(){
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+  }
+  function compareHHMM(a, b){
+    return String(a || "").localeCompare(String(b || ""));
+  }
+  function currentAgendaContext(dateIso){
+    const slots = agendaSlotsForDate(dateIso);
+    const checkins = loadAgendaCheckins(dateIso);
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const isToday = dateIso === todayIso;
+    const nowHHMM = hhmmNow();
+    let current = null;
+    let next = null;
+    if (isToday){
+      slots.forEach((slot) => {
+        if (compareHHMM(slot.hora, nowHHMM) <= 0){
+          current = slot;
+        } else if (!next){
+          next = slot;
+        }
+      });
+    } else {
+      next = slots[0] || null;
+    }
+    const delayed = isToday
+      ? slots.filter((slot) => compareHHMM(slot.hora, nowHHMM) < 0 && !Boolean(checkins[slot.hora]))
+      : [];
+    return {
+      isToday,
+      nowHHMM,
+      current,
+      next,
+      delayed,
+      currentDone: current ? Boolean(checkins[current.hora]) : false,
+    };
+  }
+  function plannerItemHeadline(item){
+    return String(item?.titulo || item?.responsavel || "Sem titulo").trim() || "Sem titulo";
+  }
+  function plannerItemSupport(item){
+    const parts = [];
+    const win = timeWindow(item);
+    if (win) parts.push(win);
+    if (item?.responsavel) parts.push(`Resp: ${item.responsavel}`);
+    parts.push(statusLabel(item?.status));
+    return parts.join(" | ");
+  }
+  function focusOpsSection(targetId){
+    const node = $(targetId);
+    if (!node) return;
+    node.scrollIntoView({ behavior:"smooth", block:"center" });
+    node.classList.remove("section-focus");
+    void node.offsetWidth;
+    node.classList.add("section-focus");
+    window.setTimeout(() => node.classList.remove("section-focus"), 1700);
+  }
+  function buildAlertCards(data, agendaCtx){
+    const cards = [];
+    const urgentes = (data?.urgentes || []).filter((item) => norm(item?.status).replace(/\s+/g, "_") !== "concluido");
+    const entregasPendentes = (data?.entregas_dia || [])
+      .map((item) => ({ item, meta: parseEntregaMeta(item) }))
+      .filter(({ meta }) => normalizeEntregaStatus(meta.statusOper) !== "entregue");
+    const agendamentosPendentes = (data?.agendamentos_dia || [])
+      .filter((item) => norm(item?.status).replace(/\s+/g, "_") !== "concluido")
+      .sort((a, b) => compareHHMM(a?.hora_inicio || "", b?.hora_inicio || ""));
+    const tarefasPendentes = (data?.tarefas_dia || [])
+      .filter((item) => !isDiaTodoItem(item))
+      .filter((item) => norm(item?.status).replace(/\s+/g, "_") !== "concluido")
+      .sort((a, b) => compareHHMM(a?.hora_inicio || "", b?.hora_inicio || ""));
+
+    if (agendaCtx.delayed.length){
+      cards.push({
+        tone:"bad",
+        tag:"Agenda atrasada",
+        title:`${agendaCtx.delayed.length} horario(s) sem check-in`,
+        desc:`Revise a agenda e conclua o bloco ${agendaCtx.delayed[0]?.hora || "-"}.`,
+        meta:"As janelas anteriores ainda nao foram registradas.",
+        target:"opAgendaPanel",
+        action:"Abrir agenda",
+      });
+    }
+    if (urgentes.length){
+      const item = urgentes[0];
+      cards.push({
+        tone:"bad",
+        tag:"Urgente",
+        title:plannerItemHeadline(item),
+        desc:String(item?.descricao || "Existe uma tarefa critica pedindo acao imediata.").trim(),
+        meta:plannerItemSupport(item),
+        target:"opBoxUrgentes",
+        action:"Ver urgencias",
+      });
+    }
+    if (entregasPendentes.length){
+      const first = entregasPendentes[0];
+      cards.push({
+        tone:"warn",
+        tag:"Entrega",
+        title:`${entregasPendentes.length} cliente(s) em entrega`,
+        desc:first.meta.acao || first.meta.observacao || `Cliente em destaque: ${first.meta.cliente || first.item?.titulo || "-"}.`,
+        meta:first.meta.responsavel ? `Resp: ${first.meta.responsavel}` : "Revise a proxima acao e destrave a entrega.",
+        target:"opEntregaPanel",
+        action:"Abrir entregas",
+      });
+    }
+    if (agendamentosPendentes.length){
+      const item = agendamentosPendentes[0];
+      cards.push({
+        tone:"info",
+        tag:"Agendamento",
+        title:plannerItemHeadline(item),
+        desc:String(item?.descricao || "Existe um agendamento pendente para acompanhamento.").trim(),
+        meta:plannerItemSupport(item),
+        target:"opBoxAgendamentos",
+        action:"Ver agendamentos",
+      });
+    }
+    if (tarefasPendentes.length){
+      const item = tarefasPendentes[0];
+      cards.push({
+        tone:"ok",
+        tag:"Tarefa do dia",
+        title:plannerItemHeadline(item),
+        desc:String(item?.descricao || "Existe uma tarefa operacional pronta para execucao.").trim(),
+        meta:plannerItemSupport(item),
+        target:"opBoxTarefas",
+        action:"Ver tarefas",
+      });
+    }
+    if (!cards.length){
+      cards.push({
+        tone:"ok",
+        tag:"Painel limpo",
+        title:"Sem alertas ativos no momento",
+        desc:"O operacional esta sem bloqueios ou urgencias abertas agora.",
+        meta:"Use a agenda e o cadastro para antecipar a proxima frente.",
+        target:"opAgendaPanel",
+        action:"Abrir agenda",
+      });
+    }
+    return cards.slice(0, 4);
+  }
+  function renderOpsAlerts(data){
+    const nowNode = $("opNowCard");
+    const gridNode = $("opAlertGrid");
+    if (!nowNode || !gridNode) return;
+    const dateIso = selectedAgendaDateIso();
+    const agendaCtx = currentAgendaContext(dateIso);
+    let tone = "";
+    let kicker = "Acao esperada";
+    let title = "Organize o proximo passo do operacional";
+    let desc = "Cadastre, acompanhe e evidencie a tarefa principal deste horario.";
+    let timeLabel = agendaCtx.isToday ? `Agora ${agendaCtx.nowHHMM}` : dateLabelLong(dateIso);
+    let hint = "Use os alertas ao lado para abrir o bloco certo e manter a equipe no fluxo.";
+    if (agendaCtx.isToday && agendaCtx.current){
+      kicker = agendaCtx.currentDone ? "Bloco concluido" : "Acao esperada agora";
+      title = `${agendaCtx.current.hora} - ${agendaCtx.current.tarefa}`;
+      desc = agendaCtx.currentDone
+        ? "O check-in da janela atual ja foi marcado. Revise urgencias ou avance para o proximo bloco."
+        : "Conclua esta acao e registre o check-in para nao perder o ritmo do dia.";
+      if (agendaCtx.delayed.length){
+        tone = "bad";
+        hint = "Existem horarios anteriores sem check-in. Corrija primeiro para limpar o atraso da agenda.";
+      } else if (!agendaCtx.currentDone){
+        tone = "warn";
+        hint = "Este e o foco principal deste horario. Ao concluir, marque na agenda e siga para a proxima frente.";
+      }
+    } else if (agendaCtx.next){
+      kicker = agendaCtx.isToday ? "Proxima janela" : "Plano do dia";
+      title = `${agendaCtx.next.hora} - ${agendaCtx.next.tarefa}`;
+      desc = agendaCtx.isToday
+        ? "Ainda nao chegou o horario dessa frente. Prepare documentos, responsavel e follow-up para entrar sem atraso."
+        : "Os avisos abaixo consideram a data selecionada e ajudam a antecipar a execucao.";
+      tone = "info";
+      timeLabel = agendaCtx.isToday ? `Proxima ${agendaCtx.next.hora}` : dateLabelLong(dateIso);
+    }
+    nowNode.className = `ops-now-card ${tone}`.trim();
+    nowNode.innerHTML = `
+      <div class="ops-now-top">
+        <span class="ops-kicker">${esc(kicker)}</span>
+        <span class="ops-now-time">${esc(timeLabel)}</span>
+      </div>
+      <div class="ops-now-copy">
+        <h4>${esc(title)}</h4>
+        <p>${esc(desc)}</p>
+        <div class="ops-hint">${esc(hint)}</div>
+      </div>
+      <div class="ops-alert-actions">
+        <button class="ops-alert-btn primary" type="button" data-alert-target="opAgendaPanel">Abrir agenda</button>
+        <button class="ops-alert-btn" type="button" data-alert-target="opBoxUrgentes">Ver urgencias</button>
+        <button class="ops-alert-btn" type="button" data-alert-target="opEntregaPanel">Ver entregas</button>
+      </div>
+    `;
+    const cards = buildAlertCards(data, agendaCtx);
+    gridNode.innerHTML = cards.map((card) => `
+      <article class="ops-alert-card ${esc(card.tone || "info")}">
+        <div class="ops-alert-top">
+          <span class="ops-alert-tag">${esc(card.tag || "Alerta")}</span>
+        </div>
+        <div class="ops-alert-copy">
+          <h4>${esc(card.title || "-")}</h4>
+          <p>${esc(card.desc || "-")}</p>
+          <div class="ops-alert-meta">${esc(card.meta || "")}</div>
+        </div>
+        <div class="ops-alert-actions">
+          <button class="ops-alert-btn" type="button" data-alert-target="${esc(card.target || "opAgendaPanel")}">${esc(card.action || "Abrir")}</button>
+        </div>
+      </article>
+    `).join("");
+  }
 
   function itemMatchesSidebarFilter(item){
     const status = norm(item?.status).replace(/\s+/g, "_");
@@ -1404,6 +1692,8 @@
     if (!filtered.length){ listNode.innerHTML = `<div class="empty">${esc(emptyText)}</div>`; return; }
     listNode.innerHTML = filtered.map((item) => {
       const done = norm(item?.status).replace(/\s+/g, "_") === "concluido";
+      const late = norm(item?.status).replace(/\s+/g, "_") === "atrasado";
+      const urgent = Boolean(item?.urgente) || norm(item?.tipo).replace(/\s+/g, "_") === "urgente";
       const parts = [];
       if (item?.responsavel) parts.push(`Resp: ${item.responsavel}`);
       if (item?.data_referencia) parts.push(dateLabel(item.data_referencia));
@@ -1411,7 +1701,7 @@
       if (win) parts.push(win);
       parts.push(`${Math.max(0, Math.min(100, Number(item?.progresso || 0)))}%`);
       return `
-        <article class="item">
+        <article class="item ${urgent ? "item-urgent" : ""} ${late ? "item-hot" : ""}">
           <div class="item-top">
             <div class="item-title">${esc(item?.titulo || "-")}</div>
             <span class="status ${statusClass(item?.status)}">${esc(statusLabel(item?.status))}</span>
@@ -1540,8 +1830,9 @@
     listNode.innerHTML = filtered.map((item) => {
       const done = norm(item?.status).replace(/\s+/g, "_") === "concluido";
       const meta = parseDiaTodoMeta(item);
+      const urgent = Boolean(item?.urgente);
       return `
-        <article class="item">
+        <article class="item ${urgent ? "item-urgent" : ""}">
           <div class="item-top">
             <div class="item-title">${esc(item?.titulo || "-")}</div>
             <span class="status ${statusClass(item?.status)}">${esc(statusLabel(item?.status))}</span>
@@ -1595,6 +1886,7 @@
         $("opAgendaNext").textContent = delayed ? `${next.hora} (atrasado)` : next.hora;
       }
     }
+    if (plannerDashboard) renderOpsAlerts(plannerDashboard);
   }
 
   let plannerDashboard = null;
@@ -1864,6 +2156,11 @@
   $("btnOpAddNote")?.addEventListener("click", () => createPlannerNote().catch(() => null));
   $("btnAddEntregaCliente")?.addEventListener("click", () => createEntregaCliente().catch(() => null));
   $("btnDiaTodoAdd")?.addEventListener("click", () => createDiaTodoTask().catch(() => null));
+  $("opsPanel")?.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-alert-target]");
+    if (!trigger) return;
+    focusOpsSection(trigger.dataset.alertTarget || "");
+  });
   $("opsPanel")?.addEventListener("click", (event) => handleActionClick(event).catch(() => null));
   $("opsPanel")?.addEventListener("change", (event) => handleActionClick(event).catch(() => null));
   $("opTitulo")?.addEventListener("keydown", (event) => {

@@ -1019,15 +1019,13 @@ export function AnalistaPainelPage() {
                       </div>
                       <span className="meta-line">{row.emp}</span>
                       <span className="meta-line">{row.corretor}</span>
-                      <div className="client-context-row">
-                        <span className="context-pill context-pill-cca">
-                          <strong>CCA</strong>
-                          <span>{row.cca || '-'}</span>
-                        </span>
-                        {isHighPriority(row) ? <span className="context-pill context-pill-danger">Prioridade alta</span> : null}
-                        {row.avisoContratoAgehab ? <span className="context-pill context-pill-warn">Solicitar contrato Agehab</span> : null}
+                      <div className="client-assignee-row">
+                        <span className="client-assignee-label">CCA responsavel</span>
+                        <span className="client-assignee-value">{row.cca || '-'}</span>
                       </div>
                       <div className="badges-row">
+                        {isHighPriority(row) ? <span className="chip danger">Prioridade alta</span> : null}
+                        {row.avisoContratoAgehab ? <span className="chip warn">Solicitar contrato Agehab</span> : null}
                         {row.foraContagemMes ? <span className="chip bad">Fora da contagem do mes</span> : null}
                       </div>
                     </div>
