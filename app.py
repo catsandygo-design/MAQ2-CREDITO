@@ -4634,24 +4634,54 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="Sistema Credito API", lifespan=lifespan)
 app.mount("/assets", StaticFiles(directory=str(WEB_DIR)), name="web_assets")
-if REACT_DIST_DIR.exists():
-    app.mount("/app-react", StaticFiles(directory=str(REACT_DIST_DIR), html=True), name="react_app")
-else:
-    @app.get("/app-react")
-    @app.get("/app-react/{_path:path}")
-    def react_app_unavailable():
-        return HTMLResponse(
-            """
-            <!doctype html>
-            <html lang="pt-BR">
-              <head><meta charset="utf-8" /><title>React indisponivel</title></head>
-              <body style="font-family:Segoe UI, sans-serif; padding:24px;">
-                <h2>Frontend React ainda nao foi buildado no servidor.</h2>
-                <p>Execute <code>npm install && npm run build</code> em <code>frontend-react</code>.</p>
-              </body>
-            </html>
-            """
-        )
+
+def _react_app_unavailable_response() -> HTMLResponse:
+    return HTMLResponse(
+        """
+        <!doctype html>
+        <html lang="pt-BR">
+          <head><meta charset="utf-8" /><title>React indisponivel</title></head>
+          <body style="font-family:Segoe UI, sans-serif; padding:24px;">
+            <h2>Frontend React ainda nao foi buildado no servidor.</h2>
+            <p>Execute <code>npm install && npm run build</code> em <code>frontend-react</code>.</p>
+          </body>
+        </html>
+        """
+    )
+
+
+def _serve_react_app(path: str = ""):
+    if not REACT_DIST_DIR.exists():
+        return _react_app_unavailable_response()
+
+    index_file = REACT_DIST_DIR / "index.html"
+    if not path:
+        return FileResponse(index_file)
+
+    dist_root = REACT_DIST_DIR.resolve()
+    candidate = (REACT_DIST_DIR / path).resolve()
+    try:
+        candidate.relative_to(dist_root)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Not Found") from exc
+
+    if candidate.is_file():
+        return FileResponse(candidate)
+
+    if Path(path).suffix:
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    return FileResponse(index_file)
+
+
+@app.get("/app-react")
+def react_app_root():
+    return _serve_react_app("")
+
+
+@app.get("/app-react/{path:path}")
+def react_app_entry(path: str):
+    return _serve_react_app(path)
 
 
 @app.middleware("http")
