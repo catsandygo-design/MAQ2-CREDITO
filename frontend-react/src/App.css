@@ -529,10 +529,65 @@ tbody td small {
   font-size: 12px;
 }
 
+.client-context-row,
 .badges-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
+}
+
+.client-context-row {
+  align-items: center;
+}
+
+.context-pill,
+.client-focus-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.context-pill strong {
+  color: #0f172a;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.context-pill-cca {
+  border-color: rgba(14, 165, 233, 0.18);
+  background: linear-gradient(180deg, #f0f9ff, #ffffff);
+  color: #075985;
+}
+
+.context-pill-danger {
+  border-color: rgba(220, 38, 38, 0.22);
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+.context-pill-warn {
+  border-color: rgba(217, 119, 6, 0.24);
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.client-focus-flag {
+  border-color: rgba(14, 165, 233, 0.28);
+  background: linear-gradient(180deg, #dbeafe, #eff6ff);
+  color: #075985;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .chip.bad {
@@ -554,10 +609,10 @@ tbody td small {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 120px;
+  min-width: 112px;
   border-radius: 999px;
   border: 1px solid rgba(2, 132, 199, 0.4);
-  padding: 5px 10px;
+  padding: 5px 11px;
   font-size: 12px;
   font-weight: 700;
   background: #dbeafe;
@@ -1152,9 +1207,11 @@ tr.row-final {
 }
 
 .client-card {
+  position: relative;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 22px;
   padding: 18px;
+  scroll-margin-top: 18px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 252, 255, 0.98)),
     linear-gradient(90deg, rgba(14, 165, 233, 0.04), rgba(20, 184, 166, 0.04));
@@ -1175,11 +1232,26 @@ tr.row-final {
 }
 
 .client-card.is-open {
-  border-color: rgba(14, 165, 233, 0.22);
+  border-color: rgba(14, 165, 233, 0.3);
+  background:
+    radial-gradient(520px 180px at 0% 0%, rgba(14, 165, 233, 0.08), transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 248, 255, 0.99));
   box-shadow:
-    0 24px 40px rgba(15, 23, 42, 0.1),
-    0 0 0 1px rgba(14, 165, 233, 0.08),
+    0 24px 40px rgba(14, 165, 233, 0.14),
+    0 0 0 1px rgba(14, 165, 233, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+.client-card.is-focused::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 14px;
+  bottom: 14px;
+  width: 5px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #0ea5e9, #14b8a6);
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.08);
 }
 
 .client-card.row-out {
@@ -1205,7 +1277,7 @@ tr.row-final {
 
 .client-card-copy {
   display: grid;
-  gap: 4px;
+  gap: 6px;
 }
 
 .client-card-tools {
@@ -1220,6 +1292,12 @@ tr.row-final {
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.client-expand.is-open {
+  border-color: rgba(14, 165, 233, 0.34);
+  background: linear-gradient(180deg, #e0f2fe, #f0f9ff);
+  color: #075985;
 }
 
 .client-flow-stack {

@@ -4,12 +4,13 @@ import {
   useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError, fetchAnalistaPlannerDashboard, fetchCCAs, fetchProcessosPaged, fetchSession, logout } from '../lib/api'
-import { TimelineLane, type TimelineStep } from '../components/TimelineLane'
+import type { TimelineStep } from '../components/TimelineLane'
 import type { CreditoPlanejamentoDashboard, CreditoPlanejamentoItem, ProcessoApiItem, ProcessoLinha } from '../types'
 
 const REFRESH_SECONDS = 60
@@ -133,12 +134,6 @@ interface FiltersState {
   stC: string
 }
 
-interface LaneSnapshot {
-  counts: Record<string, number>
-  currentKey: string
-  doneKeys: string[]
-}
-
 interface SectionShellProps {
   eyebrow: string
   title: string
@@ -199,6 +194,13 @@ function openDays(row: ProcessoLinha): number {
   if (!source) return 0
   const diff = Date.now() - source.getTime()
   return Math.max(0, Math.floor(diff / 86400000))
+}
+
+function openHours(row: ProcessoLinha): number {
+  const source = toProcessDate(row.dataCadastroOrigem) || toProcessDate(row.createdAt)
+  if (!source) return 0
+  const diff = Date.now() - source.getTime()
+  return Math.max(0, Math.floor(diff / 3600000))
 }
 
 function isVisibleInAnalista(item: ProcessoApiItem): boolean {
@@ -279,6 +281,18 @@ function plannerMeta(item: CreditoPlanejamentoItem): string {
     .map((part) => String(part || '').trim())
     .filter((part) => part && part !== '-')
   return parts.join(' • ')
+}
+
+function formatElapsedHours(hours: number): string {
+  const safeHours = Number.isFinite(hours) ? Math.max(0, Math.round(hours)) : 0
+  if (safeHours < 1) return '0 min'
+  if (safeHours < 24) return `${safeHours} h`
+
+  const days = Math.floor(safeHours / 24)
+  if (days < 365) return `${days} ${days === 1 ? 'dia' : 'dias'}`
+
+  const years = Math.floor(days / 365)
+  return `${years} ${years === 1 ? 'ano' : 'anos'}`
 }
 
 function classForStatus(value: string): 'neutral' | 'ok' | 'warn' | 'bad' {
@@ -406,46 +420,6 @@ function repasseTimelineKey(row: ProcessoLinha): string {
   return ''
 }
 
-function buildLaneSnapshot(
-  rows: ProcessoLinha[],
-  steps: TimelineStep[],
-  valueGetter: (row: ProcessoLinha) => string,
-): LaneSnapshot {
-  const counts = Object.fromEntries(steps.map((step) => [step.key, 0])) as Record<string, number>
-  const stageIndex = new Map(steps.map((step, index) => [step.key, index]))
-
-  for (const row of rows) {
-    if (row.foraContagemMes) continue
-    const key = statusFromBackend(valueGetter(row))
-    if (Object.prototype.hasOwnProperty.call(counts, key)) counts[key] += 1
-  }
-
-  const activeEntries = steps
-    .map((step) => ({ key: step.key, value: counts[step.key] || 0 }))
-    .filter((entry) => entry.value > 0)
-
-  if (activeEntries.length === 0) {
-    return {
-      counts,
-      currentKey: steps[0]?.key ?? '',
-      doneKeys: [],
-    }
-  }
-
-  activeEntries.sort((a, b) => {
-    if (b.value !== a.value) return b.value - a.value
-    return (stageIndex.get(a.key) ?? 0) - (stageIndex.get(b.key) ?? 0)
-  })
-
-  const currentKey = activeEntries[0].key
-  const currentIndex = stageIndex.get(currentKey) ?? 0
-  return {
-    counts,
-    currentKey,
-    doneKeys: steps.slice(0, currentIndex).map((step) => step.key),
-  }
-}
-
 function buildMiniTimelineSnapshot(steps: TimelineStep[], currentKey: string) {
   const normalized = statusFromBackend(currentKey)
   const currentIndex = steps.findIndex((step) => step.key === normalized)
@@ -517,6 +491,7 @@ function MiniTimeline({ tone, laneLabel, currentLabel, currentKey, steps }: Mini
 
 export function AnalistaPainelPage() {
   const navigate = useNavigate()
+  const rowRefs = useRef<Record<string, HTMLElement | null>>({})
   const [rows, setRows] = useState<ProcessoLinha[]>([])
   const [ccas, setCcas] = useState<string[]>([])
   const [planner, setPlanner] = useState<CreditoPlanejamentoDashboard | null>(null)
@@ -525,6 +500,7 @@ export function AnalistaPainelPage() {
   const [error, setError] = useState('')
   const [refreshTick, setRefreshTick] = useState(REFRESH_SECONDS)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
+  const [activeRowId, setActiveRowId] = useState('')
   const [sections, setSections] = useState({
     overview: true,
     operational: true,
@@ -662,16 +638,6 @@ export function AnalistaPainelPage() {
     }
   }, [filteredRows])
 
-  const laneSnapshot = useMemo(
-    () => buildLaneSnapshot(filteredRows, COMMERCIAL_FLOW_STEPS, (row) => row.geral),
-    [filteredRows],
-  )
-
-  const repasseSnapshot = useMemo(
-    () => buildLaneSnapshot(filteredRows, REPASSE_FLOW_STEPS, repasseTimelineKey),
-    [filteredRows],
-  )
-
   const onChangeFilter = (key: keyof FiltersState, value: string) => {
     startTransition(() => {
       setFilters((prev) => ({ ...prev, [key]: value }))
@@ -689,15 +655,28 @@ export function AnalistaPainelPage() {
   }
 
   const toggleRow = (processoId: string) => {
-    setExpandedRows((prev) => ({ ...prev, [processoId]: !prev[processoId] }))
+    const nextOpen = !Boolean(expandedRows[processoId])
+    setExpandedRows((prev) => ({ ...prev, [processoId]: nextOpen }))
+
+    if (nextOpen) {
+      setActiveRowId(processoId)
+      window.setTimeout(() => {
+        rowRefs.current[processoId]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }, 90)
+      return
+    }
+
+    setActiveRowId((prev) => (prev === processoId ? '' : prev))
   }
 
   const expandAllRows = () => {
     setExpandedRows(Object.fromEntries(filteredRows.map((row) => [row.processoId, true])))
+    setActiveRowId(filteredRows[0]?.processoId || '')
   }
 
   const collapseAllRows = () => {
     setExpandedRows({})
+    setActiveRowId('')
   }
 
   const onLogout = async () => {
@@ -809,7 +788,7 @@ export function AnalistaPainelPage() {
       <SectionShell
         eyebrow="Visao executiva"
         title="Radar da operacao"
-        description="Cartoes de leitura rapida com profundidade e trilhos consolidados das duas frentes."
+        description="Cartoes de leitura rapida com foco no que exige decisao imediata."
         open={sections.overview}
         onToggle={() => toggleSection('overview')}
         aside={
@@ -857,63 +836,15 @@ export function AnalistaPainelPage() {
           </div>
           <div className={`metric-card tone-${kpiToneByHours(kpis.avgSlaCor)}`}>
             <span className="metric-label">SLA medio comercial</span>
-            <span className="metric-value">{kpis.avgSlaCor}h</span>
+            <span className="metric-value">{formatElapsedHours(kpis.avgSlaCor)}</span>
             <span className="metric-subtitle">Media do filtro</span>
           </div>
           <div className={`metric-card tone-${kpiToneByHours(kpis.avgSlaCred)}`}>
             <span className="metric-label">SLA medio credito</span>
-            <span className="metric-value">{kpis.avgSlaCred}h</span>
+            <span className="metric-value">{formatElapsedHours(kpis.avgSlaCred)}</span>
             <span className="metric-subtitle">Media do filtro</span>
           </div>
         </section>
-
-        <div className="overview-grid">
-          <section className="timeline-strip timeline-card tone-commercial">
-            <div className="timeline-strip-head">
-              <h2>Fluxo comercial</h2>
-              <span>
-                Etapa foco: <strong>{labelFor('geral', laneSnapshot.currentKey)}</strong>
-              </span>
-            </div>
-            <TimelineLane
-              title="Comercial"
-              steps={COMMERCIAL_FLOW_STEPS}
-              currentKey={laneSnapshot.currentKey}
-              doneKeys={laneSnapshot.doneKeys}
-              height={54}
-            />
-            <div className="timeline-legend">
-              {COMMERCIAL_FLOW_STEPS.map((step) => (
-                <span key={step.key} className={`timeline-chip ${step.key === laneSnapshot.currentKey ? 'active' : ''}`}>
-                  {step.label}: <strong>{laneSnapshot.counts[step.key] ?? 0}</strong>
-                </span>
-              ))}
-            </div>
-          </section>
-
-          <section className="timeline-strip timeline-card tone-repasse">
-            <div className="timeline-strip-head">
-              <h2>Fluxo repasse</h2>
-              <span>
-                Etapa foco: <strong>{labelFor('repasse', repasseSnapshot.currentKey)}</strong>
-              </span>
-            </div>
-            <TimelineLane
-              title="Repasse"
-              steps={REPASSE_FLOW_STEPS}
-              currentKey={repasseSnapshot.currentKey}
-              doneKeys={repasseSnapshot.doneKeys}
-              height={54}
-            />
-            <div className="timeline-legend">
-              {REPASSE_FLOW_STEPS.map((step) => (
-                <span key={step.key} className={`timeline-chip ${step.key === repasseSnapshot.currentKey ? 'active' : ''}`}>
-                  {step.label}: <strong>{repasseSnapshot.counts[step.key] ?? 0}</strong>
-                </span>
-              ))}
-            </div>
-          </section>
-        </div>
       </SectionShell>
 
       <SectionShell
@@ -1069,31 +1000,49 @@ export function AnalistaPainelPage() {
               const comercialLabel = comercialKey ? labelFor('geral', comercialKey) : labelFor('geral', row.geral)
               const repasseLabel = repasseKey ? labelFor('repasse', repasseKey) : labelFor('repasse', row.repasse)
               const pendencias = pendingItems(row)
+              const isFocused = activeRowId === row.processoId
 
               return (
-                <article key={row.processoId} className={`client-card ${rowClass} ${expanded ? 'is-open' : ''}`.trim()}>
+                <article
+                  key={row.processoId}
+                  ref={(node) => {
+                    rowRefs.current[row.processoId] = node
+                  }}
+                  className={`client-card ${rowClass} ${expanded ? 'is-open' : ''} ${isFocused ? 'is-focused' : ''}`.trim()}
+                >
                   <div className="client-card-header">
                     <div className="client-card-copy">
                       <div className="client-name-row">
                         <span className={`anim-dot ${animState}`} aria-hidden="true" />
                         <a href={`/app/analise?processo_id=${encodeURIComponent(row.processoId)}`}>{row.cliente}</a>
+                        {expanded ? <span className="client-focus-flag">Cliente em foco</span> : null}
                       </div>
                       <span className="meta-line">{row.emp}</span>
                       <span className="meta-line">{row.corretor}</span>
+                      <div className="client-context-row">
+                        <span className="context-pill context-pill-cca">
+                          <strong>CCA</strong>
+                          <span>{row.cca || '-'}</span>
+                        </span>
+                        {isHighPriority(row) ? <span className="context-pill context-pill-danger">Prioridade alta</span> : null}
+                        {row.avisoContratoAgehab ? <span className="context-pill context-pill-warn">Solicitar contrato Agehab</span> : null}
+                      </div>
                       <div className="badges-row">
-                        <span className="chip">CCA {row.cca || '-'}</span>
                         {row.foraContagemMes ? <span className="chip bad">Fora da contagem do mes</span> : null}
-                        {isHighPriority(row) ? <span className="chip danger">Prioridade alta</span> : null}
-                        {row.avisoContratoAgehab ? <span className="chip warn">Solicitar contrato Agehab</span> : null}
                       </div>
                     </div>
 
                     <div className="client-card-tools">
                       <div className="sla-cluster">
-                        <span className={`status-pill ${kpiToneByHours(row.slaCor)}`}>Comercial {row.slaCor}h</span>
-                        <span className={`status-pill ${kpiToneByHours(row.slaCred)}`}>Credito {row.slaCred}h</span>
+                        <span className={`status-pill ${kpiToneByHours(row.slaCor)}`}>Comercial {formatElapsedHours(row.slaCor)}</span>
+                        <span className={`status-pill ${kpiToneByHours(row.slaCred)}`}>Credito {formatElapsedHours(row.slaCred)}</span>
                       </div>
-                      <button type="button" className="client-expand" onClick={() => toggleRow(row.processoId)} aria-expanded={expanded}>
+                      <button
+                        type="button"
+                        className={`client-expand ${expanded ? 'is-open' : ''}`}
+                        onClick={() => toggleRow(row.processoId)}
+                        aria-expanded={expanded}
+                      >
                         {expanded ? 'Fechar detalhes' : 'Abrir detalhes'}
                       </button>
                     </div>
@@ -1137,11 +1086,11 @@ export function AnalistaPainelPage() {
                         </div>
                         <div className="detail-block">
                           <span className="detail-label">SLA CCA</span>
-                          <span className={`status-pill ${kpiToneByHours(row.slaCca)}`}>{row.slaCca}h</span>
+                          <span className={`status-pill ${kpiToneByHours(row.slaCca)}`}>{formatElapsedHours(row.slaCca)}</span>
                         </div>
                         <div className="detail-block">
                           <span className="detail-label">Aging</span>
-                          <span className="status-pill neutral">{openDays(row)} dias</span>
+                          <span className="status-pill neutral">{formatElapsedHours(openHours(row))}</span>
                         </div>
                       </div>
 
