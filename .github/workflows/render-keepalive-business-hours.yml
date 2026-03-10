@@ -1,12 +1,8 @@
-﻿name: Render Keepalive (Business Hours)
+name: Render Keepalive
 
 on:
   schedule:
-    # America/Sao_Paulo (UTC-3)
-    # 08:00-17:59 BRT => 11:00-20:59 UTC (a cada 12 minutos)
-    - cron: "*/12 11-20 * * *"
-    # 18:00-18:30 BRT => 21:00-21:30 UTC (a cada 12 minutos)
-    - cron: "0,12,24 21 * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
   push:
     paths:
