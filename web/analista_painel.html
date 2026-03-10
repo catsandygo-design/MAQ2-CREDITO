@@ -1414,6 +1414,115 @@
 
   .hintRow{font-size:11px;color: var(--muted)}
   td.statusTd{overflow:hidden}
+  td.timelineTd{
+    min-width:0;
+    vertical-align:middle;
+  }
+  .clientTimeline{
+    --timeline-done:rgba(14,165,233,.72);
+    --timeline-current:rgba(14,165,233,.96);
+    --timeline-border:rgba(14,165,233,.34);
+    --timeline-track:rgba(148,163,184,.28);
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    min-width:0;
+  }
+  .clientTimeline.repasse{
+    --timeline-done:rgba(34,197,94,.74);
+    --timeline-current:rgba(34,197,94,.94);
+    --timeline-border:rgba(34,197,94,.34);
+  }
+  .clientTimelineMeta{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:6px;
+    min-width:0;
+  }
+  .clientTimelineCurrent{
+    font-size:10px;
+    font-weight:800;
+    color:#0f172a;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .clientTimelineTrack{
+    display:flex;
+    align-items:flex-start;
+    min-width:0;
+  }
+  .clientTimelineStep{
+    flex:1 1 0;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    position:relative;
+  }
+  .clientTimelineStep::after{
+    content:"";
+    position:absolute;
+    top:16px;
+    left:50%;
+    width:100%;
+    height:3px;
+    border-radius:999px;
+    background:var(--timeline-track);
+    z-index:0;
+  }
+  .clientTimelineStep:last-child::after{
+    display:none;
+  }
+  .clientTimelineStep.done::after{
+    background:var(--timeline-done);
+  }
+  .clientTimelineLabel{
+    min-height:18px;
+    padding:0 2px;
+    font-size:8px;
+    line-height:1.08;
+    text-align:center;
+    color:#64748b;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+  }
+  .clientTimelineStep.done .clientTimelineLabel,
+  .clientTimelineStep.current .clientTimelineLabel{
+    color:#0f172a;
+    font-weight:700;
+  }
+  .clientTimelineDot{
+    width:11px;
+    height:11px;
+    border-radius:999px;
+    border:2px solid var(--timeline-border);
+    background:#ffffff;
+    position:relative;
+    z-index:1;
+    box-shadow:0 0 0 2px rgba(255,255,255,.34);
+  }
+  .clientTimelineStep.future .clientTimelineDot{
+    background:rgba(255,255,255,.7);
+    border-color:rgba(148,163,184,.42);
+    box-shadow:none;
+  }
+  .clientTimelineStep.done .clientTimelineDot{
+    background:var(--timeline-done);
+    border-color:var(--timeline-done);
+  }
+  .clientTimelineStep.current .clientTimelineDot{
+    width:12px;
+    height:12px;
+    border-color:var(--timeline-current);
+    box-shadow:0 0 0 2px rgba(255,255,255,.34), 0 0 0 4px rgba(14,165,233,.10);
+  }
+  .clientTimeline.repasse .clientTimelineStep.current .clientTimelineDot{
+    box-shadow:0 0 0 2px rgba(255,255,255,.34), 0 0 0 4px rgba(34,197,94,.10);
+  }
 </style>
   <link rel="stylesheet" href="/assets/theme_techboard.css" />
   <style>
@@ -1703,7 +1812,7 @@
       padding:6px 10px;
     }
     body.analista-pro table{
-      min-width:1180px;
+      min-width:1280px;
     }
     body.analista-pro thead th{
       padding:8px 10px;
@@ -1735,6 +1844,16 @@
     body.theme-corporate.analista-pro .sla{
       font-size:9px;
       padding:3px 8px;
+    }
+    body.analista-pro .clientTimeline{
+      gap:5px;
+    }
+    body.analista-pro .clientTimelineCurrent{
+      font-size:10px;
+    }
+    body.analista-pro .clientTimelineLabel{
+      min-height:18px;
+      font-size:8px;
     }
     body.theme-corporate.analista-pro .tableWrap{
       min-height:clamp(260px, 38vh, 430px);
@@ -1788,6 +1907,12 @@
       }
       body.analista-pro tbody td{
         padding:7px 9px;
+      }
+      body.analista-pro .clientTimelineLabel{
+        font-size:7px;
+      }
+      body.analista-pro .clientTimelineCurrent{
+        font-size:9px;
       }
       body.analista-pro .cliente,
       body.analista-pro .cliente a{
@@ -1963,7 +2088,6 @@
   </div>
 
   <div class="insights" id="insights"></div>
-  <div class="flowStrip" id="flowStrip"></div>
 
   <div class="card opsCentral" id="opsCentral">
     <div class="opsHead">
@@ -2046,25 +2170,17 @@
       <div class="scroll">
         <table>
           <colgroup>
+            <col style="width:31%">
+            <col style="width:9%">
             <col style="width:30%">
-            <col style="width:8%">
-            <col style="width:12%">
-            <col style="width:12%">
-            <col style="width:12%">
-            <col style="width:12%">
-            <col style="width:7%">
-            <col style="width:7%">
+            <col style="width:30%">
           </colgroup>
           <thead>
             <tr>
               <th>Cliente</th>
               <th>CCA</th>
-              <th>Comercial</th>
-              <th>Repasse</th>
-              <th>Status Caixa</th>
-              <th>Status Agehab</th>
-              <th>Sinal</th>
-              <th>Fiador</th>
+              <th>Timeline Comercial</th>
+              <th>Timeline Repasse</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -2279,7 +2395,7 @@
   const PLANNER_DAYS = 14;
 
   const UPDATE_PAGE_URL = (row) => `/app/analise?processo_id=${encodeURIComponent(row.processo_id)}`;
-  const TABLE_COLSPAN = 8;
+  const TABLE_COLSPAN = 4;
   const COMERCIAL_STAGES = new Set(["reserva", "em_processo", "credito", "secretaria_vendas"]);
   const INSIGHT_COMERCIAL_STAGES = new Set(["em_processo", "venda_finalizada"]);
   const INSIGHT_CREDITO_STAGES = new Set(["credito", "secretaria_vendas"]);
@@ -2300,6 +2416,7 @@
     { key: "assinatura_caixa", label: "Assinatura Caixa" },
     { key: "inicio_garantia", label: "Inicio Garantia" },
   ];
+  const FLOW_COMMERCIAL_KEYS = new Set(FLOW_COMMERCIAL_STEPS.map((step) => step.key));
   const PLANNER_STATUS_LABELS = {
     pendente: "Pendente",
     em_andamento: "Em andamento",
@@ -3153,6 +3270,49 @@
     return "";
   }
 
+  function commercialTimelineKey(row){
+    const geral = statusFromBackend(row.geral);
+    return FLOW_COMMERCIAL_KEYS.has(geral) ? geral : "";
+  }
+
+  function buildClientTimelineSnapshot(steps, currentKey){
+    const normalized = statusFromBackend(currentKey);
+    const currentIndex = steps.findIndex((step) => step.key === normalized);
+    if (currentIndex < 0) {
+      return { currentKey: "", doneKeys: [] };
+    }
+    return {
+      currentKey: normalized,
+      doneKeys: steps.slice(0, currentIndex).map((step) => step.key),
+    };
+  }
+
+  function renderClientTimelineHtml(tone, steps, currentKey, currentLabel, tooltipAttr){
+    const snapshot = buildClientTimelineSnapshot(steps, currentKey);
+    const stepsHtml = steps.map((step) => {
+      const isDone = snapshot.doneKeys.includes(step.key);
+      const isCurrent = step.key === snapshot.currentKey;
+      const cls = isDone ? "done" : (isCurrent ? "current" : "future");
+      return `
+        <div class="clientTimelineStep ${cls}" aria-label="${esc(step.label)}">
+          <span class="clientTimelineLabel">${esc(step.label)}</span>
+          <span class="clientTimelineDot"></span>
+        </div>
+      `;
+    }).join("");
+
+    return `
+      <div class="clientTimeline ${tone} hintTip" data-tip="${tooltipAttr}" title="${tooltipAttr}">
+        <div class="clientTimelineMeta">
+          <span class="clientTimelineCurrent">${esc(currentLabel)}</span>
+        </div>
+        <div class="clientTimelineTrack">
+          ${stepsHtml}
+        </div>
+      </div>
+    `;
+  }
+
   function buildLaneSnapshot(rows, area, steps, valueGetter){
     const counts = Object.fromEntries(steps.map((step) => [step.key, 0]));
     const rowsByStep = Object.fromEntries(steps.map((step) => [step.key, []]));
@@ -3333,13 +3493,12 @@
       const animState = clientAnimState(r);
       const animTitle = clientAnimTitle(animState);
       const processTooltip = normalizeTitleText(buildProcessTooltip(r, animTitle));
-
-      const [gTxt,gCls] = statusText("geral", r.geral);
-      const [rTxt,rCls] = statusText("repasse", r.repasse);
-      const [cTxt,cCls] = statusText("statusCaixa", r.statusCaixa);
-      const [aTxt,aCls] = statusText("statusAgehab", r.statusAgehab);
-      const [sTxt,sCls] = statusText("sinal", r.sinal);
-      const [fTxt,fCls] = statusText("fiador", r.fiador);
+      const comercialKey = commercialTimelineKey(r);
+      const repasseKey = repasseTimelineKey(r);
+      const comercialLabel = comercialKey ? labelFor("geral", comercialKey) : labelFor("geral", r.geral);
+      const repasseLabel = repasseKey ? labelFor("repasse", repasseKey) : labelFor("repasse", r.repasse);
+      const timelineComercial = renderClientTimelineHtml("commercial", FLOW_COMMERCIAL_STEPS, comercialKey, comercialLabel, processTooltip);
+      const timelineRepasse = renderClientTimelineHtml("repasse", FLOW_REPASSE_STEPS, repasseKey, repasseLabel, processTooltip);
 
       const badges = [];
       if (r.foraContagemMes) badges.push(outCountBadge());
@@ -3366,12 +3525,8 @@
             ${badgesHtml}
           </td>
           <td>${esc(r.cca)}</td>
-          <td class="statusTd">${pill(gTxt, gCls)}</td>
-          <td class="statusTd">${pill(rTxt, rCls)}</td>
-          <td class="statusTd">${pill(cTxt, cCls)}</td>
-          <td class="statusTd">${pill(aTxt, aCls)}</td>
-          <td class="statusTd">${pill(sTxt, sCls)}</td>
-          <td class="statusTd">${pill(fTxt, fCls)}</td>
+          <td class="timelineTd">${timelineComercial}</td>
+          <td class="timelineTd">${timelineRepasse}</td>
         </tr>
       `;
     }).join("");
