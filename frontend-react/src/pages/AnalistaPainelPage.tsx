@@ -60,11 +60,13 @@ const ANALISTA_NAV: ReadonlyArray<{ label: string; href: string; active?: boolea
 const FLOW_COMMERCIAL_KEYS = new Set(COMMERCIAL_FLOW_STEPS.map((step) => step.key))
 
 const READY_STATUS = {
-  statusCaixa: new Set(['aprovado', 'dar_qv', 'conforme', 'assinatura_caixa', 'finalizado']),
-  statusAgehab: new Set(['validado_agehab', 'conforme', 'finalizado']),
-  sinal: new Set(['pago']),
-  fiador: new Set(['finalizado']),
+  statusCaixa: new Set(['aprovado', 'dar_qv', 'conforme', 'tratando_produto', 'agendado', 'assinatura_caixa', 'finalizado']),
+  statusAgehab: new Set(['validado_agehab']),
+  sinal: new Set(['nao_tem', 'pago']),
+  fiador: new Set(['nao_tem', 'finalizado']),
 }
+
+const ENTREGA_META_PREFIX = '__entrega_meta__:'
 
 const LABELS: Record<string, Record<string, string>> = {
   geral: {
@@ -81,6 +83,8 @@ const LABELS: Record<string, Record<string, string>> = {
     em_repasse: 'Em Repasse',
     inicio_repasse: 'Inicio Repasse',
     assinatura_autorizada: 'Assinatura Autorizada',
+    assinatura_caixa: 'Assinatura Caixa',
+    inicio_garantia: 'Inicio Garantia',
     sem_repasse: 'Sem Repasse',
   },
   statusCaixa: {
@@ -99,18 +103,14 @@ const LABELS: Record<string, Record<string, string>> = {
     tratando_produto: 'Tratando Produto',
     agendado: 'Agendado',
     assinatura_caixa: 'Assinatura Caixa',
+    finalizado: 'Finalizado',
   },
   statusAgehab: {
     nao_iniciado: 'Nao iniciado',
     analise_credito: 'Analise Credito',
     pendente_credito: 'Pendente Credito',
-    analise_cca: 'Analise CCA',
-    pendente_cca: 'Pendente CCA',
-    aprovado: 'Aprovado',
-    reprovado: 'Reprovado',
-    condicionado: 'Condicionado',
-    bloqueado: 'Bloqueado',
-    dar_qv: 'Dar QV',
+    envio_agehab: 'Envio Agehab',
+    pendente_agehab: 'Pendente Agehab',
     validado_agehab: 'Validado Agehab',
   },
   sinal: {
@@ -280,10 +280,83 @@ function plannerTimeWindow(item: CreditoPlanejamentoItem): string {
   return ''
 }
 
+function plannerTypeKey(item: CreditoPlanejamentoItem): string {
+  return norm(item.tipo).replace(/\s+/g, '_')
+}
+
+function normalizeEntregaStatus(value: string | null | undefined): string {
+  const token = statusFromBackend(value)
+  if (['entregue', 'concluido', 'finalizado', 'done'].includes(token)) return 'entregue'
+  if (['caixa', 'analise_caixa'].includes(token)) return 'caixa'
+  if (['agehab', 'analise_agehab'].includes(token)) return 'agehab'
+  return 'pendenciado'
+}
+
+function entregaStatusLabel(value: string | null | undefined): string {
+  const status = normalizeEntregaStatus(value)
+  if (status === 'entregue') return 'Entregue'
+  if (status === 'caixa') return 'Caixa'
+  if (status === 'agehab') return 'Agehab'
+  return 'Pendenciado'
+}
+
+function parseEntregaMeta(item: CreditoPlanejamentoItem) {
+  const rawDesc = String(item.descricao || '').trim()
+  if (!rawDesc.startsWith(ENTREGA_META_PREFIX)) {
+    return {
+      cliente: String(item.titulo || '').trim(),
+      statusOper: normalizeEntregaStatus(item.status),
+      acao: '',
+      observacao: rawDesc,
+      responsavel: String(item.responsavel || '').trim(),
+    }
+  }
+
+  try {
+    const parsed = JSON.parse(rawDesc.slice(ENTREGA_META_PREFIX.length) || '{}')
+    return {
+      cliente: String(parsed?.cliente || item.titulo || '').trim(),
+      statusOper: normalizeEntregaStatus(parsed?.statusOper || item.status),
+      acao: String(parsed?.acao || '').trim(),
+      observacao: String(parsed?.observacao || '').trim(),
+      responsavel: String(parsed?.responsavel || item.responsavel || '').trim(),
+    }
+  } catch {
+    return {
+      cliente: String(item.titulo || '').trim(),
+      statusOper: normalizeEntregaStatus(item.status),
+      acao: '',
+      observacao: '',
+      responsavel: String(item.responsavel || '').trim(),
+    }
+  }
+}
+
+function plannerCardTitle(item: CreditoPlanejamentoItem): string {
+  if (plannerTypeKey(item) !== 'entrega') return String(item.titulo || '-').trim() || '-'
+  const meta = parseEntregaMeta(item)
+  return meta.cliente || String(item.titulo || '-').trim() || '-'
+}
+
+function plannerCardDescription(item: CreditoPlanejamentoItem): string {
+  if (plannerTypeKey(item) !== 'entrega') return String(item.descricao || '').trim()
+  const meta = parseEntregaMeta(item)
+  return meta.acao || meta.observacao || ''
+}
+
 function plannerMeta(item: CreditoPlanejamentoItem): string {
+  if (plannerTypeKey(item) === 'entrega') {
+    const meta = parseEntregaMeta(item)
+    const parts = [meta.responsavel || item.responsavel || '', plannerTimeWindow(item), formatDateLabel(item.data_referencia), entregaStatusLabel(meta.statusOper)]
+      .map((part) => String(part || '').trim())
+      .filter((part) => part && part !== '-')
+    return parts.join(' - ')
+  }
+
   const parts = [item.responsavel || '', plannerTimeWindow(item), formatDateLabel(item.data_referencia)]
     .map((part) => String(part || '').trim())
     .filter((part) => part && part !== '-')
+  return parts.join(' - ')
   return parts.join(' • ')
 }
 
@@ -442,6 +515,16 @@ function timelineTooltip(row: ProcessoLinha, laneLabel: string, step: TimelineSt
     `Sinal: ${labelFor('sinal', row.sinal)}`,
     `Fiador: ${labelFor('fiador', row.fiador)}`,
   ].join('\n')
+}
+
+function nextActionSummary(row: ProcessoLinha): string {
+  if (row.foraContagemMes) return 'Cliente pausado para a contagem mensal'
+  if (row.avisoContratoAgehab) return 'Solicitar contrato Agehab e acelerar fechamento'
+  if (isWaitingDocs(row)) return 'Cobrar envio documental para destravar a analise'
+  const pendencias = pendingItems(row)
+  if (pendencias.length > 0) return `Atuar em ${pendencias[0]}`
+  if (isFinalizadoRow(row)) return 'Processo em etapa final de assinatura e formalizacao'
+  return 'Manter cadencia comercial e preparar proximo avanço'
 }
 
 function commercialTimelineKey(row: ProcessoLinha): string {
@@ -686,6 +769,25 @@ export function AnalistaPainelPage() {
     }
   }, [filteredRows])
 
+  const executiveView = useMemo(() => {
+    const countedRows = filteredRows.filter((row) => !row.foraContagemMes)
+    const hottest = countedRows[0] || filteredRows[0] || null
+    const pending = countedRows.filter((row) => isPendingRow(row)).length
+    const waitingDocs = countedRows.filter((row) => isWaitingDocs(row)).length
+    const readyFlow = countedRows.filter((row) => pendingItems(row).length === 0).length
+    const finalFlow = countedRows.filter((row) => isFinalizadoRow(row)).length
+    const focusRows = countedRows.slice(0, 3)
+
+    return {
+      hottest,
+      pending,
+      waitingDocs,
+      readyFlow,
+      finalFlow,
+      focusRows,
+    }
+  }, [filteredRows])
+
   const onChangeFilter = (key: keyof FiltersState, value: string) => {
     startTransition(() => {
       setFilters((prev) => ({ ...prev, [key]: value }))
@@ -738,21 +840,81 @@ export function AnalistaPainelPage() {
   return (
     <main className="dashboard-shell analista-shell">
       <header className="dashboard-top dashboard-top-analista">
-        <div className="analista-hero">
-          <span className="hero-kicker">Operacao de credito</span>
-          <h1>Painel do Analista</h1>
-          <p>Visao operacional consolidada com leitura rapida da fila, prioridades e avancos por cliente.</p>
+        <div className="analista-top-row">
+          <div className="analista-hero-layout">
+            <div className="analista-hero">
+              <span className="hero-kicker">Operacao de credito</span>
+              <h1>Painel do Analista</h1>
+              <p>Apresentacao executiva da carteira com leitura comercial, pressão da fila e progresso por cliente em uma unica tela.</p>
+            </div>
+
+            <div className="analista-hero-board">
+              <article className="hero-spotlight-card">
+                <span className="hero-spotlight-label">Foco agora</span>
+                <strong>{executiveView.hottest?.cliente || 'Carteira estabilizada'}</strong>
+                <p>
+                  {executiveView.hottest
+                    ? `${labelFor('geral', executiveView.hottest.geral)} • ${nextActionSummary(executiveView.hottest)}`
+                    : 'Sem cliente critico no momento.'}
+                </p>
+              </article>
+
+              <div className="hero-stat-grid">
+                <article className="hero-stat-card tone-danger">
+                  <span className="hero-stat-label">Pressao imediata</span>
+                  <strong>{kpis.prios}</strong>
+                  <p>Carteira acima de 15 dias em comercial</p>
+                </article>
+                <article className="hero-stat-card tone-warn">
+                  <span className="hero-stat-label">Pendencias ativas</span>
+                  <strong>{executiveView.pending}</strong>
+                  <p>Status, documentos, sinal ou fiador fora do ideal</p>
+                </article>
+                <article className="hero-stat-card tone-ok">
+                  <span className="hero-stat-label">Prontos para avancar</span>
+                  <strong>{executiveView.readyFlow}</strong>
+                  <p>Sem trava principal mapeada na leitura atual</p>
+                </article>
+                <article className={`hero-stat-card tone-${kpiToneByHours(kpis.avgSlaCred)}`}>
+                  <span className="hero-stat-label">SLA medio credito</span>
+                  <strong>{formatElapsedHours(kpis.avgSlaCred)}</strong>
+                  <p>Media operacional do filtro atual</p>
+                </article>
+              </div>
+            </div>
+          </div>
+
+          <div className="top-actions">
+            <span className="badge">Auto refresh: {refreshTick}s</span>
+            <span className="badge">SLA alerta: &gt;=48h</span>
+            <button type="button" onClick={() => loadData()}>
+              Atualizar base
+            </button>
+            <button type="button" className="danger" onClick={onLogout}>
+              Sair
+            </button>
+          </div>
         </div>
 
-        <div className="top-actions">
-          <span className="badge">Auto refresh: {refreshTick}s</span>
-          <span className="badge">SLA alerta: &gt;=48h</span>
-          <button type="button" onClick={() => loadData()}>
-            Atualizar base
-          </button>
-          <button type="button" className="danger" onClick={onLogout}>
-            Sair
-          </button>
+        <div className="analista-ribbon">
+          <span className="hero-ribbon-item">
+            <strong>{kpis.total}</strong>
+            <span>ativos em carteira</span>
+          </span>
+          <span className="hero-ribbon-item">
+            <strong>{executiveView.waitingDocs}</strong>
+            <span>aguardando documentos</span>
+          </span>
+          <span className="hero-ribbon-item">
+            <strong>{executiveView.finalFlow}</strong>
+            <span>em fechamento ou assinatura</span>
+          </span>
+          {executiveView.focusRows.map((row) => (
+            <a key={row.processoId} className="hero-ribbon-link" href={`#cliente-${row.processoId}`}>
+              <span>{row.cliente}</span>
+              <strong>{labelFor('geral', commercialTimelineKey(row) || row.geral)}</strong>
+            </a>
+          ))}
         </div>
 
         <nav className="analista-nav" aria-label="Navegacao do analista">
@@ -935,12 +1097,12 @@ export function AnalistaPainelPage() {
                       {group.items.slice(0, 2).map((item) => (
                         <div key={item.id} className="ops-summary-item">
                           <div className="ops-summary-title-row">
-                            <strong>{item.titulo}</strong>
+                            <strong>{plannerCardTitle(item)}</strong>
                             <span className={`ops-state ${plannerStatusTone(item.status)}`}>
                               {plannerStatusLabel(item.status)}
                             </span>
                           </div>
-                          {item.descricao ? <p>{item.descricao}</p> : null}
+                          {plannerCardDescription(item) ? <p>{plannerCardDescription(item)}</p> : null}
                           <span className="ops-summary-meta">{plannerMeta(item)}</span>
                         </div>
                       ))}
@@ -1056,6 +1218,7 @@ export function AnalistaPainelPage() {
                   ref={(node) => {
                     rowRefs.current[row.processoId] = node
                   }}
+                  id={`cliente-${row.processoId}`}
                   className={`client-card ${rowClass} ${expanded ? 'is-open' : ''} ${isFocused ? 'is-focused' : ''}`.trim()}
                 >
                   <div className="client-card-header">
@@ -1095,6 +1258,29 @@ export function AnalistaPainelPage() {
                   </div>
 
                   <div className="client-flow-stack">
+                    <div className="client-story-grid">
+                      <article className="client-story-card tone-neutral">
+                        <span className="client-story-label">Momento do cliente</span>
+                        <strong>{comercialLabel}</strong>
+                        <p>{nextActionSummary(row)}</p>
+                      </article>
+                      <article className={`client-story-card ${pendencias.length > 0 ? 'tone-danger' : 'tone-ok'}`}>
+                        <span className="client-story-label">Leitura executiva</span>
+                        <strong>{pendencias.length > 0 ? pendencias[0] : 'Fluxo alinhado'}</strong>
+                        <p>{pendencias.length > 1 ? `${pendencias.length} travas mapeadas na linha` : 'Sem pendencia principal neste momento'}</p>
+                      </article>
+                      <article className={`client-story-card ${row.semDocumento ? 'tone-warn' : 'tone-neutral'}`}>
+                        <span className="client-story-label">Documentos</span>
+                        <strong>{row.docsRecebidos}/{row.docsTotal}</strong>
+                        <p>{documentsSummary(row)}</p>
+                      </article>
+                      <article className="client-story-card tone-neutral">
+                        <span className="client-story-label">Observacao</span>
+                        <strong>{row.observacao ? 'Atualizada' : 'Sem nota'}</strong>
+                        <p>{summarizeObservation(row)}</p>
+                      </article>
+                    </div>
+
                     <MiniTimeline
                       tone="commercial"
                       laneLabel="Comercial"

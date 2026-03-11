@@ -2558,7 +2558,8 @@
       conforme: "Conforme",
       tratando_produto: "Tratando Produto",
       agendado: "Agendado",
-      assinatura_caixa: "Finalizado",
+      assinatura_caixa: "Assinatura Caixa",
+      finalizado: "Finalizado",
     },
     statusAgehab: {
       nao_iniciado: "Nao iniciado",
@@ -3200,10 +3201,10 @@
   }
 
   const READY_STATUS = {
-    statusCaixa: new Set(["aprovado", "dar_qv", "conforme", "assinatura_caixa", "finalizado"]),
-    statusAgehab: new Set(["validado_agehab", "conforme", "finalizado"]),
-    sinal: new Set(["pago"]),
-    fiador: new Set(["finalizado"]),
+    statusCaixa: new Set(["aprovado", "dar_qv", "conforme", "tratando_produto", "agendado", "assinatura_caixa", "finalizado"]),
+    statusAgehab: new Set(["validado_agehab"]),
+    sinal: new Set(["nao_tem", "pago"]),
+    fiador: new Set(["nao_tem", "finalizado"]),
   };
 
   function normalizeTitleText(text){
