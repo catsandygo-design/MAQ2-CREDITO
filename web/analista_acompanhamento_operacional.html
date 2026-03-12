@@ -646,15 +646,77 @@
       border-color:rgba(22,163,74,.28);
       background:#ecfdf5;
     }
+    .agenda-item.agenda-subitem{
+      background:linear-gradient(180deg,#f8fbff,#ffffff);
+      border-color:rgba(14,165,233,.18);
+      box-shadow:inset 3px 0 0 rgba(14,165,233,.18);
+      margin-left:14px;
+    }
+    .agenda-item.agenda-subitem.done{
+      background:linear-gradient(180deg,#f0fdf4,#ffffff);
+      border-color:rgba(34,197,94,.24);
+      box-shadow:inset 3px 0 0 rgba(34,197,94,.24);
+    }
     .agenda-time{
       font-weight:800;
       color:#0f172a;
       font-size:.78rem;
       letter-spacing:.03em;
+      display:grid;
+      gap:2px;
+    }
+    .agenda-time small{
+      font-size:.64rem;
+      font-weight:700;
+      color:#64748b;
+      letter-spacing:.04em;
     }
     .agenda-task{
+      display:grid;
+      gap:3px;
+      min-width:0;
+    }
+    .agenda-task-main{
       font-size:.76rem;
       color:#334155;
+      line-height:1.35;
+    }
+    .agenda-task-main strong{
+      color:#0f172a;
+      font-size:.75rem;
+    }
+    .agenda-task-top{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      flex-wrap:wrap;
+    }
+    .agenda-kind{
+      display:inline-flex;
+      align-items:center;
+      padding:2px 7px;
+      border-radius:999px;
+      background:#eff6ff;
+      border:1px solid rgba(14,165,233,.18);
+      color:#0369a1;
+      font-size:.62rem;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    .agenda-kind.warn{
+      background:#fff7ed;
+      border-color:rgba(245,158,11,.2);
+      color:#9a3412;
+    }
+    .agenda-kind.ok{
+      background:#ecfdf5;
+      border-color:rgba(34,197,94,.2);
+      color:#166534;
+    }
+    .agenda-task-meta{
+      font-size:.68rem;
+      color:#64748b;
       line-height:1.35;
     }
     .agenda-check{
@@ -691,6 +753,7 @@
       .form-actions{grid-column:span 4;justify-content:flex-start}
       .taskday-form{grid-template-columns:1fr}
       .agenda-item{grid-template-columns:78px 1fr}
+      .agenda-item.agenda-subitem{margin-left:0}
       .agenda-check{justify-content:flex-start}
     }
     @media (max-width:768px){
@@ -1438,6 +1501,67 @@
       tarefa: agendaTaskByDate(slot, dateIso),
     }));
   }
+  function agendaCheckKey(entry){
+    return String(entry?.checkKey || entry?.hora || "");
+  }
+  function agendaEntryChecked(entry, state){
+    const key = agendaCheckKey(entry);
+    if (Object.prototype.hasOwnProperty.call(state || {}, key)) return Boolean(state[key]);
+    if (entry?.kind === "planner") return norm(entry?.plannerStatus || "") === "concluido";
+    return false;
+  }
+  function plannerAgendaItemsForDate(dateIso){
+    const rows = Array.isArray(plannerDashboard?.itens) ? plannerDashboard.itens : [];
+    return rows
+      .filter((item) => String(item?.data_referencia || "") === String(dateIso || ""))
+      .filter((item) => ["tarefa", "agendamento", "urgente"].includes(norm(item?.tipo).replace(/\s+/g, "_")))
+      .filter((item) => !isDiaTodoItem(item))
+      .filter((item) => String(item?.hora_inicio || item?.hora_fim || "").trim())
+      .sort((a, b) => {
+        const diff = compareHHMM(a?.hora_inicio || a?.hora_fim || "", b?.hora_inicio || b?.hora_fim || "");
+        if (diff !== 0) return diff;
+        return String(a?.titulo || "").localeCompare(String(b?.titulo || ""));
+      })
+      .map((item) => ({
+        kind:"planner",
+        hora:String(item?.hora_inicio || item?.hora_fim || "").slice(0, 5),
+        horaFim:String(item?.hora_fim || "").slice(0, 5),
+        tarefa:String(item?.titulo || "Sem titulo").trim() || "Sem titulo",
+        detalhe:String(item?.descricao || "").trim(),
+        responsavel:String(item?.responsavel || "").trim(),
+        label:typeLabel(item?.tipo),
+        labelClass:norm(item?.status).replace(/\s+/g, "_") === "concluido" ? "ok" : (Boolean(item?.urgente) ? "warn" : ""),
+        plannerStatus:String(item?.status || ""),
+        plannerStatusLabel:statusLabel(item?.status),
+        checkKey:`planner:${item?.id || ""}`,
+      }));
+  }
+  function buildAgendaEntries(dateIso){
+    const baseEntries = agendaSlotsForDate(dateIso).map((slot, index) => ({
+      kind:"base",
+      hora:String(slot?.hora || ""),
+      horaFim:"",
+      tarefa:agendaTaskByDate(slot, dateIso),
+      detalhe:"",
+      responsavel:"",
+      label:"",
+      labelClass:"",
+      plannerStatus:"",
+      plannerStatusLabel:"",
+      checkKey:String(slot?.hora || ""),
+      order:index,
+    }));
+    const plannerEntries = plannerAgendaItemsForDate(dateIso).map((item, index) => ({
+      ...item,
+      order:index,
+    }));
+    return [...baseEntries, ...plannerEntries].sort((a, b) => {
+      const diff = compareHHMM(a?.hora || "", b?.hora || "");
+      if (diff !== 0) return diff;
+      if (a.kind !== b.kind) return a.kind === "base" ? -1 : 1;
+      return Number(a.order || 0) - Number(b.order || 0);
+    });
+  }
   function hhmmNow(){
     const now = new Date();
     return `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
@@ -1446,7 +1570,7 @@
     return String(a || "").localeCompare(String(b || ""));
   }
   function currentAgendaContext(dateIso){
-    const slots = agendaSlotsForDate(dateIso);
+    const slots = buildAgendaEntries(dateIso);
     const checkins = loadAgendaCheckins(dateIso);
     const todayIso = new Date().toISOString().slice(0, 10);
     const isToday = dateIso === todayIso;
@@ -1465,7 +1589,7 @@
       next = slots[0] || null;
     }
     const delayed = isToday
-      ? slots.filter((slot) => compareHHMM(slot.hora, nowHHMM) < 0 && !Boolean(checkins[slot.hora]))
+      ? slots.filter((slot) => compareHHMM(slot.hora, nowHHMM) < 0 && !agendaEntryChecked(slot, checkins))
       : [];
     return {
       isToday,
@@ -1473,7 +1597,7 @@
       current,
       next,
       delayed,
-      currentDone: current ? Boolean(checkins[current.hora]) : false,
+      currentDone: current ? agendaEntryChecked(current, checkins) : false,
     };
   }
   function plannerItemHeadline(item){
@@ -1872,17 +1996,30 @@
     const listNode = $("opAgendaList");
     if (!listNode) return;
     const dateIso = selectedAgendaDateIso();
-    const slots = agendaSlotsForDate(dateIso);
+    const slots = buildAgendaEntries(dateIso);
     const state = loadAgendaCheckins(dateIso);
     let doneCount = 0;
     listNode.innerHTML = slots.map((slot) => {
-      const key = slot.hora;
-      const checked = Boolean(state[key]);
+      const key = agendaCheckKey(slot);
+      const checked = agendaEntryChecked(slot, state);
       if (checked) doneCount += 1;
+      const isPlanner = slot.kind === "planner";
+      const metaParts = [];
+      if (slot.horaFim && slot.horaFim !== slot.hora) metaParts.push(`${slot.hora}-${slot.horaFim}`);
+      if (slot.responsavel) metaParts.push(`Resp: ${slot.responsavel}`);
+      if (slot.plannerStatusLabel) metaParts.push(slot.plannerStatusLabel);
       return `
-        <label class="agenda-item ${checked ? "done" : ""}">
-          <div class="agenda-time">${esc(slot.hora)}</div>
-          <div class="agenda-task">${esc(agendaTaskByDate(slot, dateIso))}</div>
+        <label class="agenda-item ${checked ? "done" : ""} ${isPlanner ? "agenda-subitem" : ""}">
+          <div class="agenda-time">
+            <strong>${esc(slot.hora)}</strong>
+            ${isPlanner ? `<small>check-in</small>` : ""}
+          </div>
+          <div class="agenda-task">
+            ${isPlanner ? `<div class="agenda-task-top"><span class="agenda-kind ${esc(slot.labelClass || "")}">${esc(slot.label || "Subtarefa")}</span></div>` : ""}
+            <div class="agenda-task-main">${isPlanner ? `<strong>${esc(slot.tarefa)}</strong>` : esc(slot.tarefa)}</div>
+            ${slot.detalhe ? `<div class="agenda-task-meta">${esc(slot.detalhe)}</div>` : ""}
+            ${metaParts.length ? `<div class="agenda-task-meta">${metaParts.map((entry) => esc(entry)).join(" | ")}</div>` : ""}
+          </div>
           <div class="agenda-check">
             <input type="checkbox" data-op-action="agenda-checkin" data-op-agenda-slot="${esc(key)}" ${checked ? "checked" : ""} />
             <span>${checked ? "Check-in feito" : "Pendente"}</span>
@@ -1894,7 +2031,7 @@
     if ($("opAgendaDone")) $("opAgendaDone").textContent = `${doneCount}`;
     if ($("opAgendaTotal")) $("opAgendaTotal").textContent = `${slots.length}`;
     if ($("opAgendaNext")){
-      const next = slots.find((slot) => !Boolean(state[slot.hora]));
+      const next = slots.find((slot) => !agendaEntryChecked(slot, state));
       if (!next){
         $("opAgendaNext").textContent = "Agenda concluida";
       } else {
@@ -2213,9 +2350,9 @@
   });
   $("btnAgendaAll")?.addEventListener("click", () => {
     const dateIso = selectedAgendaDateIso();
-    const slots = agendaSlotsForDate(dateIso);
+    const slots = buildAgendaEntries(dateIso);
     const payload = {};
-    slots.forEach((slot) => { payload[slot.hora] = true; });
+    slots.forEach((slot) => { payload[agendaCheckKey(slot)] = true; });
     saveAgendaCheckins(dateIso, payload);
     renderAgendaChecklist();
   });
