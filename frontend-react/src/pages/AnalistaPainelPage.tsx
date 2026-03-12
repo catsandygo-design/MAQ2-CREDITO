@@ -841,6 +841,17 @@ export function AnalistaPainelPage() {
     <main className="dashboard-shell analista-shell">
       <header className="dashboard-top dashboard-top-analista">
         <div className="analista-top-row">
+          <div className="top-actions top-actions-analista">
+            <span className="badge">Auto refresh: {refreshTick}s</span>
+            <span className="badge">SLA alerta: &gt;=48h</span>
+            <button type="button" onClick={() => loadData()}>
+              Atualizar base
+            </button>
+            <button type="button" className="danger" onClick={onLogout}>
+              Sair
+            </button>
+          </div>
+
           <div className="analista-hero-layout">
             <div className="analista-hero">
               <span className="hero-kicker">Operacao de credito</span>
@@ -884,16 +895,6 @@ export function AnalistaPainelPage() {
             </div>
           </div>
 
-          <div className="top-actions">
-            <span className="badge">Auto refresh: {refreshTick}s</span>
-            <span className="badge">SLA alerta: &gt;=48h</span>
-            <button type="button" onClick={() => loadData()}>
-              Atualizar base
-            </button>
-            <button type="button" className="danger" onClick={onLogout}>
-              Sair
-            </button>
-          </div>
         </div>
 
         <div className="analista-ribbon">
