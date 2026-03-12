@@ -2,7 +2,7 @@ name: Render Keepalive
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "2 */3 * * *"
   workflow_dispatch:
   push:
     paths:
@@ -14,6 +14,7 @@ permissions:
 jobs:
   ping-render:
     runs-on: ubuntu-latest
+    timeout-minutes: 179
     steps:
       - name: Validate secret
         shell: bash
@@ -60,7 +61,23 @@ jobs:
       - name: Ping Render keepalive endpoint
         shell: bash
         run: |
-          echo "Pinging $TARGET"
-          curl --fail --silent --show-error --location --max-time 120 --retry 2 --retry-delay 5 --retry-all-errors --user-agent "github-actions-keepalive" --write-out "HTTP %{http_code} in %{time_total}s\n" --output /dev/null "$TARGET"
+          set -euo pipefail
+
+          ping_once() {
+            echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Pinging $TARGET"
+            curl --fail --silent --show-error --location --max-time 120 --retry 2 --retry-delay 5 --retry-all-errors --user-agent "github-actions-keepalive" --write-out "HTTP %{http_code} in %{time_total}s\n" --output /dev/null "$TARGET"
+          }
+
+          if [[ "$EVENT_NAME" == "schedule" ]]; then
+            for attempt in $(seq 1 36); do
+              ping_once
+              if [[ "$attempt" -lt 36 ]]; then
+                sleep 300
+              fi
+            done
+          else
+            ping_once
+          fi
         env:
+          EVENT_NAME: ${{ github.event_name }}
           TARGET: ${{ steps.url.outputs.target }}
