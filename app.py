@@ -123,7 +123,7 @@ RUNTIME_SCHEMA_REVISION = "2026-03-01-cca-analise-financeira-v2"
 PENDENCIA_INFO_MIN_LENGTH = 0
 PROCESS_LIST_CACHE: dict[str, dict[str, Any]] = {}
 SEED_USERS_READY = False
-CREDITO_PLANEJAMENTO_TIPOS = {"tarefa", "agendamento", "entrega", "urgente", "anotacao"}
+CREDITO_PLANEJAMENTO_TIPOS = {"tarefa", "subtarefa", "agendamento", "entrega", "urgente", "anotacao"}
 CREDITO_PLANEJAMENTO_STATUS = {"pendente", "em_andamento", "concluido", "atrasado"}
 ANALISTA_REUNIAO_FOLLOWUP_STATUS = {"seguir", "finalizar_hoje", "assinado"}
 ANALISTA_REUNIAO_COMPROMISSO_STATUS = {"pendente", "nao_entregue", "entregue"}
@@ -2518,6 +2518,9 @@ def _credito_planejamento_tipo(value: Optional[str], *, fallback: str = "tarefa"
         "agenda": "agendamento",
         "agendamentos": "agendamento",
         "tarefas": "tarefa",
+        "subtarefas": "subtarefa",
+        "subtask": "subtarefa",
+        "subtasks": "subtarefa",
         "task": "tarefa",
         "tasks": "tarefa",
         "entregas": "entrega",

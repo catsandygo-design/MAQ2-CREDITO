@@ -955,6 +955,7 @@
           <label>Tipo</label>
           <select id="opTipo">
             <option value="tarefa">Tarefa</option>
+            <option value="subtarefa">Subtarefa da agenda</option>
             <option value="agendamento">Agendamento</option>
             <option value="entrega">Entrega do dia</option>
             <option value="urgente">Urgente</option>
@@ -1134,7 +1135,7 @@
   const API_BASE = "/app/api";
   const PLANNER_DAYS = 14;
   const STATUS_LABELS = { pendente:"Pendente", em_andamento:"Em andamento", concluido:"Concluido", atrasado:"Atrasado" };
-  const TYPE_LABELS = { tarefa:"Tarefa", agendamento:"Agendamento", entrega:"Entrega", urgente:"Urgente", anotacao:"Anotacao" };
+  const TYPE_LABELS = { tarefa:"Tarefa", subtarefa:"Subtarefa", agendamento:"Agendamento", entrega:"Entrega", urgente:"Urgente", anotacao:"Anotacao" };
   const ENTREGA_META_PREFIX = "__entrega_meta__:";
   const DIA_TODO_META_PREFIX = "__dia_todo_meta__:";
   const AGENDA_STORAGE_PREFIX = "credito_agenda_checkins:";
@@ -1514,8 +1515,7 @@
     const rows = Array.isArray(plannerDashboard?.itens) ? plannerDashboard.itens : [];
     return rows
       .filter((item) => String(item?.data_referencia || "") === String(dateIso || ""))
-      .filter((item) => ["tarefa", "agendamento", "urgente"].includes(norm(item?.tipo).replace(/\s+/g, "_")))
-      .filter((item) => !isDiaTodoItem(item))
+      .filter((item) => norm(item?.tipo).replace(/\s+/g, "_") === "subtarefa")
       .filter((item) => String(item?.hora_inicio || item?.hora_fim || "").trim())
       .sort((a, b) => {
         const diff = compareHHMM(a?.hora_inicio || a?.hora_fim || "", b?.hora_inicio || b?.hora_fim || "");
