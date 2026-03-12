@@ -191,6 +191,25 @@
       align-items:end;
     }
     @media (max-width:900px){.grid-delete{grid-template-columns:1fr}}
+    .planner-grid{
+      display:grid;
+      grid-template-columns:1.1fr 1.7fr 1fr 1fr 1fr 1fr 1fr .9fr;
+      gap:8px;
+      align-items:end;
+    }
+    @media (max-width:1100px){.planner-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    .planner-grid .span2{grid-column:span 2}
+    .planner-inline{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .planner-copy{
+      color:var(--muted);
+      font-size:calc(11px * var(--font-scale));
+      margin-top:8px;
+    }
     .danger-note{
       margin-top:8px;
       padding:9px 10px;
@@ -449,6 +468,83 @@
             <tr><td colspan="3" class="tiny">Carregando empreendimentos...</td></tr>
           </tbody>
         </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="top">
+        <div class="title">
+          <h1>Planejamento Operacional</h1>
+          <p>Cadastre itens do operacional direto no admin. Use <b>Subtarefa da agenda</b> para intercalar no checklist horario.</p>
+        </div>
+        <div class="actions">
+          <a class="btn" href="/app/analista/acompanhamento-operacional">Abrir painel operacional</a>
+        </div>
+      </div>
+      <div class="body">
+        <form id="plannerForm" class="planner-grid">
+          <div class="field">
+            <label for="planTipo">Tipo</label>
+            <select id="planTipo">
+              <option value="tarefa">Tarefa</option>
+              <option value="subtarefa">Subtarefa da agenda</option>
+              <option value="agendamento">Agendamento</option>
+              <option value="entrega">Entrega</option>
+              <option value="urgente">Urgente</option>
+              <option value="anotacao">Anotacao</option>
+            </select>
+          </div>
+          <div class="field span2">
+            <label for="planTitulo">Titulo</label>
+            <input id="planTitulo" required maxlength="180" placeholder="Ex.: Cobrar assinatura do cliente" />
+          </div>
+          <div class="field">
+            <label for="planResponsavel">Responsavel</label>
+            <input id="planResponsavel" maxlength="120" placeholder="Nome da pessoa" />
+          </div>
+          <div class="field">
+            <label for="planData">Data</label>
+            <input id="planData" type="date" />
+          </div>
+          <div class="field">
+            <label for="planHoraInicio">Hora inicio</label>
+            <input id="planHoraInicio" type="time" />
+          </div>
+          <div class="field">
+            <label for="planHoraFim">Hora fim</label>
+            <input id="planHoraFim" type="time" />
+          </div>
+          <div class="field">
+            <label for="planStatus">Status</label>
+            <select id="planStatus">
+              <option value="pendente">Pendente</option>
+              <option value="em_andamento">Em andamento</option>
+              <option value="concluido">Concluido</option>
+              <option value="atrasado">Atrasado</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="planProgresso">Progresso (%)</label>
+            <input id="planProgresso" type="number" min="0" max="100" step="5" value="0" />
+          </div>
+          <div class="field span2">
+            <label for="planDescricao">Descricao</label>
+            <input id="planDescricao" maxlength="2200" placeholder="Detalhe rapido para o time" />
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <label class="planner-inline">
+              <input id="planUrgente" type="checkbox" />
+              <span>Urgente</span>
+            </label>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn primary" type="submit">Cadastrar item</button>
+          </div>
+        </form>
+        <div class="planner-copy">Dica: para aparecer como subtarefa no checklist horario, use tipo <b>Subtarefa da agenda</b> e informe pelo menos a hora de inicio.</div>
+        <div id="feedbackPlanner" class="feedback" aria-live="polite"></div>
       </div>
     </section>
 
@@ -750,12 +846,14 @@
   <script>
     const feedback = document.getElementById("feedback");
     const feedbackEmp = document.getElementById("feedbackEmp");
+    const feedbackPlanner = document.getElementById("feedbackPlanner");
     const feedbackDelete = document.getElementById("feedbackDelete");
     const tbody = document.getElementById("tbodyUsers");
     const tbodyEmp = document.getElementById("tbodyEmp");
     const tbodyLogs = document.getElementById("tbodyLogs");
     const createForm = document.getElementById("createForm");
     const empForm = document.getElementById("empForm");
+    const plannerForm = document.getElementById("plannerForm");
     const deleteForm = document.getElementById("deleteForm");
     const layoutBlackholeInput = document.getElementById("layoutBlackhole");
     const layoutHint = document.getElementById("layoutHint");
@@ -826,6 +924,11 @@
     function setFeedbackEmp(message, isError = false) {
       feedbackEmp.textContent = message || "";
       feedbackEmp.classList.toggle("error", Boolean(isError));
+    }
+
+    function setFeedbackPlanner(message, isError = false) {
+      feedbackPlanner.textContent = message || "";
+      feedbackPlanner.classList.toggle("error", Boolean(isError));
     }
 
     function setFeedbackDelete(message, isError = false) {
@@ -1272,6 +1375,49 @@
       }
     });
 
+    plannerForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setFeedbackPlanner("");
+      const payload = {
+        tipo: plannerForm.planTipo.value || "tarefa",
+        titulo: plannerForm.planTitulo.value.trim(),
+        descricao: plannerForm.planDescricao.value.trim() || null,
+        responsavel: plannerForm.planResponsavel.value.trim() || null,
+        data_referencia: plannerForm.planData.value || null,
+        hora_inicio: plannerForm.planHoraInicio.value || null,
+        hora_fim: plannerForm.planHoraFim.value || null,
+        status: plannerForm.planStatus.value || "pendente",
+        progresso: Number(plannerForm.planProgresso.value || 0),
+        urgente: Boolean(plannerForm.planUrgente.checked),
+      };
+      if (!payload.titulo) {
+        setFeedbackPlanner("Informe um titulo para o item operacional.", true);
+        return;
+      }
+      try {
+        await api("/app/api/analista/planejamento/itens", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        const keepDate = plannerForm.planData.value;
+        plannerForm.reset();
+        plannerForm.planTipo.value = "tarefa";
+        plannerForm.planStatus.value = "pendente";
+        plannerForm.planProgresso.value = "0";
+        plannerForm.planData.value = keepDate || new Date().toISOString().slice(0, 10);
+        setFeedbackPlanner("Item operacional cadastrado com sucesso.");
+        await loadLogs();
+      } catch (error) {
+        setFeedbackPlanner(error.message, true);
+      }
+    });
+
+    plannerForm.planTipo.addEventListener("change", () => {
+      if (plannerForm.planTipo.value === "urgente") {
+        plannerForm.planUrgente.checked = true;
+      }
+    });
+
     deleteForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       setFeedbackDelete("");
@@ -1450,6 +1596,9 @@
         applyAdaptiveTypography();
         await loadMe();
         await loadLayoutPreference();
+        if (plannerForm?.planData) {
+          plannerForm.planData.value = new Date().toISOString().slice(0, 10);
+        }
         await loadUsers();
         await loadEmpreendimentos();
         await loadLogs();
