@@ -1396,6 +1396,15 @@
     })}`;
   }
   function parseEntregaMeta(item){
+    if (String(item?.meta_kind || "").trim() === "entrega" || item?.meta_cliente || item?.meta_status_oper) {
+      return {
+        cliente: String(item?.meta_cliente || item?.display_titulo || item?.titulo || "").trim(),
+        statusOper: normalizeEntregaStatus(item?.meta_status_oper || item?.status),
+        acao: String(item?.meta_acao || "").trim(),
+        observacao: String(item?.meta_observacao || item?.display_descricao || "").trim(),
+        responsavel: String(item?.meta_responsavel || item?.responsavel || "").trim(),
+      };
+    }
     const rawDesc = String(item?.descricao || "");
     if (!rawDesc.startsWith(ENTREGA_META_PREFIX)){
       return {
@@ -1432,6 +1441,12 @@
     })}`;
   }
   function parseDiaTodoMeta(item){
+    if (String(item?.meta_kind || "").trim() === "dia_todo") {
+      return {
+        acao: String(item?.meta_acao || "").trim(),
+        observacao: String(item?.meta_observacao || item?.display_descricao || "").trim(),
+      };
+    }
     const rawDesc = String(item?.descricao || "");
     if (!rawDesc.startsWith(DIA_TODO_META_PREFIX)){
       return { acao:"", observacao: rawDesc };
@@ -1601,14 +1616,15 @@
     };
   }
   function plannerItemHeadline(item){
-    return String(item?.titulo || item?.responsavel || "Sem titulo").trim() || "Sem titulo";
+    return String(item?.display_titulo || item?.titulo || item?.responsavel || "Sem titulo").trim() || "Sem titulo";
   }
   function plannerItemSupport(item){
+    if (String(item?.display_meta || "").trim()) return String(item.display_meta).trim();
     const parts = [];
     const win = timeWindow(item);
     if (win) parts.push(win);
     if (item?.responsavel) parts.push(`Resp: ${item.responsavel}`);
-    parts.push(statusLabel(item?.status));
+    parts.push(String(item?.status_label || statusLabel(item?.status)).trim());
     return parts.join(" | ");
   }
   function focusOpsSection(targetId){
@@ -1817,7 +1833,7 @@
             const meta = parseEntregaMeta(item);
             return `${meta.cliente} ${meta.acao} ${meta.observacao} ${meta.responsavel}`.toLowerCase().includes(query);
           }
-          return `${item?.titulo || ""} ${item?.responsavel || ""} ${item?.descricao || ""}`.toLowerCase().includes(query);
+          return `${item?.display_titulo || item?.titulo || ""} ${item?.responsavel || ""} ${item?.display_descricao || item?.descricao || ""} ${item?.display_meta || ""}`.toLowerCase().includes(query);
         });
     countNode.textContent = `${filtered.length}`;
     if (!filtered.length){ listNode.innerHTML = `<div class="empty">${esc(emptyText)}</div>`; return; }
@@ -1828,24 +1844,29 @@
       const itemType = norm(item?.tipo).replace(/\s+/g, "_");
       const entregaMeta = itemType === "entrega" ? parseEntregaMeta(item) : null;
       const entregaStatus = entregaMeta ? normalizeEntregaStatus(entregaMeta.statusOper) : "";
-      const displayTitle = entregaMeta?.cliente || item?.titulo || "-";
-      const displayDesc = entregaMeta ? (entregaMeta.acao || entregaMeta.observacao || "") : String(item?.descricao || "").trim();
+      const displayTitle = String(item?.display_titulo || entregaMeta?.cliente || item?.titulo || "-").trim() || "-";
+      const displayDesc = String(item?.display_descricao || (entregaMeta ? (entregaMeta.acao || entregaMeta.observacao || "") : item?.descricao || "")).trim();
       const parts = [];
       if (entregaMeta?.responsavel) {
         parts.push(`Resp: ${entregaMeta.responsavel}`);
       } else if (item?.responsavel) {
         parts.push(`Resp: ${item.responsavel}`);
       }
-      if (item?.data_referencia) parts.push(dateLabel(item.data_referencia));
-      const win = timeWindow(item);
-      if (win) parts.push(win);
-      if (entregaMeta) parts.push(ENTREGA_STATUS_LABELS[entregaStatus] || "Pendenciado");
-      parts.push(`${Math.max(0, Math.min(100, Number(item?.progresso || 0)))}%`);
+      if (String(item?.display_meta || "").trim()) {
+        parts.length = 0;
+        parts.push(String(item.display_meta).trim());
+      } else {
+        if (item?.data_referencia) parts.push(dateLabel(item.data_referencia));
+        const win = timeWindow(item);
+        if (win) parts.push(win);
+        if (entregaMeta) parts.push(ENTREGA_STATUS_LABELS[entregaStatus] || "Pendenciado");
+        parts.push(`${Math.max(0, Math.min(100, Number(item?.progresso || 0)))}%`);
+      }
       return `
         <article class="item ${urgent ? "item-urgent" : ""} ${late ? "item-hot" : ""}">
           <div class="item-top">
             <div class="item-title">${esc(displayTitle)}</div>
-            <span class="status ${statusClass(item?.status)}">${esc(statusLabel(item?.status))}</span>
+            <span class="status ${statusClass(item?.status)}">${esc(item?.status_label || statusLabel(item?.status))}</span>
           </div>
           ${entregaMeta?.acao ? `<div class="desc"><strong>Acao:</strong> ${esc(entregaMeta.acao)}</div>` : ""}
           ${entregaMeta?.observacao ? `<div class="desc"><strong>Observacao:</strong> ${esc(entregaMeta.observacao)}</div>` : ""}

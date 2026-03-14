@@ -66,8 +66,6 @@ const READY_STATUS = {
   fiador: new Set(['nao_tem', 'finalizado']),
 }
 
-const ENTREGA_META_PREFIX = '__entrega_meta__:'
-
 const LABELS: Record<string, Record<string, string>> = {
   geral: {
     reserva: 'Reserva',
@@ -211,8 +209,15 @@ function isVisibleInAnalista(item: ProcessoApiItem): boolean {
 
 function fromBackend(item: ProcessoApiItem): ProcessoLinha {
   const semDocumento = Boolean(item?.sem_documento_enviado)
-  const statusCaixa = semDocumento ? 'nao_iniciado' : statusFromBackend(item.status_cca || 'analise_credito')
-  const statusAgehab = semDocumento ? 'nao_iniciado' : statusFromBackend(item.status_agehab || 'analise_credito')
+  const statusCaixa = statusFromBackend(item.status_cca_key || (semDocumento ? 'nao_iniciado' : item.status_cca || 'analise_credito'))
+  const statusAgehab = statusFromBackend(item.status_agehab_key || (semDocumento ? 'nao_iniciado' : item.status_agehab || 'analise_credito'))
+  const sinal = statusFromBackend(item.status_sinal_key || item.status_sinal || 'nao_tem')
+  const fiador = statusFromBackend(item.status_fiador_key || item.status_fiador || 'nao_tem')
+  const geral = statusFromBackend(item.estagio_comercial_key || item.estagio_comercial || item.status_geral)
+  const repasse = statusFromBackend(item.repasse_fase_key || item.etapa_repasse_key || item.etapa_repasse || 'sem_repasse')
+  const pendingItems = Array.isArray(item.status_pendencias)
+    ? item.status_pendencias.map((entry) => String(entry || '').trim()).filter(Boolean)
+    : []
 
   return {
     processoId: item.processo_id,
@@ -220,26 +225,40 @@ function fromBackend(item: ProcessoApiItem): ProcessoLinha {
     emp: item.obra || '-',
     corretor: item.corretor || '-',
     cca: item.cca_responsavel || '-',
-    geral: statusFromBackend(item.estagio_comercial || item.status_geral),
-    repasse: statusFromBackend(item.etapa_repasse || 'sem_repasse'),
+    geral,
+    geralLabel: String(item.estagio_comercial_label || labelFor('geral', geral) || '-').trim() || '-',
+    repasse,
+    repasseLabel: String(item.repasse_fase_label || item.etapa_repasse_label || labelFor('repasse', repasse) || '-').trim() || '-',
     statusCaixa,
+    statusCaixaLabel: String(item.status_cca_label || labelFor('statusCaixa', statusCaixa) || '-').trim() || '-',
     statusAgehab,
-    sinal: statusFromBackend(item.status_sinal || 'nao_tem'),
-    fiador: statusFromBackend(item.status_fiador || 'nao_tem'),
+    statusAgehabLabel: String(item.status_agehab_label || labelFor('statusAgehab', statusAgehab) || '-').trim() || '-',
+    sinal,
+    sinalLabel: String(item.status_sinal_label || labelFor('sinal', sinal) || '-').trim() || '-',
+    fiador,
+    fiadorLabel: String(item.status_fiador_label || labelFor('fiador', fiador) || '-').trim() || '-',
     slaCor: readSlaHours(item, 'sla_corretor_horas', 'sla_corretor_dias'),
     slaCred: readSlaHours(item, 'sla_analista_horas', 'sla_credito_dias'),
     slaCca: readSlaHours(item, 'sla_cca_horas', 'sla_cca_dias'),
     dataCadastroOrigem: item.data_reserva_origem || item.data_cadastro_origem || null,
     createdAt: item.created_at || null,
     observacao: String(item.observacao || '').trim(),
+    observacaoResumo: String(item.observacao_resumo || '').trim() || 'Sem observacao registrada',
     docsTotal: Math.max(0, Number(item.docs_total || 0)),
     docsRecebidos: Math.max(0, Number(item.docs_recebidos || 0)),
+    docsPendentes: Math.max(0, Number(item.docs_pendentes ?? Math.max(0, Number(item.docs_total || 0) - Number(item.docs_recebidos || 0)))),
+    documentosResumo: String(item.documentos_resumo || '').trim() || 'Documentos: nenhum enviado',
     semDocumento,
     foraContagemMes: Boolean(item?.nao_contar_mes),
     avisoContratoAgehab:
       Boolean(item?.aviso_gerar_contrato_agehab) &&
       !semDocumento &&
-      statusFromBackend(item.status_agehab) === 'validado_agehab',
+      statusAgehab === 'validado_agehab',
+    pendingItems,
+    pendingSummary:
+      String(item.status_pendencias_resumo || '').trim() ||
+      (pendingItems.length ? `Pendencias: ${pendingItems.join('; ')}` : 'Status OK: caixa, agehab, sinal e fiador alinhados'),
+    statusTudoOk: Boolean(item.status_tudo_ok) || pendingItems.length === 0,
   }
 }
 
@@ -280,78 +299,16 @@ function plannerTimeWindow(item: CreditoPlanejamentoItem): string {
   return ''
 }
 
-function plannerTypeKey(item: CreditoPlanejamentoItem): string {
-  return norm(item.tipo).replace(/\s+/g, '_')
-}
-
-function normalizeEntregaStatus(value: string | null | undefined): string {
-  const token = statusFromBackend(value)
-  if (['entregue', 'concluido', 'finalizado', 'done'].includes(token)) return 'entregue'
-  if (['caixa', 'analise_caixa'].includes(token)) return 'caixa'
-  if (['agehab', 'analise_agehab'].includes(token)) return 'agehab'
-  return 'pendenciado'
-}
-
-function entregaStatusLabel(value: string | null | undefined): string {
-  const status = normalizeEntregaStatus(value)
-  if (status === 'entregue') return 'Entregue'
-  if (status === 'caixa') return 'Caixa'
-  if (status === 'agehab') return 'Agehab'
-  return 'Pendenciado'
-}
-
-function parseEntregaMeta(item: CreditoPlanejamentoItem) {
-  const rawDesc = String(item.descricao || '').trim()
-  if (!rawDesc.startsWith(ENTREGA_META_PREFIX)) {
-    return {
-      cliente: String(item.titulo || '').trim(),
-      statusOper: normalizeEntregaStatus(item.status),
-      acao: '',
-      observacao: rawDesc,
-      responsavel: String(item.responsavel || '').trim(),
-    }
-  }
-
-  try {
-    const parsed = JSON.parse(rawDesc.slice(ENTREGA_META_PREFIX.length) || '{}')
-    return {
-      cliente: String(parsed?.cliente || item.titulo || '').trim(),
-      statusOper: normalizeEntregaStatus(parsed?.statusOper || item.status),
-      acao: String(parsed?.acao || '').trim(),
-      observacao: String(parsed?.observacao || '').trim(),
-      responsavel: String(parsed?.responsavel || item.responsavel || '').trim(),
-    }
-  } catch {
-    return {
-      cliente: String(item.titulo || '').trim(),
-      statusOper: normalizeEntregaStatus(item.status),
-      acao: '',
-      observacao: '',
-      responsavel: String(item.responsavel || '').trim(),
-    }
-  }
-}
-
 function plannerCardTitle(item: CreditoPlanejamentoItem): string {
-  if (plannerTypeKey(item) !== 'entrega') return String(item.titulo || '-').trim() || '-'
-  const meta = parseEntregaMeta(item)
-  return meta.cliente || String(item.titulo || '-').trim() || '-'
+  return String(item.display_titulo || item.titulo || '-').trim() || '-'
 }
 
 function plannerCardDescription(item: CreditoPlanejamentoItem): string {
-  if (plannerTypeKey(item) !== 'entrega') return String(item.descricao || '').trim()
-  const meta = parseEntregaMeta(item)
-  return meta.acao || meta.observacao || ''
+  return String(item.display_descricao || item.descricao || '').trim()
 }
 
 function plannerMeta(item: CreditoPlanejamentoItem): string {
-  if (plannerTypeKey(item) === 'entrega') {
-    const meta = parseEntregaMeta(item)
-    const parts = [meta.responsavel || item.responsavel || '', plannerTimeWindow(item), formatDateLabel(item.data_referencia), entregaStatusLabel(meta.statusOper)]
-      .map((part) => String(part || '').trim())
-      .filter((part) => part && part !== '-')
-    return parts.join(' - ')
-  }
+  if (String(item.display_meta || '').trim()) return String(item.display_meta || '').trim()
 
   const parts = [item.responsavel || '', plannerTimeWindow(item), formatDateLabel(item.data_referencia)]
     .map((part) => String(part || '').trim())
@@ -472,39 +429,29 @@ function isResolved(area: keyof typeof READY_STATUS, value: string): boolean {
 }
 
 function pendingItems(row: ProcessoLinha): string[] {
+  if (row.pendingItems.length > 0) return row.pendingItems
   const items: string[] = []
-  if (!isResolved('statusCaixa', row.statusCaixa)) items.push(`Caixa: ${labelFor('statusCaixa', row.statusCaixa)}`)
-  if (!isResolved('statusAgehab', row.statusAgehab)) items.push(`Agehab: ${labelFor('statusAgehab', row.statusAgehab)}`)
-  if (!isResolved('sinal', row.sinal)) items.push(`Sinal: ${labelFor('sinal', row.sinal)}`)
-  if (!isResolved('fiador', row.fiador)) items.push(`Fiador: ${labelFor('fiador', row.fiador)}`)
+  if (!isResolved('statusCaixa', row.statusCaixa)) items.push(`Caixa: ${row.statusCaixaLabel}`)
+  if (!isResolved('statusAgehab', row.statusAgehab)) items.push(`Agehab: ${row.statusAgehabLabel}`)
+  if (!isResolved('sinal', row.sinal)) items.push(`Sinal: ${row.sinalLabel}`)
+  if (!isResolved('fiador', row.fiador)) items.push(`Fiador: ${row.fiadorLabel}`)
   return items
 }
 
 function summarizeObservation(row: ProcessoLinha): string {
-  const raw = String(row.observacao || '')
-    .replace(/\s+/g, ' ')
-    .trim()
-  if (!raw) return 'Sem observacao registrada'
-  return raw.length > 140 ? `${raw.slice(0, 137)}...` : raw
+  return row.observacaoResumo
 }
 
 function documentsSummary(row: ProcessoLinha): string {
-  if (row.semDocumento || row.docsTotal <= 0) return 'Documentos: nenhum enviado'
-  const pendentes = Math.max(0, row.docsTotal - row.docsRecebidos)
-  if (pendentes <= 0) return 'Documentos: OK, todos aprovados'
-  return `Documentos pendentes: ${pendentes} de ${row.docsTotal}`
+  return row.documentosResumo
 }
 
 function statusSummary(row: ProcessoLinha): string {
-  const items = pendingItems(row)
-  if (!items.length) return 'Status OK: caixa, agehab, sinal e fiador alinhados'
-  return `Pendencias: ${items.join('; ')}`
+  return row.pendingSummary
 }
 
 function timelineTooltip(row: ProcessoLinha, laneLabel: string, step: TimelineStep): string {
-  const comercialKey = commercialTimelineKey(row)
-  const repasseKey = repasseTimelineKey(row)
-  const resumo = `Resumo: Comercial ${labelFor('geral', comercialKey || row.geral)} | Repasse ${labelFor('repasse', repasseKey || row.repasse)}`
+  const resumo = `Resumo: Comercial ${row.geralLabel} | Repasse ${row.repasseLabel}`
 
   return [
     `${laneLabel} • ${step.label}`,
@@ -512,8 +459,8 @@ function timelineTooltip(row: ProcessoLinha, laneLabel: string, step: TimelineSt
     `Observacao: ${summarizeObservation(row)}`,
     documentsSummary(row),
     statusSummary(row),
-    `Sinal: ${labelFor('sinal', row.sinal)}`,
-    `Fiador: ${labelFor('fiador', row.fiador)}`,
+    `Sinal: ${row.sinalLabel}`,
+    `Fiador: ${row.fiadorLabel}`,
   ].join('\n')
 }
 
@@ -533,15 +480,7 @@ function commercialTimelineKey(row: ProcessoLinha): string {
 }
 
 function repasseTimelineKey(row: ProcessoLinha): string {
-  const repasse = statusFromBackend(row.repasse)
-  const caixa = statusFromBackend(row.statusCaixa)
-  const agehab = statusFromBackend(row.statusAgehab)
-
-  if (agehab === 'validado_agehab' || caixa === 'finalizado') return 'inicio_garantia'
-  if (caixa === 'assinatura_caixa' || repasse === 'assinatura_autorizada') return 'assinatura_caixa'
-  if (repasse === 'inicio_repasse') return 'inicio_repasse'
-  if (repasse === 'em_repasse') return 'em_repasse'
-  return ''
+  return statusFromBackend(row.repasse)
 }
 
 function buildMiniTimelineSnapshot(steps: TimelineStep[], currentKey: string) {
@@ -983,7 +922,8 @@ export function AnalistaPainelPage() {
                 <option value="">Todas</option>
                 <option value="em_repasse">Em Repasse</option>
                 <option value="inicio_repasse">Inicio Repasse</option>
-                <option value="assinatura_autorizada">Assinatura Autorizada</option>
+                <option value="assinatura_caixa">Assinatura Caixa</option>
+                <option value="inicio_garantia">Inicio Garantia</option>
                 <option value="sem_repasse">Sem Repasse</option>
               </select>
             </label>

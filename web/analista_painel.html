@@ -2718,8 +2718,15 @@
 
   function fromBackend(item){
     const semDocumento = Boolean(item?.sem_documento_enviado);
-    const statusCaixa = semDocumento ? "nao_iniciado" : statusFromBackend(item.status_cca || "analise_credito");
-    const statusAgehab = semDocumento ? "nao_iniciado" : statusFromBackend(item.status_agehab || "analise_credito");
+    const statusCaixa = statusFromBackend(item.status_cca_key || (semDocumento ? "nao_iniciado" : item.status_cca || "analise_credito"));
+    const statusAgehab = statusFromBackend(item.status_agehab_key || (semDocumento ? "nao_iniciado" : item.status_agehab || "analise_credito"));
+    const sinal = statusFromBackend(item.status_sinal_key || item.status_sinal || "nao_tem");
+    const fiador = statusFromBackend(item.status_fiador_key || item.status_fiador || "nao_tem");
+    const geral = statusFromBackend(item.estagio_comercial_key || item.estagio_comercial || item.status_geral);
+    const repasse = statusFromBackend(item.repasse_fase_key || item.etapa_repasse_key || item.etapa_repasse || "sem_repasse");
+    const pendingItems = Array.isArray(item?.status_pendencias)
+      ? item.status_pendencias.map((entry) => String(entry || "").trim()).filter(Boolean)
+      : [];
     return {
       processo_id: item.processo_id,
       cliente: item.cliente_nome || "-",
@@ -2727,17 +2734,27 @@
       corretor: item.corretor || "-",
       cca: item.cca_responsavel || "-",
       credito: statusFromBackend(item.status_credito),
-      geral: statusFromBackend(item.estagio_comercial || item.status_geral),
-      repasse: statusFromBackend(item.etapa_repasse || "sem_repasse"),
+      geral,
+      geralLabel: String(item.estagio_comercial_label || labelFor("geral", geral) || "-").trim() || "-",
+      repasse,
+      repasseLabel: String(item.repasse_fase_label || item.etapa_repasse_label || labelFor("repasse", repasse) || "-").trim() || "-",
       statusCaixa,
+      statusCaixaLabel: String(item.status_cca_label || labelFor("statusCaixa", statusCaixa) || "-").trim() || "-",
       statusAgehab,
-      sinal: statusFromBackend(item.status_sinal || "nao_tem"),
-      fiador: statusFromBackend(item.status_fiador || "nao_tem"),
+      statusAgehabLabel: String(item.status_agehab_label || labelFor("statusAgehab", statusAgehab) || "-").trim() || "-",
+      sinal,
+      sinalLabel: String(item.status_sinal_label || labelFor("sinal", sinal) || "-").trim() || "-",
+      fiador,
+      fiadorLabel: String(item.status_fiador_label || labelFor("fiador", fiador) || "-").trim() || "-",
       slaCor: readSlaHours(item, "sla_corretor_horas", "sla_corretor_dias"),
       slaCred: readSlaHours(item, "sla_analista_horas", "sla_credito_dias"),
       slaCca: readSlaHours(item, "sla_cca_horas", "sla_cca_dias"),
       dataCadastroOrigem: item.data_reserva_origem || item.data_cadastro_origem || null,
       createdAt: item.created_at || null,
+      observacaoResumo: String(item?.observacao_resumo || "").trim() || "Sem observacao registrada",
+      documentosResumo: String(item?.documentos_resumo || "").trim() || "Documentos: nenhum enviado",
+      pendingItems,
+      pendingSummary: String(item?.status_pendencias_resumo || "").trim() || (pendingItems.length ? `Pendencias: ${pendingItems.join("; ")}` : "Status OK: caixa, agehab, sinal e fiador alinhados"),
       semDocumento,
       foraContagemMes: Boolean(item?.nao_contar_mes),
       avisoContratoAgehab: Boolean(item?.aviso_gerar_contrato_agehab) && !semDocumento && statusAgehab === "validado_agehab",
@@ -2878,6 +2895,13 @@
 
   function normalizeOpsCardItem(item, listId){
     const normalized = { ...(item || {}) };
+    if (normalized?.display_titulo || normalized?.display_descricao || normalized?.display_meta || normalized?.status_label) {
+      normalized.titulo = String(normalized.display_titulo || normalized.titulo || "").trim() || normalized.titulo;
+      normalized.descricao = String(normalized.display_descricao || normalized.descricao || "").trim() || normalized.descricao;
+      normalized.display_meta = String(normalized.display_meta || "").trim();
+      normalized.display_status_label = String(normalized.status_label || "").trim();
+      return normalized;
+    }
     const payload = extractPlannerMetaPayload(normalized?.descricao);
     if (!payload) return normalized;
 
@@ -2927,14 +2951,18 @@
     listNode.innerHTML = rows.map((rawItem) => {
       const item = normalizeOpsCardItem(rawItem, listId);
       const statusClass = plannerStatusClass(item?.status);
-      const statusLabel = plannerStatusLabel(item?.status);
+      const statusLabel = item?.display_status_label || plannerStatusLabel(item?.status);
       const done = statusFromBackend(item?.status) === "concluido";
       const parts = [];
-      if (item?.responsavel) parts.push(`Resp: ${item.responsavel}`);
-      if (item?.data_referencia) parts.push(plannerDateLabel(item.data_referencia));
-      const timeWindow = plannerTimeWindow(item);
-      if (timeWindow) parts.push(timeWindow);
-      parts.push(`${Math.max(0, Math.min(100, Number(item?.progresso || 0)))}%`);
+      if (String(item?.display_meta || "").trim()) {
+        parts.push(String(item.display_meta).trim());
+      } else {
+        if (item?.responsavel) parts.push(`Resp: ${item.responsavel}`);
+        if (item?.data_referencia) parts.push(plannerDateLabel(item.data_referencia));
+        const timeWindow = plannerTimeWindow(item);
+        if (timeWindow) parts.push(timeWindow);
+        parts.push(`${Math.max(0, Math.min(100, Number(item?.progresso || 0)))}%`);
+      }
       return `
         <article class="opsItem">
           <div class="opsItemTop">
@@ -3219,18 +3247,19 @@
   }
 
   function pendingItems(row){
+    if (Array.isArray(row?.pendingItems) && row.pendingItems.length) return row.pendingItems;
     const items = [];
     if (!isResolved("statusCaixa", row.statusCaixa)) {
-      items.push(`CCA: ${labelFor("statusCaixa", row.statusCaixa)}`);
+      items.push(`Caixa: ${row.statusCaixaLabel || labelFor("statusCaixa", row.statusCaixa)}`);
     }
     if (!isResolved("statusAgehab", row.statusAgehab)) {
-      items.push(`Agehab: ${labelFor("statusAgehab", row.statusAgehab)}`);
+      items.push(`Agehab: ${row.statusAgehabLabel || labelFor("statusAgehab", row.statusAgehab)}`);
     }
     if (!isResolved("sinal", row.sinal)) {
-      items.push(`Sinal: ${labelFor("sinal", row.sinal)}`);
+      items.push(`Sinal: ${row.sinalLabel || labelFor("sinal", row.sinal)}`);
     }
     if (!isResolved("fiador", row.fiador)) {
-      items.push(`Fiador: ${labelFor("fiador", row.fiador)}`);
+      items.push(`Fiador: ${row.fiadorLabel || labelFor("fiador", row.fiador)}`);
     }
     return items;
   }
@@ -3345,15 +3374,7 @@
   }
 
   function repasseTimelineKey(row){
-    const repasse = statusFromBackend(row.repasse);
-    const caixa = statusFromBackend(row.statusCaixa);
-    const agehab = statusFromBackend(row.statusAgehab);
-
-    if (agehab === "validado_agehab" || caixa === "finalizado") return "inicio_garantia";
-    if (caixa === "assinatura_caixa" || repasse === "assinatura_autorizada") return "assinatura_caixa";
-    if (repasse === "inicio_repasse") return "inicio_repasse";
-    if (repasse === "em_repasse") return "em_repasse";
-    return "";
+    return statusFromBackend(row.repasse);
   }
 
   function commercialTimelineKey(row){

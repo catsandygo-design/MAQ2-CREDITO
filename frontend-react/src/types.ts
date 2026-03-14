@@ -72,6 +72,7 @@ export interface GestorDashboardResponse {
 export interface CreditoPlanejamentoItem {
   id: string
   tipo: string
+  tipo_label?: string | null
   titulo: string
   descricao?: string | null
   responsavel?: string | null
@@ -79,12 +80,23 @@ export interface CreditoPlanejamentoItem {
   hora_inicio?: string | null
   hora_fim?: string | null
   status: string
+  status_label?: string | null
   progresso: number
   urgente: boolean
   created_by_username?: string | null
   updated_by_username?: string | null
   created_at: string
   updated_at: string
+  display_titulo?: string | null
+  display_descricao?: string | null
+  display_meta?: string | null
+  meta_kind?: string | null
+  meta_cliente?: string | null
+  meta_acao?: string | null
+  meta_observacao?: string | null
+  meta_responsavel?: string | null
+  meta_status_oper?: string | null
+  meta_status_oper_label?: string | null
 }
 
 export interface CreditoPlanejamentoEvolucao {
@@ -137,6 +149,26 @@ export interface ProcessoApiItem {
   sem_documento_enviado?: boolean | null
   nao_contar_mes?: boolean | null
   aviso_gerar_contrato_agehab?: boolean | null
+  estagio_comercial_key?: string | null
+  estagio_comercial_label?: string | null
+  etapa_repasse_key?: string | null
+  etapa_repasse_label?: string | null
+  repasse_fase_key?: string | null
+  repasse_fase_label?: string | null
+  status_cca_key?: string | null
+  status_cca_label?: string | null
+  status_agehab_key?: string | null
+  status_agehab_label?: string | null
+  status_sinal_key?: string | null
+  status_sinal_label?: string | null
+  status_fiador_key?: string | null
+  status_fiador_label?: string | null
+  docs_pendentes?: number | null
+  documentos_resumo?: string | null
+  observacao_resumo?: string | null
+  status_pendencias?: string[] | null
+  status_pendencias_resumo?: string | null
+  status_tudo_ok?: boolean | null
 }
 
 export interface ProcessoLinha {
@@ -148,18 +180,30 @@ export interface ProcessoLinha {
   geral: string
   repasse: string
   statusCaixa: string
+  statusCaixaLabel: string
   statusAgehab: string
+  statusAgehabLabel: string
   sinal: string
+  sinalLabel: string
   fiador: string
+  fiadorLabel: string
   slaCor: number
   slaCred: number
   slaCca: number
   dataCadastroOrigem: string | null
   createdAt: string | null
   observacao: string
+  observacaoResumo: string
   docsTotal: number
   docsRecebidos: number
+  docsPendentes: number
+  documentosResumo: string
   semDocumento: boolean
   foraContagemMes: boolean
   avisoContratoAgehab: boolean
+  geralLabel: string
+  repasseLabel: string
+  pendingItems: string[]
+  pendingSummary: string
+  statusTudoOk: boolean
 }

@@ -1,6 +1,7 @@
 import os
 import io
 import csv
+import json
 import uuid
 import smtplib
 import logging
@@ -20,7 +21,7 @@ from urllib.parse import urlparse
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, and_, create_engine, or_, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.exc import SQLAlchemyError
@@ -676,6 +677,90 @@ ESTAGIOS_REPASSE_COMERCIAL = {
     "VENDA_FINALIZADA",
 }
 ESTAGIOS_DASH_COMERCIAL = {"EM_PROCESSO", "CREDITO", "SECRETARIA_VENDAS"}
+PROCESS_OVERVIEW_LABELS = {
+    "geral": {
+        "reserva": "Reserva",
+        "em_processo": "Em Processo",
+        "credito": "Credito",
+        "secretaria_vendas": "Secretaria de Vendas",
+        "assinatura_diretoria": "Assinatura Diretoria",
+        "autorizacao_diretoria": "Aprovacao Diretoria",
+        "envio_sienge": "Envio Sienge",
+        "venda_finalizada": "Venda Finalizada",
+    },
+    "repasse": {
+        "em_repasse": "Em Repasse",
+        "inicio_repasse": "Inicio Repasse",
+        "assinatura_autorizada": "Assinatura Autorizada",
+        "assinatura_caixa": "Assinatura Caixa",
+        "inicio_garantia": "Inicio Garantia",
+        "sem_repasse": "Sem Repasse",
+    },
+    "status_cca": {
+        "nao_iniciado": "Nao iniciado",
+        "analise_credito": "Analise Credito",
+        "pendente_credito": "Pendente Credito",
+        "analise_cca": "Analise CCA",
+        "pendente_cca": "Pendente CCA",
+        "aprovado": "Aprovado",
+        "reprovado": "Reprovado",
+        "condicionado": "Condicionado",
+        "bloqueado": "Bloqueado",
+        "dar_qv": "Dar QV",
+        "aguardando_conformidade": "Aguardando Conformidade",
+        "conforme": "Conforme",
+        "tratando_produto": "Tratando Produto",
+        "agendado": "Agendado",
+        "assinatura_caixa": "Assinatura Caixa",
+        "finalizado": "Finalizado",
+    },
+    "status_agehab": {
+        "nao_iniciado": "Nao iniciado",
+        "analise_credito": "Analise Credito",
+        "pendente_credito": "Pendente Credito",
+        "envio_agehab": "Envio Agehab",
+        "pendente_agehab": "Pendente Agehab",
+        "validado_agehab": "Validado Agehab",
+    },
+    "status_sinal": {
+        "nao_tem": "Nao tem",
+        "pendente": "Pendente",
+        "pago": "Pago",
+    },
+    "status_fiador": {
+        "nao_tem": "Nao tem",
+        "pendente": "Pendente",
+        "finalizado": "Finalizado",
+    },
+}
+PROCESS_READY_STATUS_KEYS = {
+    "status_cca": {"aprovado", "dar_qv", "conforme", "tratando_produto", "agendado", "assinatura_caixa", "finalizado"},
+    "status_agehab": {"validado_agehab"},
+    "status_sinal": {"nao_tem", "pago"},
+    "status_fiador": {"nao_tem", "finalizado"},
+}
+PLANEJAMENTO_ENTREGA_META_PREFIX = "__entrega_meta__:"
+PLANEJAMENTO_DIA_TODO_META_PREFIX = "__dia_todo_meta__:"
+PLANEJAMENTO_ENTREGA_STATUS_LABELS = {
+    "entregue": "Entregue",
+    "caixa": "Caixa",
+    "agehab": "Agehab",
+    "pendenciado": "Pendenciado",
+}
+PLANEJAMENTO_TIPO_LABELS = {
+    "tarefa": "Tarefa",
+    "subtarefa": "Subtarefa",
+    "agendamento": "Agendamento",
+    "entrega": "Entrega",
+    "urgente": "Urgente",
+    "anotacao": "Anotacao",
+}
+PLANEJAMENTO_STATUS_LABELS = {
+    "pendente": "Pendente",
+    "em_andamento": "Em andamento",
+    "concluido": "Concluido",
+    "atrasado": "Atrasado",
+}
 LEAD_STAGE_VALUES = [
     "LEAD",
     "AGENDAMENTO",
@@ -746,6 +831,65 @@ def _normalize_text_key(value: Optional[str]) -> str:
         return ""
     normalized = unicodedata.normalize("NFKD", text)
     return "".join(ch for ch in normalized if not unicodedata.combining(ch)).replace(" ", "_")
+
+
+def _process_view_label(area: str, value: Optional[str], *, fallback: str = "-") -> str:
+    key = _normalize_text_key(value)
+    mapped = PROCESS_OVERVIEW_LABELS.get(area, {}).get(key, "")
+    if mapped:
+        return mapped
+    raw = str(value or "").strip()
+    return raw or fallback
+
+
+def _process_status_is_resolved(area: str, value: Optional[str]) -> bool:
+    return _normalize_text_key(value) in PROCESS_READY_STATUS_KEYS.get(area, set())
+
+
+def _process_pending_items(status_cca: Optional[str], status_agehab: Optional[str], status_sinal: Optional[str], status_fiador: Optional[str]) -> list[str]:
+    items: list[str] = []
+    if not _process_status_is_resolved("status_cca", status_cca):
+        items.append(f"Caixa: {_process_view_label('status_cca', status_cca)}")
+    if not _process_status_is_resolved("status_agehab", status_agehab):
+        items.append(f"Agehab: {_process_view_label('status_agehab', status_agehab)}")
+    if not _process_status_is_resolved("status_sinal", status_sinal):
+        items.append(f"Sinal: {_process_view_label('status_sinal', status_sinal)}")
+    if not _process_status_is_resolved("status_fiador", status_fiador):
+        items.append(f"Fiador: {_process_view_label('status_fiador', status_fiador)}")
+    return items
+
+
+def _process_observacao_resumo(value: Optional[str], *, max_len: int = 140) -> str:
+    normalized = " ".join(str(value or "").split()).strip()
+    if not normalized:
+        return "Sem observacao registrada"
+    if len(normalized) <= max_len:
+        return normalized
+    return f"{normalized[: max_len - 3].rstrip()}..."
+
+
+def _process_documentos_resumo(*, docs_total: int, docs_recebidos: int, sem_documento_enviado: bool) -> str:
+    if sem_documento_enviado or docs_total <= 0:
+        return "Documentos: nenhum enviado"
+    pendentes = max(0, docs_total - docs_recebidos)
+    if pendentes <= 0:
+        return "Documentos: OK, todos aprovados"
+    return f"Documentos pendentes: {pendentes} de {docs_total}"
+
+
+def _process_repasse_display_key(etapa_repasse: Optional[str], status_cca: Optional[str], status_agehab: Optional[str]) -> str:
+    repasse_key = _normalize_text_key(etapa_repasse)
+    caixa_key = _normalize_text_key(status_cca)
+    agehab_key = _normalize_text_key(status_agehab)
+    if agehab_key == "validado_agehab" or caixa_key == "finalizado":
+        return "inicio_garantia"
+    if caixa_key == "assinatura_caixa" or repasse_key == "assinatura_autorizada":
+        return "assinatura_caixa"
+    if repasse_key == "inicio_repasse":
+        return "inicio_repasse"
+    if repasse_key == "em_repasse":
+        return "em_repasse"
+    return "sem_repasse"
 
 
 def _process_estagio_comercial(value: Optional[str], fallback: str = "RESERVA") -> str:
@@ -2211,6 +2355,26 @@ class ProcessoOverviewOut(BaseModel):
     docs_recebidos: int = 0
     sem_documento_enviado: bool = True
     aviso_gerar_contrato_agehab: bool = False
+    estagio_comercial_key: Optional[str] = None
+    estagio_comercial_label: Optional[str] = None
+    etapa_repasse_key: Optional[str] = None
+    etapa_repasse_label: Optional[str] = None
+    repasse_fase_key: Optional[str] = None
+    repasse_fase_label: Optional[str] = None
+    status_cca_key: Optional[str] = None
+    status_cca_label: Optional[str] = None
+    status_agehab_key: Optional[str] = None
+    status_agehab_label: Optional[str] = None
+    status_sinal_key: Optional[str] = None
+    status_sinal_label: Optional[str] = None
+    status_fiador_key: Optional[str] = None
+    status_fiador_label: Optional[str] = None
+    docs_pendentes: int = 0
+    documentos_resumo: Optional[str] = None
+    observacao_resumo: Optional[str] = None
+    status_pendencias: list[str] = Field(default_factory=list)
+    status_pendencias_resumo: Optional[str] = None
+    status_tudo_ok: bool = False
 
 
 class CcaAnaliseItemOut(BaseModel):
@@ -2389,6 +2553,18 @@ class CreditoPlanejamentoItemOut(BaseModel):
     updated_by_username: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    tipo_label: str = "Item"
+    status_label: str = "Pendente"
+    display_titulo: Optional[str] = None
+    display_descricao: Optional[str] = None
+    display_meta: Optional[str] = None
+    meta_kind: Optional[str] = None
+    meta_cliente: Optional[str] = None
+    meta_acao: Optional[str] = None
+    meta_observacao: Optional[str] = None
+    meta_responsavel: Optional[str] = None
+    meta_status_oper: Optional[str] = None
+    meta_status_oper_label: Optional[str] = None
 
 
 class CreditoPlanejamentoEvolucaoOut(BaseModel):
@@ -2577,7 +2753,119 @@ def _credito_planejamento_progresso(value: Optional[int]) -> int:
     return max(0, min(100, parsed))
 
 
+def _credito_planejamento_tipo_label(value: Optional[str]) -> str:
+    return PLANEJAMENTO_TIPO_LABELS.get(_credito_planejamento_tipo(value, fallback="tarefa"), "Item")
+
+
+def _credito_planejamento_status_label(value: Optional[str]) -> str:
+    return PLANEJAMENTO_STATUS_LABELS.get(_credito_planejamento_status(value, fallback="pendente"), "Pendente")
+
+
+def _credito_planejamento_time_window(hora_inicio: Optional[str], hora_fim: Optional[str]) -> str:
+    start = str(hora_inicio or "").strip()
+    end = str(hora_fim or "").strip()
+    if start and end:
+        return f"{start} - {end}"
+    return start or end
+
+
+def _credito_planejamento_date_label(value: Optional[date]) -> str:
+    if not isinstance(value, date):
+        return ""
+    return value.strftime("%d/%m/%Y")
+
+
+def _normalize_credito_planejamento_entrega_status(value: Optional[str], *, fallback: str = "pendenciado") -> str:
+    token = _normalize_text_key(value)
+    if token in {"entregue", "concluido", "finalizado", "done"}:
+        return "entregue"
+    if token in {"caixa", "analise_caixa"}:
+        return "caixa"
+    if token in {"agehab", "analise_agehab"}:
+        return "agehab"
+    return fallback
+
+
+def _extract_credito_planejamento_meta_payload(raw_description: Optional[str]) -> Optional[dict[str, Any]]:
+    raw = str(raw_description or "").strip()
+    if not raw:
+        return None
+    json_source = ""
+    if raw.startswith(PLANEJAMENTO_ENTREGA_META_PREFIX):
+        json_source = raw[len(PLANEJAMENTO_ENTREGA_META_PREFIX) :]
+    elif raw.startswith(PLANEJAMENTO_DIA_TODO_META_PREFIX):
+        json_source = raw[len(PLANEJAMENTO_DIA_TODO_META_PREFIX) :]
+    else:
+        json_start = raw.find("{")
+        has_known_prefix = (
+            raw.startswith(PLANEJAMENTO_ENTREGA_META_PREFIX)
+            or raw.startswith(PLANEJAMENTO_DIA_TODO_META_PREFIX)
+            or "entrega_meta" in raw
+            or "dia_todo_meta" in raw
+        )
+        if json_start < 0 or (not has_known_prefix and json_start != 0):
+            return None
+        json_source = raw[json_start:]
+    try:
+        payload = json.loads(json_source or "{}")
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _credito_planejamento_item_view(item: CreditoPlanejamentoItem) -> dict[str, Optional[str]]:
+    tipo = _credito_planejamento_tipo(item.tipo, fallback="tarefa")
+    raw_desc = str(item.descricao or "").strip()
+    payload = _extract_credito_planejamento_meta_payload(raw_desc)
+    time_window = _credito_planejamento_time_window(item.hora_inicio, item.hora_fim)
+    date_label = _credito_planejamento_date_label(item.data_referencia)
+
+    display_title = str(item.titulo or "").strip() or "-"
+    display_description = raw_desc or None
+    meta_kind = "texto"
+    meta_cliente = None
+    meta_acao = None
+    meta_observacao = None
+    meta_responsavel = str(item.responsavel or "").strip() or None
+    meta_status_oper = None
+    meta_status_oper_label = None
+
+    if tipo == "entrega":
+        meta_kind = "entrega"
+        meta_cliente = str((payload or {}).get("cliente") or item.titulo or "").strip() or None
+        meta_acao = str((payload or {}).get("acao") or "").strip() or None
+        meta_observacao = str((payload or {}).get("observacao") or ("" if payload else raw_desc)).strip() or None
+        meta_responsavel = str((payload or {}).get("responsavel") or item.responsavel or "").strip() or None
+        meta_status_oper = _normalize_credito_planejamento_entrega_status((payload or {}).get("statusOper") or item.status)
+        meta_status_oper_label = PLANEJAMENTO_ENTREGA_STATUS_LABELS.get(meta_status_oper, "Pendenciado")
+        display_title = meta_cliente or display_title
+        display_description = meta_acao or meta_observacao or None
+    elif raw_desc.startswith(PLANEJAMENTO_DIA_TODO_META_PREFIX):
+        meta_kind = "dia_todo"
+        meta_acao = str((payload or {}).get("acao") or "").strip() or None
+        meta_observacao = str((payload or {}).get("observacao") or "").strip() or None
+        display_description = meta_acao or meta_observacao or None
+
+    meta_parts = [meta_responsavel or "", time_window, date_label]
+    if meta_status_oper_label:
+        meta_parts.append(meta_status_oper_label)
+
+    return {
+        "display_titulo": display_title,
+        "display_descricao": display_description,
+        "display_meta": " - ".join(part for part in meta_parts if part),
+        "meta_kind": meta_kind,
+        "meta_cliente": meta_cliente,
+        "meta_acao": meta_acao,
+        "meta_observacao": meta_observacao,
+        "meta_responsavel": meta_responsavel,
+        "meta_status_oper": meta_status_oper,
+        "meta_status_oper_label": meta_status_oper_label,
+    }
+
+
 def _credito_planejamento_item_out(item: CreditoPlanejamentoItem) -> CreditoPlanejamentoItemOut:
+    view = _credito_planejamento_item_view(item)
     return CreditoPlanejamentoItemOut(
         id=item.id,
         tipo=_credito_planejamento_tipo(item.tipo, fallback="tarefa"),
@@ -2594,6 +2882,18 @@ def _credito_planejamento_item_out(item: CreditoPlanejamentoItem) -> CreditoPlan
         updated_by_username=item.updated_by_username,
         created_at=item.created_at,
         updated_at=item.updated_at,
+        tipo_label=_credito_planejamento_tipo_label(item.tipo),
+        status_label=_credito_planejamento_status_label(item.status),
+        display_titulo=view["display_titulo"],
+        display_descricao=view["display_descricao"],
+        display_meta=view["display_meta"],
+        meta_kind=view["meta_kind"],
+        meta_cliente=view["meta_cliente"],
+        meta_acao=view["meta_acao"],
+        meta_observacao=view["meta_observacao"],
+        meta_responsavel=view["meta_responsavel"],
+        meta_status_oper=view["meta_status_oper"],
+        meta_status_oper_label=view["meta_status_oper_label"],
     )
 
 
@@ -7016,6 +7316,25 @@ def app_list_processos(
         status_cca_norm = _process_caixa_status(processo.status_cca)
         status_agehab_norm = _process_agehab_status(processo.status_agehab)
         etapa_repasse_norm = _process_etapa_repasse(getattr(processo, "etapa_repasse", None))
+        estagio_comercial_norm = _process_estagio_comercial(processo.estagio_comercial)
+        status_sinal_norm = _process_sinal_status(getattr(processo, "status_sinal", None))
+        status_fiador_norm = _process_fiador_status(getattr(processo, "status_fiador", None))
+        status_cca_key = "nao_iniciado" if sem_documento_enviado else _normalize_text_key(status_cca_norm or "ANALISE_CREDITO")
+        status_agehab_key = "nao_iniciado" if sem_documento_enviado else _normalize_text_key(status_agehab_norm or "ANALISE_CREDITO")
+        status_sinal_key = _normalize_text_key(status_sinal_norm or "NAO_TEM")
+        status_fiador_key = _normalize_text_key(status_fiador_norm or "NAO_TEM")
+        estagio_comercial_key = _normalize_text_key(estagio_comercial_norm)
+        etapa_repasse_key = _normalize_text_key(etapa_repasse_norm or "SEM_REPASSE")
+        repasse_fase_key = _process_repasse_display_key(etapa_repasse_norm, status_cca_key, status_agehab_key)
+        status_pendencias = _process_pending_items(status_cca_key, status_agehab_key, status_sinal_key, status_fiador_key)
+        status_tudo_ok = len(status_pendencias) == 0
+        docs_pendentes = max(0, docs_total - docs_recebidos)
+        documentos_resumo = _process_documentos_resumo(
+            docs_total=docs_total,
+            docs_recebidos=docs_recebidos,
+            sem_documento_enviado=sem_documento_enviado,
+        )
+        observacao_resumo = _process_observacao_resumo(getattr(processo, "observacao", None))
         espelho_validado = status_cca_norm in {"APROVADO", "DAR_QV"}
         agehab_validado = status_agehab_norm == "VALIDADO_AGEHAB"
         contrato_ja_acionado = etapa_repasse_norm == "ASSINATURA_AUTORIZADA" or status_cca_norm in {"ASSINATURA_CAIXA", "FINALIZADO"}
@@ -7045,11 +7364,11 @@ def app_list_processos(
                 status_geral=processo.status_geral,
                 status_cca=status_cca_norm,
                 status_agehab=status_agehab_norm,
-                status_sinal=processo.status_sinal,
+                status_sinal=status_sinal_norm,
                 valor_sinal=float(processo.valor_sinal) if getattr(processo, "valor_sinal", None) is not None else None,
                 recolha_fgts=_process_recolha_fgts_status(getattr(processo, "recolha_fgts", None)),
-                status_fiador=processo.status_fiador,
-                estagio_comercial=_process_estagio_comercial(processo.estagio_comercial),
+                status_fiador=status_fiador_norm,
+                estagio_comercial=estagio_comercial_norm,
                 etapa_repasse=_process_etapa_repasse(processo.etapa_repasse),
                 fila_atual=_fila_atual_from_processo(processo),
                 cca_responsavel=processo.cca_responsavel,
@@ -7075,6 +7394,30 @@ def app_list_processos(
                 docs_recebidos=docs_recebidos,
                 sem_documento_enviado=sem_documento_enviado,
                 aviso_gerar_contrato_agehab=aviso_gerar_contrato_agehab,
+                estagio_comercial_key=estagio_comercial_key,
+                estagio_comercial_label=_process_view_label("geral", estagio_comercial_key),
+                etapa_repasse_key=etapa_repasse_key,
+                etapa_repasse_label=_process_view_label("repasse", etapa_repasse_key),
+                repasse_fase_key=repasse_fase_key,
+                repasse_fase_label=_process_view_label("repasse", repasse_fase_key),
+                status_cca_key=status_cca_key,
+                status_cca_label=_process_view_label("status_cca", status_cca_key),
+                status_agehab_key=status_agehab_key,
+                status_agehab_label=_process_view_label("status_agehab", status_agehab_key),
+                status_sinal_key=status_sinal_key,
+                status_sinal_label=_process_view_label("status_sinal", status_sinal_key),
+                status_fiador_key=status_fiador_key,
+                status_fiador_label=_process_view_label("status_fiador", status_fiador_key),
+                docs_pendentes=docs_pendentes,
+                documentos_resumo=documentos_resumo,
+                observacao_resumo=observacao_resumo,
+                status_pendencias=status_pendencias,
+                status_pendencias_resumo=(
+                    "Status OK: caixa, agehab, sinal e fiador alinhados"
+                    if status_tudo_ok
+                    else f"Pendencias: {'; '.join(status_pendencias)}"
+                ),
+                status_tudo_ok=status_tudo_ok,
             )
         )
 
