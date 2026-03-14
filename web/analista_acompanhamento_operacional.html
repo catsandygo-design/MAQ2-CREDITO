@@ -1529,8 +1529,12 @@
   function plannerAgendaItemsForDate(dateIso){
     const rows = Array.isArray(plannerDashboard?.itens) ? plannerDashboard.itens : [];
     return rows
-      .filter((item) => String(item?.data_referencia || "") === String(dateIso || ""))
       .filter((item) => norm(item?.tipo).replace(/\s+/g, "_") === "subtarefa")
+      .filter((item) => {
+        const startDate = String(item?.data_referencia || "").trim();
+        if (!startDate) return true;
+        return startDate <= String(dateIso || "");
+      })
       .filter((item) => String(item?.hora_inicio || item?.hora_fim || "").trim())
       .sort((a, b) => {
         const diff = compareHHMM(a?.hora_inicio || a?.hora_fim || "", b?.hora_inicio || b?.hora_fim || "");
@@ -1541,13 +1545,13 @@
         kind:"planner",
         hora:String(item?.hora_inicio || item?.hora_fim || "").slice(0, 5),
         horaFim:String(item?.hora_fim || "").slice(0, 5),
-        tarefa:String(item?.titulo || "Sem titulo").trim() || "Sem titulo",
-        detalhe:String(item?.descricao || "").trim(),
+        tarefa:String(item?.display_titulo || item?.titulo || "Sem titulo").trim() || "Sem titulo",
+        detalhe:String(item?.display_descricao || item?.descricao || "").trim(),
         responsavel:String(item?.responsavel || "").trim(),
         label:typeLabel(item?.tipo),
         labelClass:norm(item?.status).replace(/\s+/g, "_") === "concluido" ? "ok" : (Boolean(item?.urgente) ? "warn" : ""),
         plannerStatus:String(item?.status || ""),
-        plannerStatusLabel:statusLabel(item?.status),
+        plannerStatusLabel:String(item?.status_label || statusLabel(item?.status)).trim(),
         checkKey:`planner:${item?.id || ""}`,
       }));
   }

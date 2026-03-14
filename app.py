@@ -8375,6 +8375,13 @@ def app_get_credito_planejamento_dashboard(
             func.lower(func.coalesce(CreditoPlanejamentoItem.tipo, "")) != "anotacao",
             or_(
                 and_(
+                    func.lower(func.coalesce(CreditoPlanejamentoItem.tipo, "")) == "subtarefa",
+                    or_(
+                        CreditoPlanejamentoItem.data_referencia.is_(None),
+                        CreditoPlanejamentoItem.data_referencia <= fim_periodo,
+                    ),
+                ),
+                and_(
                     CreditoPlanejamentoItem.data_referencia.isnot(None),
                     CreditoPlanejamentoItem.data_referencia >= inicio_periodo,
                     CreditoPlanejamentoItem.data_referencia <= fim_periodo,

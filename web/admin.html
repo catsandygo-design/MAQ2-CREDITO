@@ -475,7 +475,7 @@
       <div class="top">
         <div class="title">
           <h1>Planejamento Operacional</h1>
-          <p>Cadastre itens do operacional direto no admin. Use <b>Subtarefa da agenda</b> para intercalar no checklist horario.</p>
+          <p>Cadastre itens do operacional direto no admin. Use <b>Subtarefa da agenda</b> para intercalar no checklist horario e repetir diariamente ate exclusao.</p>
         </div>
         <div class="actions">
           <a class="btn" href="/app/analista/acompanhamento-operacional">Abrir painel operacional</a>
@@ -503,7 +503,7 @@
             <input id="planResponsavel" maxlength="120" placeholder="Nome da pessoa" />
           </div>
           <div class="field">
-            <label for="planData">Data</label>
+            <label for="planData">Data inicial</label>
             <input id="planData" type="date" />
           </div>
           <div class="field">
@@ -543,7 +543,7 @@
             <button class="btn primary" type="submit">Cadastrar item</button>
           </div>
         </form>
-        <div class="planner-copy">Dica: para aparecer como subtarefa no checklist horario, use tipo <b>Subtarefa da agenda</b> e informe pelo menos a hora de inicio.</div>
+        <div class="planner-copy">Dica: para aparecer como subtarefa no checklist horario, use tipo <b>Subtarefa da agenda</b>, informe pelo menos a hora de inicio e, se quiser, a <b>data inicial</b>. Ela vai repetir todos os dias ate ser excluida no admin.</div>
         <div id="feedbackPlanner" class="feedback" aria-live="polite"></div>
       </div>
     </section>
