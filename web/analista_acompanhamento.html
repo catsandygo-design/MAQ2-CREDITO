@@ -458,12 +458,50 @@
 
     .col-count {
       border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, .25);
-      padding: 2px 6px;
-      font-size: 9px;
-      color: var(--muted);
-      background: rgba(2, 6, 23, .78);
+      min-width: 28px;
+      height: 28px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(15, 23, 42, .18);
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1;
+      color: #f8fafc;
+      background: linear-gradient(180deg, #0f3f67, #0b2f4e);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .16),
+        0 8px 18px rgba(15, 23, 42, .14);
       font-variant-numeric: tabular-nums;
+    }
+
+    .column[data-col="em_processo"] .col-count {
+      background: linear-gradient(180deg, #0f3f67, #0b2f4e);
+    }
+
+    .column[data-col="credito"] .col-count {
+      background: linear-gradient(180deg, #1d4ed8, #1e3a8a);
+    }
+
+    .column[data-col="secretaria_vendas"] .col-count {
+      background: linear-gradient(180deg, #0284c7, #155e75);
+    }
+
+    .column[data-col="assinatura_diretoria"] .col-count {
+      background: linear-gradient(180deg, #059669, #166534);
+    }
+
+    .column[data-col="autorizacao_diretoria"] .col-count {
+      background: linear-gradient(180deg, #d97706, #92400e);
+    }
+
+    .column[data-col="envio_sienge"] .col-count {
+      background: linear-gradient(180deg, #ea580c, #9a3412);
+    }
+
+    .column[data-col="venda_finalizada"] .col-count {
+      background: linear-gradient(180deg, #16a34a, #166534);
     }
 
     .cards {
@@ -793,8 +831,11 @@
       font-weight:800;
     }
     body.analista-pro .col-count{
-      font-size:10px;
-      padding:2px 8px;
+      min-width:32px;
+      height:30px;
+      padding:0 11px;
+      font-size:12px;
+      font-weight:800;
     }
     body.analista-pro .cards{
       gap:7px;
