@@ -78,6 +78,70 @@
       border-color: rgba(15, 23, 42, 0.18);
     }
 
+    body.theme-corporate .topbar {
+      background:
+        radial-gradient(520px 220px at 0% 0%, rgba(14, 165, 233, .10), transparent 58%),
+        linear-gradient(135deg, rgba(255, 255, 255, .98), rgba(239, 247, 255, .98));
+      box-shadow: 0 20px 34px rgba(15, 23, 42, .08);
+    }
+
+    body.theme-corporate .title-badge {
+      color: #0c4a6e;
+      border-color: rgba(14, 165, 233, .18);
+      background: linear-gradient(180deg, rgba(224, 242, 254, .96), rgba(240, 249, 255, .98));
+    }
+
+    body.theme-corporate .meta {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, .96), rgba(248, 251, 255, .96)),
+        linear-gradient(90deg, rgba(14, 165, 233, .04), rgba(34, 197, 94, .03));
+    }
+
+    body.theme-corporate .filters {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(248, 251, 255, .98)),
+        linear-gradient(135deg, rgba(14, 165, 233, .04), rgba(34, 197, 94, .02));
+      box-shadow: 0 12px 22px rgba(15, 23, 42, .06);
+    }
+
+    body.theme-corporate .board-shell {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, .96), rgba(243, 248, 255, .98)),
+        radial-gradient(800px 280px at 50% -10%, rgba(14, 165, 233, .08), transparent 60%);
+    }
+
+    body.theme-corporate .column {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(248, 251, 255, .96)),
+        linear-gradient(180deg, rgba(14, 165, 233, .03), rgba(34, 197, 94, .02));
+      box-shadow: 0 16px 26px rgba(15, 23, 42, .05);
+    }
+
+    body.theme-corporate .col-head {
+      background: linear-gradient(180deg, rgba(239, 246, 255, .94), rgba(255, 255, 255, .9));
+    }
+
+    body.theme-corporate .card {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(248, 251, 255, .98)),
+        linear-gradient(135deg, rgba(14, 165, 233, .03), rgba(34, 197, 94, .02));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .9),
+        0 12px 22px rgba(15, 23, 42, .06);
+    }
+
+    body.theme-corporate .card:hover {
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .95),
+        0 14px 24px rgba(14, 116, 144, .10);
+    }
+
+    body.theme-corporate .cards.drag-over {
+      background:
+        linear-gradient(180deg, rgba(220, 252, 231, .70), rgba(224, 242, 254, .75)),
+        rgba(255, 255, 255, .85);
+    }
+
     body.theme-corporate .chip strong,
     body.theme-corporate .name a,
     body.theme-corporate .stage {
@@ -124,7 +188,9 @@
     .topbar {
       border: 1px solid var(--line);
       border-radius: 16px;
-      background: #040b1c;
+      background:
+        radial-gradient(520px 220px at 0% 0%, rgba(34, 197, 94, .08), transparent 58%),
+        linear-gradient(135deg, rgba(4, 11, 28, .98), rgba(8, 15, 32, .94));
       backdrop-filter: blur(8px);
       width: 100%;
       min-width: 0;
@@ -133,10 +199,31 @@
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 5px;
       align-items: start;
+      box-shadow: 0 18px 36px rgba(2, 6, 23, .16);
     }
 
     .title {
       min-width: 0;
+      display: grid;
+      gap: 6px;
+    }
+
+    .title-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      max-width: 100%;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(255, 255, 255, 0.05);
+      color: #cbd5e1;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      white-space: nowrap;
     }
 
     .title h1 {
@@ -192,8 +279,11 @@
       border: 1px solid var(--line);
       border-radius: 12px;
       padding: 5px;
-      background: #040b1c;
+      background:
+        linear-gradient(180deg, rgba(4, 11, 28, .96), rgba(4, 11, 28, .9)),
+        linear-gradient(90deg, rgba(14, 165, 233, .05), rgba(34, 197, 94, .04));
       backdrop-filter: blur(6px);
+      box-shadow: 0 10px 22px rgba(2, 6, 23, .08);
     }
 
     .chip {
@@ -215,7 +305,9 @@
     .filters {
       border: 1px solid var(--line);
       border-radius: 14px;
-      background: #040b1c;
+      background:
+        linear-gradient(180deg, rgba(4, 11, 28, .97), rgba(4, 11, 28, .92)),
+        linear-gradient(135deg, rgba(14, 165, 233, .04), rgba(34, 197, 94, .03));
       backdrop-filter: blur(6px);
       width: 100%;
       min-width: 0;
@@ -246,6 +338,12 @@
       padding: 6px 8px;
       outline: none;
       font-size: 10px;
+      transition: border-color .12s ease, box-shadow .12s ease, background .12s ease;
+    }
+
+    .field input:focus {
+      border-color: rgba(56, 189, 248, .45);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, .12);
     }
 
     .msg {
@@ -262,7 +360,9 @@
       min-height: 0;
       border: 1px solid var(--line);
       border-radius: 14px;
-      background: linear-gradient(180deg, rgba(2, 6, 23, .74), rgba(2, 6, 23, .64));
+      background:
+        linear-gradient(180deg, rgba(2, 6, 23, .76), rgba(2, 6, 23, .68)),
+        radial-gradient(900px 340px at 50% -20%, rgba(14, 165, 233, .08), transparent 60%);
       padding: 5px;
       display: flex;
       flex-direction: column;
@@ -270,6 +370,7 @@
       width: 100%;
       min-width: 0;
       overflow: hidden;
+      box-shadow: 0 18px 38px rgba(15, 23, 42, .08);
     }
 
     .board {
@@ -292,12 +393,50 @@
     .column {
       border: 1px solid var(--line);
       border-radius: 12px;
-      background: rgba(7, 12, 28, .9);
+      background:
+        linear-gradient(180deg, rgba(8, 15, 32, .92), rgba(6, 11, 24, .96)),
+        linear-gradient(180deg, rgba(56, 189, 248, .03), rgba(34, 197, 94, .02));
       display: grid;
       grid-template-rows: auto 1fr;
       min-height: 0;
       height: 100%;
       min-width: 0;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 16px 32px rgba(2, 6, 23, .08);
+    }
+
+    .column::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 4px;
+      opacity: .95;
+      background: linear-gradient(90deg, rgba(56, 189, 248, .92), rgba(125, 211, 252, .25));
+    }
+
+    .column[data-col="credito"]::before {
+      background: linear-gradient(90deg, rgba(37, 99, 235, .95), rgba(59, 130, 246, .26));
+    }
+
+    .column[data-col="secretaria_vendas"]::before {
+      background: linear-gradient(90deg, rgba(14, 165, 233, .95), rgba(34, 211, 238, .24));
+    }
+
+    .column[data-col="assinatura_diretoria"]::before {
+      background: linear-gradient(90deg, rgba(16, 185, 129, .95), rgba(52, 211, 153, .24));
+    }
+
+    .column[data-col="autorizacao_diretoria"]::before {
+      background: linear-gradient(90deg, rgba(245, 158, 11, .95), rgba(251, 191, 36, .28));
+    }
+
+    .column[data-col="envio_sienge"]::before {
+      background: linear-gradient(90deg, rgba(249, 115, 22, .95), rgba(251, 146, 60, .26));
+    }
+
+    .column[data-col="venda_finalizada"]::before {
+      background: linear-gradient(90deg, rgba(34, 197, 94, .95), rgba(74, 222, 128, .3));
     }
 
     .col-head {
@@ -307,6 +446,7 @@
       justify-content: space-between;
       align-items: center;
       gap: 5px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, .01));
     }
 
     .col-title {
@@ -344,20 +484,27 @@
     }
 
     .cards.drag-over {
-      background: rgba(34, 197, 94, .08);
+      background:
+        linear-gradient(180deg, rgba(34, 197, 94, .08), rgba(14, 165, 233, .06)),
+        rgba(255, 255, 255, .02);
       box-shadow: inset 0 0 0 1px rgba(34, 197, 94, .35);
     }
 
     .card {
       border: 1px solid rgba(148, 163, 184, .2);
       border-radius: 12px;
-      background: rgba(15, 23, 42, .93);
-      padding: 7px;
+      background:
+        linear-gradient(180deg, rgba(15, 23, 42, .94), rgba(15, 23, 42, .9)),
+        linear-gradient(135deg, rgba(56, 189, 248, .03), rgba(14, 165, 233, .01));
+      padding: 8px;
       display: grid;
-      gap: 3px;
+      gap: 5px;
       min-width: 0;
       cursor: grab;
-      transition: transform .12s ease, border-color .12s ease, opacity .12s ease;
+      transition: transform .12s ease, border-color .12s ease, opacity .12s ease, box-shadow .12s ease;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .03),
+        0 12px 22px rgba(2, 6, 23, .14);
     }
     .card.finalizado {
       background: rgba(22, 163, 74, .16);
@@ -371,6 +518,9 @@
     .card:hover {
       border-color: rgba(56, 189, 248, .42);
       transform: translateY(-1px);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .06),
+        0 16px 28px rgba(2, 6, 23, .18);
     }
 
     .card.dragging {
@@ -456,11 +606,11 @@
 
     .stage {
       border-radius: 999px;
-      padding: 2px 6px;
+      padding: 3px 8px;
       font-size: 9px;
       border: 1px solid rgba(148, 163, 184, .25);
-      color: #cbd5e1;
-      background: rgba(2, 6, 23, .82);
+      color: #e2e8f0;
+      background: rgba(2, 6, 23, .72);
       white-space: nowrap;
       flex-shrink: 0;
     }
@@ -727,8 +877,9 @@
   <div class="wrap">
     <section class="topbar">
       <div class="title">
+        <span class="title-badge">Fluxo comercial oficial</span>
         <h1>Acompanhamento de Credito (Kanban)</h1>
-        <p>Arraste para a proxima fila comercial ou retorne direto para Processo. Atualizacao em tempo real.</p>
+        <p>Movimente o cliente para qualquer etapa comercial, com confirmacao antes da troca e sincronizacao automatica com o repasse.</p>
       </div>
       <div class="actions">
         <a class="btn" href="/app/analista">Painel</a>
@@ -743,7 +894,8 @@
     <section class="meta">
       <span class="chip">Total no Kanban: <strong id="totalCount">0</strong></span>
       <span class="chip">Auto refresh: <strong id="refreshLabel">60s</strong></span>
-      <span class="chip">Regra: <strong>proxima coluna ou retorno para Processo</strong></span>
+      <span class="chip">Movimentacao: <strong>livre com confirmacao</strong></span>
+      <span class="chip">Sincronizacao: <strong>repasse acompanha a etapa comercial</strong></span>
     </section>
 
     <section class="filters">
@@ -1140,12 +1292,11 @@
       const fromStage = row.stage;
       if (fromStage === targetStage) return;
 
-      const fromIndex = COL_INDEX[fromStage];
-      const toIndex = COL_INDEX[targetStage];
-      const isNextStep = toIndex === fromIndex + 1;
-      const isReturnToProcesso = targetStage === "em_processo" && fromStage !== "em_processo";
-      if (!isNextStep && !isReturnToProcesso) {
-        setMsg("Movimento permitido: proxima coluna ou retorno direto para Processo.", "err");
+      const confirmou = window.confirm(
+        `Confirma mover o cliente "${row.cliente}" de ${stageLabel(fromStage)} para ${stageLabel(targetStage)}?`
+      );
+      if (!confirmou) {
+        setMsg("Movimentacao cancelada pelo usuario.");
         applyFilters();
         return;
       }
@@ -1153,7 +1304,7 @@
       row.stage = targetStage;
       row.moving = true;
       applyFilters();
-      setMsg(`Salvando movimentacao para ${stageLabel(targetStage)}...`);
+      setMsg(`Movendo ${row.cliente} de ${stageLabel(fromStage)} para ${stageLabel(targetStage)}...`);
 
       try {
         const payload = { estagio_comercial: toBackendStage(targetStage) };
@@ -1167,7 +1318,7 @@
         });
         row.stage = toStageKey(updated.estagio_comercial || targetStage);
         row.moving = false;
-        setMsg(`Cliente movido para ${stageLabel(row.stage)}.`, "ok");
+        setMsg(`Cliente movido de ${stageLabel(fromStage)} para ${stageLabel(row.stage)}.`, "ok");
       } catch (error) {
         row.stage = fromStage;
         row.moving = false;
