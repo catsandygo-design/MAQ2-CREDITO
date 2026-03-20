@@ -295,23 +295,35 @@ export function PresentationPage() {
         </header>
 
         <main className="grid gap-6">
-          <section className="space-y-5 rounded-[28px] border border-white/15 bg-white/10 p-5 shadow-2xl backdrop-blur-xl">
-            <div className="flex items-start justify-between gap-4">
+          <section className="space-y-5 rounded-[28px] border border-white/15 bg-gradient-to-br from-slate-900/70 via-slate-900/40 to-slate-800/60 p-6 shadow-2xl backdrop-blur-xl">
+            <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.35em] text-cyan-200">Simulador</p>
                 <h2 className="mt-2 text-2xl font-black tracking-tight text-white">Painel comercial interativo</h2>
                 <p className="mt-2 max-w-2xl text-sm text-slate-200">
-                  Monte a proposta, veja o garantido e apresente o parcelamento em tempo real.
+                  Monte a proposta, veja o garantido + cheque e apresente o parcelamento em tempo real.
                 </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-right sm:text-left lg:text-right">
+                <div className="rounded-2xl border border-cyan-200/30 bg-cyan-500/15 px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.3em] text-cyan-100">Garantido (+ sinal)</p>
+                  <p className="text-lg font-black text-white">{formatCurrency(garantido)}</p>
+                </div>
+                <div className="rounded-2xl border border-emerald-200/30 bg-emerald-500/15 px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.3em] text-emerald-100">Total obtido</p>
+                  <p className="text-lg font-black text-white">{formatCurrency(totalObtido)}</p>
+                  <p className="text-[11px] uppercase tracking-[0.25em] text-emerald-100/80">Garantido + cheque</p>
+                </div>
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="space-y-2 text-sm">
-                Empreendimento
-                <select
-                  value={empreendimento}
-                  onChange={(event) => setEmpreendimento(event.target.value as Empreendimento)}
+            <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-2 text-sm">
+                  Empreendimento
+                  <select
+                    value={empreendimento}
+                    onChange={(event) => setEmpreendimento(event.target.value as Empreendimento)}
                   className="w-full rounded-2xl border border-white/20 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
                 >
                   {EMPREENDIMENTOS.map((item) => (
@@ -376,17 +388,40 @@ export function PresentationPage() {
                     <span>Parcela estimada</span>
                     <span className="font-semibold text-white">{formatCurrency(valorParcela)}</span>
                   </div>
-                  {!parcelasHabilitadas ? (
-                    <p className="text-xs text-amber-200">
-                      Prosoluto abaixo do minimo para parcelar (R$ {MIN_VALOR_PARCELA}). Cobrar à vista ou ajustar valores.
-                    </p>
-                  ) : (
-                    <p className="text-xs text-slate-300">
-                      Max {MAX_PARCELAS}x | Parcela minima {formatCurrency(MIN_VALOR_PARCELA)}.
-                    </p>
-                  )}
+                    {!parcelasHabilitadas ? (
+                      <p className="text-xs text-amber-200">
+                        Prosoluto abaixo do minimo para parcelar (R$ {MIN_VALOR_PARCELA}). Cobrar à vista ou ajustar valores.
+                      </p>
+                    ) : (
+                      <p className="text-xs text-slate-300">
+                        Max {MAX_PARCELAS}x | Parcela minima {formatCurrency(MIN_VALOR_PARCELA)}.
+                      </p>
+                    )}
                 </div>
               </label>
+            </div>
+
+              <div className="space-y-4 rounded-[24px] border border-white/10 bg-slate-950/60 p-4 shadow-inner">
+                <div className="flex items-center justify-between text-sm text-slate-200">
+                  <span className="font-semibold text-white">Painel rápido</span>
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-cyan-100">
+                    Apresentacao
+                  </span>
+                </div>
+                <div className="grid gap-2 text-sm text-slate-200">
+                  <div className="flex justify-between"><span>Garantido + sinal</span><strong>{formatCurrency(garantido)}</strong></div>
+                  <div className="flex justify-between"><span>Total obtido</span><strong>{formatCurrency(totalObtido)}</strong></div>
+                  <div className="flex justify-between"><span>Prosoluto</span><strong>{formatCurrency(prosolutoEfetivo)}</strong></div>
+                  <div className="flex justify-between">
+                    <span>Parcelamento</span>
+                    <strong>{parcelasHabilitadas ? `${parcelasNormalizadas}x de ${formatCurrency(valorParcela)}` : formatCurrency(valorParcela)}</strong>
+                  </div>
+                  <div className="flex justify-between text-xs text-slate-300">
+                    <span>Aporte inicial</span>
+                    <span>{formatCurrency(aporteInicial)}</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
