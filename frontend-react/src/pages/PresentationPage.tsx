@@ -110,6 +110,12 @@ function CurrencyField({
             setDraft(nextValue)
             onChange?.(parseCurrencyInput(nextValue))
           }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              event.currentTarget.blur()
+            }
+          }}
           readOnly={readOnly}
           className={[
             'w-full rounded-2xl border px-4 py-3 pl-12 text-white outline-none transition',
@@ -183,8 +189,9 @@ export function PresentationPage() {
   }, [])
 
   const chequeMoradia = EMPREENDIMENTOS.find((item) => item.label === empreendimento)?.chequeMoradia ?? 0
-  const garantido = financiamento + subsidio
-  const calculadoProsoluto = Math.max(0, precoUnidade - (garantido + chequeMoradia))
+  const garantido = financiamento + subsidio + sinal
+  const totalObtido = garantido + chequeMoradia
+  const calculadoProsoluto = Math.max(0, precoUnidade - totalObtido)
   const prosolutoEfetivo = calculadoProsoluto
   const maxParcelasPermitidas =
     prosolutoEfetivo >= MIN_VALOR_PARCELA ? Math.min(MAX_PARCELAS, Math.floor(prosolutoEfetivo / MIN_VALOR_PARCELA)) : 1
@@ -193,11 +200,6 @@ export function PresentationPage() {
   const valorParcela = parcelasHabilitadas ? prosolutoEfetivo / parcelasNormalizadas : prosolutoEfetivo
   const aporteInicial = sinal + valorParcela
   const showGirassolBanner = empreendimento === 'VILA GIRASSOL'
-
-  const pctFinanciamento = precoUnidade > 0 ? (financiamento / precoUnidade) * 100 : 0
-  const pctSubsidio = precoUnidade > 0 ? (subsidio / precoUnidade) * 100 : 0
-
-  const getProgressBarStyle = (value: number) => ({ width: `${Math.min(100, Math.max(0, value))}%` })
 
   useEffect(() => {
     if (parcelas > maxParcelasPermitidas) {
@@ -273,9 +275,13 @@ export function PresentationPage() {
               <p className="text-xs text-slate-300">{unitType}</p>
             </div>
             <div className="rounded-2xl border border-cyan-200/40 bg-cyan-500/15 px-4 py-3 text-right">
-              <p className="text-[11px] uppercase tracking-[0.3em] text-cyan-100">Garantido</p>
+              <p className="text-[11px] uppercase tracking-[0.3em] text-cyan-100">Garantido (+ sinal)</p>
               <p className="text-lg font-black text-white">{formatCurrency(garantido)}</p>
-              <p className="text-[11px] uppercase tracking-[0.25em] text-cyan-100/80">Cobertura</p>
+            </div>
+            <div className="rounded-2xl border border-emerald-200/40 bg-emerald-500/15 px-4 py-3 text-right">
+              <p className="text-[11px] uppercase tracking-[0.3em] text-emerald-100">Total obtido</p>
+              <p className="text-lg font-black text-white">{formatCurrency(totalObtido)}</p>
+              <p className="text-[11px] uppercase tracking-[0.25em] text-emerald-100/80">Garantido + cheque</p>
             </div>
             <button
               type="button"
@@ -288,7 +294,7 @@ export function PresentationPage() {
           </div>
         </header>
 
-        <main className="grid gap-6 lg:grid-cols-[1fr_420px]">
+        <main className="grid gap-6">
           <section className="space-y-5 rounded-[28px] border border-white/15 bg-white/10 p-5 shadow-2xl backdrop-blur-xl">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -339,7 +345,7 @@ export function PresentationPage() {
                 label="Garantido"
                 value={garantido}
                 readOnly
-                helperText="Soma automatica de financiamento + subsidio."
+                helperText="Financiamento + subsidio + sinal."
               />
               <CurrencyField label="Sinal" value={sinal} onChange={setSinal} />
               <CurrencyField label="Prosoluto" value={prosolutoEfetivo} readOnly helperText="Calculado automaticamente." />
@@ -454,35 +460,19 @@ export function PresentationPage() {
             <div className="space-y-4">
               <div className="rounded-[24px] bg-slate-950/60 p-4">
                 <div className="mb-2 flex justify-between text-sm text-slate-300">
-                  <span>Financiamento ({pctFinanciamento.toFixed(1)}%)</span>
-                  <span>{formatCurrency(financiamento)}</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                  <div className="h-full rounded-full bg-cyan-400 transition" style={getProgressBarStyle(pctFinanciamento)} />
-                </div>
-              </div>
-
-              <div className="rounded-[24px] bg-slate-950/60 p-4">
-                <div className="mb-2 flex justify-between text-sm text-slate-300">
-                  <span>Subsidio ({pctSubsidio.toFixed(1)}%)</span>
-                  <span>{formatCurrency(subsidio)}</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                  <div className="h-full rounded-full bg-emerald-400 transition" style={getProgressBarStyle(pctSubsidio)} />
-                </div>
-              </div>
-
-              <div className="rounded-[24px] bg-slate-950/60 p-4">
-                <div className="mb-2 flex justify-between text-sm text-slate-300">
-                  <span>Garantido</span>
+                  <span>Garantido + sinal</span>
                   <span>{formatCurrency(garantido)}</span>
                 </div>
-                <p className="text-xs text-slate-300">Financiamento + subsidio</p>
-              </div>
-
-              <div className="rounded-[24px] bg-slate-950/60 p-4">
                 <div className="mb-2 flex justify-between text-sm text-slate-300">
-                  <span>Parcelamento do prosoluto</span>
+                  <span>Total obtido (garantido + cheque)</span>
+                  <span>{formatCurrency(totalObtido)}</span>
+                </div>
+                <div className="mb-2 flex justify-between text-sm text-slate-300">
+                  <span>Prosoluto</span>
+                  <span>{formatCurrency(prosolutoEfetivo)}</span>
+                </div>
+                <div className="mb-2 flex justify-between text-sm text-slate-300">
+                  <span>Parcelamento</span>
                   <span>{parcelasHabilitadas ? `${parcelasNormalizadas}x de ${formatCurrency(valorParcela)}` : formatCurrency(valorParcela)}</span>
                 </div>
                 <p className="text-xs text-slate-300">Aporte inicial: {formatCurrency(aporteInicial)}</p>
