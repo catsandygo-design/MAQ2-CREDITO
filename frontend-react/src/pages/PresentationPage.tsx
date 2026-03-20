@@ -241,9 +241,14 @@ export function PresentationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#1e3a8a_0%,#0f172a_55%,#020617_100%)] p-4 text-white md:p-8">
-      <div className="mx-auto max-w-7xl">
-        <header className="mb-6 rounded-[28px] border border-white/15 bg-white/10 p-5 shadow-2xl backdrop-blur-xl md:flex md:items-center md:justify-between">
+    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#0b1c48_0%,#0b1530_55%,#050918_100%)] p-4 text-white md:p-8">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-20 top-10 h-72 w-72 rounded-full bg-cyan-500/15 blur-3xl" />
+        <div className="absolute right-0 top-24 h-96 w-96 rounded-full bg-indigo-500/20 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-emerald-400/10 blur-[120px]" />
+      </div>
+      <div className="relative z-10 mx-auto max-w-7xl">
+        <header className="mb-6 rounded-[28px] border border-white/15 bg-white/10 p-5 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl md:flex md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-4">
             {showGirassolBanner ? (
               <div className="overflow-hidden rounded-[24px] border border-white/25 bg-white/95 shadow-lg">
@@ -287,7 +292,7 @@ export function PresentationPage() {
         </header>
 
         <main className="grid gap-6">
-          <section className="space-y-5 rounded-[28px] border border-white/15 bg-gradient-to-br from-slate-900/75 via-slate-900/45 to-slate-800/65 p-6 shadow-2xl backdrop-blur-xl">
+          <section className="space-y-5 rounded-[28px] border border-white/10 bg-gradient-to-br from-slate-900/80 via-slate-900/50 to-slate-800/65 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.35em] text-cyan-200">Simulador</p>
@@ -383,7 +388,7 @@ export function PresentationPage() {
               </label>
             </div>
 
-              <div className="space-y-4 rounded-[24px] border border-white/10 bg-slate-950/70 p-4 shadow-inner">
+              <div className="space-y-4 rounded-[24px] border border-white/15 bg-slate-950/80 p-4 shadow-[0_12px_45px_rgba(0,0,0,0.4)]">
                 <div className="flex items-center justify-between text-sm text-slate-200">
                   <span className="font-semibold text-white">Resumo de negócio</span>
                   <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-cyan-100">
