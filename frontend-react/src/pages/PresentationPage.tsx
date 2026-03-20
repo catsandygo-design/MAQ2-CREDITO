@@ -25,6 +25,7 @@ const DEFAULT_FORM_VALUES = {
 const MAX_PARCELAS = 80
 const MIN_VALOR_PARCELA = 125
 const MIN_PROSOLUTO = 8000
+const PCT_PROSOLUTO_GARANTIDOR = 0.05
 
 const formatCurrency = (value: number) => {
   if (!Number.isFinite(value)) return 'R$ 0,00'
@@ -201,6 +202,7 @@ export function PresentationPage() {
   const parcelasNormalizadas = Math.min(Math.max(parcelas, 1), maxParcelasPermitidas)
   const valorParcela = parcelasHabilitadas ? prosolutoEfetivo / parcelasNormalizadas : prosolutoEfetivo
   const aporteInicial = sinal + valorParcela
+  const precisaGarantidor = prosolutoEfetivo > precoAjustado * PCT_PROSOLUTO_GARANTIDOR
   const showGirassolBanner = empreendimento === 'VILA GIRASSOL'
 
   useEffect(() => {
@@ -421,6 +423,26 @@ export function PresentationPage() {
                     <span>Aporte inicial (sinal + 1a)</span>
                     <span>{formatCurrency(aporteInicial)}</span>
                   </div>
+                </div>
+                <div
+                  className={[
+                    'rounded-2xl border px-4 py-3 text-sm',
+                    precisaGarantidor
+                      ? 'border-amber-300/60 bg-amber-500/20 text-amber-50 shadow-[0_0_25px_rgba(251,191,36,0.25)]'
+                      : 'border-emerald-300/40 bg-emerald-500/10 text-emerald-50',
+                  ].join(' ')}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">Garantidor</span>
+                    <span className="rounded-full bg-white/10 px-2 py-1 text-[11px] uppercase tracking-[0.2em]">
+                      {precisaGarantidor ? 'Necessário' : 'Dispensável'}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs">
+                    {precisaGarantidor
+                      ? 'Prosoluto acima de 5% do valor do imovel. Acionar garantidor.'
+                      : 'Prosoluto dentro do limite de 5%. Garantidor opcional.'}
+                  </p>
                 </div>
               </div>
             </div>
