@@ -192,7 +192,8 @@ export function PresentationPage() {
   const chequeMoradia = EMPREENDIMENTOS.find((item) => item.label === empreendimento)?.chequeMoradia ?? 0
   const garantido = financiamento + subsidio + sinal
   const totalObtido = garantido + chequeMoradia
-  const precoAjustado = Math.max(precoUnidade, totalObtido + MIN_PROSOLUTO)
+  const precoAjustado =
+    precoUnidade < totalObtido ? totalObtido + MIN_PROSOLUTO : Math.max(precoUnidade, totalObtido + MIN_PROSOLUTO)
   const prosolutoEfetivo = Math.max(MIN_PROSOLUTO, precoAjustado - totalObtido)
   const maxParcelasPermitidas =
     prosolutoEfetivo >= MIN_VALOR_PARCELA ? Math.min(MAX_PARCELAS, Math.floor(prosolutoEfetivo / MIN_VALOR_PARCELA)) : 1
