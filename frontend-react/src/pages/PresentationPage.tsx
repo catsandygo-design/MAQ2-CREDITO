@@ -150,10 +150,12 @@ export function PresentationPage() {
   const [saindo, setSaindo] = useState(false)
   const [empreendimento, setEmpreendimento] = useState<Empreendimento>(DEFAULT_FORM_VALUES.empreendimento)
   const [unitType, setUnitType] = useState<UnitType>(DEFAULT_FORM_VALUES.unitType)
+  const [clienteNome, setClienteNome] = useState('')
   const [precoUnidade, setPrecoUnidade] = useState(DEFAULT_FORM_VALUES.precoUnidade)
   const [financiamento, setFinanciamento] = useState(DEFAULT_FORM_VALUES.financiamento)
   const [subsidio, setSubsidio] = useState(DEFAULT_FORM_VALUES.subsidio)
   const [sinal, setSinal] = useState(DEFAULT_FORM_VALUES.sinal)
+  const [parcelaCaixa, setParcelaCaixa] = useState(0)
   const [mostrarResumo, setMostrarResumo] = useState(false)
   const [parcelas, setParcelas] = useState(24)
 
@@ -203,6 +205,13 @@ export function PresentationPage() {
   const valorParcela = parcelasHabilitadas ? prosolutoEfetivo / parcelasNormalizadas : prosolutoEfetivo
   const aporteInicial = sinal + valorParcela
   const precisaGarantidor = prosolutoEfetivo > precoAjustado * PCT_PROSOLUTO_GARANTIDOR
+
+  useEffect(() => {
+    const minimoParaPreco = totalObtido + MIN_PROSOLUTO
+    if (precoUnidade < minimoParaPreco) {
+      setPrecoUnidade(minimoParaPreco)
+    }
+  }, [totalObtido, precoUnidade])
   const showGirassolBanner = empreendimento === 'VILA GIRASSOL'
 
   useEffect(() => {
@@ -309,6 +318,16 @@ export function PresentationPage() {
 
             <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
               <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-2 text-sm sm:col-span-2">
+                  Nome do cliente
+                  <input
+                    type="text"
+                    value={clienteNome}
+                    onChange={(event) => setClienteNome(event.target.value)}
+                    className="w-full rounded-2xl border border-white/20 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+                    placeholder="Digite o nome"
+                  />
+                </label>
                 <label className="space-y-2 text-sm">
                   Empreendimento
                   <select
@@ -356,6 +375,13 @@ export function PresentationPage() {
                 value={chequeMoradia}
                 readOnly
                 helperText="Valor fixo por empreendimento. O corretor nao pode alterar."
+                wrapperClassName="sm:col-span-2"
+              />
+              <CurrencyField
+                label="Parcela Caixa"
+                value={parcelaCaixa}
+                onChange={setParcelaCaixa}
+                helperText="Informe a parcela projetada pela Caixa (se aplicavel)."
                 wrapperClassName="sm:col-span-2"
               />
               <label className="space-y-2 text-sm sm:col-span-2">
@@ -423,6 +449,10 @@ export function PresentationPage() {
                     <span>Aporte inicial (sinal + 1a)</span>
                     <span>{formatCurrency(aporteInicial)}</span>
                   </div>
+                  <div className="flex justify-between text-xs text-slate-300">
+                    <span>Parcela Caixa</span>
+                    <span>{formatCurrency(parcelaCaixa)}</span>
+                  </div>
                 </div>
                 <div
                   className={[
@@ -484,6 +514,9 @@ export function PresentationPage() {
                     Tipo de unidade: <strong>{unitType}</strong>
                   </p>
                   <p>
+                    Cliente: <strong>{clienteNome || '-'}</strong>
+                  </p>
+                  <p>
                     Preco unidade: <strong>{formatCurrency(precoAjustado)}</strong>
                   </p>
                   <p>
@@ -500,6 +533,9 @@ export function PresentationPage() {
                   </p>
                   <p>
                     Aporte inicial: <strong>{formatCurrency(aporteInicial)}</strong>
+                  </p>
+                  <p>
+                    Parcela Caixa: <strong>{formatCurrency(parcelaCaixa)}</strong>
                   </p>
                 </div>
               </div>
