@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AnalistaPainelPage } from './pages/AnalistaPainelPage'
 import { LoginPage } from './pages/LoginPage'
+import { PresentationPage } from './pages/PresentationPage'
 import './App.css'
 
 function LegacyRedirect({ to }: { to: string }) {
@@ -25,6 +26,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/apresentacao" element={<PresentationPage />} />
       <Route path="/gestor" element={<LegacyRedirect to="/app/gestor" />} />
       <Route path="/analista" element={<AnalistaPainelPage />} />
       <Route path="*" element={<Navigate to="/login" replace />} />

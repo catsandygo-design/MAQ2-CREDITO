@@ -372,7 +372,7 @@ def _home_for_role(role: Optional[str]) -> str:
     if role_key == ROLE_CCA:
         return "/app/cca"
     if role_key == ROLE_CORRETOR:
-        return "/app/corretor" if CORRETOR_ROUTE_ENABLED else "/login"
+        return "/app-react/apresentacao" if CORRETOR_ROUTE_ENABLED else "/login"
     return "/app/analista"
 
 
@@ -4982,9 +4982,47 @@ def _serve_react_app(path: str = ""):
     return FileResponse(index_file)
 
 
+def _corretor_presentation_url(request: Optional[Request] = None) -> str:
+    base_url = "/app-react/apresentacao"
+    if request is None:
+        return base_url
+    query = (request.url.query or "").strip()
+    return f"{base_url}?{query}" if query else base_url
+
+
+def _ensure_corretor_presentation_access(request: Request):
+    session = _read_session(request)
+    if not session:
+        return None, RedirectResponse(url="/login", status_code=302)
+    if bool(session.get("must_change_password")):
+        return None, RedirectResponse(url="/app/trocar-senha", status_code=302)
+
+    role = _normalize_role(str(session.get("role", "")))
+    if role != ROLE_CORRETOR:
+        return None, RedirectResponse(url=_home_for_role(role), status_code=302)
+
+    if not CORRETOR_ROUTE_ENABLED:
+        token = request.cookies.get(SESSION_COOKIE_NAME)
+        if token:
+            ACTIVE_SESSIONS.pop(token, None)
+        response = RedirectResponse(url="/login", status_code=302)
+        response.delete_cookie(key=SESSION_COOKIE_NAME)
+        return None, response
+
+    return session, None
+
+
 @app.get("/app-react")
 def react_app_root():
     return _serve_react_app("")
+
+
+@app.get("/app-react/apresentacao")
+def react_corretor_presentation_entry(request: Request):
+    _, denied = _ensure_corretor_presentation_access(request)
+    if denied:
+        return denied
+    return _serve_react_app("apresentacao")
 
 
 @app.get("/app-react/{path:path}")
@@ -5080,62 +5118,26 @@ def app_checklist_page(request: Request):
 
 @app.get("/app/corretor")
 def app_corretor_page(request: Request):
-    session = _read_session(request)
-    if not session:
-        return RedirectResponse(url="/login", status_code=302)
-    if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
-    role = _normalize_role(str(session.get("role", "")))
-    if role != ROLE_CORRETOR:
-        return RedirectResponse(url=_home_for_role(role), status_code=302)
-    if not CORRETOR_ROUTE_ENABLED:
-        token = request.cookies.get(SESSION_COOKIE_NAME)
-        if token:
-            ACTIVE_SESSIONS.pop(token, None)
-        response = RedirectResponse(url="/login", status_code=302)
-        response.delete_cookie(key=SESSION_COOKIE_NAME)
-        return response
-    return _html_page("corretor_painel.html")
+    _, denied = _ensure_corretor_presentation_access(request)
+    if denied:
+        return denied
+    return RedirectResponse(url=_corretor_presentation_url(request), status_code=302)
 
 
 @app.get("/app/corretor/precadastro")
 def app_corretor_precadastro_page(request: Request):
-    session = _read_session(request)
-    if not session:
-        return RedirectResponse(url="/login", status_code=302)
-    if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
-    role = _normalize_role(str(session.get("role", "")))
-    if role != ROLE_CORRETOR:
-        return RedirectResponse(url=_home_for_role(role), status_code=302)
-    if not CORRETOR_ROUTE_ENABLED:
-        token = request.cookies.get(SESSION_COOKIE_NAME)
-        if token:
-            ACTIVE_SESSIONS.pop(token, None)
-        response = RedirectResponse(url="/login", status_code=302)
-        response.delete_cookie(key=SESSION_COOKIE_NAME)
-        return response
-    return _html_page("corretor_precadastro.html")
+    _, denied = _ensure_corretor_presentation_access(request)
+    if denied:
+        return denied
+    return RedirectResponse(url=_corretor_presentation_url(request), status_code=302)
 
 
 @app.get("/app/corretor/apresentacao")
 def app_corretor_apresentacao_page(request: Request):
-    session = _read_session(request)
-    if not session:
-        return RedirectResponse(url="/login", status_code=302)
-    if bool(session.get("must_change_password")):
-        return RedirectResponse(url="/app/trocar-senha", status_code=302)
-    role = _normalize_role(str(session.get("role", "")))
-    if role != ROLE_CORRETOR:
-        return RedirectResponse(url=_home_for_role(role), status_code=302)
-    if not CORRETOR_ROUTE_ENABLED:
-        token = request.cookies.get(SESSION_COOKIE_NAME)
-        if token:
-            ACTIVE_SESSIONS.pop(token, None)
-        response = RedirectResponse(url="/login", status_code=302)
-        response.delete_cookie(key=SESSION_COOKIE_NAME)
-        return response
-    return _html_page("corretor_apresentacao.html")
+    _, denied = _ensure_corretor_presentation_access(request)
+    if denied:
+        return denied
+    return RedirectResponse(url=_corretor_presentation_url(request), status_code=302)
 
 
 def _ensure_analista_page_access(request: Request):
