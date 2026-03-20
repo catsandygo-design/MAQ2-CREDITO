@@ -22,6 +22,9 @@ const DEFAULT_FORM_VALUES = {
   sinal: 45000,
 }
 
+const MAX_PARCELAS = 80
+const MIN_VALOR_PARCELA = 125
+
 const formatCurrency = (value: number) => {
   if (!Number.isFinite(value)) return 'R$ 0,00'
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
@@ -142,9 +145,9 @@ export function PresentationPage() {
   const [precoUnidade, setPrecoUnidade] = useState(DEFAULT_FORM_VALUES.precoUnidade)
   const [financiamento, setFinanciamento] = useState(DEFAULT_FORM_VALUES.financiamento)
   const [subsidio, setSubsidio] = useState(DEFAULT_FORM_VALUES.subsidio)
-  const [prosoluto, setProsoluto] = useState(DEFAULT_FORM_VALUES.prosoluto)
   const [sinal, setSinal] = useState(DEFAULT_FORM_VALUES.sinal)
   const [mostrarResumo, setMostrarResumo] = useState(false)
+  const [parcelas, setParcelas] = useState(24)
 
   useEffect(() => {
     let cancelled = false
@@ -181,16 +184,29 @@ export function PresentationPage() {
 
   const chequeMoradia = EMPREENDIMENTOS.find((item) => item.label === empreendimento)?.chequeMoradia ?? 0
   const garantido = financiamento + subsidio
-  const saldo = Math.max(
-    0,
-    precoUnidade - (financiamento + subsidio + sinal + prosoluto + chequeMoradia),
-  )
+  const calculadoProsoluto = Math.max(0, precoUnidade - (garantido + chequeMoradia))
+  const prosolutoEfetivo = calculadoProsoluto
+  const maxParcelasPermitidas =
+    prosolutoEfetivo >= MIN_VALOR_PARCELA ? Math.min(MAX_PARCELAS, Math.floor(prosolutoEfetivo / MIN_VALOR_PARCELA)) : 1
+  const parcelasHabilitadas = prosolutoEfetivo >= MIN_VALOR_PARCELA
+  const parcelasNormalizadas = Math.min(Math.max(parcelas, 1), maxParcelasPermitidas)
+  const valorParcela = parcelasHabilitadas ? prosolutoEfetivo / parcelasNormalizadas : prosolutoEfetivo
+  const aporteInicial = sinal + valorParcela
   const showGirassolBanner = empreendimento === 'VILA GIRASSOL'
 
   const pctFinanciamento = precoUnidade > 0 ? (financiamento / precoUnidade) * 100 : 0
   const pctSubsidio = precoUnidade > 0 ? (subsidio / precoUnidade) * 100 : 0
 
   const getProgressBarStyle = (value: number) => ({ width: `${Math.min(100, Math.max(0, value))}%` })
+
+  useEffect(() => {
+    if (parcelas > maxParcelasPermitidas) {
+      setParcelas(maxParcelasPermitidas || 1)
+    }
+    if (parcelas < 1) {
+      setParcelas(1)
+    }
+  }, [parcelas, maxParcelasPermitidas])
 
   const handleLogout = async () => {
     if (saindo) return
@@ -225,7 +241,7 @@ export function PresentationPage() {
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#1e3a8a_0%,#0f172a_55%,#020617_100%)] p-4 text-white md:p-8">
       <div className="mx-auto max-w-7xl">
         <header className="mb-6 rounded-[28px] border border-white/15 bg-white/10 p-5 shadow-2xl backdrop-blur-xl md:flex md:items-center md:justify-between">
-          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
             {showGirassolBanner ? (
               <div className="overflow-hidden rounded-[24px] border border-white/25 bg-white/95 shadow-lg">
                 <img
@@ -256,6 +272,11 @@ export function PresentationPage() {
               <p className="text-sm font-semibold text-white">{empreendimento}</p>
               <p className="text-xs text-slate-300">{unitType}</p>
             </div>
+            <div className="rounded-2xl border border-cyan-200/40 bg-cyan-500/15 px-4 py-3 text-right">
+              <p className="text-[11px] uppercase tracking-[0.3em] text-cyan-100">Garantido</p>
+              <p className="text-lg font-black text-white">{formatCurrency(garantido)}</p>
+              <p className="text-[11px] uppercase tracking-[0.25em] text-cyan-100/80">Cobertura</p>
+            </div>
             <button
               type="button"
               onClick={handleLogout}
@@ -274,12 +295,8 @@ export function PresentationPage() {
                 <p className="text-xs uppercase tracking-[0.35em] text-cyan-200">Simulador</p>
                 <h2 className="mt-2 text-2xl font-black tracking-tight text-white">Painel comercial interativo</h2>
                 <p className="mt-2 max-w-2xl text-sm text-slate-200">
-                  Ajuste as variaveis para apresentar composicao da proposta, folga de entrada e margem de fechamento.
+                  Monte a proposta, veja o garantido e apresente o parcelamento em tempo real.
                 </p>
-              </div>
-              <div className="hidden rounded-2xl border border-emerald-300/20 bg-emerald-500/10 px-4 py-3 text-right lg:block">
-                <p className="text-[11px] uppercase tracking-[0.3em] text-emerald-200">Saldo restante</p>
-                <p className="mt-1 text-xl font-black text-white">{formatCurrency(saldo)}</p>
               </div>
             </div>
 
@@ -325,7 +342,7 @@ export function PresentationPage() {
                 helperText="Soma automatica de financiamento + subsidio."
               />
               <CurrencyField label="Sinal" value={sinal} onChange={setSinal} />
-              <CurrencyField label="Prosoluto" value={prosoluto} onChange={setProsoluto} />
+              <CurrencyField label="Prosoluto" value={prosolutoEfetivo} readOnly helperText="Calculado automaticamente." />
               <CurrencyField
                 label="Cheque moradia"
                 value={chequeMoradia}
@@ -333,6 +350,37 @@ export function PresentationPage() {
                 helperText="Valor fixo por empreendimento. O corretor nao pode alterar."
                 wrapperClassName="sm:col-span-2"
               />
+              <label className="space-y-2 text-sm sm:col-span-2">
+                Parcelamento do prosoluto
+                <div className="flex flex-col gap-2 rounded-2xl border border-white/20 bg-slate-950/70 px-4 py-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-100">
+                    <span>Parcelas</span>
+                    <span className="font-semibold text-cyan-100">{parcelasNormalizadas}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={1}
+                    max={Math.max(1, maxParcelasPermitidas)}
+                    value={parcelasNormalizadas}
+                    onChange={(event) => setParcelas(Number(event.target.value))}
+                    disabled={!parcelasHabilitadas}
+                    className="w-full accent-cyan-400"
+                  />
+                  <div className="flex flex-wrap items-center justify-between text-xs text-slate-300">
+                    <span>Parcela estimada</span>
+                    <span className="font-semibold text-white">{formatCurrency(valorParcela)}</span>
+                  </div>
+                  {!parcelasHabilitadas ? (
+                    <p className="text-xs text-amber-200">
+                      Prosoluto abaixo do minimo para parcelar (R$ {MIN_VALOR_PARCELA}). Cobrar à vista ou ajustar valores.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-slate-300">
+                      Max {MAX_PARCELAS}x | Parcela minima {formatCurrency(MIN_VALOR_PARCELA)}.
+                    </p>
+                  )}
+                </div>
+              </label>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -351,8 +399,8 @@ export function PresentationPage() {
                   setPrecoUnidade(DEFAULT_FORM_VALUES.precoUnidade)
                   setFinanciamento(DEFAULT_FORM_VALUES.financiamento)
                   setSubsidio(DEFAULT_FORM_VALUES.subsidio)
-                  setProsoluto(DEFAULT_FORM_VALUES.prosoluto)
                   setSinal(DEFAULT_FORM_VALUES.sinal)
+                  setParcelas(24)
                   setMostrarResumo(false)
                 }}
                 className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
@@ -381,7 +429,13 @@ export function PresentationPage() {
                     Cheque moradia: <strong>{formatCurrency(chequeMoradia)}</strong>
                   </p>
                   <p>
-                    Saldo restante: <strong>{formatCurrency(saldo)}</strong>
+                    Prosoluto: <strong>{formatCurrency(prosolutoEfetivo)}</strong>
+                  </p>
+                  <p>
+                    Parcelas: <strong>{parcelasNormalizadas}x de {formatCurrency(valorParcela)}</strong>
+                  </p>
+                  <p>
+                    Aporte inicial: <strong>{formatCurrency(aporteInicial)}</strong>
                   </p>
                 </div>
               </div>
@@ -428,17 +482,11 @@ export function PresentationPage() {
 
               <div className="rounded-[24px] bg-slate-950/60 p-4">
                 <div className="mb-2 flex justify-between text-sm text-slate-300">
-                  <span>Sinal + prosoluto + cheque moradia</span>
-                  <span>{formatCurrency(sinal + prosoluto + chequeMoradia)}</span>
+                  <span>Parcelamento do prosoluto</span>
+                  <span>{parcelasHabilitadas ? `${parcelasNormalizadas}x de ${formatCurrency(valorParcela)}` : formatCurrency(valorParcela)}</span>
                 </div>
-                <p className="text-xs text-slate-300">Aporte imediato para destravar a operacao</p>
-              </div>
-
-              <div className="rounded-[24px] border border-amber-300/20 bg-amber-500/10 p-4">
-                <p className="text-[11px] uppercase tracking-[0.3em] text-amber-200">Narrativa sugerida</p>
-                <p className="mt-2 text-sm text-amber-50">
-                  Mostre primeiro o valor garantido, depois o saldo e feche com o esforco inicial. A conversa fica mais clara para o cliente.
-                </p>
+                <p className="text-xs text-slate-300">Aporte inicial: {formatCurrency(aporteInicial)}</p>
+                <p className="text-xs text-slate-300">Max {MAX_PARCELAS}x | Parcela minima {formatCurrency(MIN_VALOR_PARCELA)}</p>
               </div>
             </div>
           </aside>
