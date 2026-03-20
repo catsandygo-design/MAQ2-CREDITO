@@ -24,6 +24,7 @@ const DEFAULT_FORM_VALUES = {
 
 const MAX_PARCELAS = 80
 const MIN_VALOR_PARCELA = 125
+const MIN_PROSOLUTO = 8000
 
 const formatCurrency = (value: number) => {
   if (!Number.isFinite(value)) return 'R$ 0,00'
@@ -191,8 +192,8 @@ export function PresentationPage() {
   const chequeMoradia = EMPREENDIMENTOS.find((item) => item.label === empreendimento)?.chequeMoradia ?? 0
   const garantido = financiamento + subsidio + sinal
   const totalObtido = garantido + chequeMoradia
-  const calculadoProsoluto = Math.max(0, precoUnidade - totalObtido)
-  const prosolutoEfetivo = calculadoProsoluto
+  const precoAjustado = Math.max(precoUnidade, totalObtido + MIN_PROSOLUTO)
+  const prosolutoEfetivo = Math.max(MIN_PROSOLUTO, precoAjustado - totalObtido)
   const maxParcelasPermitidas =
     prosolutoEfetivo >= MIN_VALOR_PARCELA ? Math.min(MAX_PARCELAS, Math.floor(prosolutoEfetivo / MIN_VALOR_PARCELA)) : 1
   const parcelasHabilitadas = prosolutoEfetivo >= MIN_VALOR_PARCELA
@@ -243,7 +244,7 @@ export function PresentationPage() {
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#1e3a8a_0%,#0f172a_55%,#020617_100%)] p-4 text-white md:p-8">
       <div className="mx-auto max-w-7xl">
         <header className="mb-6 rounded-[28px] border border-white/15 bg-white/10 p-5 shadow-2xl backdrop-blur-xl md:flex md:items-center md:justify-between">
-            <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             {showGirassolBanner ? (
               <div className="overflow-hidden rounded-[24px] border border-white/25 bg-white/95 shadow-lg">
                 <img
@@ -274,15 +275,6 @@ export function PresentationPage() {
               <p className="text-sm font-semibold text-white">{empreendimento}</p>
               <p className="text-xs text-slate-300">{unitType}</p>
             </div>
-            <div className="rounded-2xl border border-cyan-200/40 bg-cyan-500/15 px-4 py-3 text-right">
-              <p className="text-[11px] uppercase tracking-[0.3em] text-cyan-100">Garantido (+ sinal)</p>
-              <p className="text-lg font-black text-white">{formatCurrency(garantido)}</p>
-            </div>
-            <div className="rounded-2xl border border-emerald-200/40 bg-emerald-500/15 px-4 py-3 text-right">
-              <p className="text-[11px] uppercase tracking-[0.3em] text-emerald-100">Total obtido</p>
-              <p className="text-lg font-black text-white">{formatCurrency(totalObtido)}</p>
-              <p className="text-[11px] uppercase tracking-[0.25em] text-emerald-100/80">Garantido + cheque</p>
-            </div>
             <button
               type="button"
               onClick={handleLogout}
@@ -295,7 +287,7 @@ export function PresentationPage() {
         </header>
 
         <main className="grid gap-6">
-          <section className="space-y-5 rounded-[28px] border border-white/15 bg-gradient-to-br from-slate-900/70 via-slate-900/40 to-slate-800/60 p-6 shadow-2xl backdrop-blur-xl">
+          <section className="space-y-5 rounded-[28px] border border-white/15 bg-gradient-to-br from-slate-900/75 via-slate-900/45 to-slate-800/65 p-6 shadow-2xl backdrop-blur-xl">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.35em] text-cyan-200">Simulador</p>
@@ -304,17 +296,7 @@ export function PresentationPage() {
                   Monte a proposta, veja o garantido + cheque e apresente o parcelamento em tempo real.
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-right sm:text-left lg:text-right">
-                <div className="rounded-2xl border border-cyan-200/30 bg-cyan-500/15 px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-[0.3em] text-cyan-100">Garantido (+ sinal)</p>
-                  <p className="text-lg font-black text-white">{formatCurrency(garantido)}</p>
-                </div>
-                <div className="rounded-2xl border border-emerald-200/30 bg-emerald-500/15 px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-[0.3em] text-emerald-100">Total obtido</p>
-                  <p className="text-lg font-black text-white">{formatCurrency(totalObtido)}</p>
-                  <p className="text-[11px] uppercase tracking-[0.25em] text-emerald-100/80">Garantido + cheque</p>
-                </div>
-              </div>
+              <div className="grid grid-cols-2 gap-3 text-right sm:text-left lg:text-right"></div>
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -401,23 +383,36 @@ export function PresentationPage() {
               </label>
             </div>
 
-              <div className="space-y-4 rounded-[24px] border border-white/10 bg-slate-950/60 p-4 shadow-inner">
+              <div className="space-y-4 rounded-[24px] border border-white/10 bg-slate-950/70 p-4 shadow-inner">
                 <div className="flex items-center justify-between text-sm text-slate-200">
-                  <span className="font-semibold text-white">Painel rápido</span>
+                  <span className="font-semibold text-white">Resumo de negócio</span>
                   <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-cyan-100">
                     Apresentacao
                   </span>
                 </div>
                 <div className="grid gap-2 text-sm text-slate-200">
-                  <div className="flex justify-between"><span>Garantido + sinal</span><strong>{formatCurrency(garantido)}</strong></div>
-                  <div className="flex justify-between"><span>Total obtido</span><strong>{formatCurrency(totalObtido)}</strong></div>
-                  <div className="flex justify-between"><span>Prosoluto</span><strong>{formatCurrency(prosolutoEfetivo)}</strong></div>
+                  <div className="flex justify-between">
+                    <span>Valor do imovel (ajustado)</span>
+                    <strong>{formatCurrency(precoAjustado)}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Valor obtido</span>
+                    <strong>{formatCurrency(totalObtido)}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Prosoluto</span>
+                    <strong>{formatCurrency(prosolutoEfetivo)}</strong>
+                  </div>
                   <div className="flex justify-between">
                     <span>Parcelamento</span>
-                    <strong>{parcelasHabilitadas ? `${parcelasNormalizadas}x de ${formatCurrency(valorParcela)}` : formatCurrency(valorParcela)}</strong>
+                    <strong>
+                      {parcelasHabilitadas
+                        ? `${parcelasNormalizadas}x de ${formatCurrency(valorParcela)}`
+                        : formatCurrency(valorParcela)}
+                    </strong>
                   </div>
                   <div className="flex justify-between text-xs text-slate-300">
-                    <span>Aporte inicial</span>
+                    <span>Aporte inicial (sinal + 1a)</span>
                     <span>{formatCurrency(aporteInicial)}</span>
                   </div>
                 </div>
@@ -461,7 +456,7 @@ export function PresentationPage() {
                     Tipo de unidade: <strong>{unitType}</strong>
                   </p>
                   <p>
-                    Preco unidade: <strong>{formatCurrency(precoUnidade)}</strong>
+                    Preco unidade: <strong>{formatCurrency(precoAjustado)}</strong>
                   </p>
                   <p>
                     Garantido: <strong>{formatCurrency(garantido)}</strong>
