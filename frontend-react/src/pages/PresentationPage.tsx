@@ -264,42 +264,37 @@ export function PresentationPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#0d1b2f_0%,#0a1220_55%,#050913_100%)] p-4 text-white md:p-8">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="bg-orb orb-1" />
-        <div className="bg-orb orb-2" />
-        <div className="grain" />
-      </div>
-      <div className="relative z-10 mx-auto max-w-[1500px]">
-        <header className="mb-6 rounded-[28px] border border-white/10 bg-white/8 p-5 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-2xl md:flex md:items-center md:justify-between glass-edge">
+    <div className="relative min-h-screen overflow-hidden bg-[#0c1424] p-4 text-white md:p-8">
+      <div className="relative z-10 mx-auto max-w-[1380px]">
+        <header className="mb-6 flex flex-col gap-4 rounded-3xl border border-white/8 bg-white/5 p-5 shadow-[0_14px_48px_rgba(0,0,0,0.35)] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-4">
             {showGirassolBanner ? (
-              <div className="overflow-hidden rounded-[24px] border border-white/25 bg-white/95 shadow-lg">
+              <div className="overflow-hidden rounded-2xl border border-white/15 bg-white shadow-lg">
                 <img
                   src={vilaGirassolBanner}
                   alt="Marca do empreendimento Vila Girassol Residencial"
-                  className="h-16 w-[250px] object-cover sm:h-20 sm:w-[320px]"
+                  className="h-14 w-[220px] object-cover sm:h-16 sm:w-[260px]"
                 />
               </div>
             ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-300 via-sky-400 to-blue-600 text-lg font-black text-slate-950 shadow-lg">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-sky-300 via-cyan-400 to-blue-600 text-lg font-black text-slate-950 shadow-lg">
                 {buildBadge(empreendimento)}
               </div>
             )}
             <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-cyan-200">Apresentacao Comercial</p>
-              <h1 className="text-2xl font-black tracking-tight text-white">Fluxo de proposta para o cliente</h1>
-              <p className="mt-1 text-sm text-slate-200">Tela paralela de apoio para o corretor conduzir a conversa.</p>
+              <p className="text-[10px] uppercase tracking-[0.32em] text-cyan-200">Apresentacao Comercial</p>
+              <h1 className="text-xl font-extrabold tracking-tight text-white sm:text-2xl">Fluxo de proposta para o cliente</h1>
+              <p className="mt-1 text-sm text-slate-200">Tela de apoio para conduzir a conversa com clareza.</p>
             </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center gap-3 md:mt-0 md:justify-end">
-            <div className="rounded-2xl border border-white/15 bg-slate-950/35 px-4 py-3 text-right">
-              <p className="text-[11px] uppercase tracking-[0.3em] text-cyan-200">Corretor</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="rounded-2xl border border-white/12 bg-slate-950/50 px-4 py-3 text-right">
+              <p className="text-[10px] uppercase tracking-[0.28em] text-cyan-200">Corretor</p>
               <p className="text-sm font-semibold text-white">{corretorNome}</p>
             </div>
-            <div className="rounded-2xl border border-white/15 bg-slate-950/35 px-4 py-3 text-right">
-              <p className="text-[11px] uppercase tracking-[0.3em] text-cyan-200">Empreendimento</p>
+            <div className="rounded-2xl border border-white/12 bg-slate-950/50 px-4 py-3 text-right">
+              <p className="text-[10px] uppercase tracking-[0.28em] text-cyan-200">Empreendimento</p>
               <p className="text-sm font-semibold text-white">{empreendimento}</p>
               <p className="text-xs text-slate-300">{unitType}</p>
             </div>
@@ -307,29 +302,24 @@ export function PresentationPage() {
               type="button"
               onClick={handleLogout}
               disabled={saindo}
-              className="rounded-2xl border border-rose-300/30 bg-rose-500/15 px-4 py-3 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-2xl border border-white/14 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-cyan-200/60 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {saindo ? 'Saindo...' : 'Sair'}
             </button>
           </div>
         </header>
 
-        <main className="grid gap-6 items-start xl:grid-cols-[1.65fr_1fr]">
-          <section className="space-y-5 glass-panel">
+        <main className="grid gap-5 items-start xl:grid-cols-[1.65fr_1fr]">
+          <section className="space-y-5 rounded-3xl border border-white/8 bg-slate-900/60 p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-cyan-200">Simulador</p>
-                <h2 className="mt-2 text-2xl font-black tracking-tight text-white">Painel comercial interativo</h2>
-                <p className="mt-2 max-w-2xl text-sm text-slate-200">
-                  Monte a proposta, veja o garantido + cheque e apresente o parcelamento em tempo real.
-                </p>
+                <p className="text-[10px] uppercase tracking-[0.32em] text-cyan-200">Simulador</p>
+                <h2 className="mt-1 text-2xl font-black tracking-tight text-white">Painel comercial interativo</h2>
+                <p className="mt-1 max-w-2xl text-sm text-slate-200">Monte, explique e mostre o impacto financeiro em tempo real.</p>
               </div>
               <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {quickStats.map((item) => (
-                  <div
-                    key={item.label}
-                    className="stat-card text-right sm:text-left lg:text-right"
-                  >
+                  <div key={item.label} className="stat-card text-right sm:text-left lg:text-right">
                     <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-200">{item.label}</p>
                     <p className="text-lg font-bold text-white">{item.value}</p>
                   </div>
