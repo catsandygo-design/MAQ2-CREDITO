@@ -264,15 +264,14 @@ export function PresentationPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#0b1c48_0%,#0b1530_55%,#050918_100%)] p-4 text-white md:p-8">
+    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#0d1b2f_0%,#0a1220_55%,#050913_100%)] p-4 text-white md:p-8">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="aurora-sheet" />
-        <div className="aurora-blob aurora-1" />
-        <div className="aurora-blob aurora-2" />
-        <div className="aurora-grid" />
+        <div className="bg-orb orb-1" />
+        <div className="bg-orb orb-2" />
+        <div className="grain" />
       </div>
       <div className="relative z-10 mx-auto max-w-[1500px]">
-        <header className="mb-6 rounded-[28px] border border-white/15 bg-white/10 p-5 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl md:flex md:items-center md:justify-between">
+        <header className="mb-6 rounded-[28px] border border-white/10 bg-white/8 p-5 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-2xl md:flex md:items-center md:justify-between glass-edge">
           <div className="flex flex-wrap items-center gap-4">
             {showGirassolBanner ? (
               <div className="overflow-hidden rounded-[24px] border border-white/25 bg-white/95 shadow-lg">
@@ -316,7 +315,7 @@ export function PresentationPage() {
         </header>
 
         <main className="grid gap-6 items-start xl:grid-cols-[1.65fr_1fr]">
-          <section className="space-y-5 rounded-[28px] border border-white/10 bg-gradient-to-br from-slate-900/80 via-slate-900/50 to-slate-800/65 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
+          <section className="space-y-5 glass-panel">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.35em] text-cyan-200">Simulador</p>
@@ -329,7 +328,7 @@ export function PresentationPage() {
                 {quickStats.map((item) => (
                   <div
                     key={item.label}
-                    className="rounded-2xl border border-white/12 bg-white/5 px-4 py-3 text-right shadow-sm sm:text-left lg:text-right card-lift"
+                    className="stat-card text-right sm:text-left lg:text-right"
                   >
                     <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-200">{item.label}</p>
                     <p className="text-lg font-bold text-white">{item.value}</p>
@@ -470,7 +469,7 @@ export function PresentationPage() {
           </section>
 
           <aside className="space-y-4 xl:sticky xl:top-4">
-            <div className="rounded-[28px] border border-white/15 bg-white/10 p-5 shadow-2xl backdrop-blur-xl card-lift">
+            <div className="rounded-[28px] border border-white/10 bg-white/8 p-5 shadow-2xl backdrop-blur-xl card-lift glass-edge">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.35em] text-cyan-200">Leitura executiva</p>
@@ -496,7 +495,9 @@ export function PresentationPage() {
               </div>
             </div>
 
-            <div className="space-y-4 rounded-[24px] border border-white/15 bg-slate-950/80 p-5 shadow-[0_12px_45px_rgba(0,0,0,0.4)] card-lift">
+            </div>
+
+            <div className="space-y-4 rounded-[24px] border border-white/12 bg-slate-950/75 p-5 shadow-[0_12px_45px_rgba(0,0,0,0.4)] card-lift glass-edge">
               <div className="flex items-center justify-between text-sm text-slate-200">
                 <span className="font-semibold text-white">Resumo de negocio</span>
                 <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-cyan-100">
@@ -555,7 +556,7 @@ export function PresentationPage() {
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-white/15 bg-white/5 p-5 shadow-2xl backdrop-blur-xl card-lift">
+            <div className="rounded-[24px] border border-white/10 bg-white/8 p-5 shadow-2xl backdrop-blur-xl card-lift glass-edge">
               <div className="mb-3 flex items-center justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-cyan-200">Indicadores financeiros</p>
