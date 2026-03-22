@@ -264,9 +264,9 @@ export function PresentationPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0c1424] p-4 text-white md:p-8">
-      <div className="relative z-10 mx-auto max-w-[1380px]">
-        <header className="mb-6 flex flex-col gap-4 rounded-3xl border border-white/8 bg-white/5 p-5 shadow-[0_14px_48px_rgba(0,0,0,0.35)] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
+    <div className="presentation-bg min-h-screen p-4 text-white md:p-8">
+      <div className="relative z-10 mx-auto max-w-[1380px] space-y-5">
+        <header className="flex flex-col gap-4 rounded-3xl border border-white/8 bg-white/5 p-5 shadow-[0_14px_48px_rgba(0,0,0,0.35)] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-4">
             {showGirassolBanner ? (
               <div className="overflow-hidden rounded-2xl border border-white/15 bg-white shadow-lg">
@@ -309,24 +309,17 @@ export function PresentationPage() {
           </div>
         </header>
 
-        <main className="grid gap-5 items-start xl:grid-cols-[1.65fr_1fr]">
-          <section className="space-y-5 rounded-3xl border border-white/8 bg-slate-900/60 p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.32em] text-cyan-200">Simulador</p>
-                <h2 className="mt-1 text-2xl font-black tracking-tight text-white">Painel comercial interativo</h2>
-                <p className="mt-1 max-w-2xl text-sm text-slate-200">Monte, explique e mostre o impacto financeiro em tempo real.</p>
-              </div>
-              <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {quickStats.map((item) => (
-                  <div key={item.label} className="stat-card text-right sm:text-left lg:text-right">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-200">{item.label}</p>
-                    <p className="text-lg font-bold text-white">{item.value}</p>
-                  </div>
-                ))}
-              </div>
+        <section className="summary-bar">
+          {quickStats.map((item) => (
+            <div key={item.label} className="stat-card text-left">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-100/80">{item.label}</p>
+              <p className="text-xl font-extrabold text-white">{item.value}</p>
             </div>
+          ))}
+        </section>
 
+        <main className="grid gap-5 items-start xl:grid-cols-[1.65fr_1fr]">
+          <section className="space-y-5 rounded-3xl border border-white/8 bg-slate-900/70 p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
             <div className="grid gap-6">
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 <label className="space-y-2 text-sm sm:col-span-2">
