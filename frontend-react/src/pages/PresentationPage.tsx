@@ -19,7 +19,7 @@ const DEFAULT_FORM_VALUES = {
   financiamento: 150000,
   subsidio: 40000,
   prosoluto: 25000,
-  sinal: 45000,
+  sinal: 0,
 }
 
 const MAX_PARCELAS = 80
