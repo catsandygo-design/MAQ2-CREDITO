@@ -205,6 +205,17 @@ export function PresentationPage() {
   const valorParcela = parcelasHabilitadas ? prosolutoEfetivo / parcelasNormalizadas : prosolutoEfetivo
   const aporteInicial = sinal + valorParcela
   const precisaGarantidor = prosolutoEfetivo > precoAjustado * PCT_PROSOLUTO_GARANTIDOR
+  const quickStats = [
+    { label: 'Imovel ajustado', value: formatCurrency(precoAjustado) },
+    { label: 'Prosoluto', value: formatCurrency(prosolutoEfetivo) },
+    {
+      label: 'Parcelamento',
+      value: parcelasHabilitadas
+        ? `${parcelasNormalizadas}x de ${formatCurrency(valorParcela)}`
+        : formatCurrency(valorParcela),
+    },
+    { label: 'Aporte inicial', value: formatCurrency(aporteInicial) },
+  ]
 
   useEffect(() => {
     const minimoParaPreco = totalObtido + MIN_PROSOLUTO
@@ -254,12 +265,13 @@ export function PresentationPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#0b1c48_0%,#0b1530_55%,#050918_100%)] p-4 text-white md:p-8">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-20 top-10 h-72 w-72 rounded-full bg-cyan-500/15 blur-3xl" />
-        <div className="absolute right-0 top-24 h-96 w-96 rounded-full bg-indigo-500/20 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-emerald-400/10 blur-[120px]" />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="aurora-sheet" />
+        <div className="aurora-blob aurora-1" />
+        <div className="aurora-blob aurora-2" />
+        <div className="aurora-grid" />
       </div>
-      <div className="relative z-10 mx-auto max-w-7xl">
+      <div className="relative z-10 mx-auto max-w-[1500px]">
         <header className="mb-6 rounded-[28px] border border-white/15 bg-white/10 p-5 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl md:flex md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-4">
             {showGirassolBanner ? (
@@ -303,7 +315,7 @@ export function PresentationPage() {
           </div>
         </header>
 
-        <main className="grid gap-6">
+        <main className="grid gap-6 items-start xl:grid-cols-[1.65fr_1fr]">
           <section className="space-y-5 rounded-[28px] border border-white/10 bg-gradient-to-br from-slate-900/80 via-slate-900/50 to-slate-800/65 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -313,11 +325,21 @@ export function PresentationPage() {
                   Monte a proposta, veja o garantido + cheque e apresente o parcelamento em tempo real.
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-right sm:text-left lg:text-right"></div>
+              <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {quickStats.map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-2xl border border-white/12 bg-white/5 px-4 py-3 text-right shadow-sm sm:text-left lg:text-right card-lift"
+                  >
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-200">{item.label}</p>
+                    <p className="text-lg font-bold text-white">{item.value}</p>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-              <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-6">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 <label className="space-y-2 text-sm sm:col-span-2">
                   Nome do cliente
                   <input
@@ -417,64 +439,6 @@ export function PresentationPage() {
               </label>
             </div>
 
-              <div className="space-y-4 rounded-[24px] border border-white/15 bg-slate-950/80 p-4 shadow-[0_12px_45px_rgba(0,0,0,0.4)]">
-                <div className="flex items-center justify-between text-sm text-slate-200">
-                  <span className="font-semibold text-white">Resumo de negócio</span>
-                  <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-cyan-100">
-                    Apresentacao
-                  </span>
-                </div>
-                <div className="grid gap-2 text-sm text-slate-200">
-                  <div className="flex justify-between">
-                    <span>Valor do imovel (ajustado)</span>
-                    <strong>{formatCurrency(precoAjustado)}</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Valor obtido</span>
-                    <strong>{formatCurrency(totalObtido)}</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Prosoluto</span>
-                    <strong>{formatCurrency(prosolutoEfetivo)}</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Parcelamento</span>
-                    <strong>
-                      {parcelasHabilitadas
-                        ? `${parcelasNormalizadas}x de ${formatCurrency(valorParcela)}`
-                        : formatCurrency(valorParcela)}
-                    </strong>
-                  </div>
-                  <div className="flex justify-between text-xs text-slate-300">
-                    <span>Aporte inicial (sinal + 1a)</span>
-                    <span>{formatCurrency(aporteInicial)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-slate-300">
-                    <span>Parcela Caixa</span>
-                    <span>{formatCurrency(parcelaCaixa)}</span>
-                  </div>
-                </div>
-                <div
-                  className={[
-                    'rounded-2xl border px-4 py-3 text-sm',
-                    precisaGarantidor
-                      ? 'border-amber-300/60 bg-amber-500/20 text-amber-50 shadow-[0_0_25px_rgba(251,191,36,0.25)]'
-                      : 'border-emerald-300/40 bg-emerald-500/10 text-emerald-50',
-                  ].join(' ')}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold">Garantidor</span>
-                    <span className="rounded-full bg-white/10 px-2 py-1 text-[11px] uppercase tracking-[0.2em]">
-                      {precisaGarantidor ? 'Necessário' : 'Dispensável'}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs">
-                    {precisaGarantidor
-                      ? 'Prosoluto acima de 5% do valor do imovel. Acionar garantidor.'
-                      : 'Prosoluto dentro do limite de 5%. Garantidor opcional.'}
-                  </p>
-                </div>
-              </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -503,9 +467,135 @@ export function PresentationPage() {
               </button>
             </div>
 
+          </section>
+
+          <aside className="space-y-4 xl:sticky xl:top-4">
+            <div className="rounded-[28px] border border-white/15 bg-white/10 p-5 shadow-2xl backdrop-blur-xl card-lift">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.35em] text-cyan-200">Leitura executiva</p>
+                  <h2 className="mt-1 text-xl font-black tracking-tight text-white">Resumo rapido</h2>
+                  <p className="mt-2 text-sm text-slate-200">
+                    Destaques que ficam fixos enquanto voce preenche a simulacao. Ajuda o cliente a acompanhar os numeros.
+                  </p>
+                </div>
+                <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-cyan-100">
+                  Sempre visivel
+                </span>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {quickStats.map((item) => (
+                  <div
+                    key={`aside-${item.label}`}
+                    className="rounded-2xl border border-white/12 bg-slate-950/60 p-3 shadow-sm"
+                  >
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-200">{item.label}</p>
+                    <p className="text-lg font-semibold text-white">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4 rounded-[24px] border border-white/15 bg-slate-950/80 p-5 shadow-[0_12px_45px_rgba(0,0,0,0.4)] card-lift">
+              <div className="flex items-center justify-between text-sm text-slate-200">
+                <span className="font-semibold text-white">Resumo de negocio</span>
+                <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-cyan-100">
+                  Apresentacao
+                </span>
+              </div>
+              <div className="grid gap-2 text-sm text-slate-200">
+                <div className="flex justify-between">
+                  <span>Valor do imovel (ajustado)</span>
+                  <strong>{formatCurrency(precoAjustado)}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Valor obtido</span>
+                  <strong>{formatCurrency(totalObtido)}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Prosoluto</span>
+                  <strong>{formatCurrency(prosolutoEfetivo)}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Parcelamento</span>
+                  <strong>
+                    {parcelasHabilitadas
+                      ? `${parcelasNormalizadas}x de ${formatCurrency(valorParcela)}`
+                      : formatCurrency(valorParcela)}
+                  </strong>
+                </div>
+                <div className="flex justify-between text-xs text-slate-300">
+                  <span>Aporte inicial (sinal + 1a)</span>
+                  <span>{formatCurrency(aporteInicial)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-300">
+                  <span>Parcela Caixa</span>
+                  <span>{formatCurrency(parcelaCaixa)}</span>
+                </div>
+              </div>
+              <div
+                className={[
+                  'rounded-2xl border px-4 py-3 text-sm',
+                  precisaGarantidor
+                    ? 'border-amber-300/60 bg-amber-500/20 text-amber-50 shadow-[0_0_25px_rgba(251,191,36,0.25)]'
+                    : 'border-emerald-300/40 bg-emerald-500/10 text-emerald-50',
+                ].join(' ')}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">Garantidor</span>
+                  <span className="rounded-full bg-white/10 px-2 py-1 text-[11px] uppercase tracking-[0.2em]">
+                    {precisaGarantidor ? 'Necessario' : 'Dispensavel'}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs">
+                  {precisaGarantidor
+                    ? 'Prosoluto acima de 5% do valor do imovel. Acionar garantidor.'
+                    : 'Prosoluto dentro do limite de 5%. Garantidor opcional.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-white/15 bg-white/5 p-5 shadow-2xl backdrop-blur-xl card-lift">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-cyan-200">Indicadores financeiros</p>
+                  <h3 className="text-lg font-bold text-white">Composicao da proposta</h3>
+                </div>
+                <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-cyan-100">
+                  Detalhe
+                </span>
+              </div>
+              <div className="space-y-3 text-sm text-slate-200">
+                <div className="flex justify-between">
+                  <span>Garantido + sinal</span>
+                  <strong>{formatCurrency(garantido)}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Total obtido (garantido + cheque)</span>
+                  <strong>{formatCurrency(totalObtido)}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Prosoluto</span>
+                  <strong>{formatCurrency(prosolutoEfetivo)}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Parcelamento</span>
+                  <strong>
+                    {parcelasHabilitadas
+                      ? `${parcelasNormalizadas}x de ${formatCurrency(valorParcela)}`
+                      : formatCurrency(valorParcela)}
+                  </strong>
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-slate-300">
+                Aporte inicial: {formatCurrency(aporteInicial)} | Max {MAX_PARCELAS}x | Parcela minima{' '}
+                {formatCurrency(MIN_VALOR_PARCELA)}
+              </p>
+            </div>
+
             {mostrarResumo ? (
-              <div className="rounded-[24px] border border-cyan-200/20 bg-gradient-to-br from-cyan-950/40 to-indigo-950/30 p-5">
-                <h3 className="mb-3 text-lg font-bold tracking-tight">Resumo comercial</h3>
+              <div className="rounded-[24px] border border-cyan-200/20 bg-gradient-to-br from-cyan-950/40 to-indigo-950/30 p-5 shadow-2xl">
+                <h3 className="mb-3 text-lg font-bold tracking-tight text-white">Resumo comercial</h3>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <p>
                     Empreendimento: <strong>{empreendimento}</strong>
@@ -540,39 +630,6 @@ export function PresentationPage() {
                 </div>
               </div>
             ) : null}
-          </section>
-
-          <aside className="space-y-5 rounded-[28px] border border-white/15 bg-white/10 p-5 shadow-2xl backdrop-blur-xl">
-            <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-cyan-200">Leitura executiva</p>
-              <h2 className="mt-2 text-2xl font-black tracking-tight text-white">Indicadores financeiros</h2>
-              <p className="mt-2 text-sm text-slate-200">
-                Use os blocos laterais para explicar composicao, cobertura garantida e esforco imediato do cliente.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="rounded-[24px] bg-slate-950/60 p-4">
-                <div className="mb-2 flex justify-between text-sm text-slate-300">
-                  <span>Garantido + sinal</span>
-                  <span>{formatCurrency(garantido)}</span>
-                </div>
-                <div className="mb-2 flex justify-between text-sm text-slate-300">
-                  <span>Total obtido (garantido + cheque)</span>
-                  <span>{formatCurrency(totalObtido)}</span>
-                </div>
-                <div className="mb-2 flex justify-between text-sm text-slate-300">
-                  <span>Prosoluto</span>
-                  <span>{formatCurrency(prosolutoEfetivo)}</span>
-                </div>
-                <div className="mb-2 flex justify-between text-sm text-slate-300">
-                  <span>Parcelamento</span>
-                  <span>{parcelasHabilitadas ? `${parcelasNormalizadas}x de ${formatCurrency(valorParcela)}` : formatCurrency(valorParcela)}</span>
-                </div>
-                <p className="text-xs text-slate-300">Aporte inicial: {formatCurrency(aporteInicial)}</p>
-                <p className="text-xs text-slate-300">Max {MAX_PARCELAS}x | Parcela minima {formatCurrency(MIN_VALOR_PARCELA)}</p>
-              </div>
-            </div>
           </aside>
         </main>
       </div>
