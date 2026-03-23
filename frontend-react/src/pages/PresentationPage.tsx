@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { fetchSession, logout } from '../lib/api'
 import vilaGirassolBanner from '../assets/vila-girassol-banner.svg'
-import tipoPlanta from '../assets/tipo-planta.svg'
-import gardenFitPlanta from '../assets/gardenfit-planta.svg'
-import superGardenPlanta from '../assets/supergarden-planta.svg'
+import tipoPlanta from '../assets/TIPO.jpg'
+import gardenFitPlanta from '../assets/GARDENFIT.jpg'
+import superGardenPlanta from '../assets/SUPERGARDEN.jpg'
 
 type UnitType = 'TIPO/MOTO' | 'TIPO/CARRO' | 'GARDEN FIT' | 'GARDEN' | 'SUPER GARDEN'
 type Empreendimento = 'VILA GIRASSOL' | 'VILA MARGARIDA' | 'VILA DAS ROSAS'
@@ -516,8 +516,6 @@ export function PresentationPage() {
                   </div>
                 ))}
               </div>
-            </div>
-
             </div>
 
             <div className="space-y-4 rounded-[24px] border border-white/12 bg-slate-950/75 p-5 shadow-[0_12px_45px_rgba(0,0,0,0.4)] card-lift glass-edge">
