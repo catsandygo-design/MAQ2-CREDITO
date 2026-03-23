@@ -157,6 +157,7 @@ export function PresentationPage() {
   const [sinal, setSinal] = useState(DEFAULT_FORM_VALUES.sinal)
   const [parcelaCaixa, setParcelaCaixa] = useState(0)
   const [mostrarResumo, setMostrarResumo] = useState(false)
+  const [mostrarTabelaParcelas, setMostrarTabelaParcelas] = useState(false)
   const [parcelas, setParcelas] = useState(24)
 
   useEffect(() => {
@@ -205,6 +206,11 @@ export function PresentationPage() {
   const valorParcela = parcelasHabilitadas ? prosolutoEfetivo / parcelasNormalizadas : prosolutoEfetivo
   const aporteInicial = sinal + valorParcela
   const precisaGarantidor = prosolutoEfetivo > precoAjustado * PCT_PROSOLUTO_GARANTIDOR
+  const parcelasProgressivas = Array.from({ length: parcelasNormalizadas }, (_, i) => {
+    const fator = Math.pow(1.01, i) // 1% ao mes
+    const valor = parcelasHabilitadas ? valorParcela * fator : valorParcela
+    return { numero: i + 1, valor }
+  })
   const quickStats = [
     { label: 'Imovel ajustado', value: formatCurrency(precoAjustado) },
     { label: 'Prosoluto', value: formatCurrency(prosolutoEfetivo) },
@@ -423,31 +429,39 @@ export function PresentationPage() {
 
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setMostrarResumo((previous) => !previous)}
-                className="rounded-2xl border border-cyan-300/40 bg-cyan-500/20 px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/35"
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setMostrarResumo((previous) => !previous)}
+              className="rounded-2xl border border-cyan-300/40 bg-cyan-500/20 px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/35"
               >
                 {mostrarResumo ? 'Ocultar resumo da proposta' : 'Exibir resumo da proposta'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmpreendimento(DEFAULT_FORM_VALUES.empreendimento)
-                  setUnitType(DEFAULT_FORM_VALUES.unitType)
-                  setPrecoUnidade(DEFAULT_FORM_VALUES.precoUnidade)
-                  setFinanciamento(DEFAULT_FORM_VALUES.financiamento)
-                  setSubsidio(DEFAULT_FORM_VALUES.subsidio)
-                  setSinal(DEFAULT_FORM_VALUES.sinal)
-                  setParcelas(24)
-                  setMostrarResumo(false)
-                }}
-                className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
-              >
-                Resetar valores
-              </button>
-            </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMostrarTabelaParcelas((previous) => !previous)}
+              className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
+            >
+              {mostrarTabelaParcelas ? 'Ocultar tabela de parcelas' : 'Ver tabela com 1% a.m.'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEmpreendimento(DEFAULT_FORM_VALUES.empreendimento)
+                setUnitType(DEFAULT_FORM_VALUES.unitType)
+                setPrecoUnidade(DEFAULT_FORM_VALUES.precoUnidade)
+                setFinanciamento(DEFAULT_FORM_VALUES.financiamento)
+                setSubsidio(DEFAULT_FORM_VALUES.subsidio)
+                setSinal(DEFAULT_FORM_VALUES.sinal)
+                setParcelas(24)
+                setMostrarResumo(false)
+                setMostrarTabelaParcelas(false)
+              }}
+              className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
+            >
+              Resetar valores
+            </button>
+          </div>
 
           </section>
 
@@ -538,6 +552,38 @@ export function PresentationPage() {
                 </p>
               </div>
             </div>
+
+            {mostrarTabelaParcelas && parcelasHabilitadas ? (
+              <div className="rounded-[24px] border border-white/12 bg-slate-950/70 p-5 shadow-[0_12px_45px_rgba(0,0,0,0.4)] card-lift glass-edge">
+                <div className="mb-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-200">Tabela de parcelas</p>
+                    <h3 className="text-lg font-bold text-white">Correção de 1% ao mês</h3>
+                  </div>
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-cyan-100">
+                    {parcelasNormalizadas}x
+                  </span>
+                </div>
+                <div className="max-h-72 overflow-auto rounded-2xl border border-white/10">
+                  <table className="w-full text-sm text-slate-200">
+                    <thead className="bg-white/5 text-xs uppercase tracking-[0.15em] text-cyan-100">
+                      <tr>
+                        <th className="px-3 py-2 text-left">Parcela</th>
+                        <th className="px-3 py-2 text-right">Valor corrigido</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parcelasProgressivas.map((parcela) => (
+                        <tr key={parcela.numero} className="odd:bg-white/5 even:bg-white/0">
+                          <td className="px-3 py-2 font-semibold text-white">#{parcela.numero}</td>
+                          <td className="px-3 py-2 text-right">{formatCurrency(parcela.valor)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
 
             <div className="rounded-[24px] border border-white/10 bg-white/8 p-5 shadow-2xl backdrop-blur-xl card-lift glass-edge">
               <div className="mb-3 flex items-center justify-between">
