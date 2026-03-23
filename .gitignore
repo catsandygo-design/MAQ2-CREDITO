@@ -12,3 +12,4 @@ env/
 dist/
 !frontend-react/dist/
 !frontend-react/dist/**
+backups/*.bundle
