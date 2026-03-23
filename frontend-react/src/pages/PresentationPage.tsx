@@ -1,11 +1,21 @@
 import { useEffect, useState } from 'react'
 import { fetchSession, logout } from '../lib/api'
 import vilaGirassolBanner from '../assets/vila-girassol-banner.svg'
+import tipoPlanta from '../assets/tipo-planta.svg'
+import gardenFitPlanta from '../assets/gardenfit-planta.svg'
+import superGardenPlanta from '../assets/supergarden-planta.svg'
 
 type UnitType = 'TIPO/MOTO' | 'TIPO/CARRO' | 'GARDEN FIT' | 'GARDEN' | 'SUPER GARDEN'
 type Empreendimento = 'VILA GIRASSOL' | 'VILA MARGARIDA' | 'VILA DAS ROSAS'
 
 const UNIT_TYPES: UnitType[] = ['TIPO/MOTO', 'TIPO/CARRO', 'GARDEN FIT', 'GARDEN', 'SUPER GARDEN']
+const UNIT_IMAGES: Record<UnitType, string> = {
+  'TIPO/MOTO': tipoPlanta,
+  'TIPO/CARRO': tipoPlanta,
+  'GARDEN FIT': gardenFitPlanta,
+  GARDEN: gardenFitPlanta,
+  'SUPER GARDEN': superGardenPlanta,
+}
 const EMPREENDIMENTOS: Array<{ label: Empreendimento; chequeMoradia: number }> = [
   { label: 'VILA GIRASSOL', chequeMoradia: 45800 },
   { label: 'VILA MARGARIDA', chequeMoradia: 45800 },
@@ -211,6 +221,7 @@ export function PresentationPage() {
     const valor = parcelasHabilitadas ? valorParcela * fator : valorParcela
     return { numero: i + 1, valor }
   })
+  const plantaImagem = UNIT_IMAGES[unitType]
   const quickStats = [
     { label: 'Imovel ajustado', value: formatCurrency(precoAjustado) },
     { label: 'Prosoluto', value: formatCurrency(prosolutoEfetivo) },
@@ -466,6 +477,21 @@ export function PresentationPage() {
           </section>
 
           <aside className="space-y-4 xl:sticky xl:top-4">
+            <div className="rounded-[28px] border border-white/10 bg-white/8 p-4 shadow-2xl backdrop-blur-xl card-lift glass-edge">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.28em] text-cyan-200">Planta selecionada</p>
+                  <h3 className="text-lg font-bold text-white">{unitType}</h3>
+                </div>
+                <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-cyan-100">
+                  Visual
+                </span>
+              </div>
+              <div className="overflow-hidden rounded-2xl border border-white/10 shadow-inner">
+                <img src={plantaImagem} alt={`Planta ${unitType}`} className="block h-auto w-full object-cover" />
+              </div>
+            </div>
+
             <div className="rounded-[28px] border border-white/10 bg-white/8 p-5 shadow-2xl backdrop-blur-xl card-lift glass-edge">
               <div className="flex items-start justify-between gap-3">
                 <div>
