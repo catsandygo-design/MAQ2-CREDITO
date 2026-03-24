@@ -21,40 +21,45 @@ const UNIT_IMAGES: Record<UnitType, string> = {
   'SUPER GARDEN': superGardenPlanta,
 }
 const BACKGROUND_IMAGES = [bgGarden, bgSuperGarden, bgTipo, bgVaranda]
+const PUBLIC_BASE = import.meta.env.BASE_URL.endsWith('/')
+  ? import.meta.env.BASE_URL
+  : `${import.meta.env.BASE_URL}/`
+const publicImage = (file: string) => `${PUBLIC_BASE}imagens/${encodeURIComponent(file)}`
+
 const BG_BY_EMPREENDIMENTO: Record<Empreendimento, string[]> = {
   'VILA GIRASSOL': [
-    '/imagens/entrada girassol.jpeg',
-    '/imagens/sala girassol.jpeg',
-    '/imagens/cozinha girassol.jpeg',
-    '/imagens/casal girassol.jpeg',
-    '/imagens/banheiro girassol.jpeg',
-    '/imagens/parquinho girassol.jpeg',
-    '/imagens/pet girassol.jpeg',
-    '/imagens/piscina girassol.jpeg',
-    '/imagens/implantacao girassol.jpeg',
+    publicImage('entrada girassol.jpeg'),
+    publicImage('sala girassol.jpeg'),
+    publicImage('cozinha girassol.jpeg'),
+    publicImage('casal girassol.jpeg'),
+    publicImage('banheiro girassol.jpeg'),
+    publicImage('parquinho girassol.jpeg'),
+    publicImage('pet girassol.jpeg'),
+    publicImage('piscina girassol.jpeg'),
+    publicImage('implantacao girassol.jpeg'),
   ],
   'VILA MARGARIDA': [
-    '/imagens/entrada margarida.jpeg',
-    '/imagens/sala margarida.jpeg',
-    '/imagens/cozinha margarida.jpeg',
-    '/imagens/casal margarida.jpeg',
-    '/imagens/banheiro margarida.jpeg',
-    '/imagens/currasqueira margarida.jpeg',
-    '/imagens/parquinho margarida.jpeg',
-    '/imagens/pet margarida.jpeg',
-    '/imagens/implantacao margarida.jpeg',
-    '/imagens/lateral margarida.jpeg',
+    publicImage('entrada margarida.jpeg'),
+    publicImage('sala margarida.jpeg'),
+    publicImage('cozinha margarida.jpeg'),
+    publicImage('casal margarida.jpeg'),
+    publicImage('banheiro margarida.jpeg'),
+    publicImage('currasqueira margarida.jpeg'),
+    publicImage('parquinho margarida.jpeg'),
+    publicImage('pet margarida.jpeg'),
+    publicImage('implantacao margarida.jpeg'),
+    publicImage('lateral margarida.jpeg'),
   ],
   'VILA DAS ROSAS': [
-    '/imagens/entrada rosas.jpeg',
-    '/imagens/sala das rosas.jpeg',
-    '/imagens/cozinha das rosas.jpeg',
-    '/imagens/casal das rosas.jpeg',
-    '/imagens/banheiro das rosas.jpeg',
-    '/imagens/parquinho rosas.jpeg',
-    '/imagens/pet rosas.jpeg',
-    '/imagens/piscina e churrasqueira rosas.jpeg',
-    '/imagens/lateral vila das rosas.jpeg',
+    publicImage('entrada rosas.jpeg'),
+    publicImage('sala das rosas.jpeg'),
+    publicImage('cozinha das rosas.jpeg'),
+    publicImage('casal das rosas.jpeg'),
+    publicImage('banheiro das rosas.jpeg'),
+    publicImage('parquinho rosas.jpeg'),
+    publicImage('pet rosas.jpeg'),
+    publicImage('piscina e churrasqueira rosas.jpeg'),
+    publicImage('lateral vila das rosas.jpeg'),
   ],
 }
 const EMPREENDIMENTOS: Array<{ label: Empreendimento; chequeMoradia: number }> = [
@@ -351,11 +356,11 @@ export function PresentationPage() {
             aria-hidden
             className={[
               'absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ease-in-out',
-              index === bgIndex ? 'opacity-35' : 'opacity-0',
+              index === bgIndex ? 'opacity-60' : 'opacity-0',
             ].join(' ')}
           />
         ))}
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/55 via-slate-950/65 to-slate-950/85" />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/30 via-slate-950/45 to-slate-950/70" />
       </div>
 
       <div className="relative z-10 mx-auto max-w-[1380px] space-y-5">
