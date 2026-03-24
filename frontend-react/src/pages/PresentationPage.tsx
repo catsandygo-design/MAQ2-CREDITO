@@ -661,7 +661,7 @@ export function PresentationPage() {
             </div>
 
             {mostrarTabelaParcelas && parcelasHabilitadas ? (
-              <div className="rounded-[24px] border border-white/12 bg-slate-950/70 p-5 shadow-[0_12px_45px_rgba(0,0,0,0.4)] card-lift glass-edge">
+              <div className="rounded-[24px] border border-white/12 bg-slate-950/85 p-5 shadow-[0_12px_45px_rgba(0,0,0,0.4)] backdrop-blur-xl card-lift glass-edge">
                 <div className="mb-3 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-200">Tabela de parcelas</p>
@@ -671,9 +671,9 @@ export function PresentationPage() {
                     {parcelasNormalizadas}x
                   </span>
                 </div>
-                <div className="max-h-72 overflow-auto rounded-2xl border border-white/10">
-                  <table className="w-full text-sm text-slate-200">
-                    <thead className="bg-white/5 text-xs uppercase tracking-[0.15em] text-cyan-100">
+                <div className="max-h-72 overflow-y-auto overflow-x-hidden rounded-2xl border border-white/10 bg-slate-950/60">
+                  <table className="w-full table-fixed text-sm text-white">
+                    <thead className="bg-slate-800/70 text-xs uppercase tracking-[0.15em] text-cyan-100">
                       <tr>
                         <th className="px-3 py-2 text-left">Parcela</th>
                         <th className="px-3 py-2 text-right">Valor corrigido</th>
