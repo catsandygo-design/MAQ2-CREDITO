@@ -351,23 +351,21 @@ export function PresentationPage() {
   }
 
   return (
-    <div className="presentation-bg relative min-h-screen overflow-hidden p-4 text-white md:p-8">
-      <div className="pointer-events-none absolute inset-0">
+    <>
+      <div className="bg-carousel">
         {backgroundImages.map((image, index) => (
           <img
             key={image}
             src={image}
             aria-hidden
-            className={[
-              'absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ease-in-out',
-              index === bgIndex ? 'opacity-60' : 'opacity-0',
-            ].join(' ')}
+            className={['bg-carousel__image', index === bgIndex ? 'opacity-70' : 'opacity-0'].join(' ')}
           />
         ))}
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/30 via-slate-950/45 to-slate-950/70" />
+        <div className="bg-carousel__overlay" />
       </div>
 
-      <div className="relative z-10 mx-auto max-w-[1380px] space-y-5">
+      <div className="presentation-shell presentation-bg relative z-10 min-h-screen p-4 text-white md:p-8">
+        <div className="mx-auto max-w-[1380px] space-y-5">
         <header className="flex flex-col gap-4 rounded-3xl border border-white/8 bg-white/5 p-5 shadow-[0_14px_48px_rgba(0,0,0,0.35)] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-4">
             {logoAtual ? (
@@ -771,7 +769,8 @@ export function PresentationPage() {
             ) : null}
           </aside>
         </main>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
