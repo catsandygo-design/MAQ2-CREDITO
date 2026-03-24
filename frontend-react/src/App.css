@@ -2102,7 +2102,7 @@ tr.row-final {
 .bg-carousel__overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(5, 10, 20, 0.40), rgba(5, 10, 20, 0.72) 55%, rgba(5, 10, 20, 0.88));
+  background: linear-gradient(180deg, rgba(5, 10, 20, 0.25), rgba(5, 10, 20, 0.5) 55%, rgba(5, 10, 20, 0.65));
 }
 
 .brand-frame {

@@ -358,13 +358,13 @@ export function PresentationPage() {
             key={image}
             src={image}
             aria-hidden
-            className={['bg-carousel__image', index === bgIndex ? 'opacity-70' : 'opacity-0'].join(' ')}
+            className={['bg-carousel__image', index === bgIndex ? 'opacity-90' : 'opacity-0'].join(' ')}
           />
         ))}
         <div className="bg-carousel__overlay" />
       </div>
 
-      <div className="presentation-shell presentation-bg relative z-10 min-h-screen p-4 text-white md:p-8">
+      <div className="presentation-shell relative z-10 min-h-screen p-4 text-white md:p-8">
         <div className="mx-auto max-w-[1380px] space-y-5">
         <header className="flex flex-col gap-4 rounded-3xl border border-white/8 bg-white/5 p-5 shadow-[0_14px_48px_rgba(0,0,0,0.35)] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-4">
