@@ -67,6 +67,36 @@ const LOGOS: Partial<Record<Empreendimento, string>> = {
   'VILA MARGARIDA': publicImage('logo margarida.jpeg'),
   'VILA DAS ROSAS': publicImage('logo vila das rosas.jpeg'),
 }
+
+const THEME_BY_EMPREENDIMENTO: Record<
+  Empreendimento,
+  { primary: string; headerBg: string; rowOdd: string; rowEven: string; border: string; badgeBg: string }
+> = {
+  'VILA GIRASSOL': {
+    primary: '#f8c63d',
+    headerBg: 'rgba(248,198,61,0.20)',
+    rowOdd: 'rgba(248,198,61,0.10)',
+    rowEven: 'rgba(255,255,255,0.05)',
+    border: 'rgba(248,198,61,0.30)',
+    badgeBg: 'rgba(248,198,61,0.22)',
+  },
+  'VILA MARGARIDA': {
+    primary: '#3ad0a1',
+    headerBg: 'rgba(58,208,161,0.22)',
+    rowOdd: 'rgba(58,208,161,0.12)',
+    rowEven: 'rgba(255,255,255,0.05)',
+    border: 'rgba(58,208,161,0.30)',
+    badgeBg: 'rgba(58,208,161,0.22)',
+  },
+  'VILA DAS ROSAS': {
+    primary: '#f36a9a',
+    headerBg: 'rgba(243,106,154,0.22)',
+    rowOdd: 'rgba(243,106,154,0.12)',
+    rowEven: 'rgba(255,255,255,0.05)',
+    border: 'rgba(243,106,154,0.30)',
+    badgeBg: 'rgba(243,106,154,0.22)',
+  },
+}
 const EMPREENDIMENTOS: Array<{ label: Empreendimento; chequeMoradia: number }> = [
   { label: 'VILA GIRASSOL', chequeMoradia: 45800 },
   { label: 'VILA MARGARIDA', chequeMoradia: 45800 },
@@ -226,6 +256,7 @@ export function PresentationPage() {
     return selected.map((path) => (path.startsWith('/imagens/') ? encodeURI(path) : path))
   }, [empreendimento])
   const logoAtual = LOGOS[empreendimento]
+  const theme = THEME_BY_EMPREENDIMENTO[empreendimento]
 
   useEffect(() => {
     // Garantir que, ao trocar de empreendimento, o carrossel reinicie na primeira imagem do novo conjunto.
@@ -662,19 +693,31 @@ export function PresentationPage() {
             </div>
 
             {mostrarTabelaParcelas && parcelasHabilitadas ? (
-              <div className="rounded-[24px] border border-white/12 bg-slate-950/90 p-5 shadow-[0_12px_45px_rgba(0,0,0,0.4)] backdrop-blur-xl card-lift glass-edge">
+              <div
+                className="rounded-[24px] border bg-slate-950/90 p-5 shadow-[0_12px_45px_rgba(0,0,0,0.4)] backdrop-blur-xl card-lift glass-edge"
+                style={{ borderColor: theme.border }}
+              >
                 <div className="mb-3 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-200">Tabela de parcelas</p>
                     <h3 className="text-lg font-bold text-white">Correção de 1% ao mês</h3>
                   </div>
-                  <span className="rounded-full bg-white/12 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-cyan-100">
+                  <span
+                    className="rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-white"
+                    style={{ backgroundColor: theme.badgeBg, border: `1px solid ${theme.border}` }}
+                  >
                     {parcelasNormalizadas}x
                   </span>
                 </div>
-                <div className="w-full max-w-full max-h-72 overflow-y-auto overflow-x-hidden rounded-2xl border border-white/12 bg-slate-950/80 shadow-inner">
+                <div
+                  className="w-full max-w-full max-h-72 overflow-y-auto overflow-x-hidden rounded-2xl border bg-slate-950/80 shadow-inner"
+                  style={{ borderColor: theme.border }}
+                >
                   <table className="min-w-full table-fixed text-sm text-white">
-                    <thead className="bg-slate-800/80 text-xs uppercase tracking-[0.12em] text-cyan-100">
+                    <thead
+                      className="text-xs uppercase tracking-[0.12em]"
+                      style={{ backgroundColor: theme.headerBg, color: theme.primary }}
+                    >
                       <tr>
                         <th className="w-1/2 px-3 py-2 text-left">Parcela</th>
                         <th className="w-1/2 px-3 py-2 text-right">Valor corrigido</th>
@@ -682,9 +725,14 @@ export function PresentationPage() {
                     </thead>
                     <tbody>
                       {parcelasProgressivas.map((parcela) => (
-                        <tr key={parcela.numero} className="odd:bg-white/8 even:bg-white/4">
+                        <tr
+                          key={parcela.numero}
+                          style={{ backgroundColor: parcela.numero % 2 === 0 ? theme.rowEven : theme.rowOdd }}
+                        >
                           <td className="px-3 py-2 font-semibold text-white">#{parcela.numero}</td>
-                          <td className="px-3 py-2 text-right text-cyan-50">{formatCurrency(parcela.valor)}</td>
+                          <td className="px-3 py-2 text-right" style={{ color: theme.primary }}>
+                            {formatCurrency(parcela.valor)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
