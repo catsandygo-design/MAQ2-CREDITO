@@ -217,6 +217,11 @@ export function PresentationPage() {
   }, [empreendimento])
 
   useEffect(() => {
+    // Garantir que, ao trocar de empreendimento, o carrossel reinicie na primeira imagem do novo conjunto.
+    setBgIndex(0)
+  }, [empreendimento])
+
+  useEffect(() => {
     if (!backgroundImages.length) return undefined
     setBgIndex((current) => (current >= backgroundImages.length ? 0 : current))
     const interval = window.setInterval(() => {
