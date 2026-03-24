@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { fetchSession, logout } from '../lib/api'
 import vilaGirassolBanner from '../assets/vila-girassol-banner.svg'
 import tipoPlanta from '../assets/TIPO.jpg'
 import gardenFitPlanta from '../assets/GARDENFIT.jpg'
 import superGardenPlanta from '../assets/SUPERGARDEN.jpg'
+import bgGarden from '../assets/GARDENFIT.jpg'
+import bgSuperGarden from '../assets/SUPERGARDEN.jpg'
+import bgTipo from '../assets/TIPO.jpg'
+import bgVaranda from '../assets/TIPOVARANDA.jpg'
 
 type UnitType = 'TIPO/MOTO' | 'TIPO/CARRO' | 'GARDEN FIT' | 'GARDEN' | 'SUPER GARDEN'
 type Empreendimento = 'VILA GIRASSOL' | 'VILA MARGARIDA' | 'VILA DAS ROSAS'
@@ -15,6 +19,43 @@ const UNIT_IMAGES: Record<UnitType, string> = {
   'GARDEN FIT': gardenFitPlanta,
   GARDEN: gardenFitPlanta,
   'SUPER GARDEN': superGardenPlanta,
+}
+const BACKGROUND_IMAGES = [bgGarden, bgSuperGarden, bgTipo, bgVaranda]
+const BG_BY_EMPREENDIMENTO: Record<Empreendimento, string[]> = {
+  'VILA GIRASSOL': [
+    '/imagens/entrada girassol.jpeg',
+    '/imagens/sala girassol.jpeg',
+    '/imagens/cozinha girassol.jpeg',
+    '/imagens/casal girassol.jpeg',
+    '/imagens/banheiro girassol.jpeg',
+    '/imagens/parquinho girassol.jpeg',
+    '/imagens/pet girassol.jpeg',
+    '/imagens/piscina girassol.jpeg',
+    '/imagens/implantacao girassol.jpeg',
+  ],
+  'VILA MARGARIDA': [
+    '/imagens/entrada margarida.jpeg',
+    '/imagens/sala margarida.jpeg',
+    '/imagens/cozinha margarida.jpeg',
+    '/imagens/casal margarida.jpeg',
+    '/imagens/banheiro margarida.jpeg',
+    '/imagens/currasqueira margarida.jpeg',
+    '/imagens/parquinho margarida.jpeg',
+    '/imagens/pet margarida.jpeg',
+    '/imagens/implantacao margarida.jpeg',
+    '/imagens/lateral margarida.jpeg',
+  ],
+  'VILA DAS ROSAS': [
+    '/imagens/entrada rosas.jpeg',
+    '/imagens/sala das rosas.jpeg',
+    '/imagens/cozinha das rosas.jpeg',
+    '/imagens/casal das rosas.jpeg',
+    '/imagens/banheiro das rosas.jpeg',
+    '/imagens/parquinho rosas.jpeg',
+    '/imagens/pet rosas.jpeg',
+    '/imagens/piscina e churrasqueira rosas.jpeg',
+    '/imagens/lateral vila das rosas.jpeg',
+  ],
 }
 const EMPREENDIMENTOS: Array<{ label: Empreendimento; chequeMoradia: number }> = [
   { label: 'VILA GIRASSOL', chequeMoradia: 45800 },
@@ -169,6 +210,21 @@ export function PresentationPage() {
   const [mostrarResumo, setMostrarResumo] = useState(false)
   const [mostrarTabelaParcelas, setMostrarTabelaParcelas] = useState(false)
   const [parcelas, setParcelas] = useState(24)
+  const [bgIndex, setBgIndex] = useState(0)
+  const backgroundImages = useMemo<string[]>(() => {
+    const selected = BG_BY_EMPREENDIMENTO[empreendimento] ?? BACKGROUND_IMAGES
+    return selected.map((path) => (path.startsWith('/imagens/') ? encodeURI(path) : path))
+  }, [empreendimento])
+
+  useEffect(() => {
+    if (!backgroundImages.length) return undefined
+    setBgIndex((current) => (current >= backgroundImages.length ? 0 : current))
+    const interval = window.setInterval(() => {
+      setBgIndex((previous) => (previous + 1) % backgroundImages.length)
+    }, 5500)
+
+    return () => window.clearInterval(interval)
+  }, [backgroundImages])
 
   useEffect(() => {
     let cancelled = false
@@ -281,7 +337,22 @@ export function PresentationPage() {
   }
 
   return (
-    <div className="presentation-bg min-h-screen p-4 text-white md:p-8">
+    <div className="presentation-bg relative min-h-screen overflow-hidden p-4 text-white md:p-8">
+      <div className="pointer-events-none absolute inset-0">
+        {backgroundImages.map((image, index) => (
+          <img
+            key={image}
+            src={image}
+            aria-hidden
+            className={[
+              'absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ease-in-out',
+              index === bgIndex ? 'opacity-35' : 'opacity-0',
+            ].join(' ')}
+          />
+        ))}
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/55 via-slate-950/65 to-slate-950/85" />
+      </div>
+
       <div className="relative z-10 mx-auto max-w-[1380px] space-y-5">
         <header className="flex flex-col gap-4 rounded-3xl border border-white/8 bg-white/5 p-5 shadow-[0_14px_48px_rgba(0,0,0,0.35)] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-4">
