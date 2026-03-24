@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchSession, logout } from '../lib/api'
-import vilaGirassolBanner from '../assets/vila-girassol-banner.svg'
 import tipoPlanta from '../assets/TIPO.jpg'
 import gardenFitPlanta from '../assets/GARDENFIT.jpg'
 import superGardenPlanta from '../assets/SUPERGARDEN.jpg'
@@ -8,6 +7,7 @@ import bgGarden from '../assets/GARDENFIT.jpg'
 import bgSuperGarden from '../assets/SUPERGARDEN.jpg'
 import bgTipo from '../assets/TIPO.jpg'
 import bgVaranda from '../assets/TIPOVARANDA.jpg'
+import logoGirassol from '../assets/vila-girassol-banner.svg'
 
 type UnitType = 'TIPO/MOTO' | 'TIPO/CARRO' | 'GARDEN FIT' | 'GARDEN' | 'SUPER GARDEN'
 type Empreendimento = 'VILA GIRASSOL' | 'VILA MARGARIDA' | 'VILA DAS ROSAS'
@@ -61,6 +61,11 @@ const BG_BY_EMPREENDIMENTO: Record<Empreendimento, string[]> = {
     publicImage('piscina e churrasqueira rosas.jpeg'),
     publicImage('lateral vila das rosas.jpeg'),
   ],
+}
+const LOGOS: Partial<Record<Empreendimento, string>> = {
+  'VILA GIRASSOL': logoGirassol,
+  'VILA MARGARIDA': publicImage('logo margarida.jpeg'),
+  'VILA DAS ROSAS': publicImage('logo vila das rosas.jpeg'),
 }
 const EMPREENDIMENTOS: Array<{ label: Empreendimento; chequeMoradia: number }> = [
   { label: 'VILA GIRASSOL', chequeMoradia: 45800 },
@@ -220,6 +225,7 @@ export function PresentationPage() {
     const selected = BG_BY_EMPREENDIMENTO[empreendimento] ?? BACKGROUND_IMAGES
     return selected.map((path) => (path.startsWith('/imagens/') ? encodeURI(path) : path))
   }, [empreendimento])
+  const logoAtual = LOGOS[empreendimento]
 
   useEffect(() => {
     // Garantir que, ao trocar de empreendimento, o carrossel reinicie na primeira imagem do novo conjunto.
@@ -306,8 +312,6 @@ export function PresentationPage() {
       setPrecoUnidade(minimoParaPreco)
     }
   }, [totalObtido, precoUnidade])
-  const showGirassolBanner = empreendimento === 'VILA GIRASSOL'
-
   useEffect(() => {
     if (parcelas > maxParcelasPermitidas) {
       setParcelas(maxParcelasPermitidas || 1)
@@ -366,12 +370,12 @@ export function PresentationPage() {
       <div className="relative z-10 mx-auto max-w-[1380px] space-y-5">
         <header className="flex flex-col gap-4 rounded-3xl border border-white/8 bg-white/5 p-5 shadow-[0_14px_48px_rgba(0,0,0,0.35)] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-4">
-            {showGirassolBanner ? (
-              <div className="overflow-hidden rounded-2xl border border-white/15 bg-white shadow-lg">
+            {logoAtual ? (
+              <div className="brand-frame">
                 <img
-                  src={vilaGirassolBanner}
-                  alt="Marca do empreendimento Vila Girassol Residencial"
-                  className="h-14 w-[220px] object-cover sm:h-16 sm:w-[260px]"
+                  src={logoAtual}
+                  alt={`Marca do empreendimento ${empreendimento}`}
+                  className="brand-logo"
                 />
               </div>
             ) : (
