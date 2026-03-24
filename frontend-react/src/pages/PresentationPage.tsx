@@ -662,29 +662,29 @@ export function PresentationPage() {
             </div>
 
             {mostrarTabelaParcelas && parcelasHabilitadas ? (
-              <div className="rounded-[24px] border border-white/12 bg-slate-950/85 p-5 shadow-[0_12px_45px_rgba(0,0,0,0.4)] backdrop-blur-xl card-lift glass-edge">
+              <div className="rounded-[24px] border border-white/12 bg-slate-950/90 p-5 shadow-[0_12px_45px_rgba(0,0,0,0.4)] backdrop-blur-xl card-lift glass-edge">
                 <div className="mb-3 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-200">Tabela de parcelas</p>
                     <h3 className="text-lg font-bold text-white">Correção de 1% ao mês</h3>
                   </div>
-                  <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-cyan-100">
+                  <span className="rounded-full bg-white/12 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-cyan-100">
                     {parcelasNormalizadas}x
                   </span>
                 </div>
-                <div className="max-h-72 overflow-y-auto overflow-x-hidden rounded-2xl border border-white/10 bg-slate-950/60">
-                  <table className="w-full table-fixed text-sm text-white">
-                    <thead className="bg-slate-800/70 text-xs uppercase tracking-[0.15em] text-cyan-100">
+                <div className="w-full max-w-full max-h-72 overflow-y-auto overflow-x-hidden rounded-2xl border border-white/12 bg-slate-950/80 shadow-inner">
+                  <table className="min-w-full table-fixed text-sm text-white">
+                    <thead className="bg-slate-800/80 text-xs uppercase tracking-[0.12em] text-cyan-100">
                       <tr>
-                        <th className="px-3 py-2 text-left">Parcela</th>
-                        <th className="px-3 py-2 text-right">Valor corrigido</th>
+                        <th className="w-1/2 px-3 py-2 text-left">Parcela</th>
+                        <th className="w-1/2 px-3 py-2 text-right">Valor corrigido</th>
                       </tr>
                     </thead>
                     <tbody>
                       {parcelasProgressivas.map((parcela) => (
-                        <tr key={parcela.numero} className="odd:bg-white/5 even:bg-white/0">
+                        <tr key={parcela.numero} className="odd:bg-white/8 even:bg-white/4">
                           <td className="px-3 py-2 font-semibold text-white">#{parcela.numero}</td>
-                          <td className="px-3 py-2 text-right">{formatCurrency(parcela.valor)}</td>
+                          <td className="px-3 py-2 text-right text-cyan-50">{formatCurrency(parcela.valor)}</td>
                         </tr>
                       ))}
                     </tbody>
