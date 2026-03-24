@@ -261,7 +261,8 @@ export function PresentationPage() {
           return
         }
 
-        setCorretorNome(session.username || 'Corretor')
+        const nome = (session.username || 'Corretor').toUpperCase()
+        setCorretorNome(nome)
         setAuthReady(true)
       } catch {
         window.location.href = '/login'
