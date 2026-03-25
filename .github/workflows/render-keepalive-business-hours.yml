@@ -19,20 +19,24 @@ jobs:
   ping-render:
     runs-on: ubuntu-latest
     timeout-minutes: 179
+    env:
+      RENDER_KEEPALIVE_URL: ${{ secrets.RENDER_KEEPALIVE_URL }}
     steps:
-      - name: Validate secret
+      - name: Check keepalive secret
+        id: check
         shell: bash
-        env:
-          RENDER_KEEPALIVE_URL: ${{ secrets.RENDER_KEEPALIVE_URL }}
         run: |
           if [[ -z "${RENDER_KEEPALIVE_URL}" ]]; then
-            echo "::error::Secret RENDER_KEEPALIVE_URL nao configurado."
-            exit 1
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::Secret RENDER_KEEPALIVE_URL nao configurado. Ignorando keepalive."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build keepalive URL
         id: url
         shell: bash
+        if: steps.check.outputs.skip == 'false'
         run: |
           RAW="${RENDER_KEEPALIVE_URL//$'\r'/}"
           RAW="${RAW//$'\n'/}"
@@ -59,11 +63,10 @@ jobs:
           else
             echo "target=$BASE/health/keepalive" >> "$GITHUB_OUTPUT"
           fi
-        env:
-          RENDER_KEEPALIVE_URL: ${{ secrets.RENDER_KEEPALIVE_URL }}
 
       - name: Ping Render keepalive endpoint
         shell: bash
+        if: steps.check.outputs.skip == 'false'
         run: |
           set -euo pipefail
 
