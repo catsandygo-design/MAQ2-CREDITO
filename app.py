@@ -27,11 +27,15 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
 from sqlalchemy.sql import func
+from openpyxl import load_workbook
 
 logger = logging.getLogger("sistema_credito")
 
 WEB_DIR = Path(__file__).resolve().parent / "web"
 REACT_DIST_DIR = Path(__file__).resolve().parent / "frontend-react" / "dist"
+DATA_DIR = Path(__file__).resolve().parent / "data"
+DATA_DIR.mkdir(exist_ok=True)
+TABELA_PRECO_PATH = DATA_DIR / "tabela_precos.json"
 
 SESSION_COOKIE_NAME = "sc_session"
 SESSION_TTL_SECONDS = int(os.getenv("SESSION_TTL_SECONDS", "43200"))
@@ -79,6 +83,104 @@ APP_GESTOR_USER = os.getenv("APP_GESTOR_USER", "gestor")
 APP_GESTOR_PASSWORD = os.getenv("APP_GESTOR_PASSWORD", "Troque#Gestor123")
 APP_GESTOR_CREDITO_USER = os.getenv("APP_GESTOR_CREDITO_USER", "")
 APP_GESTOR_CREDITO_PASSWORD = os.getenv("APP_GESTOR_CREDITO_PASSWORD", "")
+
+
+class TabelaPrecoItem(BaseModel):
+  empreendimento: str
+  unidade: str
+  garantido_minimo: float
+  preco: float
+  is_maximo: float
+  prosoluto_minimo: float
+
+
+class TabelaPrecoUploadResponse(BaseModel):
+  linhas: int
+  filename: str
+
+
+def normalize_header(value: str) -> str:
+  cleaned = unicodedata.normalize("NFKD", (value or "")).encode("ascii", "ignore").decode()
+  return "_".join(cleaned.strip().lower().split())
+
+
+def parse_number(value: Any) -> float:
+  try:
+    return float(value)
+  except (TypeError, ValueError):
+    return 0.0
+
+
+def carregar_tabela_precos() -> list[TabelaPrecoItem]:
+  if not TABELA_PRECO_PATH.exists():
+    return []
+  try:
+    payload = json.loads(TABELA_PRECO_PATH.read_text(encoding="utf-8"))
+  except json.JSONDecodeError:
+    return []
+  return payload
+
+
+async def processar_tabela_upload(upload: UploadFile) -> list[TabelaPrecoItem]:
+  content = await upload.read()
+  if not content:
+    raise HTTPException(status_code=400, detail="Arquivo vazio.")
+
+  filename = (upload.filename or "").lower()
+  required = {
+    "empreendimento": "empreendimento",
+    "unidade": "unidade",
+    "garantido_minimo": "garantido_minimo",
+    "preco": "preco",
+    "is_maximo": "is_maximo",
+    "prosoluto_minimo": "prosoluto_minimo",
+  }
+  rows: list[TabelaPrecoItem] = []
+
+  if filename.endswith(".csv"):
+    text = content.decode("utf-8")
+    reader = csv.DictReader(io.StringIO(text))
+    if not reader.fieldnames:
+      raise HTTPException(status_code=400, detail="Cabecalho nao encontrado no CSV.")
+    header_map = {normalize_header(name): name for name in reader.fieldnames}
+    missing = [col for col in required if col not in header_map]
+    if missing:
+      raise HTTPException(status_code=400, detail=f"Colunas ausentes: {', '.join(missing)}")
+    for line in reader:
+      rows.append(
+        {
+          "empreendimento": str(line.get(header_map["empreendimento"], "")).strip(),
+          "unidade": str(line.get(header_map["unidade"], "")).strip(),
+          "garantido_minimo": parse_number(line.get(header_map["garantido_minimo"])),
+          "preco": parse_number(line.get(header_map["preco"])),
+          "is_maximo": parse_number(line.get(header_map["is_maximo"])),
+          "prosoluto_minimo": parse_number(line.get(header_map["prosoluto_minimo"])),
+        }
+      )
+    return rows
+
+  # XLSX / XLS
+  workbook = load_workbook(io.BytesIO(content), data_only=True)
+  sheet = workbook.active
+  header_cells = [normalize_header(str(cell.value or "")) for cell in next(sheet.iter_rows(max_row=1))]
+  header_map = {name: idx for idx, name in enumerate(header_cells)}
+  missing = [col for col in required if col not in header_map]
+  if missing:
+    raise HTTPException(status_code=400, detail=f"Colunas ausentes: {', '.join(missing)}")
+
+  for row in sheet.iter_rows(min_row=2):
+    rows.append(
+      {
+        "empreendimento": str(row[header_map["empreendimento"]].value or "").strip(),
+        "unidade": str(row[header_map["unidade"]].value or "").strip(),
+        "garantido_minimo": parse_number(row[header_map["garantido_minimo"]].value),
+        "preco": parse_number(row[header_map["preco"]].value),
+        "is_maximo": parse_number(row[header_map["is_maximo"]].value),
+        "prosoluto_minimo": parse_number(row[header_map["prosoluto_minimo"]].value),
+      }
+    )
+
+  return rows
 FORCE_RECOVER_ADMIN_ON_STARTUP = os.getenv("FORCE_RECOVER_ADMIN_ON_STARTUP", "false").lower() in {"1", "true", "yes"}
 EMAIL_SMTP_HOST = (os.getenv("EMAIL_SMTP_HOST", "") or "").strip()
 try:
@@ -10141,3 +10243,14 @@ def app_bulk_upsert_documentos(
     )
     return documentos
 
+
+@app.post("/app/api/tabela-precos/upload", response_model=TabelaPrecoUploadResponse)
+async def upload_tabela_precos(file: UploadFile = File(...)):
+    rows = await processar_tabela_upload(file)
+    TABELA_PRECO_PATH.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
+    return TabelaPrecoUploadResponse(linhas=len(rows), filename=file.filename or "")
+
+
+@app.get("/app/api/tabela-precos", response_model=list[TabelaPrecoItem])
+async def listar_tabela_precos():
+    return carregar_tabela_precos()
