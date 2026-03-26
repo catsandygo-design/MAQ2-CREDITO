@@ -247,6 +247,7 @@ export function PresentationPage() {
   const [financiamento, setFinanciamento] = useState(DEFAULT_FORM_VALUES.financiamento)
   const [subsidio, setSubsidio] = useState(DEFAULT_FORM_VALUES.subsidio)
   const [sinal, setSinal] = useState(DEFAULT_FORM_VALUES.sinal)
+  const [sinalProduto, setSinalProduto] = useState(0)
   const [parcelaCaixa, setParcelaCaixa] = useState(0)
   const [mostrarResumo, setMostrarResumo] = useState(false)
   const [mostrarTabelaParcelas, setMostrarTabelaParcelas] = useState(false)
@@ -270,8 +271,9 @@ export function PresentationPage() {
     setUploadStatus(`Enviando ${file.name}...`)
     try {
       await uploadTabelaPrecos(file)
+      const rows = await fetchTabelaPrecos()
+      setTabelaPrecos(rows)
       setUploadStatus(`Planilha enviada: ${file.name}`)
-      setTabelaPrecos(null) // forÃ§a recarregar da API
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Falha ao enviar planilha.'
       setUploadErro(message)
@@ -384,13 +386,14 @@ export function PresentationPage() {
     }
   }
 
+  const prosolutoLiquido = Math.max(prosolutoEfetivo - sinalProduto, 0)
   const maxParcelasPermitidas =
-    prosolutoEfetivo >= MIN_VALOR_PARCELA ? Math.min(MAX_PARCELAS, Math.floor(prosolutoEfetivo / MIN_VALOR_PARCELA)) : 1
-  const parcelasHabilitadas = prosolutoEfetivo >= MIN_VALOR_PARCELA
+    prosolutoLiquido >= MIN_VALOR_PARCELA ? Math.min(MAX_PARCELAS, Math.floor(prosolutoLiquido / MIN_VALOR_PARCELA)) : 1
+  const parcelasHabilitadas = prosolutoLiquido >= MIN_VALOR_PARCELA
   const parcelasNormalizadas = Math.min(Math.max(parcelas, 1), maxParcelasPermitidas)
-  const valorParcela = parcelasHabilitadas ? prosolutoEfetivo / parcelasNormalizadas : prosolutoEfetivo
+  const valorParcela = parcelasHabilitadas ? prosolutoLiquido / parcelasNormalizadas : prosolutoLiquido
   const aporteInicial = sinal + valorParcela
-  const precisaGarantidor = prosolutoEfetivo > precoVenda * PCT_PROSOLUTO_GARANTIDOR
+  const precisaGarantidor = prosolutoLiquido > precoVenda * PCT_PROSOLUTO_GARANTIDOR
   const parcelasProgressivas = Array.from({ length: parcelasNormalizadas }, (_, i) => {
     const fator = Math.pow(1.01, i) // 1% ao mes
     const valor = parcelasHabilitadas ? valorParcela * fator : valorParcela
@@ -404,7 +407,7 @@ export function PresentationPage() {
   const quickStats = [
     { label: 'Valor do imóvel', value: formatCurrency(precoVenda) },
     { label: 'Valor obtido', value: formatCurrency(valorObtido) },
-    { label: 'Entrada (prosoluto)', value: formatCurrency(prosolutoEfetivo) },
+    { label: 'Entrada (prosoluto)', value: formatCurrency(prosolutoLiquido) },
     { label: 'Sinal', value: formatCurrency(sinal) },
   ]
 
@@ -579,7 +582,14 @@ export function PresentationPage() {
                     readOnly
                     helperText="Valor fixo por empreendimento. O corretor nao pode alterar."
                   />
-                  <CurrencyField label="Prosoluto" value={prosolutoEfetivo} readOnly helperText="Calculado automaticamente." />
+                  <CurrencyField label="Prosoluto calculado" value={prosolutoEfetivo} readOnly helperText="Calculado automaticamente." />
+                  <CurrencyField
+                    label="Sinal produto"
+                    value={sinalProduto}
+                    onChange={setSinalProduto}
+                    helperText="Deduz do prosoluto, não soma no garantido."
+                  />
+                  <CurrencyField label="Prosoluto a pagar" value={prosolutoLiquido} readOnly />
                   <CurrencyField label="Sinal" value={sinal} onChange={setSinal} />
                   <CurrencyField
                     label="Garantido minimo"
@@ -720,7 +730,7 @@ export function PresentationPage() {
               </div>
             </div>
 
-            <div className="rounded-[20px] border border-white/10 bg-slate-950/80 p-4 shadow-xl backdrop-blur-xl card-lift glass-edge">
+            <div className="rounded-[20px] border border-white/10 bg-white/8 p-4 shadow-xl backdrop-blur-xl card-lift glass-edge">
               <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-200">Resumo da unidade</p>
               <div className="mt-3 space-y-2 text-sm text-slate-200">
                 <div className="flex justify-between">
@@ -789,12 +799,12 @@ export function PresentationPage() {
                   <strong>{formatCurrency(valorFinanciado)}</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span>Prosoluto efetivo</span>
+                  <span>Prosoluto calculado</span>
                   <strong>{formatCurrency(prosolutoEfetivo)}</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span>Prosoluto calculado</span>
-                  <strong>{formatCurrency(prosolutoCalculado)}</strong>
+                  <span>Prosoluto a pagar (após sinal produto)</span>
+                  <strong>{formatCurrency(prosolutoLiquido)}</strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Parcelamento</span>
@@ -904,12 +914,12 @@ export function PresentationPage() {
                   <strong>{formatCurrency(valorObtido)}</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span>Prosoluto efetivo</span>
+                  <span>Prosoluto calculado</span>
                   <strong>{formatCurrency(prosolutoEfetivo)}</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span>Prosoluto calculado</span>
-                  <strong>{formatCurrency(prosolutoCalculado)}</strong>
+                  <span>Prosoluto a pagar</span>
+                  <strong>{formatCurrency(prosolutoLiquido)}</strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Parcelamento</span>
@@ -955,7 +965,10 @@ export function PresentationPage() {
                     Valor a financiar: <strong>{formatCurrency(valorFinanciado)}</strong>
                   </p>
                   <p>
-                    Prosoluto: <strong>{formatCurrency(prosolutoEfetivo)}</strong>
+                    Prosoluto calculado: <strong>{formatCurrency(prosolutoEfetivo)}</strong>
+                  </p>
+                  <p>
+                    Prosoluto a pagar: <strong>{formatCurrency(prosolutoLiquido)}</strong>
                   </p>
                   <p>
                     Parcelas: <strong>{parcelasNormalizadas}x de {formatCurrency(valorParcela)}</strong>
