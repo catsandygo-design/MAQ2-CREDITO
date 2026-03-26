@@ -247,7 +247,6 @@ export function PresentationPage() {
   const [financiamento, setFinanciamento] = useState(DEFAULT_FORM_VALUES.financiamento)
   const [subsidio, setSubsidio] = useState(DEFAULT_FORM_VALUES.subsidio)
   const [sinal, setSinal] = useState(DEFAULT_FORM_VALUES.sinal)
-  const [rendaCliente, setRendaCliente] = useState(0)
   const [parcelaCaixa, setParcelaCaixa] = useState(0)
   const [mostrarResumo, setMostrarResumo] = useState(false)
   const [mostrarTabelaParcelas, setMostrarTabelaParcelas] = useState(false)
@@ -358,6 +357,7 @@ export function PresentationPage() {
   }, [empreendimento, tabelaPrecos, unitType])
   const valorMinimoImovel = tabelaMatch?.preco ?? precoUnidade
   const prosolutoMinimo = tabelaMatch?.prosoluto_minimo ?? MIN_PROSOLUTO
+  const garantidoMinimo = tabelaMatch?.garantido_minimo ?? 0
 
   const prosolutoCalculado = valorMinimoImovel - valorObtido
   let precoVenda = valorMinimoImovel
@@ -399,6 +399,7 @@ export function PresentationPage() {
   const plantaImagem = UNIT_IMAGES[unitType]
   const totalDescontos = subsidio + chequeMoradia
   const valorFinanciado = Math.max(precoVenda - totalDescontos, 0)
+  const garantidoObtido = garantido
 
   const quickStats = [
     { label: 'Valor do imóvel', value: formatCurrency(precoVenda) },
@@ -526,109 +527,113 @@ export function PresentationPage() {
 
         <main className="grid gap-5 items-start xl:grid-cols-[1.65fr_1fr]">
           <section className="space-y-5 rounded-3xl border border-white/8 bg-slate-900/70 p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-            <div className="grid gap-6">
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                <label className="space-y-2 text-sm sm:col-span-2">
-                  Nome do cliente
-                  <input
-                    type="text"
-                    value={clienteNome}
-                    onChange={(event) => setClienteNome(event.target.value)}
-                    className="w-full rounded-2xl border border-white/20 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
-                    placeholder="Digite o nome"
+              <div className="grid gap-6">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  <label className="space-y-2 text-sm sm:col-span-2">
+                    Nome do cliente
+                    <input
+                      type="text"
+                      value={clienteNome}
+                      onChange={(event) => setClienteNome(event.target.value)}
+                      className="w-full rounded-2xl border border-white/20 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+                      placeholder="Digite o nome"
+                    />
+                  </label>
+                  <label className="space-y-2 text-sm">
+                    Empreendimento
+                    <select
+                      value={empreendimento}
+                      onChange={(event) => setEmpreendimento(event.target.value as Empreendimento)}
+                      className="w-full rounded-2xl border border-white/20 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+                    >
+                      {EMPREENDIMENTOS.map((item) => (
+                        <option key={item.label} value={item.label}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="block text-xs text-slate-300">
+                      Cheque moradia preenchido automaticamente conforme o empreendimento.
+                    </span>
+                  </label>
+                  <label className="space-y-2 text-sm">
+                    Tipo de unidade
+                    <select
+                      value={unitType}
+                      onChange={(event) => setUnitType(event.target.value as UnitType)}
+                      className="w-full rounded-2xl border border-white/20 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+                    >
+                      {UNIT_TYPES.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <CurrencyField label="Preco da unidade" value={precoUnidade} onChange={setPrecoUnidade} />
+                  <CurrencyField label="Financiamento" value={financiamento} onChange={setFinanciamento} />
+                  <CurrencyField label="Subsidio" value={subsidio} onChange={setSubsidio} />
+                  <CurrencyField
+                    label="Cheque moradia"
+                    value={chequeMoradia}
+                    readOnly
+                    helperText="Valor fixo por empreendimento. O corretor nao pode alterar."
                   />
-                </label>
-                <label className="space-y-2 text-sm">
-                  Empreendimento
-                  <select
-                    value={empreendimento}
-                    onChange={(event) => setEmpreendimento(event.target.value as Empreendimento)}
-                  className="w-full rounded-2xl border border-white/20 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
-                >
-                  {EMPREENDIMENTOS.map((item) => (
-                    <option key={item.label} value={item.label}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-                <span className="block text-xs text-slate-300">
-                  Cheque moradia preenchido automaticamente conforme o empreendimento.
-                </span>
-              </label>
-              <label className="space-y-2 text-sm">
-                Tipo de unidade
-                <select
-                  value={unitType}
-                  onChange={(event) => setUnitType(event.target.value as UnitType)}
-                  className="w-full rounded-2xl border border-white/20 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
-                >
-                  {UNIT_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <CurrencyField label="Preco da unidade" value={precoUnidade} onChange={setPrecoUnidade} />
-              <CurrencyField label="Financiamento" value={financiamento} onChange={setFinanciamento} />
-              <CurrencyField label="Subsidio" value={subsidio} onChange={setSubsidio} />
-              <CurrencyField label="Renda do cliente" value={rendaCliente} onChange={setRendaCliente} />
-              <CurrencyField
-                label="Garantido"
-                value={garantido}
-                readOnly
-                helperText="Financiamento + subsidio + sinal."
-              />
-              <CurrencyField label="Sinal" value={sinal} onChange={setSinal} />
-              <CurrencyField label="Prosoluto" value={prosolutoEfetivo} readOnly helperText="Calculado automaticamente." />
-              <CurrencyField
-                label="Cheque moradia"
-                value={chequeMoradia}
-                readOnly
-                helperText="Valor fixo por empreendimento. O corretor nao pode alterar."
-                wrapperClassName="sm:col-span-2"
-              />
-              <CurrencyField
-                label="Parcela Caixa"
-                value={parcelaCaixa}
-                onChange={setParcelaCaixa}
-                helperText="Informe a parcela projetada pela Caixa (se aplicavel)."
-                wrapperClassName="sm:col-span-2"
-              />
-              <label className="space-y-2 text-sm sm:col-span-2">
-                Parcelamento do prosoluto
-                <div className="flex flex-col gap-2 rounded-2xl border border-white/20 bg-slate-950/70 px-4 py-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-100">
-                    <span>Parcelas</span>
-                    <span className="font-semibold text-cyan-100">{parcelasNormalizadas}x</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={1}
-                    max={Math.max(1, maxParcelasPermitidas)}
-                    value={parcelasNormalizadas}
-                    onChange={(event) => setParcelas(Number(event.target.value))}
-                    disabled={!parcelasHabilitadas}
-                    className="w-full accent-cyan-400"
+                  <CurrencyField label="Prosoluto" value={prosolutoEfetivo} readOnly helperText="Calculado automaticamente." />
+                  <CurrencyField label="Sinal" value={sinal} onChange={setSinal} />
+                  <CurrencyField
+                    label="Garantido minimo"
+                    value={garantidoMinimo}
+                    readOnly
+                    helperText="Vem da tabela enviada (excel)."
                   />
-                  <div className="flex flex-wrap items-center justify-between text-xs text-slate-300">
-                    <span>Parcela estimada</span>
-                    <span className="font-semibold text-white">{formatCurrency(valorParcela)}</span>
-                  </div>
-                    {!parcelasHabilitadas ? (
-                      <p className="text-xs text-amber-200">
-                        Prosoluto abaixo do minimo para parcelar (R$ {MIN_VALOR_PARCELA}). Cobrar Ã  vista ou ajustar valores.
-                      </p>
-                    ) : (
-                      <p className="text-xs text-slate-300">
-                        Max {MAX_PARCELAS}x | Parcela minima {formatCurrency(MIN_VALOR_PARCELA)}.
-                      </p>
-                    )}
+                  <CurrencyField
+                    label="Garantido obtido"
+                    value={garantidoObtido}
+                    readOnly
+                    helperText="Financiamento + subsidio + sinal."
+                  />
+                  <CurrencyField
+                    label="Parcela Caixa"
+                    value={parcelaCaixa}
+                    onChange={setParcelaCaixa}
+                    helperText="Informe a parcela projetada pela Caixa (se aplicavel)."
+                    wrapperClassName="sm:col-span-2"
+                  />
+                  <label className="space-y-2 text-sm sm:col-span-2">
+                    Parcelamento do prosoluto
+                    <div className="flex flex-col gap-2 rounded-2xl border border-white/20 bg-slate-950/70 px-4 py-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-100">
+                        <span>Parcelas</span>
+                        <span className="font-semibold text-cyan-100">{parcelasNormalizadas}x</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={1}
+                        max={Math.max(1, maxParcelasPermitidas)}
+                        value={parcelasNormalizadas}
+                        onChange={(event) => setParcelas(Number(event.target.value))}
+                        disabled={!parcelasHabilitadas}
+                        className="w-full accent-cyan-400"
+                      />
+                      <div className="flex flex-wrap items-center justify-between text-xs text-slate-300">
+                        <span>Parcela estimada</span>
+                        <span className="font-semibold text-white">{formatCurrency(valorParcela)}</span>
+                      </div>
+                        {!parcelasHabilitadas ? (
+                          <p className="text-xs text-amber-200">
+                            Prosoluto abaixo do minimo para parcelar (R$ {MIN_VALOR_PARCELA}). Cobrar Ã  vista ou ajustar valores.
+                          </p>
+                        ) : (
+                          <p className="text-xs text-slate-300">
+                            Max {MAX_PARCELAS}x | Parcela minima {formatCurrency(MIN_VALOR_PARCELA)}.
+                          </p>
+                        )}
+                    </div>
+                  </label>
                 </div>
-              </label>
-            </div>
 
-            </div>
+              </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <input
@@ -712,6 +717,24 @@ export function PresentationPage() {
               </div>
               <div className="overflow-hidden rounded-2xl border border-white/10 shadow-inner">
                 <img src={plantaImagem} alt={`Planta ${unitType}`} className="block h-auto w-full object-cover" />
+              </div>
+            </div>
+
+            <div className="rounded-[20px] border border-white/10 bg-slate-950/80 p-4 shadow-xl backdrop-blur-xl card-lift glass-edge">
+              <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-200">Resumo da unidade</p>
+              <div className="mt-3 space-y-2 text-sm text-slate-200">
+                <div className="flex justify-between">
+                  <span>Empreendimento</span>
+                  <strong>{empreendimento}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Unidade</span>
+                  <strong>{unitType}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Garagem</span>
+                  <strong>{unitType === 'TIPO/MOTO' ? 'Moto' : 'Carro'}</strong>
+                </div>
               </div>
             </div>
 
