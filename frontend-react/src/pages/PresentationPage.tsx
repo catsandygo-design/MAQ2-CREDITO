@@ -348,10 +348,34 @@ export function PresentationPage() {
 
   const chequeMoradia = EMPREENDIMENTOS.find((item) => item.label === empreendimento)?.chequeMoradia ?? 0
   const garantido = financiamento + subsidio + sinal
-  const totalObtido = garantido + chequeMoradia
-  const precoAjustado =
-    precoUnidade < totalObtido ? totalObtido + MIN_PROSOLUTO : Math.max(precoUnidade, totalObtido + MIN_PROSOLUTO)
-  const prosolutoEfetivo = Math.max(MIN_PROSOLUTO, precoAjustado - totalObtido)
+  const valorObtido = garantido + chequeMoradia
+  const tabelaMatch = useMemo(() => {
+    if (!tabelaPrecos) return null
+    const normalize = (value: string) => value.trim().toUpperCase()
+    return tabelaPrecos.find(
+      (row) =>
+        normalize(row.empreendimento) === normalize(empreendimento) && normalize(row.unidade) === normalize(unitType),
+    )
+  }, [empreendimento, tabelaPrecos, unitType])
+  const valorMinimoImovel = tabelaMatch?.preco ?? precoUnidade
+  const prosolutoMinimo = tabelaMatch?.prosoluto_minimo ?? MIN_PROSOLUTO
+
+  const prosolutoCalculado = valorMinimoImovel - valorObtido
+  let precoAjustado = valorMinimoImovel
+  let ajustePreco = 0
+
+  if (valorObtido <= valorMinimoImovel) {
+    if (prosolutoCalculado < prosolutoMinimo) {
+      ajustePreco = prosolutoMinimo - prosolutoCalculado
+      precoAjustado = valorMinimoImovel + ajustePreco
+    }
+  } else {
+    const excedente = valorObtido - valorMinimoImovel
+    ajustePreco = Math.max(prosolutoMinimo - excedente, 0)
+    precoAjustado = valorObtido + ajustePreco
+  }
+
+  const prosolutoEfetivo = precoAjustado - valorObtido
   const maxParcelasPermitidas =
     prosolutoEfetivo >= MIN_VALOR_PARCELA ? Math.min(MAX_PARCELAS, Math.floor(prosolutoEfetivo / MIN_VALOR_PARCELA)) : 1
   const parcelasHabilitadas = prosolutoEfetivo >= MIN_VALOR_PARCELA
@@ -366,23 +390,30 @@ export function PresentationPage() {
   })
   const plantaImagem = UNIT_IMAGES[unitType]
   const quickStats = [
-    { label: 'Imovel ajustado', value: formatCurrency(precoAjustado) },
-    { label: 'Prosoluto', value: formatCurrency(prosolutoEfetivo) },
-    {
-      label: 'Parcelamento',
-      value: parcelasHabilitadas
-        ? `${parcelasNormalizadas}x de ${formatCurrency(valorParcela)}`
-        : formatCurrency(valorParcela),
-    },
-    { label: 'Aporte inicial', value: formatCurrency(aporteInicial) },
+    { label: 'Valor obtido', value: formatCurrency(valorObtido) },
+    { label: 'Prosoluto calculado', value: formatCurrency(prosolutoCalculado) },
+    { label: 'Ajuste aplicado', value: formatCurrency(ajustePreco) },
+    { label: 'Preço final de venda', value: formatCurrency(precoAjustado) },
   ]
 
   useEffect(() => {
-    const minimoParaPreco = totalObtido + MIN_PROSOLUTO
+    const minimoParaPreco = valorObtido + MIN_PROSOLUTO
     if (precoUnidade < minimoParaPreco) {
       setPrecoUnidade(minimoParaPreco)
     }
-  }, [totalObtido, precoUnidade])
+  }, [valorObtido, precoUnidade])
+
+  useEffect(() => {
+    if (tabelaPrecos !== null || loadingTabela) return
+    setLoadingTabela(true)
+    fetchTabelaPrecos()
+      .then(setTabelaPrecos)
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : 'Falha ao carregar tabela de preços.'
+        setErroTabela(message)
+      })
+      .finally(() => setLoadingTabela(false))
+  }, [loadingTabela, tabelaPrecos])
   useEffect(() => {
     if (parcelas > maxParcelasPermitidas) {
       setParcelas(maxParcelasPermitidas || 1)
@@ -721,11 +752,15 @@ export function PresentationPage() {
                 </div>
                 <div className="flex justify-between">
                   <span>Valor obtido</span>
-                  <strong>{formatCurrency(totalObtido)}</strong>
+                  <strong>{formatCurrency(valorObtido)}</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span>Prosoluto</span>
+                  <span>Prosoluto efetivo</span>
                   <strong>{formatCurrency(prosolutoEfetivo)}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Prosoluto calculado</span>
+                  <strong>{formatCurrency(prosolutoCalculado)}</strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Parcelamento</span>
@@ -832,11 +867,15 @@ export function PresentationPage() {
                 </div>
                 <div className="flex justify-between">
                   <span>Total obtido (garantido + cheque)</span>
-                  <strong>{formatCurrency(totalObtido)}</strong>
+                  <strong>{formatCurrency(valorObtido)}</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span>Prosoluto</span>
+                  <span>Prosoluto efetivo</span>
                   <strong>{formatCurrency(prosolutoEfetivo)}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Prosoluto calculado</span>
+                  <strong>{formatCurrency(prosolutoCalculado)}</strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Parcelamento</span>
