@@ -7,6 +7,9 @@ import type {
 } from '../types'
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) || '/app/api'
+const FORM_HEADERS: HeadersInit = {
+  // deixar vazio para o navegador montar boundary corretamente
+}
 
 export class ApiError extends Error {
   readonly status: number
@@ -105,4 +108,18 @@ export async function fetchProcessosPaged(
   }
 
   return out
+}
+
+export async function uploadTabelaPrecos(file: File): Promise<{ detail?: string }> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const res = await fetch(`${API_BASE}/tabela-precos/upload`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    body: formData,
+    headers: FORM_HEADERS,
+  })
+
+  return parseResponse<{ detail?: string }>(res)
 }

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { fetchSession, logout } from '../lib/api'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { fetchSession, logout, uploadTabelaPrecos } from '../lib/api'
 import tipoPlanta from '../assets/TIPO.jpg'
 import gardenFitPlanta from '../assets/GARDENFIT.jpg'
 import superGardenPlanta from '../assets/SUPERGARDEN.jpg'
@@ -251,12 +251,27 @@ export function PresentationPage() {
   const [mostrarTabelaParcelas, setMostrarTabelaParcelas] = useState(false)
   const [parcelas, setParcelas] = useState(24)
   const [bgIndex, setBgIndex] = useState(0)
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null)
+  const [uploadErro, setUploadErro] = useState<string | null>(null)
+  const inputUploadRef = useRef<HTMLInputElement | null>(null)
   const backgroundImages = useMemo<string[]>(() => {
     const selected = BG_BY_EMPREENDIMENTO[empreendimento] ?? BACKGROUND_IMAGES
     return selected.map((path) => (path.startsWith('/imagens/') ? encodeURI(path) : path))
   }, [empreendimento])
   const logoAtual = LOGOS[empreendimento]
   const theme = THEME_BY_EMPREENDIMENTO[empreendimento]
+  const processarUpload = async (file: File) => {
+    setUploadErro(null)
+    setUploadStatus(`Enviando ${file.name}...`)
+    try {
+      await uploadTabelaPrecos(file)
+      setUploadStatus(`Planilha enviada: ${file.name}`)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Falha ao enviar planilha.'
+      setUploadErro(message)
+      setUploadStatus(null)
+    }
+  }
 
   useEffect(() => {
     // Garantir que, ao trocar de empreendimento, o carrossel reinicie na primeira imagem do novo conjunto.
@@ -556,6 +571,26 @@ export function PresentationPage() {
             </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <input
+              ref={inputUploadRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (file) {
+                  void processarUpload(file)
+                }
+                event.target.value = ''
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => inputUploadRef.current?.click()}
+              className="rounded-2xl border border-cyan-300/50 bg-cyan-500/20 px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/35"
+            >
+              Upload Excel (preços)
+            </button>
             <button
               type="button"
               onClick={() => setMostrarResumo((previous) => !previous)}
@@ -588,6 +623,12 @@ export function PresentationPage() {
               Resetar valores
             </button>
           </div>
+          {(uploadStatus || uploadErro) && (
+            <div className="text-xs text-slate-200">
+              {uploadStatus ? <span>{uploadStatus}</span> : null}
+              {uploadErro ? <span className="text-amber-200"> {uploadErro}</span> : null}
+            </div>
+          )}
 
           </section>
 
