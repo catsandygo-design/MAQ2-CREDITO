@@ -248,7 +248,6 @@ export function PresentationPage() {
   const [subsidio, setSubsidio] = useState(DEFAULT_FORM_VALUES.subsidio)
   const [sinal, setSinal] = useState(DEFAULT_FORM_VALUES.sinal)
   const [rendaCliente, setRendaCliente] = useState(0)
-  const [isValor, setIsValor] = useState(0)
   const [parcelaCaixa, setParcelaCaixa] = useState(0)
   const [mostrarResumo, setMostrarResumo] = useState(false)
   const [mostrarTabelaParcelas, setMostrarTabelaParcelas] = useState(false)
@@ -389,11 +388,14 @@ export function PresentationPage() {
     return { numero: i + 1, valor }
   })
   const plantaImagem = UNIT_IMAGES[unitType]
+  const totalDescontos = subsidio + chequeMoradia
+  const valorFinanciado = Math.max(precoAjustado - totalDescontos, 0)
+
   const quickStats = [
+    { label: 'Valor do imóvel', value: formatCurrency(precoAjustado) },
     { label: 'Valor obtido', value: formatCurrency(valorObtido) },
-    { label: 'Prosoluto calculado', value: formatCurrency(prosolutoCalculado) },
-    { label: 'Ajuste aplicado', value: formatCurrency(ajustePreco) },
-    { label: 'Preço final de venda', value: formatCurrency(precoAjustado) },
+    { label: 'Entrada (prosoluto)', value: formatCurrency(prosolutoEfetivo) },
+    { label: 'Sinal', value: formatCurrency(sinal) },
   ]
 
   useEffect(() => {
@@ -576,7 +578,6 @@ export function PresentationPage() {
                 helperText="Financiamento + subsidio + sinal."
               />
               <CurrencyField label="Sinal" value={sinal} onChange={setSinal} />
-              <CurrencyField label="IS (seguro/incorp.)" value={isValor} onChange={setIsValor} />
               <CurrencyField label="Prosoluto" value={prosolutoEfetivo} readOnly helperText="Calculado automaticamente." />
               <CurrencyField
                 label="Cheque moradia"
@@ -755,6 +756,14 @@ export function PresentationPage() {
                   <strong>{formatCurrency(valorObtido)}</strong>
                 </div>
                 <div className="flex justify-between">
+                  <span>Total de descontos (subsídio + cheque)</span>
+                  <strong>{formatCurrency(totalDescontos)}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Valor a ser financiado</span>
+                  <strong>{formatCurrency(valorFinanciado)}</strong>
+                </div>
+                <div className="flex justify-between">
                   <span>Prosoluto efetivo</span>
                   <strong>{formatCurrency(prosolutoEfetivo)}</strong>
                 </div>
@@ -915,6 +924,12 @@ export function PresentationPage() {
                     Cheque moradia: <strong>{formatCurrency(chequeMoradia)}</strong>
                   </p>
                   <p>
+                    Total descontos: <strong>{formatCurrency(totalDescontos)}</strong>
+                  </p>
+                  <p>
+                    Valor a financiar: <strong>{formatCurrency(valorFinanciado)}</strong>
+                  </p>
+                  <p>
                     Prosoluto: <strong>{formatCurrency(prosolutoEfetivo)}</strong>
                   </p>
                   <p>
@@ -992,7 +1007,6 @@ export function PresentationPage() {
                       <th className="px-3 py-2 text-left">Unidade</th>
                       <th className="px-3 py-2 text-right">Garantido mínimo</th>
                       <th className="px-3 py-2 text-right">Preço</th>
-                      <th className="px-3 py-2 text-right">IS máximo</th>
                       <th className="px-3 py-2 text-right">Prosoluto mínimo</th>
                     </tr>
                   </thead>
@@ -1008,7 +1022,6 @@ export function PresentationPage() {
                           {formatCurrency(row.garantido_minimo)}
                         </td>
                         <td className="px-3 py-2 text-right text-white">{formatCurrency(row.preco)}</td>
-                        <td className="px-3 py-2 text-right text-white">{formatCurrency(row.is_maximo)}</td>
                         <td className="px-3 py-2 text-right text-white">{formatCurrency(row.prosoluto_minimo)}</td>
                       </tr>
                     ))}
