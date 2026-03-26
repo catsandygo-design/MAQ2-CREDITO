@@ -360,28 +360,37 @@ export function PresentationPage() {
   const prosolutoMinimo = tabelaMatch?.prosoluto_minimo ?? MIN_PROSOLUTO
 
   const prosolutoCalculado = valorMinimoImovel - valorObtido
-  let precoAjustado = valorMinimoImovel
+  let precoVenda = valorMinimoImovel
   let ajustePreco = 0
+  let prosolutoEfetivo = prosolutoCalculado
 
-  if (valorObtido <= valorMinimoImovel) {
-    if (prosolutoCalculado < prosolutoMinimo) {
-      ajustePreco = prosolutoMinimo - prosolutoCalculado
-      precoAjustado = valorMinimoImovel + ajustePreco
+  if (valorObtido < valorMinimoImovel) {
+    if (prosolutoEfetivo < prosolutoMinimo) {
+      ajustePreco = prosolutoMinimo - prosolutoEfetivo
+      precoVenda = valorMinimoImovel + ajustePreco
+      prosolutoEfetivo = prosolutoMinimo
+    } else {
+      precoVenda = valorMinimoImovel
     }
   } else {
     const excedente = valorObtido - valorMinimoImovel
-    ajustePreco = Math.max(prosolutoMinimo - excedente, 0)
-    precoAjustado = valorObtido + ajustePreco
+    if (excedente >= prosolutoMinimo) {
+      precoVenda = valorObtido
+      prosolutoEfetivo = 0
+    } else {
+      ajustePreco = prosolutoMinimo - excedente
+      precoVenda = valorObtido + ajustePreco
+      prosolutoEfetivo = prosolutoMinimo
+    }
   }
 
-  const prosolutoEfetivo = precoAjustado - valorObtido
   const maxParcelasPermitidas =
     prosolutoEfetivo >= MIN_VALOR_PARCELA ? Math.min(MAX_PARCELAS, Math.floor(prosolutoEfetivo / MIN_VALOR_PARCELA)) : 1
   const parcelasHabilitadas = prosolutoEfetivo >= MIN_VALOR_PARCELA
   const parcelasNormalizadas = Math.min(Math.max(parcelas, 1), maxParcelasPermitidas)
   const valorParcela = parcelasHabilitadas ? prosolutoEfetivo / parcelasNormalizadas : prosolutoEfetivo
   const aporteInicial = sinal + valorParcela
-  const precisaGarantidor = prosolutoEfetivo > precoAjustado * PCT_PROSOLUTO_GARANTIDOR
+  const precisaGarantidor = prosolutoEfetivo > precoVenda * PCT_PROSOLUTO_GARANTIDOR
   const parcelasProgressivas = Array.from({ length: parcelasNormalizadas }, (_, i) => {
     const fator = Math.pow(1.01, i) // 1% ao mes
     const valor = parcelasHabilitadas ? valorParcela * fator : valorParcela
@@ -389,21 +398,14 @@ export function PresentationPage() {
   })
   const plantaImagem = UNIT_IMAGES[unitType]
   const totalDescontos = subsidio + chequeMoradia
-  const valorFinanciado = Math.max(precoAjustado - totalDescontos, 0)
+  const valorFinanciado = Math.max(precoVenda - totalDescontos, 0)
 
   const quickStats = [
-    { label: 'Valor do imóvel', value: formatCurrency(precoAjustado) },
+    { label: 'Valor do imóvel', value: formatCurrency(precoVenda) },
     { label: 'Valor obtido', value: formatCurrency(valorObtido) },
     { label: 'Entrada (prosoluto)', value: formatCurrency(prosolutoEfetivo) },
     { label: 'Sinal', value: formatCurrency(sinal) },
   ]
-
-  useEffect(() => {
-    const minimoParaPreco = valorObtido + MIN_PROSOLUTO
-    if (precoUnidade < minimoParaPreco) {
-      setPrecoUnidade(minimoParaPreco)
-    }
-  }, [valorObtido, precoUnidade])
 
   useEffect(() => {
     if (tabelaPrecos !== null || loadingTabela) return
@@ -749,7 +751,7 @@ export function PresentationPage() {
               <div className="grid gap-2 text-sm text-slate-200">
                 <div className="flex justify-between">
                   <span>Valor do imovel (ajustado)</span>
-                  <strong>{formatCurrency(precoAjustado)}</strong>
+                  <strong>{formatCurrency(precoVenda)}</strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Valor obtido</span>
@@ -915,7 +917,7 @@ export function PresentationPage() {
                     Cliente: <strong>{clienteNome || '-'}</strong>
                   </p>
                   <p>
-                    Preco unidade: <strong>{formatCurrency(precoAjustado)}</strong>
+                     Preco unidade: <strong>{formatCurrency(precoVenda)}</strong>
                   </p>
                   <p>
                     Garantido: <strong>{formatCurrency(garantido)}</strong>
