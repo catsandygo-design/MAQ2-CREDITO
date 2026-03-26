@@ -75,27 +75,27 @@ const THEME_BY_EMPREENDIMENTO: Record<
 > = {
   'VILA GIRASSOL': {
     primary: '#f8c63d',
-    headerBg: 'rgba(248,198,61,0.20)',
-    rowOdd: 'rgba(248,198,61,0.10)',
-    rowEven: 'rgba(255,255,255,0.05)',
-    border: 'rgba(248,198,61,0.30)',
-    badgeBg: 'rgba(248,198,61,0.22)',
+    headerBg: 'rgba(248,198,61,0.35)',
+    rowOdd: 'rgba(248,198,61,0.18)',
+    rowEven: 'rgba(255,255,255,0.08)',
+    border: 'rgba(248,198,61,0.45)',
+    badgeBg: 'rgba(248,198,61,0.28)',
   },
   'VILA MARGARIDA': {
     primary: '#3ad0a1',
-    headerBg: 'rgba(58,208,161,0.22)',
-    rowOdd: 'rgba(58,208,161,0.12)',
-    rowEven: 'rgba(255,255,255,0.05)',
-    border: 'rgba(58,208,161,0.30)',
-    badgeBg: 'rgba(58,208,161,0.22)',
+    headerBg: 'rgba(58,208,161,0.35)',
+    rowOdd: 'rgba(58,208,161,0.18)',
+    rowEven: 'rgba(255,255,255,0.08)',
+    border: 'rgba(58,208,161,0.45)',
+    badgeBg: 'rgba(58,208,161,0.28)',
   },
   'VILA DAS ROSAS': {
     primary: '#f36a9a',
-    headerBg: 'rgba(243,106,154,0.22)',
-    rowOdd: 'rgba(243,106,154,0.12)',
-    rowEven: 'rgba(255,255,255,0.05)',
-    border: 'rgba(243,106,154,0.30)',
-    badgeBg: 'rgba(243,106,154,0.22)',
+    headerBg: 'rgba(243,106,154,0.35)',
+    rowOdd: 'rgba(243,106,154,0.18)',
+    rowEven: 'rgba(255,255,255,0.08)',
+    border: 'rgba(243,106,154,0.45)',
+    badgeBg: 'rgba(243,106,154,0.28)',
   },
 }
 const EMPREENDIMENTOS: Array<{ label: Empreendimento; chequeMoradia: number }> = [
@@ -771,23 +771,23 @@ export function PresentationPage() {
                 className="rounded-[24px] border bg-slate-950/90 p-5 shadow-[0_12px_45px_rgba(0,0,0,0.4)] backdrop-blur-xl card-lift glass-edge"
                 style={{ borderColor: theme.border }}
               >
-              <div className="mb-3 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.3em] text-white/90">Tabela de parcelas</p>
-                  <h3 className="text-lg font-bold text-white">CorreÃ§Ã£o de 1% ao mÃªs</h3>
+                <div className="mb-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.3em] text-white/90">Tabela de parcelas</p>
+                    <h3 className="text-lg font-bold text-white">Correção de 1% ao mês</h3>
+                  </div>
+                  <span
+                    className="rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-white shadow-[0_0_12px_rgba(0,0,0,0.35)]"
+                    style={{ backgroundColor: theme.badgeBg, border: `1px solid ${theme.border}` }}
+                  >
+                    {parcelasNormalizadas}x
+                  </span>
                 </div>
-                <span
-                  className="rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-white shadow-[0_0_12px_rgba(0,0,0,0.35)]"
-                  style={{ backgroundColor: theme.badgeBg, border: `1px solid ${theme.border}` }}
-                >
-                  {parcelasNormalizadas}x
-                </span>
-              </div>
-                <div
-                  className="w-full max-w-full max-h-72 overflow-y-auto overflow-x-hidden rounded-2xl border bg-slate-950/80 shadow-inner"
-                  style={{ borderColor: theme.border }}
-                >
-                  <table className="min-w-full table-fixed text-sm text-white">
+              <div
+                className="w-full max-w-full max-h-72 overflow-y-auto overflow-x-hidden rounded-2xl border bg-slate-900/85 shadow-inner"
+                style={{ borderColor: theme.border }}
+              >
+                <table className="min-w-full table-fixed text-sm text-white">
                     <thead
                       className="text-xs uppercase tracking-[0.12em]"
                       style={{ backgroundColor: theme.headerBg, color: theme.primary }}
@@ -968,9 +968,9 @@ export function PresentationPage() {
                         <td className="px-3 py-2 text-right" style={{ color: theme.primary }}>
                           {formatCurrency(row.garantido_minimo)}
                         </td>
-                        <td className="px-3 py-2 text-right">{formatCurrency(row.preco)}</td>
-                        <td className="px-3 py-2 text-right">{formatCurrency(row.is_maximo)}</td>
-                        <td className="px-3 py-2 text-right">{formatCurrency(row.prosoluto_minimo)}</td>
+                        <td className="px-3 py-2 text-right text-white">{formatCurrency(row.preco)}</td>
+                        <td className="px-3 py-2 text-right text-white">{formatCurrency(row.is_maximo)}</td>
+                        <td className="px-3 py-2 text-right text-white">{formatCurrency(row.prosoluto_minimo)}</td>
                       </tr>
                     ))}
                     {(tabelaPrecos || []).length === 0 && !loadingTabela ? (
