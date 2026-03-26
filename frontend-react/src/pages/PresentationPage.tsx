@@ -247,6 +247,8 @@ export function PresentationPage() {
   const [financiamento, setFinanciamento] = useState(DEFAULT_FORM_VALUES.financiamento)
   const [subsidio, setSubsidio] = useState(DEFAULT_FORM_VALUES.subsidio)
   const [sinal, setSinal] = useState(DEFAULT_FORM_VALUES.sinal)
+  const [rendaCliente, setRendaCliente] = useState(0)
+  const [isValor, setIsValor] = useState(0)
   const [parcelaCaixa, setParcelaCaixa] = useState(0)
   const [mostrarResumo, setMostrarResumo] = useState(false)
   const [mostrarTabelaParcelas, setMostrarTabelaParcelas] = useState(false)
@@ -479,12 +481,12 @@ export function PresentationPage() {
         </header>
 
         <section className="summary-bar">
-          {quickStats.map((item) => (
-            <div key={item.label} className="stat-card text-left">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-100/80">{item.label}</p>
-              <p className="text-xl font-extrabold text-white">{item.value}</p>
-            </div>
-          ))}
+              {quickStats.map((item) => (
+                <div key={item.label} className="stat-card text-left">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/90">{item.label}</p>
+                  <p className="text-xl font-extrabold text-white drop-shadow-[0_1px_6px_rgba(0,0,0,0.45)]">{item.value}</p>
+                </div>
+              ))}
         </section>
 
         <main className="grid gap-5 items-start xl:grid-cols-[1.65fr_1fr]">
@@ -535,6 +537,7 @@ export function PresentationPage() {
               <CurrencyField label="Preco da unidade" value={precoUnidade} onChange={setPrecoUnidade} />
               <CurrencyField label="Financiamento" value={financiamento} onChange={setFinanciamento} />
               <CurrencyField label="Subsidio" value={subsidio} onChange={setSubsidio} />
+              <CurrencyField label="Renda do cliente" value={rendaCliente} onChange={setRendaCliente} />
               <CurrencyField
                 label="Garantido"
                 value={garantido}
@@ -542,6 +545,7 @@ export function PresentationPage() {
                 helperText="Financiamento + subsidio + sinal."
               />
               <CurrencyField label="Sinal" value={sinal} onChange={setSinal} />
+              <CurrencyField label="IS (seguro/incorp.)" value={isValor} onChange={setIsValor} />
               <CurrencyField label="Prosoluto" value={prosolutoEfetivo} readOnly helperText="Calculado automaticamente." />
               <CurrencyField
                 label="Cheque moradia"
@@ -767,18 +771,18 @@ export function PresentationPage() {
                 className="rounded-[24px] border bg-slate-950/90 p-5 shadow-[0_12px_45px_rgba(0,0,0,0.4)] backdrop-blur-xl card-lift glass-edge"
                 style={{ borderColor: theme.border }}
               >
-                <div className="mb-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-200">Tabela de parcelas</p>
-                    <h3 className="text-lg font-bold text-white">CorreÃ§Ã£o de 1% ao mÃªs</h3>
-                  </div>
-                  <span
-                    className="rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-white"
-                    style={{ backgroundColor: theme.badgeBg, border: `1px solid ${theme.border}` }}
-                  >
-                    {parcelasNormalizadas}x
-                  </span>
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-white/90">Tabela de parcelas</p>
+                  <h3 className="text-lg font-bold text-white">CorreÃ§Ã£o de 1% ao mÃªs</h3>
                 </div>
+                <span
+                  className="rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-white shadow-[0_0_12px_rgba(0,0,0,0.35)]"
+                  style={{ backgroundColor: theme.badgeBg, border: `1px solid ${theme.border}` }}
+                >
+                  {parcelasNormalizadas}x
+                </span>
+              </div>
                 <div
                   className="w-full max-w-full max-h-72 overflow-y-auto overflow-x-hidden rounded-2xl border bg-slate-950/80 shadow-inner"
                   style={{ borderColor: theme.border }}
