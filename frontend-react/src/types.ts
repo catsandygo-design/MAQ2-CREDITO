@@ -120,6 +120,15 @@ export interface CreditoPlanejamentoDashboard {
   itens: CreditoPlanejamentoItem[]
 }
 
+export interface TabelaPrecoRow {
+  empreendimento: string
+  unidade: string
+  garantido_minimo: number
+  preco: number
+  is_maximo: number
+  prosoluto_minimo: number
+}
+
 export interface ProcessoApiItem {
   processo_id: string
   cliente_nome?: string | null

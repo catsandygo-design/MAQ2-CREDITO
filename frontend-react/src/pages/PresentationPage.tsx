@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { fetchSession, logout, uploadTabelaPrecos } from '../lib/api'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
+import { fetchSession, logout, uploadTabelaPrecos, fetchTabelaPrecos } from '../lib/api'
+import type { TabelaPrecoRow } from '../types'
 import tipoPlanta from '../assets/TIPO.jpg'
 import gardenFitPlanta from '../assets/GARDENFIT.jpg'
 import superGardenPlanta from '../assets/SUPERGARDEN.jpg'
@@ -254,6 +255,10 @@ export function PresentationPage() {
   const [uploadStatus, setUploadStatus] = useState<string | null>(null)
   const [uploadErro, setUploadErro] = useState<string | null>(null)
   const inputUploadRef = useRef<HTMLInputElement | null>(null)
+  const [tabelaPrecos, setTabelaPrecos] = useState<TabelaPrecoRow[] | null>(null)
+  const [loadingTabela, setLoadingTabela] = useState(false)
+  const [erroTabela, setErroTabela] = useState<string | null>(null)
+  const [mostrarTabelaPrecos, setMostrarTabelaPrecos] = useState(false)
   const backgroundImages = useMemo<string[]>(() => {
     const selected = BG_BY_EMPREENDIMENTO[empreendimento] ?? BACKGROUND_IMAGES
     return selected.map((path) => (path.startsWith('/imagens/') ? encodeURI(path) : path))
@@ -266,10 +271,27 @@ export function PresentationPage() {
     try {
       await uploadTabelaPrecos(file)
       setUploadStatus(`Planilha enviada: ${file.name}`)
+      setTabelaPrecos(null) // forÃ§a recarregar da API
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Falha ao enviar planilha.'
       setUploadErro(message)
       setUploadStatus(null)
+    }
+  }
+
+  const abrirTabelaPrecos = async () => {
+    setErroTabela(null)
+    setMostrarTabelaPrecos(true)
+    if (tabelaPrecos !== null) return
+    try {
+      setLoadingTabela(true)
+      const rows = await fetchTabelaPrecos()
+      setTabelaPrecos(rows)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Falha ao carregar tabela de preÃ§os.'
+      setErroTabela(message)
+    } finally {
+      setLoadingTabela(false)
     }
   }
 
@@ -557,7 +579,7 @@ export function PresentationPage() {
                   </div>
                     {!parcelasHabilitadas ? (
                       <p className="text-xs text-amber-200">
-                        Prosoluto abaixo do minimo para parcelar (R$ {MIN_VALOR_PARCELA}). Cobrar à vista ou ajustar valores.
+                        Prosoluto abaixo do minimo para parcelar (R$ {MIN_VALOR_PARCELA}). Cobrar Ã  vista ou ajustar valores.
                       </p>
                     ) : (
                       <p className="text-xs text-slate-300">
@@ -590,6 +612,13 @@ export function PresentationPage() {
               className="rounded-2xl border border-cyan-300/50 bg-cyan-500/20 px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/35"
             >
               Upload Excel (preços)
+            </button>
+            <button
+              type="button"
+              onClick={() => void abrirTabelaPrecos()}
+              className="rounded-2xl border border-emerald-300/50 bg-emerald-500/20 px-4 py-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/35"
+            >
+              Tabela de preços
             </button>
             <button
               type="button"
@@ -741,7 +770,7 @@ export function PresentationPage() {
                 <div className="mb-3 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-200">Tabela de parcelas</p>
-                    <h3 className="text-lg font-bold text-white">Correção de 1% ao mês</h3>
+                    <h3 className="text-lg font-bold text-white">CorreÃ§Ã£o de 1% ao mÃªs</h3>
                   </div>
                   <span
                     className="rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-white"
@@ -861,6 +890,100 @@ export function PresentationPage() {
         </main>
         </div>
       </div>
+
+      {mostrarTabelaPrecos ? (
+        <div
+          className="fixed inset-0 z-[120] flex items-start justify-center bg-black/70 p-4 backdrop-blur-sm"
+          onClick={() => setMostrarTabelaPrecos(false)}
+        >
+          <div
+            className="w-full max-w-5xl overflow-hidden rounded-[28px] border bg-slate-950/95 shadow-2xl"
+            style={{ borderColor: theme.border }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div
+              className="flex items-center justify-between px-5 py-4"
+              style={{ backgroundColor: theme.headerBg || 'rgba(148,163,184,0.12)' }}
+            >
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.28em] text-cyan-100">Tabela de preços</p>
+                <h3 className="text-lg font-bold text-white">Preços e limites por unidade</h3>
+                <p className="text-xs text-slate-300">Fonte: planilha enviada (excel/csv).</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20"
+                  onClick={() => {
+                    setTabelaPrecos(null)
+                    void abrirTabelaPrecos()
+                  }}
+                >
+                  Recarregar
+                </button>
+                <button
+                  type="button"
+                  className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20"
+                  onClick={() => setMostrarTabelaPrecos(false)}
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto bg-slate-950/85">
+              {loadingTabela ? (
+                <div className="p-5 text-sm text-slate-200">Carregando tabela...</div>
+              ) : null}
+              {erroTabela ? (
+                <div className="p-5 text-sm text-amber-200">Erro: {erroTabela}</div>
+              ) : null}
+              {!loadingTabela && !erroTabela ? (
+                <table className="min-w-full table-fixed text-sm text-white">
+                  <thead
+                    className="text-xs uppercase tracking-[0.14em]"
+                    style={{ backgroundColor: theme.headerBg, color: theme.primary }}
+                  >
+                    <tr>
+                      <th className="px-3 py-2 text-left">Empreendimento</th>
+                      <th className="px-3 py-2 text-left">Unidade</th>
+                      <th className="px-3 py-2 text-right">Garantido mínimo</th>
+                      <th className="px-3 py-2 text-right">Preço</th>
+                      <th className="px-3 py-2 text-right">IS máximo</th>
+                      <th className="px-3 py-2 text-right">Prosoluto mínimo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(tabelaPrecos || []).map((row, index) => (
+                      <tr
+                        key={`${row.empreendimento}-${row.unidade}-${index}`}
+                        style={{ backgroundColor: index % 2 === 0 ? theme.rowOdd : theme.rowEven }}
+                      >
+                        <td className="px-3 py-2">{row.empreendimento}</td>
+                        <td className="px-3 py-2">{row.unidade}</td>
+                        <td className="px-3 py-2 text-right" style={{ color: theme.primary }}>
+                          {formatCurrency(row.garantido_minimo)}
+                        </td>
+                        <td className="px-3 py-2 text-right">{formatCurrency(row.preco)}</td>
+                        <td className="px-3 py-2 text-right">{formatCurrency(row.is_maximo)}</td>
+                        <td className="px-3 py-2 text-right">{formatCurrency(row.prosoluto_minimo)}</td>
+                      </tr>
+                    ))}
+                    {(tabelaPrecos || []).length === 0 && !loadingTabela ? (
+                      <tr>
+                        <td className="px-3 py-4 text-center text-slate-300" colSpan={6}>
+                          Nenhuma linha encontrada. Envie a planilha para popular a tabela.
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   )
 }
+

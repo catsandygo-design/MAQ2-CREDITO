@@ -4,6 +4,7 @@ import type {
   GestorDashboardResponse,
   LoginResponse,
   ProcessoApiItem,
+  TabelaPrecoRow,
 } from '../types'
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) || '/app/api'
@@ -122,4 +123,12 @@ export async function uploadTabelaPrecos(file: File): Promise<{ detail?: string 
   })
 
   return parseResponse<{ detail?: string }>(res)
+}
+
+export async function fetchTabelaPrecos(): Promise<TabelaPrecoRow[]> {
+  const res = await fetch(`${API_BASE}/tabela-precos`, {
+    credentials: 'same-origin',
+    cache: 'no-store',
+  })
+  return parseResponse<TabelaPrecoRow[]>(res)
 }
