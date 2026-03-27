@@ -125,6 +125,7 @@ export interface TabelaPrecoRow {
   unidade: string
   garantido_minimo: number
   preco: number
+  sobrepreco: number
   is_maximo: number
   prosoluto_minimo: number
 }

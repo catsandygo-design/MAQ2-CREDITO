@@ -95,6 +95,7 @@ class TabelaPrecoItem(BaseModel):
   unidade: str
   garantido_minimo: float
   preco: float
+  sobrepreco: float
   is_maximo: float
   prosoluto_minimo: float
 
@@ -199,6 +200,7 @@ async def processar_tabela_upload(upload: UploadFile) -> list[TabelaPrecoItem]:
     "unidade": "unidade",
     "garantido_minimo": "garantido_minimo",
     "preco": "preco",
+    "sobrepreco": "sobrepreco",
     "is_maximo": "is_maximo",
     "prosoluto_minimo": "prosoluto_minimo",
   }
@@ -220,6 +222,7 @@ async def processar_tabela_upload(upload: UploadFile) -> list[TabelaPrecoItem]:
           "unidade": str(line.get(header_map["unidade"], "")).strip(),
           "garantido_minimo": parse_number(line.get(header_map["garantido_minimo"])),
           "preco": parse_number(line.get(header_map["preco"])),
+          "sobrepreco": parse_number(line.get(header_map["sobrepreco"])),
           "is_maximo": parse_number(line.get(header_map["is_maximo"])),
           "prosoluto_minimo": parse_number(line.get(header_map["prosoluto_minimo"])),
         }
@@ -242,6 +245,7 @@ async def processar_tabela_upload(upload: UploadFile) -> list[TabelaPrecoItem]:
         "unidade": str(row[header_map["unidade"]].value or "").strip(),
         "garantido_minimo": parse_number(row[header_map["garantido_minimo"]].value),
         "preco": parse_number(row[header_map["preco"]].value),
+        "sobrepreco": parse_number(row[header_map["sobrepreco"]].value),
         "is_maximo": parse_number(row[header_map["is_maximo"]].value),
         "prosoluto_minimo": parse_number(row[header_map["prosoluto_minimo"]].value),
       }

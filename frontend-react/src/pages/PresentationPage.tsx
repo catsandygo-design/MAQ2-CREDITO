@@ -116,7 +116,6 @@ const DEFAULT_FORM_VALUES = {
 
 const MAX_PARCELAS = 80
 const MIN_VALOR_PARCELA = 125
-const MIN_PROSOLUTO = 8000
 const PCT_PROSOLUTO_GARANTIDOR = 0.05
 
 const formatCurrency = (value: number) => {
@@ -243,7 +242,9 @@ export function PresentationPage() {
   const [empreendimento, setEmpreendimento] = useState<Empreendimento>(DEFAULT_FORM_VALUES.empreendimento)
   const [unitType, setUnitType] = useState<UnitType>(DEFAULT_FORM_VALUES.unitType)
   const [clienteNome, setClienteNome] = useState('')
-  const [precoUnidade, setPrecoUnidade] = useState(DEFAULT_FORM_VALUES.precoUnidade)
+  const [precoTabela, setPrecoTabela] = useState(DEFAULT_FORM_VALUES.precoUnidade)
+  const [sobreprecoMinimo, setSobreprecoMinimo] = useState(0)
+  const [precoDigitadoCorretor, setPrecoDigitadoCorretor] = useState(DEFAULT_FORM_VALUES.precoUnidade)
   const [financiamento, setFinanciamento] = useState(DEFAULT_FORM_VALUES.financiamento)
   const [subsidio, setSubsidio] = useState(DEFAULT_FORM_VALUES.subsidio)
   const [sinal, setSinal] = useState(DEFAULT_FORM_VALUES.sinal)
@@ -259,6 +260,7 @@ export function PresentationPage() {
   const [uploadErro, setUploadErro] = useState<string | null>(null)
   const [salvarStatus, setSalvarStatus] = useState<string | null>(null)
   const [salvarErro, setSalvarErro] = useState<string | null>(null)
+  const [precoErro, setPrecoErro] = useState<string | null>(null)
   const inputUploadRef = useRef<HTMLInputElement | null>(null)
   const [tabelaPrecos, setTabelaPrecos] = useState<TabelaPrecoRow[] | null>(null)
   const [loadingTabela, setLoadingTabela] = useState(false)
@@ -292,10 +294,10 @@ export function PresentationPage() {
       const payload = {
         empreendimento,
         unidade: unitType,
-        preco_imovel: precoVenda,
-        valor_obtido: valorObtido,
-        prosoluto_calculado: prosolutoEfetivo,
-        prosoluto_liquido: prosolutoLiquido,
+        preco_imovel: pricing.precoFinalImovel,
+        valor_obtido: pricing.valorObtido,
+        prosoluto_calculado: pricing.entradaBruta,
+        prosoluto_liquido: pricing.entradaLiquida,
         sinal,
         sinal_produto: sinalProduto,
         financiamento,
@@ -391,8 +393,6 @@ export function PresentationPage() {
   }, [])
 
   const chequeMoradia = EMPREENDIMENTOS.find((item) => item.label === empreendimento)?.chequeMoradia ?? 0
-  const garantido = financiamento + subsidio + sinal
-  const valorObtido = garantido + chequeMoradia
   const tabelaMatch = useMemo(() => {
     if (!tabelaPrecos) return null
     const normalize = (value: string) => value.trim().toUpperCase()
@@ -401,48 +401,64 @@ export function PresentationPage() {
         normalize(row.empreendimento) === normalize(empreendimento) && normalize(row.unidade) === normalize(unitType),
     )
   }, [empreendimento, tabelaPrecos, unitType])
-  const valorMinimoImovel = tabelaMatch?.preco ?? precoUnidade
-  const prosolutoMinimo = tabelaMatch?.prosoluto_minimo ?? MIN_PROSOLUTO
-  const garantidoMinimo = tabelaMatch?.garantido_minimo ?? 0
-
-  const prosolutoCalculado = valorMinimoImovel - valorObtido
-  let precoVenda = valorMinimoImovel
-  let ajustePreco = 0
-  let prosolutoEfetivo = prosolutoCalculado
-
-  if (valorObtido < valorMinimoImovel) {
-    if (prosolutoEfetivo < prosolutoMinimo) {
-      ajustePreco = prosolutoMinimo - prosolutoEfetivo
-      precoVenda = valorMinimoImovel + ajustePreco
-      prosolutoEfetivo = prosolutoMinimo
+  useEffect(() => {
+    if (tabelaMatch) {
+      const precoPlanilha = tabelaMatch.preco ?? 0
+      const sobreprecoPlanilha = tabelaMatch.sobrepreco ?? 0
+      setPrecoTabela(precoPlanilha)
+      setSobreprecoMinimo(sobreprecoPlanilha)
+      setPrecoDigitadoCorretor(precoPlanilha + sobreprecoPlanilha)
     } else {
-      precoVenda = valorMinimoImovel
+      setSobreprecoMinimo(0)
     }
-  } else {
-    const excedente = valorObtido - valorMinimoImovel
-    if (excedente >= prosolutoMinimo) {
-      precoVenda = valorObtido
-      prosolutoEfetivo = 0
-    } else {
-      ajustePreco = prosolutoMinimo - excedente
-      precoVenda = valorObtido + ajustePreco
-      prosolutoEfetivo = prosolutoMinimo
-    }
-  }
+  }, [tabelaMatch])
+  const pricing = useMemo(() => {
+    const precoTabelaVal = Number(precoTabela) || 0
+    const sobreprecoVal = Number(sobreprecoMinimo) || 0
+    const precoBaseEmpresa = precoTabelaVal + sobreprecoVal
+    const garantidoVal = financiamento + subsidio + sinal
+    const valorObtidoVal = garantidoVal + chequeMoradia
+    const precoMinimoPermitido = Math.max(precoBaseEmpresa, valorObtidoVal)
+    const precoCorretor = Number(precoDigitadoCorretor) || 0
+    const precoFinalImovel = Math.max(precoCorretor, precoMinimoPermitido)
+    const entradaBruta = Math.max(precoFinalImovel - valorObtidoVal, 0)
+    const entradaLiquida = Math.max(entradaBruta - sinalProduto, 0)
 
-  const prosolutoLiquido = Math.max(prosolutoEfetivo - sinalProduto, 0)
+    return {
+      precoTabela: precoTabelaVal,
+      sobreprecoMinimo: sobreprecoVal,
+      precoBaseEmpresa,
+      garantido: garantidoVal,
+      valorObtido: valorObtidoVal,
+      precoMinimoPermitido,
+      precoDigitadoCorretor: precoCorretor,
+      precoFinalImovel,
+      entradaBruta,
+      entradaLiquida,
+    }
+  }, [
+    chequeMoradia,
+    financiamento,
+    precoDigitadoCorretor,
+    precoTabela,
+    sinal,
+    sinalProduto,
+    sobreprecoMinimo,
+    subsidio,
+  ])
+
   const maxParcelasPermitidas =
-    prosolutoLiquido >= MIN_VALOR_PARCELA ? Math.min(MAX_PARCELAS, Math.floor(prosolutoLiquido / MIN_VALOR_PARCELA)) : 1
-  const parcelasHabilitadas = prosolutoLiquido >= MIN_VALOR_PARCELA
+    pricing.entradaLiquida >= MIN_VALOR_PARCELA
+      ? Math.min(MAX_PARCELAS, Math.floor(pricing.entradaLiquida / MIN_VALOR_PARCELA))
+      : 1
+  const parcelasHabilitadas = pricing.entradaLiquida >= MIN_VALOR_PARCELA
   const parcelasNormalizadas = Math.min(Math.max(parcelas, 1), maxParcelasPermitidas)
-  const valorParcela = parcelasHabilitadas ? prosolutoLiquido / parcelasNormalizadas : prosolutoLiquido
+  const valorParcela = parcelasHabilitadas ? pricing.entradaLiquida / parcelasNormalizadas : pricing.entradaLiquida
   const aporteInicial = sinal + valorParcela
-  const precisaGarantidor = prosolutoLiquido > precoVenda * PCT_PROSOLUTO_GARANTIDOR
+  const precisaGarantidor = pricing.entradaLiquida > pricing.precoFinalImovel * PCT_PROSOLUTO_GARANTIDOR
   const entradaParceladaAtual = parcelasHabilitadas ? valorParcela : 0
   const isAgora =
-    rendaBruta > 0
-      ? (percConstrucao / 100) * (parcelaCaixa + entradaParceladaAtual) / rendaBruta
-      : 0
+    rendaBruta > 0 ? (percConstrucao / 100) * (parcelaCaixa + entradaParceladaAtual) / rendaBruta : 0
   const isPosChaves = rendaBruta > 0 ? (parcelaCaixa + entradaParceladaAtual) / rendaBruta : 0
   const parcelasProgressivas = Array.from({ length: parcelasNormalizadas }, (_, i) => {
     const fator = Math.pow(1.01, i) // 1% ao mes
@@ -451,13 +467,12 @@ export function PresentationPage() {
   })
   const plantaImagem = UNIT_IMAGES[unitType]
   const totalDescontos = subsidio + chequeMoradia
-  const valorFinanciado = Math.max(precoVenda - totalDescontos, 0)
-  const garantidoObtido = garantido
+  const valorFinanciado = Math.max(pricing.precoFinalImovel - totalDescontos, 0)
 
   const quickStats = [
-    { label: 'Valor do imóvel', value: formatCurrency(precoVenda) },
-    { label: 'Valor obtido', value: formatCurrency(valorObtido) },
-    { label: 'Entrada (prosoluto)', value: formatCurrency(prosolutoLiquido) },
+    { label: 'Valor do imóvel', value: formatCurrency(pricing.precoFinalImovel) },
+    { label: 'Valor obtido', value: formatCurrency(pricing.valorObtido) },
+    { label: 'Entrada', value: formatCurrency(pricing.entradaLiquida) },
     { label: 'Sinal', value: formatCurrency(sinal) },
   ]
 
@@ -480,6 +495,11 @@ export function PresentationPage() {
       setParcelas(1)
     }
   }, [parcelas, maxParcelasPermitidas])
+  useEffect(() => {
+    if (precoDigitadoCorretor >= pricing.precoMinimoPermitido) {
+      setPrecoErro(null)
+    }
+  }, [precoDigitadoCorretor, pricing.precoMinimoPermitido])
 
   const handleLogout = async () => {
     if (saindo) return
@@ -623,53 +643,87 @@ export function PresentationPage() {
                       ))}
                     </select>
                   </label>
-                  <CurrencyField label="Preco da unidade" value={precoUnidade} onChange={setPrecoUnidade} />
-                  <CurrencyField label="Financiamento" value={financiamento} onChange={setFinanciamento} />
-                  <CurrencyField label="Subsidio" value={subsidio} onChange={setSubsidio} />
-                  <CurrencyField label="Renda bruta" value={rendaBruta} onChange={setRendaBruta} />
-                  <CurrencyField label="Cheque moradia" value={chequeMoradia} readOnly helperText="Valor fixo por empreendimento. O corretor nao pode alterar." />
-                  <CurrencyField label="Prosoluto calculado" value={prosolutoEfetivo} readOnly helperText="Calculado automaticamente." />
-                  <CurrencyField
-                    label="Sinal produto"
-                    value={sinalProduto}
-                    onChange={setSinalProduto}
-                    helperText="Deduz do prosoluto, não soma no garantido."
-                  />
-                  <CurrencyField label="Prosoluto a pagar" value={prosolutoLiquido} readOnly />
-                  <CurrencyField label="Sinal" value={sinal} onChange={setSinal} />
-                  <label className="space-y-2 text-sm">
-                    % obra (para IS pré-chaves)
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={percConstrucao}
-                      onChange={(event) => setPercConstrucao(Number(event.target.value))}
-                      className="w-full rounded-2xl border border-white/20 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
-                    />
-                    <span className="block text-xs text-slate-300">Ex.: 70 significa 70% de avanço de obra.</span>
-                  </label>
-                  <CurrencyField
-                    label="Garantido minimo"
-                    value={garantidoMinimo}
-                    readOnly
-                    helperText="Vem da tabela enviada (excel)."
-                  />
-                  <CurrencyField
-                    label="Garantido obtido"
-                    value={garantidoObtido}
-                    readOnly
-                    helperText="Financiamento + subsidio + sinal."
-                  />
+
+                  <div className="sm:col-span-3 grid gap-3 rounded-2xl border border-white/12 bg-slate-950/60 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">Base da unidade</p>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <CurrencyField
+                        label="Preço de tabela"
+                        value={pricing.precoTabela}
+                        onChange={setPrecoTabela}
+                        readOnly={Boolean(tabelaMatch)}
+                        helperText={tabelaMatch ? 'Vem da tabela (excel).' : 'Informe quando não houver planilha.'}
+                      />
+                      <CurrencyField
+                        label="Sobrepreço mínimo"
+                        value={sobreprecoMinimo}
+                        onChange={setSobreprecoMinimo}
+                        readOnly={Boolean(tabelaMatch)}
+                        helperText="Vem do campo sobrepreco da planilha."
+                      />
+                      <CurrencyField label="Preço base da empresa" value={pricing.precoBaseEmpresa} readOnly />
+                    </div>
+                  </div>
+
+                  <div className="sm:col-span-3 grid gap-3 rounded-2xl border border-white/12 bg-slate-950/60 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">Capacidade do cliente</p>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <CurrencyField label="Financiamento" value={financiamento} onChange={setFinanciamento} />
+                      <CurrencyField label="Subsidio" value={subsidio} onChange={setSubsidio} />
+                      <CurrencyField label="Sinal" value={sinal} onChange={setSinal} />
+                      <CurrencyField label="Cheque moradia" value={chequeMoradia} readOnly />
+                      <CurrencyField label="Garantido" value={pricing.garantido} readOnly helperText="Financiamento + subsídio + sinal." />
+                      <CurrencyField label="Valor obtido" value={pricing.valorObtido} readOnly helperText="Garantido + cheque moradia." />
+                      <CurrencyField label="Renda bruta" value={rendaBruta} onChange={setRendaBruta} />
+                      <CurrencyField
+                        label="Sinal produto"
+                        value={sinalProduto}
+                        onChange={setSinalProduto}
+                        helperText="Deduz da entrada, não soma no garantido."
+                      />
+                      <label className="space-y-2 text-sm">
+                        % obra (para IS pré-chaves)
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={percConstrucao}
+                          onChange={(event) => setPercConstrucao(Number(event.target.value))}
+                          className="w-full rounded-2xl border border-white/20 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+                        />
+                        <span className="block text-xs text-slate-300">Ex.: 70 significa 70% de avanço de obra.</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="sm:col-span-3 grid gap-3 rounded-2xl border border-white/12 bg-slate-950/60 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">Formação do preço</p>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <CurrencyField label="Preço mínimo permitido" value={pricing.precoMinimoPermitido} readOnly />
+                      <CurrencyField
+                        label="Preço digitado (corretor)"
+                        value={precoDigitadoCorretor}
+                        onChange={(value) => {
+                          setPrecoDigitadoCorretor(value)
+                          setPrecoErro(value < pricing.precoMinimoPermitido ? 'O preço não pode ser menor que o mínimo permitido.' : null)
+                        }}
+                        helperText={precoErro || 'Pode ser maior que o mínimo permitido.'}
+                      />
+                      <CurrencyField label="Preço final do imóvel" value={pricing.precoFinalImovel} readOnly />
+                      <CurrencyField label="Entrada bruta" value={pricing.entradaBruta} readOnly />
+                      <CurrencyField label="Entrada (após sinal produto)" value={pricing.entradaLiquida} readOnly />
+                    </div>
+                  </div>
+
                   <CurrencyField
                     label="Parcela Caixa"
                     value={parcelaCaixa}
                     onChange={setParcelaCaixa}
                     helperText="Informe a parcela projetada pela Caixa (se aplicavel)."
-                    wrapperClassName="sm:col-span-2"
+                    wrapperClassName="sm:col-span-3"
                   />
-                  <label className="space-y-2 text-sm sm:col-span-2">
-                    Parcelamento do prosoluto
+                  <label className="space-y-2 text-sm sm:col-span-3">
+                    Parcelamento da entrada
                     <div className="flex flex-col gap-2 rounded-2xl border border-white/20 bg-slate-950/70 px-4 py-3">
                       <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-100">
                         <span>Parcelas</span>
@@ -690,7 +744,7 @@ export function PresentationPage() {
                       </div>
                         {!parcelasHabilitadas ? (
                           <p className="text-xs text-amber-200">
-                            Prosoluto abaixo do minimo para parcelar (R$ {MIN_VALOR_PARCELA}). Cobrar Ã  vista ou ajustar valores.
+                            Entrada abaixo do minimo para parcelar (R$ {MIN_VALOR_PARCELA}). Cobrar Ã  vista ou ajustar valores.
                           </p>
                         ) : (
                           <p className="text-xs text-slate-300">
@@ -757,7 +811,8 @@ export function PresentationPage() {
               onClick={() => {
                 setEmpreendimento(DEFAULT_FORM_VALUES.empreendimento)
                 setUnitType(DEFAULT_FORM_VALUES.unitType)
-                setPrecoUnidade(DEFAULT_FORM_VALUES.precoUnidade)
+                setPrecoTabela(DEFAULT_FORM_VALUES.precoUnidade)
+                setPrecoDigitadoCorretor(DEFAULT_FORM_VALUES.precoUnidade)
                 setFinanciamento(DEFAULT_FORM_VALUES.financiamento)
                 setSubsidio(DEFAULT_FORM_VALUES.subsidio)
                 setSinal(DEFAULT_FORM_VALUES.sinal)
@@ -855,11 +910,11 @@ export function PresentationPage() {
               <div className="grid gap-2 text-sm text-slate-200">
                 <div className="flex justify-between">
                   <span>Valor do imovel (ajustado)</span>
-                  <strong>{formatCurrency(precoVenda)}</strong>
+                  <strong>{formatCurrency(pricing.precoFinalImovel)}</strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Valor obtido</span>
-                  <strong>{formatCurrency(valorObtido)}</strong>
+                  <strong>{formatCurrency(pricing.valorObtido)}</strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Total de descontos (subsídio + cheque)</span>
@@ -870,12 +925,12 @@ export function PresentationPage() {
                   <strong>{formatCurrency(valorFinanciado)}</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span>Prosoluto calculado</span>
-                  <strong>{formatCurrency(prosolutoEfetivo)}</strong>
+                  <span>Entrada bruta</span>
+                  <strong>{formatCurrency(pricing.entradaBruta)}</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span>Prosoluto a pagar (após sinal produto)</span>
-                  <strong>{formatCurrency(prosolutoLiquido)}</strong>
+                  <span>Entrada (após sinal produto)</span>
+                  <strong>{formatCurrency(pricing.entradaLiquida)}</strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Parcelamento</span>
@@ -986,19 +1041,19 @@ export function PresentationPage() {
               <div className="space-y-3 text-sm text-slate-200">
                 <div className="flex justify-between">
                   <span>Garantido + sinal</span>
-                  <strong>{formatCurrency(garantido)}</strong>
+                  <strong>{formatCurrency(pricing.garantido)}</strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Total obtido (garantido + cheque)</span>
-                  <strong>{formatCurrency(valorObtido)}</strong>
+                  <strong>{formatCurrency(pricing.valorObtido)}</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span>Prosoluto calculado</span>
-                  <strong>{formatCurrency(prosolutoEfetivo)}</strong>
+                  <span>Entrada bruta</span>
+                  <strong>{formatCurrency(pricing.entradaBruta)}</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span>Prosoluto a pagar</span>
-                  <strong>{formatCurrency(prosolutoLiquido)}</strong>
+                  <span>Entrada (após sinal produto)</span>
+                  <strong>{formatCurrency(pricing.entradaLiquida)}</strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Parcelamento</span>
@@ -1029,10 +1084,10 @@ export function PresentationPage() {
                     Cliente: <strong>{clienteNome || '-'}</strong>
                   </p>
                   <p>
-                     Preco unidade: <strong>{formatCurrency(precoVenda)}</strong>
+                     Preco final do imovel: <strong>{formatCurrency(pricing.precoFinalImovel)}</strong>
                   </p>
                   <p>
-                    Garantido: <strong>{formatCurrency(garantido)}</strong>
+                    Garantido: <strong>{formatCurrency(pricing.garantido)}</strong>
                   </p>
                   <p>
                     Cheque moradia: <strong>{formatCurrency(chequeMoradia)}</strong>
@@ -1044,10 +1099,10 @@ export function PresentationPage() {
                     Valor a financiar: <strong>{formatCurrency(valorFinanciado)}</strong>
                   </p>
                   <p>
-                    Prosoluto calculado: <strong>{formatCurrency(prosolutoEfetivo)}</strong>
+                    Entrada bruta: <strong>{formatCurrency(pricing.entradaBruta)}</strong>
                   </p>
                   <p>
-                    Prosoluto a pagar: <strong>{formatCurrency(prosolutoLiquido)}</strong>
+                    Entrada (após sinal produto): <strong>{formatCurrency(pricing.entradaLiquida)}</strong>
                   </p>
                   <p>
                     Parcelas: <strong>{parcelasNormalizadas}x de {formatCurrency(valorParcela)}</strong>
@@ -1124,6 +1179,7 @@ export function PresentationPage() {
                       <th className="px-3 py-2 text-left">Unidade</th>
                       <th className="px-3 py-2 text-right">Garantido mínimo</th>
                       <th className="px-3 py-2 text-right">Preço</th>
+                      <th className="px-3 py-2 text-right">Sobrepreço mínimo</th>
                       <th className="px-3 py-2 text-right">Prosoluto mínimo</th>
                     </tr>
                   </thead>
@@ -1139,6 +1195,7 @@ export function PresentationPage() {
                           {formatCurrency(row.garantido_minimo)}
                         </td>
                         <td className="px-3 py-2 text-right text-white">{formatCurrency(row.preco)}</td>
+                        <td className="px-3 py-2 text-right text-white">{formatCurrency(row.sobrepreco)}</td>
                         <td className="px-3 py-2 text-right text-white">{formatCurrency(row.prosoluto_minimo)}</td>
                       </tr>
                     ))}
