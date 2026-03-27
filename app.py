@@ -34,8 +34,9 @@ logger = logging.getLogger("sistema_credito")
 WEB_DIR = Path(__file__).resolve().parent / "web"
 REACT_DIST_DIR = Path(__file__).resolve().parent / "frontend-react" / "dist"
 DATA_DIR = Path(__file__).resolve().parent / "data"
-DATA_DIR.mkdir(exist_ok=True)
+DATA_DIR.mkdir(exist_ok=True, parents=True)
 TABELA_PRECO_PATH = DATA_DIR / "tabela_precos.json"
+TABELA_PRECO_CACHE: list[dict[str, Any]] = []
 
 SESSION_COOKIE_NAME = "sc_session"
 SESSION_TTL_SECONDS = int(os.getenv("SESSION_TTL_SECONDS", "43200"))
@@ -112,13 +113,22 @@ def parse_number(value: Any) -> float:
 
 
 def carregar_tabela_precos() -> list[TabelaPrecoItem]:
+  if TABELA_PRECO_CACHE:
+    return TABELA_PRECO_CACHE
   if not TABELA_PRECO_PATH.exists():
     return []
   try:
     payload = json.loads(TABELA_PRECO_PATH.read_text(encoding="utf-8"))
   except json.JSONDecodeError:
     return []
+  TABELA_PRECO_CACHE[:] = payload
   return payload
+
+
+def salvar_tabela_precos(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+  TABELA_PRECO_CACHE[:] = rows
+  TABELA_PRECO_PATH.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
+  return rows
 
 
 async def processar_tabela_upload(upload: UploadFile) -> list[TabelaPrecoItem]:
@@ -10247,7 +10257,7 @@ def app_bulk_upsert_documentos(
 @app.post("/app/api/tabela-precos/upload", response_model=TabelaPrecoUploadResponse)
 async def upload_tabela_precos(file: UploadFile = File(...)):
     rows = await processar_tabela_upload(file)
-    TABELA_PRECO_PATH.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
+    salvar_tabela_precos(rows)
     return TabelaPrecoUploadResponse(linhas=len(rows), filename=file.filename or "")
 
 
