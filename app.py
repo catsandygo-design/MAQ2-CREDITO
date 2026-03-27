@@ -38,6 +38,10 @@ DATA_DIR.mkdir(exist_ok=True, parents=True)
 TABELA_PRECO_PATH = DATA_DIR / "tabela_precos.json"
 TABELA_PRECO_CACHE: list[dict[str, Any]] = []
 
+ANALISE_DB_PATH = DATA_DIR / "analises.db"
+analise_engine = create_engine(f"sqlite:///{ANALISE_DB_PATH}", future=True)
+AnaliseSessionLocal = sessionmaker(analise_engine, expire_on_commit=False)
+
 SESSION_COOKIE_NAME = "sc_session"
 SESSION_TTL_SECONDS = int(os.getenv("SESSION_TTL_SECONDS", "43200"))
 SESSION_IDLE_TIMEOUT_SECONDS = int(os.getenv("SESSION_IDLE_TIMEOUT_SECONDS", "1800"))
@@ -100,6 +104,28 @@ class TabelaPrecoUploadResponse(BaseModel):
   filename: str
 
 
+class AnaliseCreate(BaseModel):
+  empreendimento: str
+  unidade: str
+  preco_imovel: float
+  valor_obtido: float
+  prosoluto_calculado: float
+  prosoluto_liquido: float
+  sinal: float
+  sinal_produto: float
+  financiamento: float
+  subsidio: float
+  cheque_moradia: float
+  renda_bruta: float
+  perc_construcao: float
+  is_agora: float
+  is_pos_chaves: float
+  tabela_referencia: list[dict[str, Any]] = Field(default_factory=list)
+  data_referencia: datetime
+
+  model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
 def normalize_header(value: str) -> str:
   cleaned = unicodedata.normalize("NFKD", (value or "")).encode("ascii", "ignore").decode()
   return "_".join(cleaned.strip().lower().split())
@@ -129,6 +155,37 @@ def salvar_tabela_precos(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
   TABELA_PRECO_CACHE[:] = rows
   TABELA_PRECO_PATH.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
   return rows
+
+
+class AnaliseBase(DeclarativeBase):
+  pass
+
+
+class Analise(AnaliseBase):
+  __tablename__ = "analises"
+
+  id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+  created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+  empreendimento: Mapped[str] = mapped_column(String(120))
+  unidade: Mapped[str] = mapped_column(String(120))
+  preco_imovel: Mapped[float] = mapped_column(Float)
+  valor_obtido: Mapped[float] = mapped_column(Float)
+  prosoluto_calculado: Mapped[float] = mapped_column(Float)
+  prosoluto_liquido: Mapped[float] = mapped_column(Float)
+  sinal: Mapped[float] = mapped_column(Float)
+  sinal_produto: Mapped[float] = mapped_column(Float)
+  financiamento: Mapped[float] = mapped_column(Float)
+  subsidio: Mapped[float] = mapped_column(Float)
+  cheque_moradia: Mapped[float] = mapped_column(Float)
+  renda_bruta: Mapped[float] = mapped_column(Float)
+  perc_construcao: Mapped[float] = mapped_column(Float)
+  is_agora: Mapped[float] = mapped_column(Float)
+  is_pos_chaves: Mapped[float] = mapped_column(Float)
+  tabela_referencia: Mapped[str] = mapped_column(Text)  # JSON string de tabela no upload
+  data_referencia: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+AnaliseBase.metadata.create_all(analise_engine)
 
 
 async def processar_tabela_upload(upload: UploadFile) -> list[TabelaPrecoItem]:
@@ -10264,3 +10321,66 @@ async def upload_tabela_precos(file: UploadFile = File(...)):
 @app.get("/app/api/tabela-precos", response_model=list[TabelaPrecoItem])
 async def listar_tabela_precos():
     return carregar_tabela_precos()
+
+
+@app.post("/app/api/analises")
+async def criar_analise(payload: AnaliseCreate):
+    with AnaliseSessionLocal() as db:
+        registro = Analise(
+            empreendimento=payload.empreendimento,
+            unidade=payload.unidade,
+            preco_imovel=payload.preco_imovel,
+            valor_obtido=payload.valor_obtido,
+            prosoluto_calculado=payload.prosoluto_calculado,
+            prosoluto_liquido=payload.prosoluto_liquido,
+            sinal=payload.sinal,
+            sinal_produto=payload.sinal_produto,
+            financiamento=payload.financiamento,
+            subsidio=payload.subsidio,
+            cheque_moradia=payload.cheque_moradia,
+            renda_bruta=payload.renda_bruta,
+            perc_construcao=payload.perc_construcao,
+            is_agora=payload.is_agora,
+            is_pos_chaves=payload.is_pos_chaves,
+            tabela_referencia=json.dumps(payload.tabela_referencia, ensure_ascii=False),
+            data_referencia=payload.data_referencia,
+        )
+        db.add(registro)
+        db.commit()
+        db.refresh(registro)
+        return {"id": registro.id, "created_at": registro.created_at}
+
+
+@app.get("/app/api/analises")
+async def listar_analises(limit: int = 50):
+    with AnaliseSessionLocal() as db:
+        rows = (
+            db.query(Analise)
+            .order_by(Analise.created_at.desc())
+            .limit(min(max(limit, 1), 200))
+            .all()
+        )
+        return [
+            {
+                "id": row.id,
+                "created_at": row.created_at,
+                "empreendimento": row.empreendimento,
+                "unidade": row.unidade,
+                "preco_imovel": row.preco_imovel,
+                "valor_obtido": row.valor_obtido,
+                "prosoluto_calculado": row.prosoluto_calculado,
+                "prosoluto_liquido": row.prosoluto_liquido,
+                "sinal": row.sinal,
+                "sinal_produto": row.sinal_produto,
+                "financiamento": row.financiamento,
+                "subsidio": row.subsidio,
+                "cheque_moradia": row.cheque_moradia,
+                "renda_bruta": row.renda_bruta,
+                "perc_construcao": row.perc_construcao,
+                "is_agora": row.is_agora,
+                "is_pos_chaves": row.is_pos_chaves,
+                "tabela_referencia": json.loads(row.tabela_referencia or "[]"),
+                "data_referencia": row.data_referencia,
+            }
+            for row in rows
+        ]

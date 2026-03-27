@@ -247,6 +247,8 @@ export function PresentationPage() {
   const [financiamento, setFinanciamento] = useState(DEFAULT_FORM_VALUES.financiamento)
   const [subsidio, setSubsidio] = useState(DEFAULT_FORM_VALUES.subsidio)
   const [sinal, setSinal] = useState(DEFAULT_FORM_VALUES.sinal)
+  const [rendaBruta, setRendaBruta] = useState(0)
+  const [percConstrucao, setPercConstrucao] = useState(70)
   const [sinalProduto, setSinalProduto] = useState(0)
   const [parcelaCaixa, setParcelaCaixa] = useState(0)
   const [mostrarResumo, setMostrarResumo] = useState(false)
@@ -255,6 +257,8 @@ export function PresentationPage() {
   const [bgIndex, setBgIndex] = useState(0)
   const [uploadStatus, setUploadStatus] = useState<string | null>(null)
   const [uploadErro, setUploadErro] = useState<string | null>(null)
+  const [salvarStatus, setSalvarStatus] = useState<string | null>(null)
+  const [salvarErro, setSalvarErro] = useState<string | null>(null)
   const inputUploadRef = useRef<HTMLInputElement | null>(null)
   const [tabelaPrecos, setTabelaPrecos] = useState<TabelaPrecoRow[] | null>(null)
   const [loadingTabela, setLoadingTabela] = useState(false)
@@ -278,6 +282,46 @@ export function PresentationPage() {
       const message = error instanceof Error ? error.message : 'Falha ao enviar planilha.'
       setUploadErro(message)
       setUploadStatus(null)
+    }
+  }
+
+  const salvarAnalise = async () => {
+    setSalvarErro(null)
+    setSalvarStatus('Salvando análise...')
+    try {
+      const payload = {
+        empreendimento,
+        unidade: unitType,
+        preco_imovel: precoVenda,
+        valor_obtido: valorObtido,
+        prosoluto_calculado: prosolutoEfetivo,
+        prosoluto_liquido: prosolutoLiquido,
+        sinal,
+        sinal_produto: sinalProduto,
+        financiamento,
+        subsidio,
+        cheque_moradia: chequeMoradia,
+        renda_bruta: rendaBruta,
+        perc_construcao: percConstrucao,
+        is_agora: isAgora,
+        is_pos_chaves: isPosChaves,
+        tabela_referencia: tabelaPrecos || [],
+        data_referencia: new Date().toISOString(),
+      }
+      const res = await fetch('/app/api/analises', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}))
+        throw new Error(detail.detail || 'Falha ao salvar análise')
+      }
+      setSalvarStatus('Análise salva.')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao salvar análise.'
+      setSalvarErro(message)
+      setSalvarStatus(null)
     }
   }
 
@@ -394,6 +438,12 @@ export function PresentationPage() {
   const valorParcela = parcelasHabilitadas ? prosolutoLiquido / parcelasNormalizadas : prosolutoLiquido
   const aporteInicial = sinal + valorParcela
   const precisaGarantidor = prosolutoLiquido > precoVenda * PCT_PROSOLUTO_GARANTIDOR
+  const entradaParceladaAtual = parcelasHabilitadas ? valorParcela : 0
+  const isAgora =
+    rendaBruta > 0
+      ? (percConstrucao / 100) * (parcelaCaixa + entradaParceladaAtual) / rendaBruta
+      : 0
+  const isPosChaves = rendaBruta > 0 ? (parcelaCaixa + entradaParceladaAtual) / rendaBruta : 0
   const parcelasProgressivas = Array.from({ length: parcelasNormalizadas }, (_, i) => {
     const fator = Math.pow(1.01, i) // 1% ao mes
     const valor = parcelasHabilitadas ? valorParcela * fator : valorParcela
@@ -576,12 +626,8 @@ export function PresentationPage() {
                   <CurrencyField label="Preco da unidade" value={precoUnidade} onChange={setPrecoUnidade} />
                   <CurrencyField label="Financiamento" value={financiamento} onChange={setFinanciamento} />
                   <CurrencyField label="Subsidio" value={subsidio} onChange={setSubsidio} />
-                  <CurrencyField
-                    label="Cheque moradia"
-                    value={chequeMoradia}
-                    readOnly
-                    helperText="Valor fixo por empreendimento. O corretor nao pode alterar."
-                  />
+                  <CurrencyField label="Renda bruta" value={rendaBruta} onChange={setRendaBruta} />
+                  <CurrencyField label="Cheque moradia" value={chequeMoradia} readOnly helperText="Valor fixo por empreendimento. O corretor nao pode alterar." />
                   <CurrencyField label="Prosoluto calculado" value={prosolutoEfetivo} readOnly helperText="Calculado automaticamente." />
                   <CurrencyField
                     label="Sinal produto"
@@ -591,6 +637,18 @@ export function PresentationPage() {
                   />
                   <CurrencyField label="Prosoluto a pagar" value={prosolutoLiquido} readOnly />
                   <CurrencyField label="Sinal" value={sinal} onChange={setSinal} />
+                  <label className="space-y-2 text-sm">
+                    % obra (para IS pré-chaves)
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={percConstrucao}
+                      onChange={(event) => setPercConstrucao(Number(event.target.value))}
+                      className="w-full rounded-2xl border border-white/20 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+                    />
+                    <span className="block text-xs text-slate-300">Ex.: 70 significa 70% de avanço de obra.</span>
+                  </label>
                   <CurrencyField
                     label="Garantido minimo"
                     value={garantidoMinimo}
@@ -689,6 +747,13 @@ export function PresentationPage() {
             </button>
             <button
               type="button"
+              onClick={() => void salvarAnalise()}
+              className="rounded-2xl border border-emerald-300/50 bg-emerald-500/20 px-4 py-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/35"
+            >
+              Salvar análise
+            </button>
+            <button
+              type="button"
               onClick={() => {
                 setEmpreendimento(DEFAULT_FORM_VALUES.empreendimento)
                 setUnitType(DEFAULT_FORM_VALUES.unitType)
@@ -709,6 +774,12 @@ export function PresentationPage() {
             <div className="text-xs text-slate-200">
               {uploadStatus ? <span>{uploadStatus}</span> : null}
               {uploadErro ? <span className="text-amber-200"> {uploadErro}</span> : null}
+            </div>
+          )}
+          {(salvarStatus || salvarErro) && (
+            <div className="text-xs text-slate-200">
+              {salvarStatus ? <span>{salvarStatus}</span> : null}
+              {salvarErro ? <span className="text-amber-200"> {salvarErro}</span> : null}
             </div>
           )}
 
@@ -821,6 +892,14 @@ export function PresentationPage() {
                 <div className="flex justify-between text-xs text-slate-300">
                   <span>Parcela Caixa</span>
                   <span>{formatCurrency(parcelaCaixa)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-300">
+                  <span>IS pré-chaves</span>
+                  <span>{(isAgora * 100).toFixed(2)}%</span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-300">
+                  <span>IS pós-chaves</span>
+                  <span>{(isPosChaves * 100).toFixed(2)}%</span>
                 </div>
               </div>
               <div
