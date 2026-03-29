@@ -6,7 +6,6 @@ export function ScreenControls() {
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
   const [isFullscreen, setIsFullscreen] = useState<boolean>(() => !!document.fullscreenElement)
-  const [fullscreenTarget, setFullscreenTarget] = useState<'container' | 'page'>('container')
   const [isSharing, setIsSharing] = useState(false)
   const [isShareLoading, setIsShareLoading] = useState(false)
   const [stream, setStream] = useState<MediaStream | null>(null)
@@ -38,8 +37,7 @@ export function ScreenControls() {
     if (!supportsFullscreen) return showStatus('Fullscreen não suportado.')
     try {
       if (!document.fullscreenElement) {
-        const target = fullscreenTarget === 'container' ? containerRef.current : document.documentElement
-        await (target ?? document.documentElement).requestFullscreen()
+        await document.documentElement.requestFullscreen()
       } else {
         await document.exitFullscreen()
       }
@@ -110,27 +108,16 @@ export function ScreenControls() {
           />
           Capturar áudio
         </label>
-
-        <label style={styles.inlineControl}>
-          <span>Fullscreen alvo:</span>
-          <select
-            value={fullscreenTarget}
-            onChange={(e) => setFullscreenTarget(e.target.value as 'container' | 'page')}
-            disabled={isFullscreen}
-            style={styles.select}
-          >
-            <option value="container">Preview</option>
-            <option value="page">Página inteira</option>
-          </select>
-        </label>
       </div>
 
       {statusMsg && <div style={styles.inlineStatus}>{statusMsg}</div>}
 
-      <div ref={containerRef} style={styles.previewBox}>
-        <p style={styles.status}>{isSharing ? 'Compartilhando…' : 'Pronto para compartilhar'}</p>
-        <video ref={videoRef} style={styles.video} muted playsInline autoPlay />
-      </div>
+      {isSharing && (
+        <div ref={containerRef} style={styles.previewBox}>
+          <p style={styles.status}>Compartilhando…</p>
+          <video ref={videoRef} style={styles.video} muted playsInline autoPlay />
+        </div>
+      )}
     </>
   )
 }
@@ -145,19 +132,19 @@ const styles: Record<string, CSSProperties> = {
     alignItems: 'center',
     zIndex: 50,
     flexWrap: 'wrap',
-    background: 'rgba(15,23,42,0.7)',
+    background: 'rgba(15,23,42,0.6)',
     border: '1px solid #1f2937',
-    borderRadius: 12,
-    padding: '10px 12px',
-    boxShadow: '0 12px 30px rgba(0,0,0,0.35)',
+    borderRadius: 10,
+    padding: '8px 10px',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.28)',
   },
   active: { backgroundColor: '#10b981', color: '#0b172a', borderColor: '#0ea371' },
   inlineControl: { display: 'flex', gap: 6, alignItems: 'center', fontSize: 13, color: '#cbd5e1' },
   select: { background: '#1f2937', color: '#e5e7eb', border: '1px solid #1f2937', borderRadius: 8, padding: '6px 8px' },
   inlineStatus: {
     position: 'fixed',
-    top: 60,
-    right: 16,
+    top: 56,
+    right: 12,
     padding: '8px 12px',
     background: '#1f2937',
     color: '#e5e7eb',
@@ -170,13 +157,13 @@ const styles: Record<string, CSSProperties> = {
     position: 'fixed',
     bottom: 16,
     right: 16,
-    width: 320,
-    maxWidth: '50vw',
+    width: 260,
+    maxWidth: '45vw',
     border: '1px solid #1f2937',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 10,
+    padding: 10,
     background: '#0b1220',
-    boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
+    boxShadow: '0 8px 22px rgba(0,0,0,0.32)',
     zIndex: 40,
   },
   status: { margin: '0 0 12px 0', fontWeight: 600, color: '#a5b4fc' },
