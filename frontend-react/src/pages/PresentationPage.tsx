@@ -447,6 +447,7 @@ export function PresentationPage() {
     sobreprecoMinimo,
     subsidio,
   ])
+  const exibirBlocoInterno = false
 
   const maxParcelasPermitidas =
     pricing.entradaLiquida >= MIN_VALOR_PARCELA
@@ -646,26 +647,28 @@ export function PresentationPage() {
                     </select>
                   </label>
 
-                  <div className="sm:col-span-3 grid gap-3 rounded-2xl border border-white/12 bg-slate-950/60 p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">Base da unidade</p>
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      <CurrencyField
-                        label="Preço de tabela"
-                        value={pricing.precoTabela}
-                        onChange={setPrecoTabela}
-                        readOnly={Boolean(tabelaMatch)}
-                        helperText={tabelaMatch ? 'Vem da tabela (excel).' : 'Informe quando não houver planilha.'}
-                      />
-                      <CurrencyField
-                        label="Sobrepreço mínimo"
-                        value={sobreprecoMinimo}
-                        onChange={setSobreprecoMinimo}
-                        readOnly={Boolean(tabelaMatch)}
-                        helperText="Vem do campo sobrepreco da planilha."
-                      />
-                      <CurrencyField label="Preço base da empresa" value={pricing.precoBaseEmpresa} readOnly />
+                  {exibirBlocoInterno ? (
+                    <div className="sm:col-span-3 grid gap-3 rounded-2xl border border-white/12 bg-slate-950/60 p-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">Base da unidade</p>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <CurrencyField
+                          label="Preço de tabela"
+                          value={pricing.precoTabela}
+                          onChange={setPrecoTabela}
+                          readOnly={Boolean(tabelaMatch)}
+                          helperText={tabelaMatch ? 'Vem da tabela (excel).' : 'Informe quando não houver planilha.'}
+                        />
+                        <CurrencyField
+                          label="Sobrepreço mínimo"
+                          value={sobreprecoMinimo}
+                          onChange={setSobreprecoMinimo}
+                          readOnly={Boolean(tabelaMatch)}
+                          helperText="Vem do campo sobrepreco da planilha."
+                        />
+                        <CurrencyField label="Preço base da empresa" value={pricing.precoBaseEmpresa} readOnly />
+                      </div>
                     </div>
-                  </div>
+                  ) : null}
 
                   <div className="sm:col-span-3 grid gap-3 rounded-2xl border border-white/12 bg-slate-950/60 p-4">
                     <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">Capacidade do cliente</p>

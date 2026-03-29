@@ -151,7 +151,7 @@ const styles: Record<string, CSSProperties> = {
     display: 'flex',
     gap: 10,
     alignItems: 'center',
-    zIndex: 10,
+    zIndex: 50,
     flexWrap: 'wrap',
   },
   active: { backgroundColor: '#10b981', color: '#0b172a', borderColor: '#0ea371' },
@@ -166,7 +166,7 @@ const styles: Record<string, CSSProperties> = {
     color: '#e5e7eb',
     borderRadius: 8,
     border: '1px solid #334155',
-    zIndex: 9,
+    zIndex: 50,
     fontWeight: 600,
   },
   previewBox: {
