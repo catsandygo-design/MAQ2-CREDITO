@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, CSSProperties } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 
 export function ScreenControls() {
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -53,10 +54,7 @@ export function ScreenControls() {
     setIsShareLoading(true)
     setStatusMsg('')
     try {
-      const mediaStream = await navigator.mediaDevices.getDisplayMedia({
-        video: { cursor: 'always' },
-        audio: withAudio,
-      })
+      const mediaStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: withAudio })
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream
         videoRef.current.onloadedmetadata = () => videoRef.current?.play().catch(() => {})
