@@ -81,7 +81,7 @@ export function ScreenControls() {
   const handleShareClick = () => (isSharing ? stopSharing() : startSharing())
 
   return (
-    <div style={styles.page}>
+    <>
       <div style={styles.controls}>
         <button
           style={buttonStyle(supportsFullscreen)}
@@ -131,33 +131,32 @@ export function ScreenControls() {
         <p style={styles.status}>{isSharing ? 'Compartilhando…' : 'Pronto para compartilhar'}</p>
         <video ref={videoRef} style={styles.video} muted playsInline autoPlay />
       </div>
-    </div>
+    </>
   )
 }
 
 const styles: Record<string, CSSProperties> = {
-  page: {
-    minHeight: '100%',
-    color: '#e5e7eb',
-    fontFamily: 'Inter, system-ui, sans-serif',
-    position: 'relative',
-  },
   controls: {
     position: 'fixed',
-    top: 16,
-    right: 16,
+    top: 12,
+    right: 12,
     display: 'flex',
     gap: 10,
     alignItems: 'center',
     zIndex: 50,
     flexWrap: 'wrap',
+    background: 'rgba(15,23,42,0.7)',
+    border: '1px solid #1f2937',
+    borderRadius: 12,
+    padding: '10px 12px',
+    boxShadow: '0 12px 30px rgba(0,0,0,0.35)',
   },
   active: { backgroundColor: '#10b981', color: '#0b172a', borderColor: '#0ea371' },
   inlineControl: { display: 'flex', gap: 6, alignItems: 'center', fontSize: 13, color: '#cbd5e1' },
   select: { background: '#1f2937', color: '#e5e7eb', border: '1px solid #1f2937', borderRadius: 8, padding: '6px 8px' },
   inlineStatus: {
     position: 'fixed',
-    top: 70,
+    top: 60,
     right: 16,
     padding: '8px 12px',
     background: '#1f2937',
@@ -168,12 +167,17 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 600,
   },
   previewBox: {
-    marginTop: 80,
+    position: 'fixed',
+    bottom: 16,
+    right: 16,
+    width: 320,
+    maxWidth: '50vw',
     border: '1px solid #1f2937',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 12,
+    padding: 12,
     background: '#0b1220',
     boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
+    zIndex: 40,
   },
   status: { margin: '0 0 12px 0', fontWeight: 600, color: '#a5b4fc' },
   video: {
