@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchSession, logout, uploadTabelaPrecos, fetchTabelaPrecos } from '../lib/api'
 import type { TabelaPrecoRow } from '../types'
+import { ScreenControls } from '../components/ScreenControls'
 import tipoPlanta from '../assets/TIPO.jpg'
 import gardenFitPlanta from '../assets/GARDENFIT.jpg'
 import superGardenPlanta from '../assets/SUPERGARDEN.jpg'
@@ -532,6 +533,7 @@ export function PresentationPage() {
 
   return (
     <>
+      <ScreenControls />
       <div className="bg-carousel">
         {backgroundImages.map((image, index) => (
           <img
