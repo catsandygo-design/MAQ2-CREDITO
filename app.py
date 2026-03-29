@@ -22,7 +22,7 @@ from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, Uploa
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, and_, create_engine, or_, text
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, and_, create_engine, or_, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
@@ -139,7 +139,33 @@ def parse_number(value: Any) -> float:
     return 0.0
 
 
+def _tabela_precos_payload(rows: list["TabelaPreco"]) -> list[dict[str, Any]]:
+  return [
+      {
+          "empreendimento": row.empreendimento,
+          "unidade": row.unidade,
+          "garantido_minimo": row.garantido_minimo,
+          "preco": row.preco,
+          "sobrepreco": row.sobrepreco,
+          "is_maximo": row.is_maximo,
+          "prosoluto_minimo": row.prosoluto_minimo,
+      }
+      for row in rows
+  ]
+
+
 def carregar_tabela_precos() -> list[TabelaPrecoItem]:
+  if SessionLocal is not None:
+    try:
+      with SessionLocal() as db:
+        payload = _tabela_precos_payload(
+            db.query(TabelaPreco).order_by(TabelaPreco.empreendimento.asc(), TabelaPreco.unidade.asc()).all()
+        )
+        TABELA_PRECO_CACHE[:] = payload
+        return payload
+    except SQLAlchemyError:
+      logger.exception("Falha ao carregar tabela de precos do banco; tentando cache/arquivo.")
+
   if TABELA_PRECO_CACHE:
     return TABELA_PRECO_CACHE
   if not TABELA_PRECO_PATH.exists():
@@ -153,6 +179,20 @@ def carregar_tabela_precos() -> list[TabelaPrecoItem]:
 
 
 def salvar_tabela_precos(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+  if SessionLocal is not None:
+    try:
+      with SessionLocal() as db:
+        db.query(TabelaPreco).delete()
+        db.add_all([TabelaPreco(**row) for row in rows])
+        db.commit()
+        payload = _tabela_precos_payload(
+            db.query(TabelaPreco).order_by(TabelaPreco.empreendimento.asc(), TabelaPreco.unidade.asc()).all()
+        )
+        TABELA_PRECO_CACHE[:] = payload
+        return payload
+    except SQLAlchemyError:
+      logger.exception("Falha ao salvar tabela de precos no banco; salvando em arquivo.")
+
   TABELA_PRECO_CACHE[:] = rows
   TABELA_PRECO_PATH.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
   return rows
@@ -1900,6 +1940,27 @@ class EmpreendimentoRegraFinanceira(Base):
     )
     valor_cheque_moradia: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class TabelaPreco(Base):
+    __tablename__ = "tabela_precos"
+    __table_args__ = (
+        UniqueConstraint("empreendimento", "unidade", name="uq_tabela_preco_empreendimento_unidade"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    empreendimento: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    unidade: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    garantido_minimo: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    preco: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    sobrepreco: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    is_maximo: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    prosoluto_minimo: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -5076,7 +5137,7 @@ async def lifespan(_: FastAPI):
 
     if engine is not None:
         try:
-            Base.metadata.create_all(bind=engine, tables=[AppUser.__table__, Empreendimento.__table__])
+            Base.metadata.create_all(bind=engine, tables=[AppUser.__table__, Empreendimento.__table__, TabelaPreco.__table__])
             if SessionLocal is not None:
                 db = SessionLocal()
                 try:
