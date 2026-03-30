@@ -2068,7 +2068,7 @@ tr.row-final {
 #yvy-eye {
   position: fixed;
   top: 14px;
-  right: 14px;
+  left: 14px;
   z-index: 70;
   pointer-events: none;
 }

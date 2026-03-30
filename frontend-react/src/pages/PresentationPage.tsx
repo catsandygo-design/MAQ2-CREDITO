@@ -507,7 +507,7 @@ export function PresentationPage() {
         sobrepreco_vila: sobreprecoMinimo,
         valor_obtido: pricing.valorObtido,
         parcela_caixa: parcelaCaixa || 0,
-        preco_digitado_corretor: precoDigitadoCorretor || 0,
+        preco_digitado_corretor: precoDigitadoCorretor > 0 ? precoDigitadoCorretor : undefined,
       }
       const rec = await fetchRecomendacao(payload)
       setIaSugestao(rec)
