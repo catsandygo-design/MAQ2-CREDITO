@@ -2064,6 +2064,25 @@ tr.row-final {
   border-color: rgba(56,189,248,0.35);
 }
 
+/* Oculta qualquer vestígio do olho antigo e estiliza o embed do YVY */
+#yvy-eye {
+  display: none !important;
+}
+.yvy-embed-wrap {
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, #0b1827, #0a1522);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.05), 0 10px 24px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+.yvy-embed {
+  width: 100%;
+  height: 240px;
+  border: 0;
+  background: #050a14;
+  filter: drop-shadow(0 0 18px rgba(56, 189, 248, 0.28));
+}
+
 /* YvY eye */
 #yvy-eye {
   position: fixed;

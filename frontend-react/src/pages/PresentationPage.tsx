@@ -844,6 +844,14 @@ export function PresentationPage() {
                         </button>
                       </div>
                     </div>
+                    <div className="yvy-embed-wrap">
+                      <iframe
+                        title="YVY Core"
+                        src="/assets/yvy.html"
+                        className="yvy-embed"
+                        loading="lazy"
+                      />
+                    </div>
                     {iaErro ? <div className="ia-tooltip ia-warning">{iaErro}</div> : null}
                     {iaAviso ? <div className="ia-tooltip">{iaAviso}</div> : null}
                     {iaSugestao ? (
