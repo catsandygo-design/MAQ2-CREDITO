@@ -567,6 +567,41 @@ export function PresentationPage() {
     }
   }, [precoDigitadoCorretor, pricing.precoMinimoPermitido])
 
+  useEffect(() => {
+    const eye = document.getElementById('yvy-eye')
+    const iris = eye?.querySelector('.iris') as HTMLElement | null
+    if (!eye || !iris) return
+    const maxOffset = 6
+    const onMove = (e: PointerEvent) => {
+      const { innerWidth: w, innerHeight: h } = window
+      const dx = (e.clientX / w - 0.5) * 2
+      const dy = (e.clientY / h - 0.5) * 2
+      const x = (dx * maxOffset).toFixed(2)
+      const y = (dy * maxOffset).toFixed(2)
+      iris.style.transform = `translate(${x}px, ${y}px)`
+    }
+    window.addEventListener('pointermove', onMove)
+    const idleNudge = () => {
+      const x = ((Math.random() * 2 - 1) * 2).toFixed(2)
+      const y = ((Math.random() * 2 - 1) * 2).toFixed(2)
+      iris.style.transform = `translate(${x}px, ${y}px)`
+    }
+    const idleTimer = window.setInterval(idleNudge, 1800)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.clearInterval(idleTimer)
+    }
+  }, [])
+
+  useEffect(() => {
+    const eye = document.getElementById('yvy-eye')
+    if (!eye) return
+    if (iaLoading) eye.className = 'processando'
+    else if (iaErro) eye.className = 'confusa'
+    else if (iaSugestao) eye.className = 'convicta'
+    else eye.className = 'indecisa'
+  }, [iaLoading, iaErro, iaSugestao])
+
   const handleLogout = async () => {
     if (saindo) return
 
@@ -612,6 +647,13 @@ export function PresentationPage() {
       </div>
 
       <div className="presentation-shell relative z-10 min-h-screen p-4 text-white md:p-8">
+        <div id="yvy-eye" aria-hidden="true">
+          <div className="eye">
+            <div className="iris">
+              <div className="y-mark"></div>
+            </div>
+          </div>
+        </div>
         <div className="mx-auto max-w-[1380px] space-y-5">
         <header className="flex flex-col gap-4 rounded-3xl border border-white/8 bg-white/5 p-5 shadow-[0_14px_48px_rgba(0,0,0,0.35)] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-4">
