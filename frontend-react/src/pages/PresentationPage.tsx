@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+ï»¿import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchSession, logout, uploadTabelaPrecos, fetchTabelaPrecos, fetchRecomendacao, enviarFeedbackRecomendacao } from '../lib/api'
 import type { TabelaPrecoRow } from '../types'
 import { ScreenControls } from '../components/ScreenControls'
@@ -303,7 +303,7 @@ export function PresentationPage() {
 
   const salvarAnalise = async () => {
     setSalvarErro(null)
-    setSalvarStatus('Salvando análise...')
+    setSalvarStatus('Salvando anÃ¡lise...')
     try {
       const payload = {
         empreendimento,
@@ -331,11 +331,11 @@ export function PresentationPage() {
       })
       if (!res.ok) {
         const detail = await res.json().catch(() => ({}))
-        throw new Error(detail.detail || 'Falha ao salvar análise')
+        throw new Error(detail.detail || 'Falha ao salvar anÃ¡lise')
       }
-      setSalvarStatus('Análise salva.')
+      setSalvarStatus('AnÃ¡lise salva.')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro ao salvar análise.'
+      const message = error instanceof Error ? error.message : 'Erro ao salvar anÃ¡lise.'
       setSalvarErro(message)
       setSalvarStatus(null)
     }
@@ -350,7 +350,7 @@ export function PresentationPage() {
       const rows = await fetchTabelaPrecos()
       setTabelaPrecos(rows)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Falha ao carregar tabela de preÃ§os.'
+      const message = error instanceof Error ? error.message : 'Falha ao carregar tabela de preÃƒÂ§os.'
       setErroTabela(message)
     } finally {
       setLoadingTabela(false)
@@ -486,7 +486,7 @@ export function PresentationPage() {
   const valorFinanciado = Math.max(pricing.precoFinalImovel - totalDescontos, 0)
 
   const quickStats = [
-    { label: 'Valor do imóvel', value: formatCurrency(pricing.precoFinalImovel) },
+    { label: 'Valor do imÃ³vel', value: formatCurrency(pricing.precoFinalImovel) },
     { label: 'Valor obtido', value: formatCurrency(pricing.valorObtido) },
     { label: 'Entrada', value: formatCurrency(pricing.entradaLiquida) },
     { label: 'Sinal', value: formatCurrency(sinal) },
@@ -495,6 +495,10 @@ export function PresentationPage() {
   const gerarRecomendacaoIA = async () => {
     setIaErro(null)
     setIaAviso(null)
+    if (!rendaBruta || rendaBruta <= 0) {
+      setIaErro('Informe renda bruta maior que zero para gerar sugestao.')
+      return
+    }
     setIaLoading(true)
     try {
       const payload = {
@@ -508,7 +512,7 @@ export function PresentationPage() {
       const rec = await fetchRecomendacao(payload)
       setIaSugestao(rec)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Falha ao obter recomendação.'
+      const message = error instanceof Error ? error.message : 'Falha ao obter recomendaÃ§Ã£o.'
       setIaErro(message)
     } finally {
       setIaLoading(false)
@@ -519,9 +523,9 @@ export function PresentationPage() {
     if (!iaSugestao) return
     if (aceitou) {
       setPrecoDigitadoCorretor(iaSugestao.preco_sugerido)
-      setIaAviso('Preço ajustado para a recomendação.')
+      setIaAviso('PreÃ§o ajustado para a recomendaÃ§Ã£o.')
     } else {
-      setIaAviso('Recomendação recusada.')
+      setIaAviso('RecomendaÃ§Ã£o recusada.')
     }
     try {
       await enviarFeedbackRecomendacao({
@@ -544,7 +548,7 @@ export function PresentationPage() {
     fetchTabelaPrecos()
       .then(setTabelaPrecos)
       .catch((error) => {
-        const message = error instanceof Error ? error.message : 'Falha ao carregar tabela de preços.'
+        const message = error instanceof Error ? error.message : 'Falha ao carregar tabela de preÃ§os.'
         setErroTabela(message)
       })
       .finally(() => setLoadingTabela(false))
@@ -712,20 +716,20 @@ export function PresentationPage() {
                       <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">Base da unidade</p>
                       <div className="grid gap-3 sm:grid-cols-3">
                         <CurrencyField
-                          label="Preço de tabela"
+                          label="PreÃ§o de tabela"
                           value={pricing.precoTabela}
                           onChange={setPrecoTabela}
                           readOnly={Boolean(tabelaMatch)}
-                          helperText={tabelaMatch ? 'Vem da tabela (excel).' : 'Informe quando não houver planilha.'}
+                          helperText={tabelaMatch ? 'Vem da tabela (excel).' : 'Informe quando nÃ£o houver planilha.'}
                         />
                         <CurrencyField
-                          label="Sobrepreço mínimo"
+                          label="SobrepreÃ§o mÃ­nimo"
                           value={sobreprecoMinimo}
                           onChange={setSobreprecoMinimo}
                           readOnly={Boolean(tabelaMatch)}
                           helperText="Vem do campo sobrepreco da planilha."
                         />
-                        <CurrencyField label="Preço base da empresa" value={pricing.precoBaseEmpresa} readOnly />
+                        <CurrencyField label="PreÃ§o base da empresa" value={pricing.precoBaseEmpresa} readOnly />
                       </div>
                     </div>
                   ) : null}
@@ -737,17 +741,17 @@ export function PresentationPage() {
                       <CurrencyField label="Subsidio" value={subsidio} onChange={setSubsidio} />
                       <CurrencyField label="Sinal" value={sinal} onChange={setSinal} />
                       <CurrencyField label="Cheque moradia" value={chequeMoradia} readOnly />
-                      <CurrencyField label="Garantido" value={pricing.garantido} readOnly helperText="Financiamento + subsídio + sinal." />
+                      <CurrencyField label="Garantido" value={pricing.garantido} readOnly helperText="Financiamento + subsÃ­dio + sinal." />
                       <CurrencyField label="Valor obtido" value={pricing.valorObtido} readOnly helperText="Garantido + cheque moradia." />
                       <CurrencyField label="Renda bruta" value={rendaBruta} onChange={setRendaBruta} />
                       <CurrencyField
                         label="Sinal produto"
                         value={sinalProduto}
                         onChange={setSinalProduto}
-                        helperText="Deduz da entrada, não soma no garantido."
+                        helperText="Deduz da entrada, nÃ£o soma no garantido."
                       />
                       <label className="space-y-2 text-sm">
-                        % obra (para IS pré-chaves)
+                        % obra (para IS prÃ©-chaves)
                         <input
                           type="number"
                           min={0}
@@ -756,33 +760,33 @@ export function PresentationPage() {
                           onChange={(event) => setPercConstrucao(Number(event.target.value))}
                           className="w-full rounded-2xl border border-white/20 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
                         />
-                        <span className="block text-xs text-slate-300">Ex.: 70 significa 70% de avanço de obra.</span>
+                        <span className="block text-xs text-slate-300">Ex.: 70 significa 70% de avanÃ§o de obra.</span>
                       </label>
                     </div>
                   </div>
 
                   <div className="sm:col-span-3 grid gap-3 rounded-2xl border border-white/12 bg-slate-950/60 p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">Formação do preço</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">Formacao do preco</p>
                     <div className="grid gap-3 sm:grid-cols-4">
-                      <CurrencyField label="Preço mínimo permitido (somente corretor)" value={pricing.precoMinimoPermitido} readOnly />
+                      <CurrencyField label="Preco minimo permitido (somente corretor)" value={pricing.precoMinimoPermitido} readOnly />
                       <CurrencyField
-                        label="Preço digitado (corretor)"
+                        label="Preco digitado (corretor)"
                         value={precoDigitadoCorretor}
                         onChange={(value) => {
                           setPrecoDigitadoCorretor(value)
-                          setPrecoErro(value < pricing.precoMinimoPermitido ? 'O preço não pode ser menor que o mínimo permitido.' : null)
+                          setPrecoErro(value < pricing.precoMinimoPermitido ? 'O preco nao pode ser menor que o minimo permitido.' : null)
                         }}
                         onBlurValue={(value) => {
                           if (value < pricing.precoMinimoPermitido) {
                             setPrecoDigitadoCorretor(pricing.precoMinimoPermitido)
-                            setPrecoErro('Valor ajustado para o mínimo permitido.')
+                            setPrecoErro('Valor ajustado para o minimo permitido.')
                           }
                         }}
-                        helperText={precoErro || 'Pode ser maior que o mínimo permitido.'}
+                        helperText={precoErro || 'Pode ser maior que o minimo permitido.'}
                       />
-                      <CurrencyField label="Preço final do imóvel" value={pricing.precoFinalImovel} readOnly />
+                      <CurrencyField label="Preco final do imovel" value={pricing.precoFinalImovel} readOnly />
                       <CurrencyField label="Entrada bruta" value={pricing.entradaBruta} readOnly />
-                      <CurrencyField label="Entrada (após sinal produto)" value={pricing.entradaLiquida} readOnly />
+                      <CurrencyField label="Entrada (apos sinal produto)" value={pricing.entradaLiquida} readOnly />
                     </div>
                   </div>
 
@@ -790,7 +794,7 @@ export function PresentationPage() {
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">Assistente IA (somente corretor)</p>
-                        <p className="text-sm text-slate-200">Sugere preço mínimo seguro. Você decide aplicar.</p>
+                        <p className="text-sm text-slate-200">Sugere preco minimo seguro. Voce decide aplicar.</p>
                       </div>
                       <div className="flex gap-2">
                         <button
@@ -799,7 +803,7 @@ export function PresentationPage() {
                           className="rounded-xl border border-cyan-300/50 bg-cyan-500/20 px-4 py-2 text-sm font-semibold text-cyan-50 hover:bg-cyan-500/30"
                           disabled={iaLoading}
                         >
-                          {iaLoading ? 'Gerando...' : 'Gerar sugestão'}
+                          {iaLoading ? 'Gerando...' : 'Gerar sugestÃ£o'}
                         </button>
                         <button
                           type="button"
@@ -824,7 +828,7 @@ export function PresentationPage() {
                     {iaSugestao ? (
                       <div className="grid gap-2 rounded-xl border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-100">
                         <div className="flex justify-between">
-                          <span>Preço sugerido</span>
+                          <span>PreÃ§o sugerido</span>
                           <strong>{formatCurrency(iaSugestao.preco_sugerido)}</strong>
                         </div>
                         <div className="flex justify-between">
@@ -832,11 +836,11 @@ export function PresentationPage() {
                           <span>{iaSugestao.status_ia}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Risco / Exposição</span>
+                          <span>Risco / ExposiÃ§Ã£o</span>
                           <span>{iaSugestao.risco_exposicao}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Confiança</span>
+                          <span>ConfianÃ§a</span>
                           <span>{(iaSugestao.confianca * 100).toFixed(0)}%</span>
                         </div>
                         {iaSugestao.motivo ? <p className="text-xs text-slate-300">Motivo: {iaSugestao.motivo}</p> : null}
@@ -873,7 +877,7 @@ export function PresentationPage() {
                       </div>
                         {!parcelasHabilitadas ? (
                           <p className="text-xs text-amber-200">
-                            Entrada abaixo do minimo para parcelar (R$ {MIN_VALOR_PARCELA}). Cobrar Ã  vista ou ajustar valores.
+                            Entrada abaixo do minimo para parcelar (R$ {MIN_VALOR_PARCELA}). Cobrar ÃƒÂ  vista ou ajustar valores.
                           </p>
                         ) : (
                           <p className="text-xs text-slate-300">
@@ -905,14 +909,14 @@ export function PresentationPage() {
               onClick={() => inputUploadRef.current?.click()}
               className="rounded-2xl border border-cyan-300/50 bg-cyan-500/20 px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/35"
             >
-              Upload Excel (preços)
+              Upload Excel (preÃ§os)
             </button>
             <button
               type="button"
               onClick={() => void abrirTabelaPrecos()}
               className="rounded-2xl border border-emerald-300/50 bg-emerald-500/20 px-4 py-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/35"
             >
-              Tabela de preços
+              Tabela de preÃ§os
             </button>
             <button
               type="button"
@@ -933,7 +937,7 @@ export function PresentationPage() {
               onClick={() => void salvarAnalise()}
               className="rounded-2xl border border-emerald-300/50 bg-emerald-500/20 px-4 py-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/35"
             >
-              Salvar análise
+              Salvar anÃ¡lise
             </button>
             <button
               type="button"
@@ -1046,7 +1050,7 @@ export function PresentationPage() {
                   <strong>{formatCurrency(pricing.valorObtido)}</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span>Total de descontos (subsídio + cheque)</span>
+                  <span>Total de descontos (subsÃ­dio + cheque)</span>
                   <strong>{formatCurrency(totalDescontos)}</strong>
                 </div>
                 <div className="flex justify-between">
@@ -1058,7 +1062,7 @@ export function PresentationPage() {
                   <strong>{formatCurrency(pricing.entradaBruta)}</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span>Entrada (após sinal produto)</span>
+                  <span>Entrada (apÃ³s sinal produto)</span>
                   <strong>{formatCurrency(pricing.entradaLiquida)}</strong>
                 </div>
                 <div className="flex justify-between">
@@ -1078,11 +1082,11 @@ export function PresentationPage() {
                   <span>{formatCurrency(parcelaCaixa)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-slate-300">
-                  <span>IS pré-chaves</span>
+                  <span>IS prÃ©-chaves</span>
                   <span>{(isAgora * 100).toFixed(2)}%</span>
                 </div>
                 <div className="flex justify-between text-xs text-slate-300">
-                  <span>IS pós-chaves</span>
+                  <span>IS pÃ³s-chaves</span>
                   <span>{(isPosChaves * 100).toFixed(2)}%</span>
                 </div>
               </div>
@@ -1116,7 +1120,7 @@ export function PresentationPage() {
                 <div className="mb-3 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.3em] text-white/90">Tabela de parcelas</p>
-                    <h3 className="text-lg font-bold text-white">Correção de 1% ao mês</h3>
+                    <h3 className="text-lg font-bold text-white">CorreÃ§Ã£o de 1% ao mÃªs</h3>
                   </div>
                   <span
                     className="rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-white shadow-[0_0_12px_rgba(0,0,0,0.35)]"
@@ -1181,7 +1185,7 @@ export function PresentationPage() {
                   <strong>{formatCurrency(pricing.entradaBruta)}</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span>Entrada (após sinal produto)</span>
+                  <span>Entrada (apÃ³s sinal produto)</span>
                   <strong>{formatCurrency(pricing.entradaLiquida)}</strong>
                 </div>
                 <div className="flex justify-between">
@@ -1231,7 +1235,7 @@ export function PresentationPage() {
                     Entrada bruta: <strong>{formatCurrency(pricing.entradaBruta)}</strong>
                   </p>
                   <p>
-                    Entrada (após sinal produto): <strong>{formatCurrency(pricing.entradaLiquida)}</strong>
+                    Entrada (apÃ³s sinal produto): <strong>{formatCurrency(pricing.entradaLiquida)}</strong>
                   </p>
                   <p>
                     Parcelas: <strong>{parcelasNormalizadas}x de {formatCurrency(valorParcela)}</strong>
@@ -1265,8 +1269,8 @@ export function PresentationPage() {
               style={{ backgroundColor: theme.headerBg || 'rgba(148,163,184,0.12)' }}
             >
               <div>
-                <p className="text-[10px] uppercase tracking-[0.28em] text-cyan-100">Tabela de preços</p>
-                <h3 className="text-lg font-bold text-white">Preços e limites por unidade</h3>
+                <p className="text-[10px] uppercase tracking-[0.28em] text-cyan-100">Tabela de preÃ§os</p>
+                <h3 className="text-lg font-bold text-white">PreÃ§os e limites por unidade</h3>
                 <p className="text-xs text-slate-300">Fonte: planilha enviada (excel/csv).</p>
               </div>
               <div className="flex items-center gap-2">
@@ -1306,10 +1310,10 @@ export function PresentationPage() {
                     <tr>
                       <th className="px-3 py-2 text-left">Empreendimento</th>
                       <th className="px-3 py-2 text-left">Unidade</th>
-                      <th className="px-3 py-2 text-right">Garantido mínimo</th>
-                      <th className="px-3 py-2 text-right">Preço</th>
-                      <th className="px-3 py-2 text-right">Sobrepreço mínimo</th>
-                      <th className="px-3 py-2 text-right">Prosoluto mínimo</th>
+                      <th className="px-3 py-2 text-right">Garantido mÃ­nimo</th>
+                      <th className="px-3 py-2 text-right">PreÃ§o</th>
+                      <th className="px-3 py-2 text-right">SobrepreÃ§o mÃ­nimo</th>
+                      <th className="px-3 py-2 text-right">Prosoluto mÃ­nimo</th>
                     </tr>
                   </thead>
                   <tbody>
