@@ -13,3 +13,8 @@ body {
   margin: 0;
   font-family: 'Sora', 'Segoe UI', sans-serif;
 }
+
+/* Oculta eye antigo se aparecer em builds legados */
+#yvy-eye {
+  display: none !important;
+}

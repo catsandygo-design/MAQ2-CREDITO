@@ -569,38 +569,8 @@ export function PresentationPage() {
 
   useEffect(() => {
     const eye = document.getElementById('yvy-eye')
-    const iris = eye?.querySelector('.iris') as HTMLElement | null
-    if (!eye || !iris) return
-    const maxOffset = 6
-    const onMove = (e: PointerEvent) => {
-      const { innerWidth: w, innerHeight: h } = window
-      const dx = (e.clientX / w - 0.5) * 2
-      const dy = (e.clientY / h - 0.5) * 2
-      const x = (dx * maxOffset).toFixed(2)
-      const y = (dy * maxOffset).toFixed(2)
-      iris.style.transform = `translate(${x}px, ${y}px)`
-    }
-    window.addEventListener('pointermove', onMove)
-    const idleNudge = () => {
-      const x = ((Math.random() * 2 - 1) * 2).toFixed(2)
-      const y = ((Math.random() * 2 - 1) * 2).toFixed(2)
-      iris.style.transform = `translate(${x}px, ${y}px)`
-    }
-    const idleTimer = window.setInterval(idleNudge, 1800)
-    return () => {
-      window.removeEventListener('pointermove', onMove)
-      window.clearInterval(idleTimer)
-    }
+    if (eye) eye.remove()
   }, [])
-
-  useEffect(() => {
-    const eye = document.getElementById('yvy-eye')
-    if (!eye) return
-    if (iaLoading) eye.className = 'processando'
-    else if (iaErro) eye.className = 'confusa'
-    else if (iaSugestao) eye.className = 'convicta'
-    else eye.className = 'indecisa'
-  }, [iaLoading, iaErro, iaSugestao])
 
   const handleLogout = async () => {
     if (saindo) return
