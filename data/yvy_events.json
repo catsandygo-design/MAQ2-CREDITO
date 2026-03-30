@@ -1,0 +1,188 @@
+[
+  {
+    "timestamp": "2026-03-30T20:22:10.180076",
+    "input": {
+      "renda_bruta": 8000.0,
+      "valor_tabela": 250000.0,
+      "sobrepreco_vila": 5000.0,
+      "valor_obtido": 200000.0,
+      "parcela_caixa": 900.0,
+      "preco_digitado_corretor": 0.0
+    },
+    "heuristica": {
+      "apresentacao_cliente": {
+        "valor_imovel": 255000.0,
+        "valor_obtido": 200000.0,
+        "entrada_facilitada": 55000.0,
+        "plano_pagamento": "80x de R$ 1002.04",
+        "valor_parcela": 1002.04
+      },
+      "leitura_executiva_corretor": {
+        "status_ia": "PERFIL_SEG_01",
+        "risco_exposicao": "20.0%",
+        "garantidores_necessarios": 2,
+        "is_pos_chaves": "23.78%",
+        "is_limite": "40.0%",
+        "bloqueio_critico": false,
+        "motivo_auditoria": "",
+        "alerta_preco": "Preço Base"
+      }
+    },
+    "yvy": {
+      "preco_heuristico": 255000.0,
+      "preco_yvy": 255000.0,
+      "prob_aceite": 0.62,
+      "status_ia": "PERFIL_SEG_01",
+      "risco_exposicao": "20.0%",
+      "confianca": 0.62,
+      "motivos": [
+        "Perfil dentro dos limites heurísticos atuais.",
+        "Risco de exposição: 20.0%."
+      ],
+      "sugestoes": []
+    },
+    "user_agent": "Mozilla/5.0 (Windows NT; Windows NT 10.0; pt-BR) WindowsPowerShell/5.1.26100.7920",
+    "client_host": "127.0.0.1"
+  },
+  {
+    "timestamp": "2026-03-30T20:22:16.873199",
+    "input": {
+      "renda_bruta": 8000.0,
+      "valor_tabela": 250000.0,
+      "sobrepreco_vila": 5000.0,
+      "valor_obtido": 200000.0,
+      "parcela_caixa": 900.0,
+      "preco_digitado_corretor": 0.0
+    },
+    "heuristica": {
+      "apresentacao_cliente": {
+        "valor_imovel": 255000.0,
+        "valor_obtido": 200000.0,
+        "entrada_facilitada": 55000.0,
+        "plano_pagamento": "80x de R$ 1002.04",
+        "valor_parcela": 1002.04
+      },
+      "leitura_executiva_corretor": {
+        "status_ia": "PERFIL_SEG_01",
+        "risco_exposicao": "20.0%",
+        "garantidores_necessarios": 2,
+        "is_pos_chaves": "23.78%",
+        "is_limite": "40.0%",
+        "bloqueio_critico": false,
+        "motivo_auditoria": "",
+        "alerta_preco": "Preço Base"
+      }
+    },
+    "yvy": {
+      "preco_heuristico": 255000.0,
+      "preco_yvy": 255000.0,
+      "prob_aceite": 0.62,
+      "status_ia": "PERFIL_SEG_01",
+      "risco_exposicao": "20.0%",
+      "confianca": 0.62,
+      "motivos": [
+        "Perfil dentro dos limites heurísticos atuais.",
+        "Risco de exposição: 20.0%."
+      ],
+      "sugestoes": []
+    },
+    "user_agent": "Mozilla/5.0 (Windows NT; Windows NT 10.0; pt-BR) WindowsPowerShell/5.1.26100.7920",
+    "client_host": "127.0.0.1"
+  },
+  {
+    "timestamp": "2026-03-30T20:30:38.474122",
+    "input": {
+      "renda_bruta": 8000.0,
+      "valor_tabela": 250000.0,
+      "sobrepreco_vila": 5000.0,
+      "valor_obtido": 200000.0,
+      "parcela_caixa": 900.0,
+      "preco_digitado_corretor": 0.0
+    },
+    "heuristica": {
+      "apresentacao_cliente": {
+        "valor_imovel": 255000.0,
+        "valor_obtido": 200000.0,
+        "entrada_facilitada": 55000.0,
+        "plano_pagamento": "80x de R$ 1002.04",
+        "valor_parcela": 1002.04
+      },
+      "leitura_executiva_corretor": {
+        "status_ia": "PERFIL_SEG_01",
+        "risco_exposicao": "20.0%",
+        "garantidores_necessarios": 2,
+        "is_pos_chaves": "23.78%",
+        "is_limite": "40.0%",
+        "bloqueio_critico": false,
+        "motivo_auditoria": "",
+        "alerta_preco": "Preço Base"
+      }
+    },
+    "yvy": {
+      "preco_heuristico": 255000.0,
+      "preco_yvy": 255036.74,
+      "prob_aceite": 0.5024010403177928,
+      "status_ia": "PERFIL_SEG_01",
+      "risco_exposicao": "20.0%",
+      "confianca": 0.5024010403177928,
+      "motivos": [
+        "Probabilidade estimada via modelo yvy.",
+        "Perfil dentro dos limites heurísticos atuais.",
+        "Risco de exposição: 20.0%."
+      ],
+      "sugestoes": []
+    },
+    "user_agent": "Mozilla/5.0 (Windows NT; Windows NT 10.0; pt-BR) WindowsPowerShell/5.1.26100.7920",
+    "client_host": "127.0.0.1"
+  },
+  {
+    "timestamp": "2026-03-30T20:37:20.798729",
+    "input": {
+      "renda_bruta": 8000.0,
+      "valor_tabela": 250000.0,
+      "sobrepreco_vila": 5000.0,
+      "valor_obtido": 200000.0,
+      "parcela_caixa": 900.0,
+      "preco_digitado_corretor": 0.0
+    },
+    "heuristica": {
+      "apresentacao_cliente": {
+        "valor_imovel": 255000.0,
+        "valor_obtido": 200000.0,
+        "entrada_facilitada": 55000.0,
+        "plano_pagamento": "80x de R$ 1002.04",
+        "valor_parcela": 1002.04
+      },
+      "leitura_executiva_corretor": {
+        "status_ia": "PERFIL_SEG_01",
+        "risco_exposicao": "20.0%",
+        "garantidores_necessarios": 2,
+        "is_pos_chaves": "23.78%",
+        "is_limite": "40.0%",
+        "bloqueio_critico": false,
+        "motivo_auditoria": "",
+        "alerta_preco": "Preço Base"
+      }
+    },
+    "yvy": {
+      "preco_heuristico": 255000.0,
+      "preco_yvy": 255036.74,
+      "prob_aceite": 0.5024010403177928,
+      "status_ia": "PERFIL_SEG_01",
+      "risco_exposicao": "20.0%",
+      "confianca": 0.5024010403177928,
+      "motivos": [
+        "Probabilidade estimada via modelo yvy.",
+        "Perfil dentro dos limites heurísticos atuais.",
+        "Risco de exposição: 20.0%."
+      ],
+      "sugestoes": []
+    },
+    "features": {
+      "expo": 0.2,
+      "is_pos": 0.2378
+    },
+    "user_agent": "Mozilla/5.0 (Windows NT; Windows NT 10.0; pt-BR) WindowsPowerShell/5.1.26100.7920",
+    "client_host": "127.0.0.1"
+  }
+]

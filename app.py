@@ -3,6 +3,8 @@ import io
 import csv
 import json
 import uuid
+import math
+import contextlib
 import smtplib
 import logging
 import hashlib
@@ -31,6 +33,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, rela
 from sqlalchemy.sql import func
 from openpyxl import load_workbook
 from simulacao_engine import SimulacaoInput, engine_calculo_imobiliario
+import psycopg
 
 logger = logging.getLogger("sistema_credito")
 
@@ -39,8 +42,11 @@ REACT_DIST_DIR = Path(__file__).resolve().parent / "frontend-react" / "dist"
 DATA_DIR = Path(__file__).resolve().parent / "data"
 DATA_DIR.mkdir(exist_ok=True, parents=True)
 IA_FEEDBACK_PATH = DATA_DIR / "ia_feedback.json"
+YVY_EVENTS_PATH = DATA_DIR / "yvy_events.json"
+YVY_MODEL_PATH = DATA_DIR / "yvy_model.json"
 TABELA_PRECO_PATH = DATA_DIR / "tabela_precos.json"
 TABELA_PRECO_CACHE: list[dict[str, Any]] = []
+YVY_DB_URL = os.getenv("YVY_DB_URL") or os.getenv("DATABASE_URL")
 
 ANALISE_DB_PATH = DATA_DIR / "analises.db"
 analise_engine = create_engine(f"sqlite:///{ANALISE_DB_PATH}", future=True)
@@ -5159,6 +5165,7 @@ async def lifespan(_: FastAPI):
             logger.exception("Falha ao preparar tabela de usuarios da aplicacao.")
             if os.getenv("STARTUP_DB_STRICT", "false").lower() in {"1", "true", "yes"}:
                 raise
+    _ensure_yvy_tables()
     try:
         yield
     finally:
@@ -10448,6 +10455,270 @@ async def feedback_recomendacao(payload: dict):
     )
     IA_FEEDBACK_PATH.write_text(json.dumps(feedbacks, ensure_ascii=False, indent=2), encoding="utf-8")
     return {"ok": True}
+
+
+def _safe_load_json_list(path: Path) -> list[dict[str, Any]]:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+
+def _persist_json_list(path: Path, items: list[dict[str, Any]], *, max_len: int = 5000) -> None:
+    trimmed = items[-max_len:]
+    path.write_text(json.dumps(trimmed, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _load_yvy_model() -> Optional[dict[str, Any]]:
+    if not YVY_MODEL_PATH.exists():
+        return None
+    try:
+        return json.loads(YVY_MODEL_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        logger.exception("Falha ao carregar modelo yvy; seguindo sem modelo.")
+        return None
+
+
+def _sigmoid(x: float) -> float:
+    try:
+        return 1 / (1 + math.exp(-x))
+    except OverflowError:
+        return 0.0 if x < 0 else 1.0
+
+
+def _log_yvy_event(event: dict[str, Any]) -> None:
+    if not _log_yvy_event_db(event):
+        events = _safe_load_json_list(YVY_EVENTS_PATH)
+        events.append(event)
+        _persist_json_list(YVY_EVENTS_PATH, events)
+
+
+class YvySugestaoOut(BaseModel):
+    preco_heuristico: float
+    preco_yvy: float
+    prob_aceite: float
+    status_ia: str
+    risco_exposicao: str
+    confianca: float
+    motivos: list[str] = Field(default_factory=list)
+    sugestoes: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+class YvyRecomendacaoOut(BaseModel):
+    heuristica: dict[str, Any]
+    yvy: YvySugestaoOut
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+def _yvy_features(payload: SimulacaoInput, heuristica: dict[str, Any]) -> list[float]:
+    expo = 0.0
+    try:
+        expo = float(heuristica["leitura_executiva_corretor"]["risco_exposicao"].strip("%")) / 100.0
+    except Exception:
+        expo = 0.0
+    is_pos = 0.0
+    try:
+        is_pos = float(heuristica["leitura_executiva_corretor"]["is_pos_chaves"].strip("%")) / 100.0
+    except Exception:
+        is_pos = 0.0
+    return [
+        float(payload.renda_bruta),
+        float(payload.valor_tabela),
+        float(payload.sobrepreco_vila),
+        float(payload.valor_obtido),
+        float(payload.parcela_caixa),
+        float(payload.preco_digitado_corretor or 0.0),
+        expo,
+        is_pos,
+    ]
+
+
+def _yvy_predict_prob(model: dict[str, Any], feats: list[float]) -> float:
+    means = model.get("means", [])
+    stds = model.get("stds", [])
+    weights = model.get("weights", [])
+    bias = float(model.get("bias", 0.0))
+    if not weights or len(weights) != len(feats):
+        return 0.62
+    total = bias
+    for x, m, s, w in zip(feats, means, stds, weights):
+        s = s if s and s != 0 else 1.0
+        total += ((x - m) / s) * w
+    return max(0.0, min(1.0, _sigmoid(total)))
+
+
+def _yvy_db_conn():
+    if not YVY_DB_URL:
+        return None
+    try:
+        return psycopg.connect(YVY_DB_URL, connect_timeout=10)
+    except Exception:
+        logger.exception("Falha ao conectar YVY_DB_URL; fallback para arquivo.")
+        return None
+
+
+def _ensure_yvy_tables():
+    conn = _yvy_db_conn()
+    if conn is None:
+        return
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                create table if not exists yvy_events(
+                    id bigserial primary key,
+                    created_at timestamptz default now(),
+                    renda_bruta numeric,
+                    valor_tabela numeric,
+                    sobrepreco_vila numeric,
+                    valor_obtido numeric,
+                    parcela_caixa numeric,
+                    preco_digitado_corretor numeric,
+                    expo numeric,
+                    is_pos_chaves numeric,
+                    heuristica jsonb,
+                    yvy jsonb,
+                    aceitou boolean,
+                    origem text
+                );
+                """
+            )
+            cur.execute(
+                """
+                create table if not exists yvy_models(
+                    id bigserial primary key,
+                    version text not null,
+                    created_at timestamptz default now(),
+                    artifact jsonb not null,
+                    notes text
+                );
+                """
+            )
+    except Exception:
+        logger.exception("Nao foi possivel garantir tabelas yvy no banco.")
+    finally:
+        conn.close()
+
+
+def _log_yvy_event_db(event: dict[str, Any]) -> bool:
+    conn = _yvy_db_conn()
+    if conn is None:
+        return False
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                insert into yvy_events(
+                    renda_bruta, valor_tabela, sobrepreco_vila, valor_obtido,
+                    parcela_caixa, preco_digitado_corretor, expo, is_pos_chaves,
+                    heuristica, yvy, aceitou, origem
+                )
+                values (%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s::jsonb,%s,%s)
+                """,
+                (
+                    event.get("input", {}).get("renda_bruta"),
+                    event.get("input", {}).get("valor_tabela"),
+                    event.get("input", {}).get("sobrepreco_vila"),
+                    event.get("input", {}).get("valor_obtido"),
+                    event.get("input", {}).get("parcela_caixa"),
+                    event.get("input", {}).get("preco_digitado_corretor"),
+                    event.get("features", {}).get("expo"),
+                    event.get("features", {}).get("is_pos"),
+                    json.dumps(event.get("heuristica")),
+                    json.dumps(event.get("yvy")),
+                    None,
+                    event.get("origem") or "app",
+                ),
+            )
+        return True
+    except Exception:
+        logger.exception("Falha ao gravar evento yvy no banco; fallback arquivo.")
+        return False
+    finally:
+        conn.close()
+
+
+def _load_latest_yvy_model_from_db() -> Optional[dict[str, Any]]:
+    conn = _yvy_db_conn()
+    if conn is None:
+        return None
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("select artifact from yvy_models order by created_at desc limit 1;")
+            row = cur.fetchone()
+            if row and row[0]:
+                return row[0]
+    except Exception:
+        logger.exception("Falha ao carregar modelo yvy do banco.")
+    finally:
+        conn.close()
+    return None
+
+
+@app.post("/app/api/yvy/recomendacao", response_model=YvyRecomendacaoOut)
+async def recomendar_proposta_yvy(payload: SimulacaoInput, request: Request):
+    """
+    Camada \"yvy\":
+    - Mantém cálculo determinístico existente.
+    - Acrescenta sugestão baseada em regras suaves ou modelo leve, e registra evento para futuro treinamento.
+    """
+    resultado = engine_calculo_imobiliario(payload)
+    heur_valor = float(resultado["apresentacao_cliente"]["valor_imovel"])
+    status_ia = resultado["leitura_executiva_corretor"]["status_ia"]
+    risco = resultado["leitura_executiva_corretor"]["risco_exposicao"]
+    bloqueio = bool(resultado["leitura_executiva_corretor"].get("bloqueio_critico", False))
+
+    preco_yvy = heur_valor
+    sugestoes: list[str] = []
+    motivos: list[str] = []
+    prob_aceite = 0.62
+
+    model = _load_yvy_model() or _load_latest_yvy_model_from_db()
+    feats = _yvy_features(payload, resultado)
+    if model:
+        prob_aceite = _yvy_predict_prob(model, feats)
+        motivos.append("Probabilidade estimada via modelo yvy.")
+    if bloqueio:
+        preco_yvy = round(heur_valor * 0.97, 2)
+        sugestoes.append("Reduzir preço em ~3% para aliviar IS pós-chaves.")
+        motivos.append("Bloqueio crítico pela regra de IS >= 40%.")
+        prob_aceite = min(prob_aceite, 0.4)
+    else:
+        motivos.append("Perfil dentro dos limites heurísticos atuais.")
+        if risco:
+            motivos.append(f"Risco de exposição: {risco}.")
+
+    # Ajuste suave de preço baseado na probabilidade.
+    preco_yvy = round(heur_valor * (0.97 + 0.06 * prob_aceite), 2)
+    confianca = prob_aceite
+
+    yvy_payload = YvySugestaoOut(
+        preco_heuristico=heur_valor,
+        preco_yvy=preco_yvy,
+        prob_aceite=prob_aceite,
+        status_ia=status_ia,
+        risco_exposicao=risco,
+        confianca=confianca,
+        motivos=motivos,
+        sugestoes=sugestoes,
+    )
+
+    _log_yvy_event(
+        {
+            "timestamp": datetime.utcnow().isoformat(),
+            "input": payload.model_dump(),
+            "heuristica": resultado,
+            "yvy": yvy_payload.model_dump(),
+            "features": {"expo": feats[6], "is_pos": feats[7]},
+            "user_agent": request.headers.get("user-agent"),
+            "client_host": request.client.host if request.client else None,
+        }
+    )
+
+    return YvyRecomendacaoOut(heuristica=resultado, yvy=yvy_payload)
 
 
 @app.post("/app/api/analises")
