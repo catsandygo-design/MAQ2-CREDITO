@@ -156,6 +156,7 @@ type CurrencyFieldProps = {
   label: string
   value: number
   onChange?: (value: number) => void
+  onBlurValue?: (value: number) => void
   readOnly?: boolean
   helperText?: string
   wrapperClassName?: string
@@ -165,6 +166,7 @@ function CurrencyField({
   label,
   value,
   onChange,
+  onBlurValue,
   readOnly = false,
   helperText,
   wrapperClassName = '',
@@ -197,6 +199,7 @@ function CurrencyField({
           onBlur={() => {
             setIsFocused(false)
             setDraft(formatCurrencyFieldValue(value))
+            onBlurValue?.(value)
           }}
           onChange={(event) => {
             if (readOnly) return
@@ -670,9 +673,9 @@ export function PresentationPage() {
                     </div>
                   ) : null}
 
-                  <div className="sm:col-span-3 grid gap-3 rounded-2xl border border-white/12 bg-slate-950/60 p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">Capacidade do cliente</p>
-                    <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="sm:col-span-3 grid gap-3 rounded-2xl border border-white/12 bg-slate-950/60 p-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">Capacidade do cliente</p>
+                    <div className="grid gap-3 sm:grid-cols-4">
                       <CurrencyField label="Financiamento" value={financiamento} onChange={setFinanciamento} />
                       <CurrencyField label="Subsidio" value={subsidio} onChange={setSubsidio} />
                       <CurrencyField label="Sinal" value={sinal} onChange={setSinal} />
@@ -703,14 +706,20 @@ export function PresentationPage() {
 
                   <div className="sm:col-span-3 grid gap-3 rounded-2xl border border-white/12 bg-slate-950/60 p-4">
                     <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">Formação do preço</p>
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      <CurrencyField label="Preço mínimo permitido" value={pricing.precoMinimoPermitido} readOnly />
+                    <div className="grid gap-3 sm:grid-cols-4">
+                      <CurrencyField label="Preço mínimo permitido (somente corretor)" value={pricing.precoMinimoPermitido} readOnly />
                       <CurrencyField
                         label="Preço digitado (corretor)"
                         value={precoDigitadoCorretor}
                         onChange={(value) => {
                           setPrecoDigitadoCorretor(value)
                           setPrecoErro(value < pricing.precoMinimoPermitido ? 'O preço não pode ser menor que o mínimo permitido.' : null)
+                        }}
+                        onBlurValue={(value) => {
+                          if (value < pricing.precoMinimoPermitido) {
+                            setPrecoDigitadoCorretor(pricing.precoMinimoPermitido)
+                            setPrecoErro('Valor ajustado para o mínimo permitido.')
+                          }
                         }}
                         helperText={precoErro || 'Pode ser maior que o mínimo permitido.'}
                       />
