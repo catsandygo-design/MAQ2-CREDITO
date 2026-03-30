@@ -647,13 +647,6 @@ export function PresentationPage() {
       </div>
 
       <div className="presentation-shell relative z-10 min-h-screen p-4 text-white md:p-8">
-        <div id="yvy-eye" aria-hidden="true">
-          <div className="eye">
-            <div className="iris">
-              <div className="y-mark"></div>
-            </div>
-          </div>
-        </div>
         <div className="mx-auto max-w-[1380px] space-y-5">
         <header className="flex flex-col gap-4 rounded-3xl border border-white/8 bg-white/5 p-5 shadow-[0_14px_48px_rgba(0,0,0,0.35)] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-4">
@@ -687,15 +680,6 @@ export function PresentationPage() {
               <p className="text-sm font-semibold text-white">{empreendimento}</p>
               <p className="text-xs text-slate-300">{unitType}</p>
             </div>
-            <a
-              href="/assets/yvy.html"
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-2xl border border-cyan-200/50 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-white hover:bg-white/20"
-              aria-label="Abrir YVY Core"
-            >
-              YVY Core
-            </a>
             <button
               type="button"
               onClick={handleLogout}
@@ -847,6 +831,15 @@ export function PresentationPage() {
                         <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">Assistente IA (somente corretor)</p>
                         <p className="text-sm text-slate-200">Sugere preco minimo seguro. Voce decide aplicar.</p>
                       </div>
+                      <a
+                        href="/assets/yvy.html"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-full border border-cyan-300/60 bg-cyan-500/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-50 transition hover:border-white hover:bg-cyan-500/30"
+                        aria-label="Abrir YVY Core"
+                      >
+                        YVY Core
+                      </a>
                       <div className="flex gap-2">
                         <button
                           type="button"
