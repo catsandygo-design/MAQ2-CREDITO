@@ -19,6 +19,8 @@ from typing import Any, Optional
 from urllib.parse import urlparse
 
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
@@ -28,6 +30,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
 from sqlalchemy.sql import func
 from openpyxl import load_workbook
+from simulacao_engine import SimulacaoInput, engine_calculo_imobiliario
 
 logger = logging.getLogger("sistema_credito")
 
@@ -5172,6 +5175,17 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="Sistema Credito API", lifespan=lifespan)
 app.mount("/assets", StaticFiles(directory=str(WEB_DIR)), name="web_assets")
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = []
+    for err in exc.errors():
+        loc = ".".join(str(x) for x in err.get("loc", []))
+        msg = err.get("msg", "")
+        errors.append(f"{loc}: {msg}")
+    detail = "; ".join(errors) or "Dados inválidos."
+    return JSONResponse(status_code=422, content={"detail": detail})
 
 def _react_app_unavailable_response() -> HTMLResponse:
     return HTMLResponse(
@@ -10386,6 +10400,14 @@ async def upload_tabela_precos(file: UploadFile = File(...)):
 @app.get("/app/api/tabela-precos", response_model=list[TabelaPrecoItem])
 async def listar_tabela_precos():
     return carregar_tabela_precos()
+
+
+@app.post("/app/api/simulacao")
+async def simular_proposta(payload: SimulacaoInput):
+    resultado = engine_calculo_imobiliario(payload)
+    if isinstance(resultado, dict) and resultado.get("erro_politica"):
+        raise HTTPException(status_code=422, detail=resultado.get("mensagem", "Valor abaixo da política comercial"))
+    return resultado
 
 
 @app.post("/app/api/analises")
