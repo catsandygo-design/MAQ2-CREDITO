@@ -38,6 +38,7 @@ WEB_DIR = Path(__file__).resolve().parent / "web"
 REACT_DIST_DIR = Path(__file__).resolve().parent / "frontend-react" / "dist"
 DATA_DIR = Path(__file__).resolve().parent / "data"
 DATA_DIR.mkdir(exist_ok=True, parents=True)
+IA_FEEDBACK_PATH = DATA_DIR / "ia_feedback.json"
 TABELA_PRECO_PATH = DATA_DIR / "tabela_precos.json"
 TABELA_PRECO_CACHE: list[dict[str, Any]] = []
 
@@ -10408,6 +10409,45 @@ async def simular_proposta(payload: SimulacaoInput):
     if isinstance(resultado, dict) and resultado.get("erro_politica"):
         raise HTTPException(status_code=422, detail=resultado.get("mensagem", "Valor abaixo da política comercial"))
     return resultado
+
+
+@app.post("/app/api/recomendacao")
+async def recomendar_proposta(payload: SimulacaoInput):
+    resultado = engine_calculo_imobiliario(payload)
+    if isinstance(resultado, dict) and resultado.get("erro_politica"):
+        raise HTTPException(status_code=422, detail=resultado.get("mensagem", "Valor abaixo da política comercial"))
+
+    preco_sugerido = resultado["apresentacao_cliente"]["valor_imovel"]
+    status_ia = resultado["leitura_executiva_corretor"]["status_ia"]
+    risco = resultado["leitura_executiva_corretor"]["risco_exposicao"]
+    confianca = 0.62  # placeholder heurístico
+
+    return {
+        "preco_sugerido": preco_sugerido,
+        "status_ia": status_ia,
+        "risco_exposicao": risco,
+        "confianca": confianca,
+        "motivo": resultado["leitura_executiva_corretor"].get("motivo_auditoria", ""),
+    }
+
+
+@app.post("/app/api/recomendacao/feedback")
+async def feedback_recomendacao(payload: dict):
+    # payload esperado: {aceitou: bool, preco_sugerido: float, contexto: {...}}
+    try:
+        feedbacks = json.loads(IA_FEEDBACK_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        feedbacks = []
+    feedbacks.append(
+        {
+            "aceitou": bool(payload.get("aceitou")),
+            "preco_sugerido": payload.get("preco_sugerido"),
+            "contexto": payload.get("contexto"),
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+    )
+    IA_FEEDBACK_PATH.write_text(json.dumps(feedbacks, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"ok": True}
 
 
 @app.post("/app/api/analises")

@@ -132,3 +132,38 @@ export async function fetchTabelaPrecos(): Promise<TabelaPrecoRow[]> {
   })
   return parseResponse<TabelaPrecoRow[]>(res)
 }
+
+export async function fetchRecomendacao(input: {
+  renda_bruta: number
+  valor_tabela: number
+  sobrepreco_vila: number
+  valor_obtido: number
+  parcela_caixa: number
+  preco_digitado_corretor?: number
+}) {
+  const res = await fetch(`${API_BASE}/recomendacao`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  return parseResponse<{
+    preco_sugerido: number
+    status_ia: string
+    risco_exposicao: string
+    confianca: number
+    motivo: string
+  }>(res)
+}
+
+export async function enviarFeedbackRecomendacao(payload: {
+  aceitou: boolean
+  preco_sugerido: number
+  contexto: Record<string, unknown>
+}) {
+  const res = await fetch(`${API_BASE}/recomendacao/feedback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  return parseResponse<{ ok: boolean }>(res)
+}
