@@ -865,8 +865,8 @@ export function PresentationPage() {
                         </button>
                       </div>
                     </div>
-                    {iaErro ? <p className="text-sm text-amber-200">{iaErro}</p> : null}
-                    {iaAviso ? <p className="text-sm text-cyan-200">{iaAviso}</p> : null}
+                    {iaErro ? <div className="ia-tooltip ia-warning">{iaErro}</div> : null}
+                    {iaAviso ? <div className="ia-tooltip">{iaAviso}</div> : null}
                     {iaSugestao ? (
                       <div className="grid gap-2 rounded-xl border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-100">
                         <div className="flex justify-between">
