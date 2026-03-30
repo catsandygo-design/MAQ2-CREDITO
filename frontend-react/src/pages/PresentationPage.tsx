@@ -687,6 +687,15 @@ export function PresentationPage() {
               <p className="text-sm font-semibold text-white">{empreendimento}</p>
               <p className="text-xs text-slate-300">{unitType}</p>
             </div>
+            <a
+              href="/assets/yvy.html"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-2xl border border-cyan-200/50 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-white hover:bg-white/20"
+              aria-label="Abrir YVY Core"
+            >
+              YVY Core
+            </a>
             <button
               type="button"
               onClick={handleLogout}
