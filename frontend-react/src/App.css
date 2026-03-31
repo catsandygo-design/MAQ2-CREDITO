@@ -2085,12 +2085,12 @@ tr.row-final {
 
 /* Compact version for dash box */
 .yvy-mini {
-  width: 110px;
-  height: 90px;
-  border-radius: 14px;
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
   overflow: hidden;
   border: 1px solid rgba(56,189,248,0.35);
-  box-shadow: 0 0 22px rgba(56,189,248,0.25), inset 0 1px rgba(255,255,255,0.08);
+  box-shadow: 0 0 16px rgba(56,189,248,0.22), inset 0 1px rgba(255,255,255,0.08);
 }
 .yvy-mini__frame {
   width: 100%;

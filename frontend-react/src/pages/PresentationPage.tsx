@@ -875,16 +875,7 @@ export function PresentationPage() {
                           Recusar
                         </button>
                       </div>
-                    </div>
-                    <div className="yvy-embed-wrap">
-                      <iframe
-                        ref={yvyFrameRef}
-                        title="YVY Core"
-                        src="/assets/yvy.html"
-                        className="yvy-embed"
-                        loading="lazy"
-                      />
-                    </div>
+                      </div>
                     {iaErro ? <div className="ia-tooltip ia-warning">{iaErro}</div> : null}
                     {iaAviso ? <div className="ia-tooltip">{iaAviso}</div> : null}
                     {iaSugestao ? (
