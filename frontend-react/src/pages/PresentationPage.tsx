@@ -284,6 +284,14 @@ export function PresentationPage() {
     const selected = BG_BY_EMPREENDIMENTO[empreendimento] ?? BACKGROUND_IMAGES
     return selected.map((path) => (path.startsWith('/imagens/') ? encodeURI(path) : path))
   }, [empreendimento])
+  const yvyFrameRef = useRef<HTMLIFrameElement | null>(null)
+
+  const sendYvyMood = (payload: { type: 'yvy:mood'; mood: string; energy?: number }) => {
+    const win = yvyFrameRef.current?.contentWindow
+    if (win) {
+      win.postMessage(payload, window.location.origin)
+    }
+  }
   const logoAtual = LOGOS[empreendimento]
   const theme = THEME_BY_EMPREENDIMENTO[empreendimento]
   const processarUpload = async (file: File) => {
@@ -572,6 +580,35 @@ export function PresentationPage() {
     if (eye) eye.remove()
   }, [])
 
+  useEffect(() => {
+    const container = document.querySelector('.presentation-shell')
+    if (!container) return
+    let debounce: number | null = null
+    const handler = () => {
+      if (debounce) window.clearTimeout(debounce)
+      debounce = window.setTimeout(() => {
+        sendYvyMood({ type: 'yvy:mood', mood: 'aprendendo', energy: 0.35 })
+      }, 120)
+    }
+    container.addEventListener('input', handler, true)
+    return () => {
+      container.removeEventListener('input', handler, true)
+      if (debounce) window.clearTimeout(debounce)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (precoErro) {
+      sendYvyMood({ type: 'yvy:mood', mood: 'alerta', energy: 0.7 })
+    }
+  }, [precoErro])
+
+  useEffect(() => {
+    if (iaErro) {
+      sendYvyMood({ type: 'yvy:mood', mood: 'alerta', energy: 0.6 })
+    }
+  }, [iaErro])
+
   const handleLogout = async () => {
     if (saindo) return
 
@@ -846,6 +883,7 @@ export function PresentationPage() {
                     </div>
                     <div className="yvy-embed-wrap">
                       <iframe
+                        ref={yvyFrameRef}
                         title="YVY Core"
                         src="/assets/yvy.html"
                         className="yvy-embed"
