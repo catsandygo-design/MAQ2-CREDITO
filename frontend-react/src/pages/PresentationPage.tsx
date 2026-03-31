@@ -833,26 +833,21 @@ export function PresentationPage() {
                   </div>
 
                   <div className="sm:col-span-3 grid gap-3 rounded-2xl border border-white/12 bg-slate-950/70 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">Assistente IA (somente corretor)</p>
-                        <p className="text-sm text-slate-200">Sugere preco minimo seguro. Voce decide aplicar.</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="relative flex items-center gap-2 rounded-full border border-cyan-200/30 bg-gradient-to-r from-cyan-500/15 via-indigo-500/10 to-emerald-400/15 px-3 py-2 shadow-[0_0_28px_rgba(56,189,248,0.35)]">
-                          <span className="absolute left-2 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-cyan-200 opacity-80" />
-                          <span className="absolute left-2 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-cyan-300 animate-ping" />
-                          <span className="pl-4 text-[11px] uppercase tracking-[0.24em] text-cyan-100">YVY residente</span>
+                  <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="yvy-mini">
+                          <iframe
+                            ref={yvyFrameRef}
+                            title="YVY Core"
+                            src="/assets/yvy.html"
+                            className="yvy-mini__frame"
+                            loading="lazy"
+                          />
                         </div>
-                        <a
-                          href="/assets/yvy.html"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded-full border border-cyan-300/60 bg-cyan-500/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white transition hover:border-white hover:bg-cyan-500/40 shadow-[0_0_22px_rgba(56,189,248,0.45)]"
-                          aria-label="Abrir YVY Core"
-                        >
-                          Abrir YVY
-                        </a>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">Assistente IA (somente corretor)</p>
+                          <p className="text-sm text-slate-200">Sugere preco minimo seguro. Voce decide aplicar.</p>
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         <button
