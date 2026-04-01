@@ -744,7 +744,7 @@ export function AnalistaPainelPage() {
   }
 
   const toggleRow = (processoId: string) => {
-    const nextOpen = !Boolean(expandedRows[processoId])
+    const nextOpen = !expandedRows[processoId]
     setExpandedRows((prev) => ({ ...prev, [processoId]: nextOpen }))
 
     if (nextOpen) {

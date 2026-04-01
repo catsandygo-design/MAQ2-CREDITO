@@ -143,6 +143,7 @@ export async function fetchRecomendacao(input: {
 }) {
   const res = await fetch(`${API_BASE}/recomendacao`, {
     method: 'POST',
+    credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
@@ -162,6 +163,7 @@ export async function enviarFeedbackRecomendacao(payload: {
 }) {
   const res = await fetch(`${API_BASE}/recomendacao/feedback`, {
     method: 'POST',
+    credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })

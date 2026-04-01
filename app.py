@@ -32,7 +32,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
 from sqlalchemy.sql import func
 from openpyxl import load_workbook
+from security_utils import decrypt_pii, encrypt_pii, generate_pii_encryption_key, hash_email, hash_optional, hash_token, last4_digits, mask_document, mask_email, pii_encryption_enabled
 from simulacao_engine import SimulacaoInput, engine_calculo_imobiliario
+from yvy_operacional import AnaliseInput as YvyAnaliseInput
+from yvy_operacional import RespostaYvy as YvyRespostaOperacional
+from yvy_operacional import analisar_operacao_yvy
 import psycopg
 
 logger = logging.getLogger("sistema_credito")
@@ -87,15 +91,15 @@ ROLE_GESTOR_CREDITO = "gestor_credito"
 VALID_ROLES = {ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN, ROLE_GESTOR, ROLE_GESTOR_CREDITO}
 
 APP_CCA_USER = os.getenv("APP_CCA_USER", os.getenv("APP_LOGIN_USER", "cca"))
-APP_CCA_PASSWORD = os.getenv("APP_CCA_PASSWORD", os.getenv("APP_LOGIN_PASSWORD", "Troque#Cca123"))
+APP_CCA_PASSWORD = os.getenv("APP_CCA_PASSWORD", os.getenv("APP_LOGIN_PASSWORD", ""))
 APP_ANALISTA_USER = os.getenv("APP_ANALISTA_USER", "analista")
-APP_ANALISTA_PASSWORD = os.getenv("APP_ANALISTA_PASSWORD", "Troque#Analista123")
+APP_ANALISTA_PASSWORD = os.getenv("APP_ANALISTA_PASSWORD", "")
 APP_CORRETOR_USER = os.getenv("APP_CORRETOR_USER", "corretor")
-APP_CORRETOR_PASSWORD = os.getenv("APP_CORRETOR_PASSWORD", "Troque#Corretor123")
+APP_CORRETOR_PASSWORD = os.getenv("APP_CORRETOR_PASSWORD", "")
 APP_ADMIN_USER = os.getenv("APP_ADMIN_USER", "douglasadm")
-APP_ADMIN_PASSWORD = os.getenv("APP_ADMIN_PASSWORD", "Troque#Admin123")
+APP_ADMIN_PASSWORD = os.getenv("APP_ADMIN_PASSWORD", "")
 APP_GESTOR_USER = os.getenv("APP_GESTOR_USER", "gestor")
-APP_GESTOR_PASSWORD = os.getenv("APP_GESTOR_PASSWORD", "Troque#Gestor123")
+APP_GESTOR_PASSWORD = os.getenv("APP_GESTOR_PASSWORD", "")
 APP_GESTOR_CREDITO_USER = os.getenv("APP_GESTOR_CREDITO_USER", "")
 APP_GESTOR_CREDITO_PASSWORD = os.getenv("APP_GESTOR_CREDITO_PASSWORD", "")
 
@@ -174,7 +178,10 @@ def carregar_tabela_precos() -> list[TabelaPrecoItem]:
         TABELA_PRECO_CACHE[:] = payload
         return payload
     except SQLAlchemyError:
-      logger.exception("Falha ao carregar tabela de precos do banco; tentando cache/arquivo.")
+      logger.exception("Falha ao carregar tabela de precos do banco.")
+      if TABELA_PRECO_CACHE:
+        return TABELA_PRECO_CACHE
+      raise
 
   if TABELA_PRECO_CACHE:
     return TABELA_PRECO_CACHE
@@ -201,7 +208,8 @@ def salvar_tabela_precos(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         TABELA_PRECO_CACHE[:] = payload
         return payload
     except SQLAlchemyError:
-      logger.exception("Falha ao salvar tabela de precos no banco; salvando em arquivo.")
+      logger.exception("Falha ao salvar tabela de precos no banco.")
+      raise
 
   TABELA_PRECO_CACHE[:] = rows
   TABELA_PRECO_PATH.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
@@ -513,19 +521,29 @@ def _db_error_hint(exc: SQLAlchemyError) -> str:
 
 
 def _warn_default_credentials() -> None:
-    defaults = [
-        (_normalize_username(APP_CORRETOR_USER), "corretor", "Troque#Corretor123"),
-        (_normalize_username(APP_CCA_USER), "cca", "Troque#Cca123"),
-        (_normalize_username(APP_ANALISTA_USER), "analista", "Troque#Analista123"),
-        (_normalize_username(APP_ADMIN_USER), "admin", "Troque#Admin123"),
-        (_normalize_username(APP_GESTOR_USER), "gestor", "Troque#Gestor123"),
+    defaults = {
+        "Troque#Corretor123",
+        "Troque#Cca123",
+        "Troque#Analista123",
+        "Troque#Admin123",
+        "Troque#Gestor123",
+        "1234",
+        "12345",
+        "",
+    }
+    checks = [
+        (_normalize_username(APP_CORRETOR_USER), "corretor"),
+        (_normalize_username(APP_CCA_USER), "cca"),
+        (_normalize_username(APP_ANALISTA_USER), "analista"),
+        (_normalize_username(APP_ADMIN_USER), "admin"),
+        (_normalize_username(APP_GESTOR_USER), "gestor"),
     ]
-    for username, role, expected_password in defaults:
+    for username, role in checks:
         if not username:
             continue
         configured = APP_USERS.get(username, {}).get("password")
-        if configured == expected_password:
-            logger.warning("Credencial padrao em uso para perfil '%s'. Troque a senha no ambiente.", role)
+        if configured in defaults:
+            logger.warning("Credencial insegura ou ausente para perfil '%s'. Defina senha forte no ambiente.", role)
 
 
 def _utcnow() -> datetime:
@@ -602,7 +620,7 @@ def _home_for_role(role: Optional[str]) -> str:
 def _new_session(user_id: uuid.UUID, username: str, role: str, must_change_password: bool) -> str:
     token = uuid.uuid4().hex
     now = _utcnow()
-    ACTIVE_SESSIONS[token] = {
+    session = {
         "user_id": str(user_id),
         "username": username,
         "role": role,
@@ -612,16 +630,127 @@ def _new_session(user_id: uuid.UUID, username: str, role: str, must_change_passw
         "db_checked_at": now,
         "expires_at": now + timedelta(seconds=SESSION_TTL_SECONDS),
     }
+    ACTIVE_SESSIONS[token] = session
+    _persist_session_record(token, session)
     return token
+
+
+def _session_token_hash(token: str) -> str:
+    return hash_token(token)
+
+
+def _persist_session_record(token: str, session: dict[str, Any]) -> None:
+    if SessionLocal is None:
+        return
+    db = SessionLocal()
+    try:
+        token_hash = _session_token_hash(token)
+        row = db.query(AppSession).filter(AppSession.session_token_hash == token_hash).first()
+        if row is None:
+            row = AppSession(
+                session_token_hash=token_hash,
+                user_id=uuid.UUID(str(session["user_id"])),
+                username=str(session.get("username", "")),
+                role=_normalize_role(str(session.get("role", ""))),
+                must_change_password=bool(session.get("must_change_password")),
+                created_at=session.get("created_at") or _utcnow(),
+                last_seen_at=session.get("last_seen_at") or _utcnow(),
+                db_checked_at=session.get("db_checked_at") or _utcnow(),
+                expires_at=session.get("expires_at") or (_utcnow() + timedelta(seconds=SESSION_TTL_SECONDS)),
+            )
+            db.add(row)
+        else:
+            row.username = str(session.get("username", ""))
+            row.role = _normalize_role(str(session.get("role", "")))
+            row.must_change_password = bool(session.get("must_change_password"))
+            row.last_seen_at = session.get("last_seen_at") or row.last_seen_at
+            row.db_checked_at = session.get("db_checked_at") or row.db_checked_at
+            row.expires_at = session.get("expires_at") or row.expires_at
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Falha ao persistir sessao autenticada.")
+    finally:
+        db.close()
+
+
+def _load_session_from_store(token: str) -> Optional[dict[str, Any]]:
+    if SessionLocal is None:
+        return None
+    db = SessionLocal()
+    now = _utcnow()
+    try:
+        row = db.query(AppSession).filter(AppSession.session_token_hash == _session_token_hash(token)).first()
+        if not row:
+            return None
+        if row.expires_at <= now:
+            db.delete(row)
+            db.commit()
+            return None
+        return {
+            "user_id": str(row.user_id),
+            "username": row.username,
+            "role": _normalize_role(row.role),
+            "must_change_password": bool(row.must_change_password),
+            "created_at": row.created_at,
+            "last_seen_at": row.last_seen_at,
+            "db_checked_at": row.db_checked_at,
+            "expires_at": row.expires_at,
+        }
+    except Exception:
+        logger.exception("Falha ao carregar sessao persistida.")
+        return None
+    finally:
+        db.close()
+
+
+def _delete_session_record(token: str) -> None:
+    ACTIVE_SESSIONS.pop(token, None)
+    if SessionLocal is None:
+        return
+    db = SessionLocal()
+    try:
+        row = db.query(AppSession).filter(AppSession.session_token_hash == _session_token_hash(token)).first()
+        if row:
+            db.delete(row)
+            db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Falha ao remover sessao persistida.")
+    finally:
+        db.close()
+
+
+def _persist_session_activity(token: str, session: dict[str, Any]) -> None:
+    if SessionLocal is None:
+        return
+    db = SessionLocal()
+    try:
+        row = db.query(AppSession).filter(AppSession.session_token_hash == _session_token_hash(token)).first()
+        if not row:
+            return
+        row.username = str(session.get("username", row.username))
+        row.role = _normalize_role(str(session.get("role", row.role)))
+        row.must_change_password = bool(session.get("must_change_password", row.must_change_password))
+        row.last_seen_at = session.get("last_seen_at") or row.last_seen_at
+        row.db_checked_at = session.get("db_checked_at") or row.db_checked_at
+        row.expires_at = session.get("expires_at") or row.expires_at
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Falha ao atualizar atividade da sessao.")
+    finally:
+        db.close()
 
 
 def _sync_session_from_db(token: str, session: dict[str, Any]) -> Optional[dict[str, Any]]:
     now = _utcnow()
-    if SESSION_DB_SYNC_INTERVAL_SECONDS > 0:
+    sync_interval_seconds = SESSION_DB_SYNC_INTERVAL_SECONDS
+    if sync_interval_seconds > 0:
         checked_at = session.get("db_checked_at")
         if isinstance(checked_at, datetime):
             checked_at_utc = checked_at if checked_at.tzinfo else checked_at.replace(tzinfo=timezone.utc)
-            if checked_at_utc + timedelta(seconds=SESSION_DB_SYNC_INTERVAL_SECONDS) > now:
+            if checked_at_utc + timedelta(seconds=sync_interval_seconds) > now:
                 return session
 
     user_id_raw = str(session.get("user_id", "")).strip()
@@ -631,26 +760,39 @@ def _sync_session_from_db(token: str, session: dict[str, Any]) -> Optional[dict[
     try:
         user_id = uuid.UUID(user_id_raw)
     except ValueError:
-        ACTIVE_SESSIONS.pop(token, None)
+        _delete_session_record(token)
         return None
 
+    db = SessionLocal()
     try:
-        db = SessionLocal()
-    except Exception:
-        logger.exception("Falha ao abrir sessao de banco para validar sessao ativa.")
-        return session
-
-    try:
-        user = db.get(AppUser, user_id)
-        if not user or not user.is_active:
+        row = db.query(AppSession).filter(AppSession.session_token_hash == _session_token_hash(token)).first()
+        if not row:
             ACTIVE_SESSIONS.pop(token, None)
             return None
+        if row.expires_at <= now:
+            db.delete(row)
+            db.commit()
+            ACTIVE_SESSIONS.pop(token, None)
+            return None
+        user = db.get(AppUser, user_id)
+        if not user or not user.is_active:
+            db.delete(row)
+            db.commit()
+            ACTIVE_SESSIONS.pop(token, None)
+            return None
+        row.username = user.username
+        row.role = _normalize_role(user.role)
+        row.must_change_password = bool(user.must_change_password)
+        row.db_checked_at = now
+        db.commit()
         session["username"] = user.username
         session["role"] = _normalize_role(user.role)
         session["must_change_password"] = bool(user.must_change_password)
         session["db_checked_at"] = now
+        session["expires_at"] = row.expires_at
         return session
     except Exception:
+        db.rollback()
         logger.exception("Falha ao validar usuario da sessao no banco.")
         return session
     finally:
@@ -662,6 +804,17 @@ def _drop_sessions_for_user(user_id: uuid.UUID) -> None:
     stale_tokens = [token for token, data in ACTIVE_SESSIONS.items() if str(data.get("user_id", "")) == user_id_str]
     for token in stale_tokens:
         ACTIVE_SESSIONS.pop(token, None)
+    if SessionLocal is None:
+        return
+    db = SessionLocal()
+    try:
+        db.query(AppSession).filter(AppSession.user_id == user_id).delete()
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Falha ao invalidar sessoes do usuario.")
+    finally:
+        db.close()
 
 
 def _process_list_cache_key(
@@ -762,7 +915,10 @@ def _read_session(request: Request) -> Optional[dict[str, Any]]:
 
     session = ACTIVE_SESSIONS.get(token)
     if not session:
-        return None
+        session = _load_session_from_store(token)
+        if not session:
+            return None
+        ACTIVE_SESSIONS[token] = session
 
     synced = _sync_session_from_db(token, session)
     if not synced:
@@ -772,21 +928,24 @@ def _read_session(request: Request) -> Optional[dict[str, Any]]:
     now = _utcnow()
     expires_at = session.get("expires_at")
     if not isinstance(expires_at, datetime) or expires_at <= now:
-        ACTIVE_SESSIONS.pop(token, None)
+        _delete_session_record(token)
         return None
 
     if SESSION_IDLE_TIMEOUT_SECONDS > 0:
         last_seen = session.get("last_seen_at") or session.get("created_at")
         if not isinstance(last_seen, datetime):
-            ACTIVE_SESSIONS.pop(token, None)
+            _delete_session_record(token)
             return None
         if last_seen + timedelta(seconds=SESSION_IDLE_TIMEOUT_SECONDS) <= now:
-            ACTIVE_SESSIONS.pop(token, None)
+            _delete_session_record(token)
             return None
 
     # Sliding idle timeout: requisicoes passivas (polling) nao renovam atividade.
     if _should_touch_session(request):
         session["last_seen_at"] = now
+        session["db_checked_at"] = now
+        session["expires_at"] = now + timedelta(seconds=SESSION_TTL_SECONDS)
+        _persist_session_activity(token, session)
     return session
 
 
@@ -1923,6 +2082,31 @@ class AppUser(Base):
     )
 
 
+class AppSession(Base):
+    __tablename__ = "app_sessions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("app_users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    username: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    role: Mapped[str] = mapped_column(String(20), nullable=False, default=ROLE_CORRETOR)
+    must_change_password: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    db_checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
 class Empreendimento(Base):
     __tablename__ = "empreendimentos"
 
@@ -1984,16 +2168,22 @@ class LeadPreCadastro(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     corretor_username: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     nome_cliente: Mapped[str] = mapped_column(Text, nullable=False)
-    telefone: Mapped[Optional[str]] = mapped_column(String(40))
-    whatsapp: Mapped[Optional[str]] = mapped_column(String(40))
-    email: Mapped[Optional[str]] = mapped_column(String(180))
-    cpf: Mapped[Optional[str]] = mapped_column(String(20), index=True)
-    documento_identificacao: Mapped[Optional[str]] = mapped_column(String(40))
+    _telefone: Mapped[Optional[str]] = mapped_column("telefone", Text)
+    telefone_last4: Mapped[Optional[str]] = mapped_column(String(4), index=True)
+    _whatsapp: Mapped[Optional[str]] = mapped_column("whatsapp", Text)
+    whatsapp_last4: Mapped[Optional[str]] = mapped_column(String(4), index=True)
+    _email: Mapped[Optional[str]] = mapped_column("email", Text)
+    email_hash: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    _cpf: Mapped[Optional[str]] = mapped_column("cpf", Text)
+    cpf_hash: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    cpf_last4: Mapped[Optional[str]] = mapped_column(String(4), index=True)
+    _documento_identificacao: Mapped[Optional[str]] = mapped_column("documento_identificacao", Text)
+    documento_hash: Mapped[Optional[str]] = mapped_column(String(64), index=True)
     estado_civil: Mapped[Optional[str]] = mapped_column(String(30))
-    certidao_numero: Mapped[Optional[str]] = mapped_column(String(60))
-    cidade_nascimento: Mapped[Optional[str]] = mapped_column(String(120))
+    _certidao_numero: Mapped[Optional[str]] = mapped_column("certidao_numero", Text)
+    _cidade_nascimento: Mapped[Optional[str]] = mapped_column("cidade_nascimento", Text)
     data_nascimento: Mapped[Optional[date]] = mapped_column(Date)
-    endereco: Mapped[Optional[str]] = mapped_column(Text)
+    _endereco: Mapped[Optional[str]] = mapped_column("endereco", Text)
     empreendimento_interesse: Mapped[Optional[str]] = mapped_column(Text)
     localidade_interesse: Mapped[Optional[str]] = mapped_column(Text)
     local_agendamento: Mapped[Optional[str]] = mapped_column(Text)
@@ -2019,6 +2209,111 @@ class LeadPreCadastro(Base):
         onupdate=func.now(),
         index=True,
     )
+
+    @property
+    def telefone(self) -> Optional[str]:
+        return decrypt_pii(self._telefone)
+
+    @telefone.setter
+    def telefone(self, value: Optional[str]) -> None:
+        self._telefone = encrypt_pii(value)
+        self.telefone_last4 = last4_digits(value)
+
+    @property
+    def whatsapp(self) -> Optional[str]:
+        return decrypt_pii(self._whatsapp)
+
+    @whatsapp.setter
+    def whatsapp(self, value: Optional[str]) -> None:
+        self._whatsapp = encrypt_pii(value)
+        self.whatsapp_last4 = last4_digits(value)
+
+    @property
+    def email(self) -> Optional[str]:
+        return decrypt_pii(self._email)
+
+    @email.setter
+    def email(self, value: Optional[str]) -> None:
+        self._email = encrypt_pii(value)
+        self.email_hash = hash_email(value)
+
+    @property
+    def cpf(self) -> Optional[str]:
+        return decrypt_pii(self._cpf)
+
+    @cpf.setter
+    def cpf(self, value: Optional[str]) -> None:
+        self._cpf = encrypt_pii(value)
+        self.cpf_hash = hash_optional(value)
+        self.cpf_last4 = last4_digits(value)
+
+    @property
+    def documento_identificacao(self) -> Optional[str]:
+        return decrypt_pii(self._documento_identificacao)
+
+    @documento_identificacao.setter
+    def documento_identificacao(self, value: Optional[str]) -> None:
+        self._documento_identificacao = encrypt_pii(value)
+        self.documento_hash = hash_optional(value)
+
+    @property
+    def certidao_numero(self) -> Optional[str]:
+        return decrypt_pii(self._certidao_numero)
+
+    @certidao_numero.setter
+    def certidao_numero(self, value: Optional[str]) -> None:
+        self._certidao_numero = encrypt_pii(value)
+
+    @property
+    def cidade_nascimento(self) -> Optional[str]:
+        return decrypt_pii(self._cidade_nascimento)
+
+    @cidade_nascimento.setter
+    def cidade_nascimento(self, value: Optional[str]) -> None:
+        self._cidade_nascimento = encrypt_pii(value)
+
+    @property
+    def endereco(self) -> Optional[str]:
+        return decrypt_pii(self._endereco)
+
+    @endereco.setter
+    def endereco(self, value: Optional[str]) -> None:
+        self._endereco = encrypt_pii(value)
+
+
+class IaFeedback(Base):
+    __tablename__ = "ia_feedback"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    aceitou: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    preco_sugerido: Mapped[Optional[float]] = mapped_column(Float)
+    contexto_json: Mapped[Optional[str]] = mapped_column(Text)
+    origem: Mapped[str] = mapped_column(String(80), nullable=False, default="app", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+class AnaliseRegistroDB(Base):
+    __tablename__ = "analises"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
+    empreendimento: Mapped[str] = mapped_column(String(120))
+    unidade: Mapped[str] = mapped_column(String(120))
+    preco_imovel: Mapped[float] = mapped_column(Float)
+    valor_obtido: Mapped[float] = mapped_column(Float)
+    prosoluto_calculado: Mapped[float] = mapped_column(Float)
+    prosoluto_liquido: Mapped[float] = mapped_column(Float)
+    sinal: Mapped[float] = mapped_column(Float)
+    sinal_produto: Mapped[float] = mapped_column(Float)
+    financiamento: Mapped[float] = mapped_column(Float)
+    subsidio: Mapped[float] = mapped_column(Float)
+    cheque_moradia: Mapped[float] = mapped_column(Float)
+    renda_bruta: Mapped[float] = mapped_column(Float)
+    perc_construcao: Mapped[float] = mapped_column(Float)
+    is_agora: Mapped[float] = mapped_column(Float)
+    is_pos_chaves: Mapped[float] = mapped_column(Float)
+    tabela_referencia: Mapped[Optional[str]] = mapped_column(Text)
+    data_referencia: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class UnidadeDisponivel(Base):
@@ -3446,7 +3741,7 @@ def _ensure_seed_users(db: Session, force: bool = False) -> None:
     seeds = []
     if seed_mode == USERS_SEED_MODE_ADMIN_ONLY:
         admin_username = _normalize_username(RESET_ADMIN_USERNAME) or _normalize_username(APP_ADMIN_USER)
-        admin_password = (APP_ADMIN_PASSWORD or "").strip() or "Troque#Admin123"
+        admin_password = (APP_ADMIN_PASSWORD or "").strip()
         seeds.append((admin_username, admin_password, ROLE_ADMIN))
         admin_seed_username = admin_username
     else:
@@ -3457,6 +3752,9 @@ def _ensure_seed_users(db: Session, force: bool = False) -> None:
     created = 0
     changed = 0
     for username, password, role in seeds:
+        if not username or not (password or "").strip():
+            logger.warning("Seed ignorado para usuario '%s': senha ausente no ambiente.", username or "<vazio>")
+            continue
         policy_error = _password_policy_error(password)
         if policy_error and not ALLOW_WEAK_SEED_PASSWORDS:
             logger.warning("Seed ignorado para usuario '%s': %s", username, policy_error)
@@ -3466,7 +3764,6 @@ def _ensure_seed_users(db: Session, force: bool = False) -> None:
 
         existing = _get_user_by_username(db, username)
         if existing:
-            # Usuarios seed entram com troca opcional para facilitar acesso inicial.
             is_admin_seed = _normalize_username(existing.username) == admin_seed_username
             if is_admin_seed and FORCE_RECOVER_ADMIN_ON_STARTUP:
                 admin_changed = False
@@ -3476,27 +3773,27 @@ def _ensure_seed_users(db: Session, force: bool = False) -> None:
                 if not bool(existing.is_active):
                     existing.is_active = True
                     admin_changed = True
-                if existing.must_change_password:
-                    existing.must_change_password = False
+                if not existing.must_change_password:
+                    existing.must_change_password = True
                     admin_changed = True
                 existing.last_login_at = None
                 if not _verify_password(password, existing.password_hash, existing.password_salt):
-                    _set_user_password(existing, password, must_change_password=False)
+                    _set_user_password(existing, password, must_change_password=True)
                     admin_changed = True
                 if admin_changed:
                     changed += 1
                 continue
-            if existing.must_change_password and (existing.last_login_at is None or is_admin_seed):
-                existing.must_change_password = False
+            if existing.last_login_at is None and not existing.must_change_password:
+                existing.must_change_password = True
                 changed += 1
             continue
         user = AppUser(
             username=_normalize_username(username),
             role=role,
             is_active=True,
-            must_change_password=False,
+            must_change_password=True,
         )
-        _set_user_password(user, password, must_change_password=False)
+        _set_user_password(user, password, must_change_password=True)
         db.add(user)
         created += 1
 
@@ -3544,6 +3841,76 @@ def _normalize_lead_documento(value: Optional[str]) -> Optional[str]:
     if not doc:
         return None
     return doc.upper()
+
+
+def _refresh_lead_security_fields(lead: LeadPreCadastro) -> bool:
+    changed = False
+
+    telefone = decrypt_pii(getattr(lead, "_telefone", None))
+    whatsapp = decrypt_pii(getattr(lead, "_whatsapp", None))
+    email = decrypt_pii(getattr(lead, "_email", None))
+    cpf = decrypt_pii(getattr(lead, "_cpf", None))
+    documento = decrypt_pii(getattr(lead, "_documento_identificacao", None))
+    certidao = decrypt_pii(getattr(lead, "_certidao_numero", None))
+    cidade = decrypt_pii(getattr(lead, "_cidade_nascimento", None))
+    endereco = decrypt_pii(getattr(lead, "_endereco", None))
+
+    expected_telefone_last4 = last4_digits(telefone)
+    expected_whatsapp_last4 = last4_digits(whatsapp)
+    expected_email_hash = hash_email(email)
+    expected_cpf_hash = hash_optional(cpf)
+    expected_cpf_last4 = last4_digits(cpf)
+    expected_documento_hash = hash_optional(documento)
+
+    if lead.telefone_last4 != expected_telefone_last4:
+        lead.telefone_last4 = expected_telefone_last4
+        changed = True
+    if lead.whatsapp_last4 != expected_whatsapp_last4:
+        lead.whatsapp_last4 = expected_whatsapp_last4
+        changed = True
+    if lead.email_hash != expected_email_hash:
+        lead.email_hash = expected_email_hash
+        changed = True
+    if lead.cpf_hash != expected_cpf_hash:
+        lead.cpf_hash = expected_cpf_hash
+        changed = True
+    if lead.cpf_last4 != expected_cpf_last4:
+        lead.cpf_last4 = expected_cpf_last4
+        changed = True
+    if lead.documento_hash != expected_documento_hash:
+        lead.documento_hash = expected_documento_hash
+        changed = True
+
+    if pii_encryption_enabled():
+        secure_fields = [
+            ("_telefone", telefone),
+            ("_whatsapp", whatsapp),
+            ("_email", email),
+            ("_cpf", cpf),
+            ("_documento_identificacao", documento),
+            ("_certidao_numero", certidao),
+            ("_cidade_nascimento", cidade),
+            ("_endereco", endereco),
+        ]
+        for attr_name, plain in secure_fields:
+            current = getattr(lead, attr_name, None)
+            expected = encrypt_pii(plain)
+            if expected and current != expected:
+                setattr(lead, attr_name, expected)
+                changed = True
+
+    return changed
+
+
+def _backfill_lead_security_fields(db: Session) -> int:
+    updated = 0
+    rows = db.query(LeadPreCadastro).all()
+    for lead in rows:
+        if _refresh_lead_security_fields(lead):
+            updated += 1
+    if updated:
+        db.commit()
+    return updated
 
 
 def _normalize_estado_civil(value: Optional[str]) -> Optional[str]:
@@ -4561,6 +4928,19 @@ def _ensure_runtime_schema(db: Session) -> None:
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS estado_civil VARCHAR(30)"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS certidao_numero VARCHAR(60)"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS cidade_nascimento VARCHAR(120)"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS telefone_last4 VARCHAR(4)"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS whatsapp_last4 VARCHAR(4)"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS email_hash VARCHAR(64)"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS cpf_hash VARCHAR(64)"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS cpf_last4 VARCHAR(4)"))
+    db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS documento_hash VARCHAR(64)"))
+    db.execute(text("ALTER TABLE lead_precadastros ALTER COLUMN telefone TYPE TEXT"))
+    db.execute(text("ALTER TABLE lead_precadastros ALTER COLUMN whatsapp TYPE TEXT"))
+    db.execute(text("ALTER TABLE lead_precadastros ALTER COLUMN email TYPE TEXT"))
+    db.execute(text("ALTER TABLE lead_precadastros ALTER COLUMN cpf TYPE TEXT"))
+    db.execute(text("ALTER TABLE lead_precadastros ALTER COLUMN documento_identificacao TYPE TEXT"))
+    db.execute(text("ALTER TABLE lead_precadastros ALTER COLUMN certidao_numero TYPE TEXT"))
+    db.execute(text("ALTER TABLE lead_precadastros ALTER COLUMN cidade_nascimento TYPE TEXT"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS data_nascimento DATE"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS endereco TEXT"))
     db.execute(text("ALTER TABLE lead_precadastros ADD COLUMN IF NOT EXISTS empreendimento_interesse TEXT"))
@@ -4631,6 +5011,12 @@ def _ensure_runtime_schema(db: Session) -> None:
         )
     )
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_cpf ON lead_precadastros (cpf)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_email_hash ON lead_precadastros (email_hash)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_cpf_hash ON lead_precadastros (cpf_hash)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_cpf_last4 ON lead_precadastros (cpf_last4)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_telefone_last4 ON lead_precadastros (telefone_last4)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_whatsapp_last4 ON lead_precadastros (whatsapp_last4)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_documento_hash ON lead_precadastros (documento_hash)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_processo_id ON lead_precadastros (processo_id)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_estagio ON lead_precadastros (estagio_lead)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_lead_precadastros_decisao_cca ON lead_precadastros (decisao_cca)"))
@@ -5127,6 +5513,12 @@ async def lifespan(_: FastAPI):
 
     _warn_default_credentials()
 
+    if not pii_encryption_enabled():
+        logger.warning(
+            "PII_ENCRYPTION_KEY nao configurada. Tokens sensiveis seguem protegidos por hash, "
+            "mas a criptografia de PII em repouso nao sera aplicada ate definir a chave."
+        )
+
     if not SESSION_COOKIE_SECURE:
         logger.warning("SESSION_COOKIE_SECURE=false. Use true em producao com HTTPS.")
 
@@ -5147,12 +5539,24 @@ async def lifespan(_: FastAPI):
 
     if engine is not None:
         try:
-            Base.metadata.create_all(bind=engine, tables=[AppUser.__table__, Empreendimento.__table__, TabelaPreco.__table__])
+            Base.metadata.create_all(
+                bind=engine,
+                tables=[
+                    AppUser.__table__,
+                    AppSession.__table__,
+                    Empreendimento.__table__,
+                    TabelaPreco.__table__,
+                    IaFeedback.__table__,
+                    AnaliseRegistroDB.__table__,
+                ],
+            )
             if SessionLocal is not None:
                 db = SessionLocal()
                 try:
                     _ensure_seed_users(db)
                     _ensure_runtime_schema(db)
+                    backfilled_leads = _backfill_lead_security_fields(db)
+                    _set_runtime_meta(db, "lead_security_backfill_count", str(backfilled_leads))
                     _ensure_process_archiving(db, _utcnow())
                     now_utc = _utcnow()
                     _set_runtime_meta(db, "sla_runtime_started_at", now_utc.isoformat())
@@ -5260,7 +5664,7 @@ def _ensure_corretor_presentation_access(request: Request):
     if not CORRETOR_ROUTE_ENABLED:
         token = request.cookies.get(SESSION_COOKIE_NAME)
         if token:
-            ACTIVE_SESSIONS.pop(token, None)
+            _delete_session_record(token)
         response = RedirectResponse(url="/login", status_code=302)
         response.delete_cookie(key=SESSION_COOKIE_NAME)
         return None, response
@@ -5658,7 +6062,7 @@ def auth_login(payload: LoginPayload, db: Session = Depends(get_db)):
 def auth_logout(request: Request):
     token = request.cookies.get(SESSION_COOKIE_NAME)
     if token:
-        ACTIVE_SESSIONS.pop(token, None)
+        _delete_session_record(token)
 
     response = JSONResponse({"ok": True})
     response.delete_cookie(key=SESSION_COOKIE_NAME)
@@ -5722,6 +6126,7 @@ def auth_change_password(
         ACTIVE_SESSIONS[token]["role"] = _normalize_role(user.role)
         ACTIVE_SESSIONS[token]["username"] = user.username
         ACTIVE_SESSIONS[token]["db_checked_at"] = _utcnow()
+        _persist_session_activity(token, ACTIVE_SESSIONS[token])
 
     return {
         "ok": True,
@@ -5927,18 +6332,35 @@ def corretor_list_pre_cadastros(
 
     if term:
         like = f"%{term}%"
+        pii_filters: list[Any] = []
+        if "@" in term:
+            pii_filters.append(LeadPreCadastro.email_hash == hash_email(term))
+        digits_term = "".join(ch for ch in term if ch.isdigit())
+        if len(digits_term) >= 4:
+            last4 = digits_term[-4:]
+            pii_filters.extend(
+                [
+                    LeadPreCadastro.telefone_last4 == last4,
+                    LeadPreCadastro.whatsapp_last4 == last4,
+                    LeadPreCadastro.cpf_last4 == last4,
+                ]
+            )
+        doc_hash = hash_optional(term)
+        if doc_hash:
+            pii_filters.extend(
+                [
+                    LeadPreCadastro.cpf_hash == doc_hash,
+                    LeadPreCadastro.documento_hash == doc_hash,
+                ]
+            )
         query = query.filter(
             or_(
                 func.lower(func.coalesce(LeadPreCadastro.nome_cliente, "")).like(like),
-                func.lower(func.coalesce(LeadPreCadastro.telefone, "")).like(like),
-                func.lower(func.coalesce(LeadPreCadastro.whatsapp, "")).like(like),
-                func.lower(func.coalesce(LeadPreCadastro.email, "")).like(like),
-                func.lower(func.coalesce(LeadPreCadastro.cpf, "")).like(like),
-                func.lower(func.coalesce(LeadPreCadastro.documento_identificacao, "")).like(like),
                 func.lower(func.coalesce(LeadPreCadastro.decisao_cca, "")).like(like),
                 func.lower(func.coalesce(LeadPreCadastro.empreendimento_interesse, "")).like(like),
                 func.lower(func.coalesce(LeadPreCadastro.localidade_interesse, "")).like(like),
                 func.lower(func.coalesce(LeadPreCadastro.local_agendamento, "")).like(like),
+                *pii_filters,
             )
         )
     if estagio_norm:
@@ -6154,15 +6576,16 @@ def corretor_enviar_confirmacao_assinatura_email(
         raise HTTPException(status_code=422, detail="Marque contrato assinado antes de enviar confirmacao por e-mail.")
 
     now = _utcnow()
-    token = secrets.token_urlsafe(32)
     expires_at = now + timedelta(hours=EMAIL_CONFIRM_TOKEN_TTL_HOURS)
+    raw_token = secrets.token_urlsafe(32)
+    stored_token_hash = hash_token(raw_token)
     lead.assinatura_email_confirmada = False
     lead.assinatura_email_confirmada_em = None
-    lead.assinatura_email_token = token
+    lead.assinatura_email_token = stored_token_hash
     lead.assinatura_email_token_expires_at = expires_at
     lead.assinatura_email_enviado_em = now
 
-    link = _build_email_confirmation_link(request, token)
+    link = _build_email_confirmation_link(request, raw_token)
     subject = "Confirmacao de assinatura de contrato - SioCred"
     text_body = (
         f"Ola, {lead.nome_cliente}.\n\n"
@@ -6187,13 +6610,13 @@ def corretor_enviar_confirmacao_assinatura_email(
         acao="LEAD_ASSINATURA_EMAIL_ENVIADO",
         entidade_tipo="lead_precadastro",
         entidade_id=str(lead.id),
-        details=f"cliente={lead.nome_cliente}; email={lead.email}; expira={expires_at.isoformat()}",
+        details=f"cliente={lead.nome_cliente}; email={mask_email(lead.email)}; expira={expires_at.isoformat()}",
     )
     db.commit()
     db.refresh(lead)
     return LeadAssinaturaEmailOut(
         lead_id=lead.id,
-        email=lead.email,
+        email=mask_email(lead.email) or "",
         token_expires_at=lead.assinatura_email_token_expires_at or expires_at,
         enviado_em=lead.assinatura_email_enviado_em or now,
     )
@@ -6210,7 +6633,12 @@ def app_confirmar_assinatura_email(token: str = Query(default=""), db: Session =
     now = _utcnow()
     lead = (
         db.query(LeadPreCadastro)
-        .filter(LeadPreCadastro.assinatura_email_token == token_value)
+        .filter(
+            or_(
+                LeadPreCadastro.assinatura_email_token == token_value,
+                LeadPreCadastro.assinatura_email_token == hash_token(token_value),
+            )
+        )
         .first()
     )
     if not lead:
@@ -7210,7 +7638,9 @@ def admin_reset_sistema(
         db.execute(text("DELETE FROM app_runtime_meta"))
 
     admin_username = _normalize_username(RESET_ADMIN_USERNAME) or _normalize_username(APP_ADMIN_USER)
-    admin_password = (APP_ADMIN_PASSWORD or "").strip() or "Troque#Admin123"
+    admin_password = (APP_ADMIN_PASSWORD or "").strip()
+    if not admin_password:
+        raise HTTPException(status_code=503, detail="APP_ADMIN_PASSWORD precisa estar configurada para reset administrativo.")
     admin_user = db.query(AppUser).filter(func.lower(AppUser.username) == admin_username).first()
     admin_criado = False
 
@@ -7219,9 +7649,9 @@ def admin_reset_sistema(
             username=admin_username,
             role=ROLE_ADMIN,
             is_active=True,
-            must_change_password=False,
+            must_change_password=True,
         )
-        _set_user_password(admin_user, admin_password, must_change_password=False)
+        _set_user_password(admin_user, admin_password, must_change_password=True)
         db.add(admin_user)
         db.flush()
         admin_criado = True
@@ -7230,7 +7660,7 @@ def admin_reset_sistema(
         admin_user.role = ROLE_ADMIN
         admin_user.is_active = True
         # Mantem a senha atual do admin para evitar bloqueio apos reset.
-    admin_user.must_change_password = False
+    admin_user.must_change_password = True
     admin_user.last_login_at = None
 
     # Nao remove usuarios cadastrados no reset geral.
@@ -7244,6 +7674,8 @@ def admin_reset_sistema(
     db.commit()
     _invalidate_process_list_cache()
     ACTIVE_SESSIONS.clear()
+    db.query(AppSession).delete()
+    db.commit()
     SEED_USERS_READY = False
 
     return {
@@ -10399,19 +10831,27 @@ def app_bulk_upsert_documentos(
 
 
 @app.post("/app/api/tabela-precos/upload", response_model=TabelaPrecoUploadResponse)
-async def upload_tabela_precos(file: UploadFile = File(...)):
+async def upload_tabela_precos(
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    file: UploadFile = File(...),
+):
     rows = await processar_tabela_upload(file)
     salvar_tabela_precos(rows)
     return TabelaPrecoUploadResponse(linhas=len(rows), filename=file.filename or "")
 
 
 @app.get("/app/api/tabela-precos", response_model=list[TabelaPrecoItem])
-async def listar_tabela_precos():
+async def listar_tabela_precos(
+    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+):
     return carregar_tabela_precos()
 
 
 @app.post("/app/api/simulacao")
-async def simular_proposta(payload: SimulacaoInput):
+async def simular_proposta(
+    payload: SimulacaoInput,
+    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+):
     resultado = engine_calculo_imobiliario(payload)
     if isinstance(resultado, dict) and resultado.get("erro_politica"):
         raise HTTPException(status_code=422, detail=resultado.get("mensagem", "Valor abaixo da política comercial"))
@@ -10419,7 +10859,10 @@ async def simular_proposta(payload: SimulacaoInput):
 
 
 @app.post("/app/api/recomendacao")
-async def recomendar_proposta(payload: SimulacaoInput):
+async def recomendar_proposta(
+    payload: SimulacaoInput,
+    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+):
     resultado = engine_calculo_imobiliario(payload)
     if isinstance(resultado, dict) and resultado.get("erro_politica"):
         raise HTTPException(status_code=422, detail=resultado.get("mensagem", "Valor abaixo da política comercial"))
@@ -10439,21 +10882,19 @@ async def recomendar_proposta(payload: SimulacaoInput):
 
 
 @app.post("/app/api/recomendacao/feedback")
-async def feedback_recomendacao(payload: dict):
-    # payload esperado: {aceitou: bool, preco_sugerido: float, contexto: {...}}
-    try:
-        feedbacks = json.loads(IA_FEEDBACK_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        feedbacks = []
-    feedbacks.append(
-        {
-            "aceitou": bool(payload.get("aceitou")),
-            "preco_sugerido": payload.get("preco_sugerido"),
-            "contexto": payload.get("contexto"),
-            "timestamp": datetime.utcnow().isoformat(),
-        }
+async def feedback_recomendacao(
+    payload: dict,
+    session: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    feedback = IaFeedback(
+        aceitou=bool(payload.get("aceitou")),
+        preco_sugerido=float(payload.get("preco_sugerido") or 0.0) if payload.get("preco_sugerido") is not None else None,
+        contexto_json=json.dumps(payload.get("contexto"), ensure_ascii=False) if payload.get("contexto") is not None else None,
+        origem=_normalize_role(str(session.get("role", ""))),
     )
-    IA_FEEDBACK_PATH.write_text(json.dumps(feedbacks, ensure_ascii=False, indent=2), encoding="utf-8")
+    db.add(feedback)
+    db.commit()
     return {"ok": True}
 
 
@@ -10487,7 +10928,7 @@ def _sigmoid(x: float) -> float:
 
 
 def _log_yvy_event(event: dict[str, Any]) -> None:
-    if not _log_yvy_event_db(event):
+    if not _log_yvy_event_db(event) and not YVY_DB_URL:
         events = _safe_load_json_list(YVY_EVENTS_PATH)
         events.append(event)
         _persist_json_list(YVY_EVENTS_PATH, events)
@@ -10659,7 +11100,11 @@ def _load_latest_yvy_model_from_db() -> Optional[dict[str, Any]]:
 
 
 @app.post("/app/api/yvy/recomendacao", response_model=YvyRecomendacaoOut)
-async def recomendar_proposta_yvy(payload: SimulacaoInput, request: Request):
+async def recomendar_proposta_yvy(
+    payload: SimulacaoInput,
+    request: Request,
+    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+):
     """
     Camada \"yvy\":
     - Mantém cálculo determinístico existente.
@@ -10721,64 +11166,79 @@ async def recomendar_proposta_yvy(payload: SimulacaoInput, request: Request):
     return YvyRecomendacaoOut(heuristica=resultado, yvy=yvy_payload)
 
 
+@app.post("/app/api/yvy/analisar", response_model=YvyRespostaOperacional)
+@app.post("/yvy/analisar", response_model=YvyRespostaOperacional)
+def yvy_analisar_operacional(
+    payload: YvyAnaliseInput,
+    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+) -> YvyRespostaOperacional:
+    return analisar_operacao_yvy(payload)
+
+
 @app.post("/app/api/analises")
-async def criar_analise(payload: AnaliseCreate):
-    with AnaliseSessionLocal() as db:
-        registro = Analise(
-            empreendimento=payload.empreendimento,
-            unidade=payload.unidade,
-            preco_imovel=payload.preco_imovel,
-            valor_obtido=payload.valor_obtido,
-            prosoluto_calculado=payload.prosoluto_calculado,
-            prosoluto_liquido=payload.prosoluto_liquido,
-            sinal=payload.sinal,
-            sinal_produto=payload.sinal_produto,
-            financiamento=payload.financiamento,
-            subsidio=payload.subsidio,
-            cheque_moradia=payload.cheque_moradia,
-            renda_bruta=payload.renda_bruta,
-            perc_construcao=payload.perc_construcao,
-            is_agora=payload.is_agora,
-            is_pos_chaves=payload.is_pos_chaves,
-            tabela_referencia=json.dumps(payload.tabela_referencia, ensure_ascii=False),
-            data_referencia=payload.data_referencia,
-        )
-        db.add(registro)
-        db.commit()
-        db.refresh(registro)
-        return {"id": registro.id, "created_at": registro.created_at}
+async def criar_analise(
+    payload: AnaliseCreate,
+    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    registro = AnaliseRegistroDB(
+        empreendimento=payload.empreendimento,
+        unidade=payload.unidade,
+        preco_imovel=payload.preco_imovel,
+        valor_obtido=payload.valor_obtido,
+        prosoluto_calculado=payload.prosoluto_calculado,
+        prosoluto_liquido=payload.prosoluto_liquido,
+        sinal=payload.sinal,
+        sinal_produto=payload.sinal_produto,
+        financiamento=payload.financiamento,
+        subsidio=payload.subsidio,
+        cheque_moradia=payload.cheque_moradia,
+        renda_bruta=payload.renda_bruta,
+        perc_construcao=payload.perc_construcao,
+        is_agora=payload.is_agora,
+        is_pos_chaves=payload.is_pos_chaves,
+        tabela_referencia=json.dumps(payload.tabela_referencia, ensure_ascii=False),
+        data_referencia=payload.data_referencia,
+    )
+    db.add(registro)
+    db.commit()
+    db.refresh(registro)
+    return {"id": registro.id, "created_at": registro.created_at}
 
 
 @app.get("/app/api/analises")
-async def listar_analises(limit: int = 50):
-    with AnaliseSessionLocal() as db:
-        rows = (
-            db.query(Analise)
-            .order_by(Analise.created_at.desc())
-            .limit(min(max(limit, 1), 200))
-            .all()
-        )
-        return [
-            {
-                "id": row.id,
-                "created_at": row.created_at,
-                "empreendimento": row.empreendimento,
-                "unidade": row.unidade,
-                "preco_imovel": row.preco_imovel,
-                "valor_obtido": row.valor_obtido,
-                "prosoluto_calculado": row.prosoluto_calculado,
-                "prosoluto_liquido": row.prosoluto_liquido,
-                "sinal": row.sinal,
-                "sinal_produto": row.sinal_produto,
-                "financiamento": row.financiamento,
-                "subsidio": row.subsidio,
-                "cheque_moradia": row.cheque_moradia,
-                "renda_bruta": row.renda_bruta,
-                "perc_construcao": row.perc_construcao,
-                "is_agora": row.is_agora,
-                "is_pos_chaves": row.is_pos_chaves,
-                "tabela_referencia": json.loads(row.tabela_referencia or "[]"),
-                "data_referencia": row.data_referencia,
-            }
-            for row in rows
-        ]
+async def listar_analises(
+    limit: int = 50,
+    _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    rows = (
+        db.query(AnaliseRegistroDB)
+        .order_by(AnaliseRegistroDB.created_at.desc())
+        .limit(min(max(limit, 1), 200))
+        .all()
+    )
+    return [
+        {
+            "id": row.id,
+            "created_at": row.created_at,
+            "empreendimento": row.empreendimento,
+            "unidade": row.unidade,
+            "preco_imovel": row.preco_imovel,
+            "valor_obtido": row.valor_obtido,
+            "prosoluto_calculado": row.prosoluto_calculado,
+            "prosoluto_liquido": row.prosoluto_liquido,
+            "sinal": row.sinal,
+            "sinal_produto": row.sinal_produto,
+            "financiamento": row.financiamento,
+            "subsidio": row.subsidio,
+            "cheque_moradia": row.cheque_moradia,
+            "renda_bruta": row.renda_bruta,
+            "perc_construcao": row.perc_construcao,
+            "is_agora": row.is_agora,
+            "is_pos_chaves": row.is_pos_chaves,
+            "tabela_referencia": json.loads(row.tabela_referencia or "[]"),
+            "data_referencia": row.data_referencia,
+        }
+        for row in rows
+    ]

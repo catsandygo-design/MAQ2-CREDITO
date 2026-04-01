@@ -28,6 +28,18 @@ services:
         value: "admin"
       - key: APP_LOGIN_PASSWORD
         sync: false
+      - key: APP_ADMIN_PASSWORD
+        sync: false
+      - key: APP_CORRETOR_PASSWORD
+        sync: false
+      - key: APP_CCA_PASSWORD
+        sync: false
+      - key: APP_ANALISTA_PASSWORD
+        sync: false
+      - key: APP_GESTOR_PASSWORD
+        sync: false
+      - key: APP_GESTOR_CREDITO_PASSWORD
+        sync: false
       - key: SESSION_TTL_SECONDS
         value: "43200"
       - key: SESSION_IDLE_TIMEOUT_SECONDS
@@ -38,3 +50,7 @@ services:
         value: "8"
       - key: SESSION_COOKIE_SECURE
         value: "true"
+      - key: ENABLE_LEGACY_DEMO_USERS
+        value: "false"
+      - key: PII_ENCRYPTION_KEY
+        sync: false

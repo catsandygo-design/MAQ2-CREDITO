@@ -174,12 +174,6 @@ function CurrencyField({
   const [isFocused, setIsFocused] = useState(false)
   const [draft, setDraft] = useState(() => formatCurrencyFieldValue(value))
 
-  useEffect(() => {
-    if (!isFocused) {
-      setDraft(formatCurrencyFieldValue(value))
-    }
-  }, [isFocused, value])
-
   return (
     <label className={`space-y-2 text-sm ${wrapperClassName}`.trim()}>
       <span>{label}</span>
@@ -930,7 +924,7 @@ export function PresentationPage() {
                       </div>
                         {!parcelasHabilitadas ? (
                           <p className="text-xs text-amber-200">
-                            Entrada abaixo do minimo para parcelar (R$ {MIN_VALOR_PARCELA}). Cobrar Ã  vista ou ajustar valores.
+                            Entrada abaixo do minimo para parcelar (R$ {MIN_VALOR_PARCELA}). Cobrar a vista ou ajustar valores.
                           </p>
                         ) : (
                           <p className="text-xs text-slate-300">
