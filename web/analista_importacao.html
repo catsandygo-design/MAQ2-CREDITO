@@ -172,8 +172,316 @@
     .bad{color:var(--danger)}
   </style>
   <link rel="stylesheet" href="/assets/theme_techboard.css" />
+  <style>
+    body.analista-pro{
+      --border: rgba(15,23,42,.16);
+      padding:12px;
+    }
+    body.analista-pro .wrap{
+      width:min(1780px, 100%);
+      max-width:100%;
+      padding:0;
+      gap:10px;
+    }
+    body.analista-pro .topbar{
+      display:grid;
+      grid-template-columns:minmax(0, 1fr) auto;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:16px;
+      background:rgba(255,255,255,.94);
+      box-shadow:0 16px 34px rgba(15,23,42,.08);
+    }
+    body.analista-pro .title h1{
+      font-size:22px;
+      letter-spacing:.01em;
+      color:#0a3357;
+    }
+    body.analista-pro .title p{
+      margin-top:4px;
+      font-size:12px;
+      color:#415670;
+    }
+    body.analista-pro .actions{
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      gap:8px;
+    }
+    body.theme-corporate.analista-pro .btn{
+      min-height:38px;
+      padding:8px 14px;
+      border-radius:13px;
+      font-size:12px;
+      font-weight:700;
+    }
+    body.theme-corporate.analista-pro .btn.activeNav{
+      border-color:rgba(14,165,233,.46) !important;
+      background:linear-gradient(180deg, #dff4ff, #c9eafe) !important;
+      color:#0b507f !important;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.65), 0 6px 14px rgba(14,116,144,.16) !important;
+    }
+    body.analista-pro .chips{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      padding:0 2px;
+    }
+    body.analista-pro .chip{
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:5px 10px;
+      background:rgba(255,255,255,.96);
+      color:#334155;
+      font-size:11px;
+      font-weight:600;
+      white-space:nowrap;
+    }
+    .process-strip{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:8px;
+    }
+    .process-card{
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:10px 12px;
+      display:grid;
+      gap:5px;
+      background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(245,249,255,.92));
+      box-shadow:0 12px 24px rgba(15,23,42,.06);
+    }
+    .process-card .label{
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+    .process-card strong{
+      font-size:24px;
+      line-height:1;
+      color:#0f172a;
+    }
+    .process-card p{
+      margin:0;
+      font-size:11px;
+      color:var(--muted);
+      line-height:1.4;
+    }
+    .board-toolbar{
+      display:grid;
+      grid-template-columns:minmax(360px, 1.08fr) minmax(340px, .92fr);
+      gap:8px;
+    }
+    .dock-card,
+    .dock-chip{
+      border:1px solid var(--border);
+      border-radius:16px;
+      background:rgba(255,255,255,.96);
+      box-shadow:0 12px 24px rgba(15,23,42,.08);
+    }
+    .dock-card{
+      padding:12px 14px;
+      display:grid;
+      gap:6px;
+    }
+    .dock-chip-grid{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:8px;
+    }
+    .dock-chip{
+      padding:12px;
+      display:grid;
+      gap:5px;
+      align-content:start;
+    }
+    .dock-label{
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+    .dock-card strong,
+    .dock-chip strong{
+      color:#0f172a;
+      line-height:1.1;
+    }
+    .dock-card strong{ font-size:18px; }
+    .dock-chip strong{ font-size:22px; }
+    .dock-card p,
+    .dock-chip span{
+      margin:0;
+      font-size:11px;
+      color:var(--muted);
+      line-height:1.4;
+    }
+    body.analista-pro .card{
+      border-radius:16px;
+      padding:12px;
+      gap:10px;
+      background:rgba(255,255,255,.96);
+      box-shadow:0 14px 30px rgba(15,23,42,.08);
+    }
+    .card-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .card-head-copy{
+      display:grid;
+      gap:3px;
+    }
+    .card-head-copy strong{
+      font-size:12px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:#0f172a;
+    }
+    .card-head-copy span{
+      font-size:11px;
+      color:var(--muted);
+      line-height:1.4;
+    }
+    .step-strip{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:8px;
+    }
+    .step-piece{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:10px 12px;
+      background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,251,255,.92));
+      display:grid;
+      gap:4px;
+      transition:border-color .12s ease, box-shadow .12s ease, transform .12s ease;
+    }
+    .step-piece strong{
+      font-size:13px;
+      color:#0f172a;
+    }
+    .step-piece span{
+      font-size:11px;
+      color:var(--muted);
+      line-height:1.35;
+    }
+    .step-piece.active{
+      border-color:rgba(14,165,233,.42);
+      box-shadow:0 0 0 2px rgba(14,165,233,.10), 0 14px 28px rgba(14,165,233,.08);
+      transform:translateY(-1px);
+    }
+    .step-piece.done{
+      border-color:rgba(34,197,94,.35);
+      background:linear-gradient(180deg, rgba(236,253,245,.96), rgba(255,255,255,.92));
+    }
+    .step-piece.warn{
+      border-color:rgba(245,158,11,.35);
+      background:linear-gradient(180deg, rgba(255,247,237,.95), rgba(255,255,255,.92));
+    }
+    body.analista-pro input[type="number"],
+    body.analista-pro input[type="file"]{
+      min-height:41px;
+      min-width:220px;
+      padding:8px 11px;
+      font-size:13px;
+      border-radius:12px;
+      background:#fff;
+    }
+    .upload-row{
+      display:grid;
+      grid-template-columns:minmax(0, 1fr) auto;
+      gap:10px;
+      align-items:center;
+    }
+    .meter-card{
+      min-width:82px;
+      display:grid;
+      justify-items:center;
+      gap:8px;
+    }
+    .meter{
+      width:18px;
+      height:152px;
+      background:rgba(226,232,240,.92);
+    }
+    .meter-note{
+      font-size:11px;
+      font-weight:700;
+      color:var(--muted);
+    }
+    .result-filters{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+    .filter-pill{
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:6px 10px;
+      background:#fff;
+      color:#334155;
+      font-size:11px;
+      font-weight:700;
+      cursor:pointer;
+      transition:border-color .12s ease, box-shadow .12s ease, transform .12s ease;
+    }
+    .filter-pill:hover{ transform:translateY(-1px); }
+    .filter-pill.active{
+      border-color:rgba(14,165,233,.42);
+      background:linear-gradient(180deg, #dff4ff, #eff8ff);
+      color:#0b507f;
+      box-shadow:0 8px 16px rgba(14,116,144,.10);
+    }
+    .result-list{
+      max-height:320px;
+      padding:10px;
+      gap:8px;
+      background:rgba(248,250,252,.98);
+    }
+    .result-item{
+      border-color:rgba(15,23,42,.12);
+      padding:10px;
+      background:#fff;
+      display:grid;
+      gap:4px;
+    }
+    .result-item strong{ color:#0f172a; }
+    @media (max-width: 1180px){
+      .board-toolbar{ grid-template-columns:1fr; }
+      .process-strip,
+      .step-strip,
+      .dock-chip-grid{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+      .upload-row{ grid-template-columns:1fr; }
+      .meter-card{ justify-items:flex-start; }
+      .meter{
+        width:100%;
+        max-width:320px;
+        height:18px;
+      }
+      .fill{
+        inset:0 auto 0 0;
+        width:0%;
+        height:100%;
+      }
+    }
+    @media (max-width: 860px){
+      body.analista-pro{ padding:10px; }
+      body.analista-pro .topbar{ grid-template-columns:1fr; }
+      body.analista-pro .actions{ justify-content:flex-start; }
+      .process-strip,
+      .step-strip,
+      .dock-chip-grid{ grid-template-columns:1fr; }
+    }
+  </style>
 </head>
-<body class="theme-corporate">
+<body class="theme-corporate analista-pro">
   <canvas id="bhCanvas" aria-hidden="true"></canvas>
   <script>
     window.__layoutPrefPromise = (async () => {
@@ -204,12 +512,80 @@
     <div class="topbar">
       <div class="title">
         <h1>Importacao de Clientes</h1>
-        <p>Tela dedicada para upload de planilha e configuracao da meta mensal.</p>
+        <p>Mesa de entrada para meta, leitura do arquivo e encaixe do retorno antes de soltar a carteira no processo.</p>
       </div>
-      <a class="btn" href="/app/analista">Voltar para Painel</a>
+      <div class="actions">
+        <a class="btn" href="/app/analista">Painel</a>
+        <a class="btn" href="/app/analista/acompanhamento">Acompanhamento</a>
+        <a class="btn" href="/app/analista/acompanhamento-operacional">Operacional</a>
+        <a class="btn" href="/app/analista/repasse">Repasse</a>
+        <a class="btn activeNav" href="/app/analista/importacao" aria-current="page">Importacao</a>
+        <a class="btn" href="/app/analista/arquivados">Arquivados</a>
+      </div>
     </div>
 
+    <section class="chips" aria-label="Leitura rapida da importacao">
+      <span class="chip">Meta mensal: <strong id="metaChip">0</strong></span>
+      <span class="chip">Arquivo atual: <strong id="fileChip">Nenhum</strong></span>
+      <span class="chip">Retorno filtrado: <strong id="filterChip">Todos</strong></span>
+      <span class="chip">Ultima leitura: <strong id="lastImportChip">Sem importacao</strong></span>
+    </section>
+
+    <section class="process-strip" aria-label="Resumo da esteira de entrada">
+      <article class="process-card">
+        <span class="label">Meta do mes</span>
+        <strong id="metaTargetCount">0</strong>
+        <p>Capacidade comercial esperada para o recorte atual.</p>
+      </article>
+      <article class="process-card">
+        <span class="label">Importados</span>
+        <strong id="importedCount">0</strong>
+        <p>Linhas que encaixaram no sistema sem pendencia.</p>
+      </article>
+      <article class="process-card">
+        <span class="label">Ignorados</span>
+        <strong id="ignoredCount">0</strong>
+        <p>Clientes ja existentes que nao precisaram reentrada.</p>
+      </article>
+      <article class="process-card">
+        <span class="label">Invalidos</span>
+        <strong id="invalidCount">0</strong>
+        <p>Itens que ainda exigem ajuste antes de voltar para a esteira.</p>
+      </article>
+    </section>
+
+    <section class="board-toolbar" aria-label="Dock de encaixe da importacao">
+      <article class="dock-card">
+        <span class="dock-label">Etapa em foco</span>
+        <strong id="importDockStatus">Aguardando arquivo para iniciar o encaixe.</strong>
+        <p id="importDockHint">Selecione a planilha, confira as colunas e use o retorno filtrado para corrigir so o que trava a entrada.</p>
+      </article>
+      <div class="dock-chip-grid">
+        <article class="dock-chip">
+          <span class="dock-label">Prontas para subir</span>
+          <strong id="readyRowsCount">0</strong>
+          <span>Linhas importadas e prontas para seguir no fluxo.</span>
+        </article>
+        <article class="dock-chip">
+          <span class="dock-label">Pedir revisao</span>
+          <strong id="reviewRowsCount">0</strong>
+          <span>Linhas ignoradas ou com alerta para leitura final.</span>
+        </article>
+        <article class="dock-chip">
+          <span class="dock-label">Travadas</span>
+          <strong id="errorRowsCount">0</strong>
+          <span>Linhas invalidas que ainda nao encaixaram.</span>
+        </article>
+      </div>
+    </section>
+
     <section class="card" aria-label="Meta mensal">
+      <div class="card-head">
+        <div class="card-head-copy">
+          <strong>Meta comercial</strong>
+          <span>Ajuste a capacidade do mes antes da entrada da carteira para manter o fechamento coerente.</span>
+        </div>
+      </div>
       <div class="row">
         <input id="metaMensal" type="number" min="0" step="1" placeholder="Meta mensal do gestor" />
         <button class="btn" id="btnSalvarMeta" type="button">Salvar Meta</button>
@@ -218,11 +594,25 @@
     </section>
 
     <section class="card" aria-label="Importacao de planilha">
-      <div class="row">
-        <input id="fileImport" type="file" accept=".csv,.cvs,.xlsx" />
-        <button class="btn primary" id="btnImportar" type="button">Importar Planilha</button>
-        <div class="meter" title="Progresso da importacao">
-          <div class="fill" id="importFill"></div>
+      <div class="card-head">
+        <div class="card-head-copy">
+          <strong>Workbench da importacao</strong>
+          <span>O arquivo entra aqui, passa pela leitura das colunas e sai com o retorno separado por encaixe.</span>
+        </div>
+      </div>
+
+      <div class="step-strip" id="importSteps" aria-label="Etapas da importacao"></div>
+
+      <div class="upload-row">
+        <div class="row">
+          <input id="fileImport" type="file" accept=".csv,.cvs,.xlsx" />
+          <button class="btn primary" id="btnImportar" type="button">Importar Planilha</button>
+        </div>
+        <div class="meter-card">
+          <div class="meter" title="Progresso da importacao">
+            <div class="fill" id="importFill"></div>
+          </div>
+          <span class="meter-note" id="importPercentLabel">0%</span>
         </div>
       </div>
       <div class="hint">Colunas obrigatorias (ordem recomendada): Reserva, Data, Situação, Empreendimento, Cliente, Corretor, Imobiliária.</div>
@@ -231,6 +621,12 @@
 
       <div class="result-wrap">
         <div class="hint" id="resultSummary">Nenhuma importacao executada.</div>
+        <div class="result-filters" id="resultFilters">
+          <button class="filter-pill active" type="button" data-filter="todos">Todos</button>
+          <button class="filter-pill" type="button" data-filter="importado">Importados</button>
+          <button class="filter-pill" type="button" data-filter="ignorado">Ignorados</button>
+          <button class="filter-pill" type="button" data-filter="invalido">Invalidos</button>
+        </div>
         <div class="result-list" id="resultList"></div>
       </div>
     </section>
@@ -434,12 +830,127 @@
   <script>
     const API_BASE = "/app/api";
     const $ = (id) => document.getElementById(id);
+    let lastImportData = null;
+    let currentImportPhase = "idle";
+    let activeResultFilter = "todos";
+    let currentFileName = "";
 
     function setImportProgress(percent) {
       const fill = $("importFill");
       if (!fill) return;
       const safe = Math.max(0, Math.min(100, Number(percent || 0)));
-      fill.style.height = `${safe}%`;
+      if (window.matchMedia("(max-width: 1180px)").matches) {
+        fill.style.width = `${safe}%`;
+        fill.style.height = "100%";
+      } else {
+        fill.style.height = `${safe}%`;
+        fill.style.width = "100%";
+      }
+      $("importPercentLabel").textContent = `${safe}%`;
+    }
+
+    function formatFilterLabel(value) {
+      if (value === "todos") return "Todos";
+      if (value === "importado") return "Importados";
+      if (value === "ignorado") return "Ignorados";
+      if (value === "invalido") return "Invalidos";
+      return "Todos";
+    }
+
+    function importStats(data) {
+      const linhas = Array.isArray(data?.resultados) ? data.resultados : [];
+      return {
+        total: Number(data?.total_linhas || linhas.length || 0),
+        importados: Number(data?.importados || 0),
+        ignorados: Number(data?.ignorados_existentes || 0),
+        invalidados: Number(data?.invalidados || 0),
+        linhas,
+      };
+    }
+
+    function renderImportSteps() {
+      const host = $("importSteps");
+      if (!host) return;
+      const steps = [
+        {
+          title: "Preparar arquivo",
+          text: currentFileName ? currentFileName : "Selecione a planilha que vai entrar.",
+        },
+        {
+          title: "Conferir colunas",
+          text: "Reserva, data, situacao e chaves comerciais coerentes.",
+        },
+        {
+          title: "Rodar importacao",
+          text: "Suba a planilha e acompanhe a barra de progresso.",
+        },
+        {
+          title: "Revisar retorno",
+          text: "Filtre importados, ignorados e invalidos antes de seguir.",
+        },
+      ];
+      const phaseMap = {
+        idle: 0,
+        file_ready: 1,
+        importing: 2,
+        reviewed: 3,
+        error: 3,
+      };
+      const activeIndex = phaseMap[currentImportPhase] ?? 0;
+      host.innerHTML = steps.map((step, index) => {
+        const classes = [
+          "step-piece",
+          index < activeIndex ? "done" : "",
+          index === activeIndex ? "active" : "",
+          currentImportPhase === "error" && index === 3 ? "warn" : "",
+        ].filter(Boolean).join(" ");
+        return `<article class="${classes}"><strong>${step.title}</strong><span>${step.text}</span></article>`;
+      }).join("");
+    }
+
+    function syncResultFilters() {
+      document.querySelectorAll("[data-filter]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.filter === activeResultFilter);
+      });
+      $("filterChip").textContent = formatFilterLabel(activeResultFilter);
+    }
+
+    function updateImportCockpit(data = lastImportData) {
+      const stats = importStats(data);
+      $("fileChip").textContent = currentFileName || "Nenhum";
+      $("filterChip").textContent = formatFilterLabel(activeResultFilter);
+      $("lastImportChip").textContent = stats.total ? `${stats.importados}/${stats.total} encaixadas` : "Sem importacao";
+      $("importedCount").textContent = String(stats.importados);
+      $("ignoredCount").textContent = String(stats.ignorados);
+      $("invalidCount").textContent = String(stats.invalidados);
+      $("readyRowsCount").textContent = String(stats.importados);
+      $("reviewRowsCount").textContent = String(stats.ignorados);
+      $("errorRowsCount").textContent = String(stats.invalidados);
+
+      if (currentImportPhase === "importing") {
+        $("importDockStatus").textContent = "Importacao em andamento.";
+        $("importDockHint").textContent = "A barra mostra o encaixe do arquivo no runtime. Assim que concluir, revise so o que voltou pendente.";
+      } else if (currentImportPhase === "error") {
+        $("importDockStatus").textContent = "Importacao travou e pede ajuste.";
+        $("importDockHint").textContent = "Corrija as linhas invalidas ou o arquivo de origem antes de tentar novo envio.";
+      } else if (stats.total > 0) {
+        $("importDockStatus").textContent = `${stats.importados} linhas prontas, ${stats.invalidados} travadas.`;
+        $("importDockHint").textContent = "Use os filtros do retorno para corrigir primeiro os invalidos e depois revisar os ignorados.";
+      } else if (currentFileName) {
+        $("importDockStatus").textContent = `Arquivo selecionado: ${currentFileName}`;
+        $("importDockHint").textContent = "Conferindo colunas e preparando a subida da carteira.";
+      } else {
+        $("importDockStatus").textContent = "Aguardando arquivo para iniciar o encaixe.";
+        $("importDockHint").textContent = "Selecione a planilha, confira as colunas e use o retorno filtrado para corrigir so o que trava a entrada.";
+      }
+
+      renderImportSteps();
+    }
+
+    function filteredImportRows(data) {
+      const linhas = importStats(data).linhas;
+      if (activeResultFilter === "todos") return linhas;
+      return linhas.filter((row) => String(row.status || "").toLowerCase() === activeResultFilter);
     }
 
     async function api(path, options = {}) {
@@ -495,18 +1006,18 @@
       const resultList = $("resultList");
       const resultSummary = $("resultSummary");
       if (!resultList || !resultSummary) return;
+      lastImportData = data;
 
-      const total = Number(data?.total_linhas || 0);
-      const importados = Number(data?.importados || 0);
-      const ignorados = Number(data?.ignorados_existentes || 0);
-      const invalidados = Number(data?.invalidados || 0);
-      const linhas = Array.isArray(data?.resultados) ? data.resultados : [];
+      const { total, importados, ignorados, invalidados } = importStats(data);
+      const linhas = filteredImportRows(data);
 
       resultSummary.textContent =
         `Resultado: ${importados} importado(s), ${ignorados} ignorado(s), ${invalidados} invalido(s), total ${total} linha(s) processada(s).`;
+      syncResultFilters();
+      updateImportCockpit(data);
 
       if (!linhas.length) {
-        resultList.innerHTML = `<div class="result-item">Nenhuma linha processada.</div>`;
+        resultList.innerHTML = `<div class="result-item">Nenhuma linha encontrada para o filtro atual.</div>`;
         return;
       }
 
@@ -527,6 +1038,8 @@
       const data = await api("/gestor/meta");
       const meta = Number(data?.meta ?? 0);
       metaInput.value = String(Number.isFinite(meta) && meta >= 0 ? Math.round(meta) : 0);
+      $("metaChip").textContent = metaInput.value || "0";
+      $("metaTargetCount").textContent = metaInput.value || "0";
       if (metaHint) metaHint.textContent = `Meta mensal atual: ${metaInput.value || "0"} (definida pelo analista).`;
     }
 
@@ -545,10 +1058,30 @@
           body: JSON.stringify({ meta: Math.round(parsed) }),
         });
         metaInput.value = String(Number(data?.meta ?? 0));
+        $("metaChip").textContent = metaInput.value || "0";
+        $("metaTargetCount").textContent = metaInput.value || "0";
         metaHint.textContent = `Meta mensal salva: ${metaInput.value} (definida pelo analista).`;
       } catch (error) {
         metaHint.textContent = `Erro ao salvar meta: ${error.message}`;
       }
+    });
+
+    $("fileImport").addEventListener("change", (event) => {
+      currentFileName = event.target?.files?.[0]?.name || "";
+      currentImportPhase = currentFileName ? "file_ready" : "idle";
+      updateImportCockpit();
+    });
+
+    $("resultFilters").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-filter]");
+      if (!button) return;
+      activeResultFilter = button.dataset.filter || "todos";
+      if (lastImportData) {
+        renderResultados(lastImportData);
+        return;
+      }
+      syncResultFilters();
+      updateImportCockpit();
     });
 
     $("btnImportar").addEventListener("click", async () => {
@@ -565,23 +1098,30 @@
 
       btn.disabled = true;
       setImportProgress(0);
+      currentImportPhase = "importing";
+      updateImportCockpit();
       msgEl.textContent = "Importando planilha...";
       msgEl.className = "msg";
       try {
         const data = await uploadPlanilha(file);
+        currentImportPhase = "reviewed";
         renderResultados(data);
         msgEl.textContent = "Importacao concluida com sucesso.";
         msgEl.className = "msg ok";
         setImportProgress(100);
       } catch (error) {
+        currentImportPhase = "error";
         msgEl.textContent = `Erro na importacao: ${error.message}`;
         msgEl.className = "msg err";
         setImportProgress(0);
+        updateImportCockpit(lastImportData);
       } finally {
         btn.disabled = false;
       }
     });
 
+    renderImportSteps();
+    updateImportCockpit();
     loadMetaMensal().catch((error) => {
       const metaHint = $("metaHint");
       if (metaHint) metaHint.textContent = `Erro ao carregar meta: ${error.message}`;

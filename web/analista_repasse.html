@@ -109,7 +109,7 @@
       margin: 0 auto;
       padding: 10px;
       display: grid;
-      grid-template-rows: auto auto auto 1fr;
+      grid-template-rows: auto auto auto auto minmax(0, 1fr);
       gap: 8px;
     }
 
@@ -242,6 +242,67 @@
       color: var(--muted);
     }
 
+    .board-toolbar {
+      display: grid;
+      grid-template-columns: minmax(320px, 1.15fr) minmax(320px, 0.85fr);
+      gap: 8px;
+    }
+
+    .dock-card,
+    .dock-chip {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
+      box-shadow: 0 10px 20px rgba(2, 6, 23, .08);
+    }
+
+    .dock-card {
+      padding: 12px 14px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .dock-chip-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .dock-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .dock-card strong {
+      color: var(--text);
+      font-size: 18px;
+      line-height: 1.15;
+    }
+
+    .dock-card p,
+    .dock-chip span {
+      margin: 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .dock-chip {
+      padding: 12px;
+      display: grid;
+      gap: 5px;
+      align-content: start;
+    }
+
+    .dock-chip strong {
+      color: var(--text);
+      font-size: 22px;
+      line-height: 1;
+    }
+
     .filters {
       border: 1px solid var(--line);
       border-radius: 14px;
@@ -289,9 +350,38 @@
       border-radius: 16px;
       background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
       padding: 8px;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .board-head {
       display: flex;
-      flex-direction: column;
-      gap: 6px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 4px 2px 0;
+    }
+
+    .board-head-copy {
+      display: grid;
+      gap: 2px;
+    }
+
+    .board-head-copy strong {
+      color: var(--text);
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .board-head-copy span,
+    .board-rules {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
     }
 
     .board {
@@ -301,7 +391,9 @@
       display: grid;
       grid-template-columns: repeat(5, minmax(210px, 1fr));
       gap: 8px;
-      align-items: start;
+      align-items: stretch;
+      scroll-snap-type: x proximity;
+      padding-bottom: 2px;
     }
 
     .column {
@@ -310,8 +402,21 @@
       background: rgba(7, 12, 28, .8);
       display: grid;
       grid-template-rows: auto 1fr;
-      min-height: 340px;
-      max-height: calc(100vh - 210px);
+      min-height: 0;
+      height: 100%;
+      scroll-snap-align: start;
+      transition: border-color .12s ease, box-shadow .12s ease, transform .12s ease;
+    }
+
+    .column.drop-ok {
+      border-color: rgba(34, 197, 94, .45);
+      box-shadow: 0 0 0 2px rgba(34, 197, 94, .16), 0 16px 28px rgba(34, 197, 94, .08);
+      transform: translateY(-1px);
+    }
+
+    .column.drop-blocked {
+      border-color: rgba(239, 68, 68, .35);
+      box-shadow: 0 0 0 2px rgba(239, 68, 68, .10);
     }
 
     .col-head {
@@ -319,8 +424,14 @@
       border-bottom: 1px solid rgba(148, 163, 184, .12);
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: start;
       gap: 6px;
+    }
+
+    .col-copy {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
     }
 
     .col-title {
@@ -328,6 +439,18 @@
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: .06em;
+    }
+
+    .col-subtitle {
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.35;
+    }
+
+    .col-head-side {
+      display: grid;
+      gap: 4px;
+      justify-items: end;
     }
 
     .col-count {
@@ -340,6 +463,14 @@
       font-variant-numeric: tabular-nums;
     }
 
+    .col-drop-note {
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.25;
+      text-align: right;
+      max-width: 110px;
+    }
+
     .cards {
       min-height: 0;
       overflow-y: auto;
@@ -348,11 +479,17 @@
       display: grid;
       gap: 6px;
       align-content: start;
+      transition: background .12s ease, box-shadow .12s ease;
     }
 
     .cards.drag-over {
       background: rgba(34, 197, 94, .08);
       box-shadow: inset 0 0 0 1px rgba(34, 197, 94, .35);
+    }
+
+    .cards.drag-over.blocked {
+      background: rgba(239, 68, 68, .06);
+      box-shadow: inset 0 0 0 1px rgba(239, 68, 68, .28);
     }
 
     .card {
@@ -367,6 +504,12 @@
       cursor: grab;
       transition: transform .12s ease, border-color .12s ease, opacity .12s ease;
     }
+
+    .card.is-selected {
+      border-color: rgba(14, 165, 233, .42);
+      box-shadow: 0 0 0 2px rgba(14, 165, 233, .14), 0 14px 22px rgba(14, 165, 233, .10);
+    }
+
     .card.finalizado {
       background: rgba(22, 163, 74, .10);
       border-color: rgba(34, 197, 94, .5);
@@ -397,6 +540,13 @@
       gap: 8px;
       align-items: start;
       min-width: 0;
+    }
+
+    .card-head-main {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+      flex: 1 1 auto;
     }
 
     .name {
@@ -458,6 +608,22 @@
       50% { opacity: 1; transform: scaleY(1); }
     }
 
+    .drag-grip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      min-height: 28px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, .22);
+      background: rgba(2, 6, 23, .55);
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1;
+      cursor: grab;
+      flex-shrink: 0;
+    }
+
     .stage {
       border-radius: 999px;
       padding: 2px 6px;
@@ -470,6 +636,76 @@
       max-width: 110px;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .card-badges,
+    .card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .mini-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 0 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, .24);
+      background: rgba(255, 255, 255, .06);
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      max-width: 100%;
+    }
+
+    .mini-chip.ok {
+      border-color: rgba(22, 163, 74, .32);
+      background: rgba(34, 197, 94, .10);
+      color: #166534;
+    }
+
+    .mini-chip.warn {
+      border-color: rgba(245, 158, 11, .30);
+      background: rgba(245, 158, 11, .10);
+      color: #92400e;
+    }
+
+    .mini-chip.bad {
+      border-color: rgba(239, 68, 68, .30);
+      background: rgba(239, 68, 68, .10);
+      color: #991b1b;
+    }
+
+    .mini-btn {
+      border: 1px solid rgba(148, 163, 184, .24);
+      background: rgba(255, 255, 255, .05);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 5px 9px;
+      font-size: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+    }
+
+    .mini-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: rgba(14, 165, 233, .35);
+      box-shadow: 0 8px 16px rgba(14, 165, 233, .10);
+    }
+
+    .mini-btn.primary {
+      border-color: rgba(14, 165, 233, .35);
+      background: rgba(14, 165, 233, .12);
+      color: #0c4a6e;
+    }
+
+    .mini-btn:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+      box-shadow: none;
     }
 
     .meta-line {
@@ -537,14 +773,17 @@
       .filters {
         grid-template-columns: 1fr 1fr;
       }
+      .board-toolbar {
+        grid-template-columns: 1fr;
+      }
       .process-strip {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
       .board {
         grid-template-columns: repeat(5, minmax(210px, 1fr));
       }
-      .column {
-        max-height: calc(100vh - 280px);
+      .dock-chip-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
     }
   </style>
@@ -598,6 +837,24 @@
       font-size:11px;
       font-weight:600;
     }
+    body.analista-pro .board-toolbar{
+      grid-template-columns:minmax(360px, 1.1fr) minmax(340px, .9fr);
+    }
+    body.analista-pro .dock-card,
+    body.analista-pro .dock-chip,
+    body.theme-corporate.analista-pro .mini-chip,
+    body.theme-corporate.analista-pro .mini-btn,
+    body.theme-corporate.analista-pro .drag-grip{
+      background:rgba(255,255,255,.96);
+      border-color:rgba(15,23,42,.12);
+      color:#0f172a;
+    }
+    body.analista-pro .dock-card{
+      padding:12px 14px;
+    }
+    body.analista-pro .dock-chip-grid{
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+    }
     body.analista-pro .filters{
       grid-template-columns:minmax(230px, 1.4fr) repeat(2, minmax(170px, 1fr)) auto auto;
       gap:8px;
@@ -623,18 +880,18 @@
     }
     body.analista-pro .board-shell{
       border-radius:16px;
-      padding:8px;
+      padding:10px;
     }
     body.analista-pro .board{
-      grid-template-columns:repeat(5, minmax(230px, 1fr));
+      grid-template-columns:repeat(5, minmax(250px, 1fr));
       gap:10px;
     }
     body.analista-pro .column{
       border-radius:14px;
-      min-height:360px;
+      min-height:0;
     }
     body.analista-pro .col-head{
-      padding:9px;
+      padding:10px;
     }
     body.analista-pro .col-title{
       font-size:11px;
@@ -650,9 +907,9 @@
       gap:7px;
     }
     body.analista-pro .card{
-      padding:8px;
+      padding:10px;
       border-radius:11px;
-      gap:5px;
+      gap:7px;
     }
     body.analista-pro .name{
       font-size:12px;
@@ -677,6 +934,9 @@
       body.analista-pro .actions{
         justify-content:flex-start;
       }
+      body.analista-pro .board-toolbar{
+        grid-template-columns:1fr;
+      }
       body.analista-pro .filters{
         grid-template-columns:repeat(2, minmax(0, 1fr));
       }
@@ -685,6 +945,9 @@
       }
     }
     @media (max-width: 760px){
+      body.analista-pro .dock-chip-grid{
+        grid-template-columns:1fr;
+      }
       body.analista-pro .filters{
         grid-template-columns:1fr;
       }
@@ -792,7 +1055,39 @@
       <div class="msg" id="msg"></div>
     </section>
 
+    <section class="board-toolbar" aria-label="Modo de encaixe do tabuleiro">
+      <article class="dock-card">
+        <span class="dock-label">Modo encaixe</span>
+        <strong id="dragStatus">Arraste um card ou use os botoes de acao rapida.</strong>
+        <p id="dragHint">O repasse aceita proxima coluna, retorno para Inicio de Repasse ou encerramento final.</p>
+      </article>
+      <div class="dock-chip-grid">
+        <article class="dock-chip">
+          <span class="dock-label">Pecas moveis</span>
+          <strong id="moveableCount">0</strong>
+          <span>Clientes ainda em esteira ativa.</span>
+        </article>
+        <article class="dock-chip">
+          <span class="dock-label">Prontos para avancar</span>
+          <strong id="moveReadyCount">0</strong>
+          <span>Ja conseguem o proximo encaixe.</span>
+        </article>
+        <article class="dock-chip">
+          <span class="dock-label">Bloqueio forte</span>
+          <strong id="blockedMoveCount">0</strong>
+          <span>Assinatura travada por regra.</span>
+        </article>
+      </div>
+    </section>
+
     <section class="board-shell">
+      <div class="board-head">
+        <div class="board-head-copy">
+          <strong>Tabuleiro interativo de repasse</strong>
+          <span>As colunas mostram onde encaixar o cliente. Arraste, solte ou use os botoes do proprio card.</span>
+        </div>
+        <div class="board-rules">Assinatura Caixa so libera quando CCA, Agehab, sinal e fiador estiverem dentro da regra.</div>
+      </div>
       <div class="board" id="board"></div>
     </section>
   </div>
@@ -971,6 +1266,14 @@
       { key: "distrato", title: "Distrato" },
     ];
 
+    const COLUMN_HELP = {
+      em_repasse: "Entrada da esteira de repasse.",
+      inicio_repasse: "Retorno tecnico e reencaixe.",
+      assinatura_caixa: "Fase apta para assinatura.",
+      cancelado: "Saida definitiva por cancelamento.",
+      distrato: "Saida definitiva por distrato.",
+    };
+
     const REPASSE_ESTAGIOS = new Set([
       "assinatura_diretoria",
       "autorizacao_diretoria",
@@ -989,6 +1292,7 @@
     let loading = false;
     let countdown = REFRESH_SECONDS;
     let lastRefreshAt = 0;
+    let selectedCardId = "";
 
     function setMsg(text, tone = "") {
       const el = $("msg");
@@ -1097,6 +1401,58 @@
       return blockers;
     }
 
+    function moveRule(row, targetStage) {
+      const fromStage = row.stage;
+      if (!targetStage || fromStage === targetStage) {
+        return { ok: false, reason: "Mesma etapa" };
+      }
+      if (fromStage === "cancelado" || fromStage === "distrato") {
+        return { ok: false, reason: "Status final nao permite retorno" };
+      }
+      if (targetStage === "assinatura_caixa") {
+        const blockers = assinaturaBlockers(row);
+        if (blockers.length) {
+          return { ok: false, reason: blockers[0] };
+        }
+      }
+
+      const fromIndex = COL_INDEX[fromStage];
+      const toIndex = COL_INDEX[targetStage];
+      const isCancelamento = targetStage === "cancelado" || targetStage === "distrato";
+      const isNextStep = toIndex === fromIndex + 1;
+      const isReturnToInicio = targetStage === "inicio_repasse" && fromStage !== "inicio_repasse";
+
+      if (!isNextStep && !isReturnToInicio && !isCancelamento) {
+        return { ok: false, reason: "Use proxima coluna, Inicio de Repasse ou encerramento" };
+      }
+
+      if (isCancelamento) return { ok: true, reason: "Encerrar processo nesta etapa final" };
+      if (isNextStep) return { ok: true, reason: `Avancar para ${stageLabel(targetStage)}` };
+      if (isReturnToInicio) return { ok: true, reason: "Retornar para o encaixe tecnico do inicio" };
+      return { ok: true, reason: `Mover para ${stageLabel(targetStage)}` };
+    }
+
+    function nextSuggestedStage(row) {
+      if (row.stage === "cancelado" || row.stage === "distrato" || row.stage === "assinatura_caixa") return "";
+      const next = COLUMNS[COL_INDEX[row.stage] + 1];
+      return next && !["cancelado", "distrato"].includes(next.key) ? next.key : "";
+    }
+
+    function canReturnToInicio(row) {
+      return row.stage !== "cancelado" && row.stage !== "distrato" && COL_INDEX[row.stage] > COL_INDEX["inicio_repasse"];
+    }
+
+    function primaryRepasseBlocker(row) {
+      const blockers = assinaturaBlockers(row);
+      if (!blockers.length) return "Pronto para assinatura"
+      if (blockers.some((item) => item.includes("Agehab"))) return "Agehab segura o encaixe"
+      if (blockers.some((item) => item.includes("Caixa"))) return "CCA ainda nao liberou assinatura"
+      if (blockers.some((item) => item.includes("sinal")) || blockers.some((item) => item.includes("fiador"))) {
+        return "Estrutura financeira pendente"
+      }
+      return blockers[0]
+    }
+
     async function api(path, options = {}) {
       const response = await fetch(`${API_BASE}${path}`, {
         credentials: "same-origin",
@@ -1156,8 +1512,14 @@
       board.innerHTML = COLUMNS.map((c) => `
         <article class="column" data-col="${c.key}">
           <header class="col-head">
-            <h3 class="col-title">${c.title}</h3>
-            <span class="col-count" id="count-${c.key}">0</span>
+            <div class="col-copy">
+              <h3 class="col-title">${c.title}</h3>
+              <span class="col-subtitle">${COLUMN_HELP[c.key] || "Fluxo do repasse"}</span>
+            </div>
+            <div class="col-head-side">
+              <span class="col-count" id="count-${c.key}">0</span>
+              <span class="col-drop-note" id="hint-${c.key}">Aguardando encaixe</span>
+            </div>
           </header>
           <div class="cards" id="cards-${c.key}" data-drop="${c.key}"></div>
         </article>
@@ -1168,8 +1530,13 @@
       const href = `/app/analise?processo_id=${encodeURIComponent(row.id)}`;
       const blockers = assinaturaBlockers(row);
       const assinatura = blockers.length ? `Bloqueado (${blockers.length})` : "Apto";
+      const blockerTone = blockers.length ? (blockers.length > 1 ? "bad" : "warn") : "ok";
+      const nextStage = nextSuggestedStage(row);
+      const nextRule = nextStage ? moveRule(row, nextStage) : { ok: false, reason: "Sem proxima etapa" };
+      const resetRule = canReturnToInicio(row) ? moveRule(row, "inicio_repasse") : { ok: false, reason: "Ja esta no encaixe inicial" };
       const cardClasses = [
         "card",
+        selectedCardId === row.id ? "is-selected" : "",
         row.moving ? "updating" : "",
         row.foraContagemMes ? "out-count" : "",
         !row.foraContagemMes && isFinalizadoRow(row) ? "finalizado" : "",
@@ -1180,8 +1547,14 @@
       return `
         <div class="${cardClasses}" draggable="${row.moving ? "false" : "true"}" data-id="${esc(row.id)}" data-stage="${esc(row.stage)}">
           <div class="card-top">
-            <p class="name">${pauseIcon}<a href="${href}" title="Abrir analise">${esc(row.cliente)}</a></p>
-            <span class="stage">${esc(comercialStageLabel(row.estagioComercial))}</span>
+            <div class="card-head-main">
+              <p class="name">${pauseIcon}<a href="${href}" title="Abrir analise">${esc(row.cliente)}</a></p>
+              <div class="card-badges">
+                <span class="stage">${esc(comercialStageLabel(row.estagioComercial))}</span>
+                <span class="mini-chip ${blockerTone}">${esc(primaryRepasseBlocker(row))}</span>
+              </div>
+            </div>
+            <span class="drag-grip" title="Arraste ou use os botoes de encaixe" aria-hidden="true">::</span>
           </div>
           <div class="meta-line"><span>Empreendimento</span><b>${esc(row.obra)}</b></div>
           <div class="meta-line"><span>Corretor</span><b>${esc(row.corretor)}</b></div>
@@ -1192,6 +1565,10 @@
           <div class="meta-line"><span>Status agehab</span><b>${esc(row.statusAgehab)}</b></div>
           <div class="meta-line"><span>Status sinal</span><b>${esc(row.statusSinal)}</b></div>
           <div class="meta-line"><span>Status fiador</span><b>${esc(row.statusFiador)}</b></div>
+          <div class="card-actions">
+            <button class="mini-btn" type="button" data-card-action="reset" data-id="${esc(row.id)}" ${resetRule.ok ? "" : "disabled"} title="${esc(resetRule.reason)}">Voltar para inicio</button>
+            <button class="mini-btn primary" type="button" data-card-action="advance" data-id="${esc(row.id)}" data-target="${esc(nextStage)}" ${nextRule.ok ? "" : "disabled"} title="${esc(nextRule.reason)}">Proximo encaixe</button>
+          </div>
         </div>
       `;
     }
@@ -1201,6 +1578,8 @@
         const list = filtered.filter((r) => r.stage === col.key);
         const body = $(`cards-${col.key}`);
         $(`count-${col.key}`).textContent = String(list.length);
+        const hintNode = $(`hint-${col.key}`);
+        if (hintNode) hintNode.textContent = COLUMN_HELP[col.key] || "Fluxo do repasse";
         if (!list.length) {
           body.innerHTML = '<div class="empty">Sem clientes nesta etapa.</div>';
           return;
@@ -1217,12 +1596,29 @@
         const blockers = assinaturaBlockers(row);
         return blockers.some((item) => item.includes("sinal")) || blockers.some((item) => item.includes("fiador"));
       }).length;
+      const moveable = filtered.filter((row) => !["cancelado", "distrato"].includes(row.stage)).length;
+      const readyToAdvance = filtered.filter((row) => {
+        const nextStage = nextSuggestedStage(row);
+        return nextStage && moveRule(row, nextStage).ok;
+      }).length;
+      const blockedHard = filtered.filter((row) => assinaturaBlockers(row).length > 0).length;
+      const selected = filtered.find((row) => row.id === selectedCardId) || DATA.find((row) => row.id === selectedCardId) || null;
       $("totalCount").textContent = outCount > 0 ? `${counted} + ${outCount} fora` : String(counted);
       $("sumAptosAssinatura").textContent = String(aptosAssinatura);
       $("sumBloqueioCaixa").textContent = String(bloqueioCaixa);
       $("sumBloqueioAgehab").textContent = String(bloqueioAgehab);
       $("sumBloqueioGarantia").textContent = String(bloqueioGarantia);
+      $("moveableCount").textContent = String(moveable);
+      $("moveReadyCount").textContent = String(readyToAdvance);
+      $("blockedMoveCount").textContent = String(blockedHard);
+      $("dragStatus").textContent = selected
+        ? `${selected.cliente} em ${stageLabel(selected.stage)}`
+        : "Arraste um card ou use os botoes de acao rapida.";
+      $("dragHint").textContent = selected
+        ? primaryRepasseBlocker(selected)
+        : "O repasse aceita proxima coluna, retorno para Inicio de Repasse ou encerramento final.";
       bindDragEvents();
+      bindCardControls();
     }
 
     function applyFilters() {
@@ -1243,36 +1639,18 @@
     async function moveToStage(processoId, targetStage) {
       const row = DATA.find((r) => r.id === processoId);
       if (!row) return;
+      selectedCardId = row.id;
 
       const fromStage = row.stage;
       if (fromStage === targetStage) return;
-
-      const fromIsClosed = fromStage === "cancelado" || fromStage === "distrato";
-      if (fromIsClosed) {
-        setMsg("Status Cancelado/Distrato nao permite retorno.", "err");
+      const rule = moveRule(row, targetStage);
+      if (!rule.ok) {
+        setMsg(rule.reason, "err");
         applyFilters();
         return;
       }
 
-      if (targetStage === "assinatura_caixa") {
-        const blockers = assinaturaBlockers(row);
-        if (blockers.length) {
-          setMsg(`Nao autorizado para Assinatura Caixa: ${blockers[0]}.`, "err");
-          applyFilters();
-          return;
-        }
-      }
-
-      const fromIndex = COL_INDEX[fromStage];
-      const toIndex = COL_INDEX[targetStage];
       const isCancelamento = targetStage === "cancelado" || targetStage === "distrato";
-      const isNextStep = toIndex === fromIndex + 1;
-      const isReturnToInicio = targetStage === "inicio_repasse" && fromStage !== "inicio_repasse";
-      if (!isNextStep && !isReturnToInicio && !isCancelamento) {
-        setMsg("Movimento permitido: proxima coluna, retorno para Inicio de Repasse, Cancelado ou Distrato.", "err");
-        applyFilters();
-        return;
-      }
 
       if (isCancelamento) {
         const confirmou = window.confirm(
@@ -1324,10 +1702,71 @@
       applyFilters();
     }
 
+    function clearDropTargets() {
+      document.querySelectorAll(".column").forEach((col) => col.classList.remove("drop-ok", "drop-blocked"));
+      document.querySelectorAll(".cards").forEach((zone) => zone.classList.remove("drag-over", "blocked"));
+      COLUMNS.forEach((col) => {
+        const hintNode = $(`hint-${col.key}`);
+        if (hintNode) hintNode.textContent = COLUMN_HELP[col.key] || "Fluxo do repasse";
+      });
+    }
+
+    function paintDropTargets(row) {
+      COLUMNS.forEach((col) => {
+        const node = document.querySelector(`.column[data-col="${col.key}"]`);
+        if (!node) return;
+        const result = moveRule(row, col.key);
+        node.classList.remove("drop-ok", "drop-blocked");
+        if (result.ok) {
+          node.classList.add("drop-ok");
+        } else if (col.key !== row.stage) {
+          node.classList.add("drop-blocked");
+        }
+        const hintNode = $(`hint-${col.key}`);
+        if (hintNode) hintNode.textContent = col.key === row.stage ? "Etapa atual" : result.reason;
+      });
+    }
+
+    function bindCardControls() {
+      document.querySelectorAll(".card").forEach((card) => {
+        card.addEventListener("click", (event) => {
+          if (event.target.closest("a, button")) return;
+          selectedCardId = card.dataset.id || "";
+          renderBoard();
+        });
+      });
+
+      document.querySelectorAll("[data-card-action]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const processoId = button.dataset.id;
+          const action = button.dataset.cardAction;
+          const row = DATA.find((item) => item.id === processoId);
+          if (!row) return;
+          selectedCardId = row.id;
+          if (action === "reset") {
+            moveToStage(row.id, "inicio_repasse").catch(() => null);
+            return;
+          }
+          if (action === "advance" && button.dataset.target) {
+            moveToStage(row.id, button.dataset.target).catch(() => null);
+          }
+        });
+      });
+    }
+
     function bindDragEvents() {
       document.querySelectorAll(".card[draggable='true']").forEach((card) => {
         card.addEventListener("dragstart", (ev) => {
           card.classList.add("dragging");
+          selectedCardId = card.dataset.id || "";
+          const row = DATA.find((item) => item.id === card.dataset.id);
+          if (row) {
+            paintDropTargets(row);
+            $("dragStatus").textContent = `${row.cliente} em movimento`;
+            $("dragHint").textContent = "Solte na coluna liberada ou use o retorno para Inicio de Repasse.";
+          }
           ev.dataTransfer.effectAllowed = "move";
           ev.dataTransfer.setData("text/plain", JSON.stringify({
             id: card.dataset.id,
@@ -1338,6 +1777,8 @@
         card.addEventListener("dragend", () => {
           card.classList.remove("dragging");
           document.querySelectorAll(".cards.drag-over").forEach((zone) => zone.classList.remove("drag-over"));
+          clearDropTargets();
+          renderBoard();
         });
       });
 
@@ -1345,15 +1786,18 @@
         zone.addEventListener("dragover", (ev) => {
           ev.preventDefault();
           zone.classList.add("drag-over");
+          zone.classList.toggle("blocked", zone.closest(".column")?.classList.contains("drop-blocked"));
         });
 
         zone.addEventListener("dragleave", () => {
           zone.classList.remove("drag-over");
+          zone.classList.remove("blocked");
         });
 
         zone.addEventListener("drop", (ev) => {
           ev.preventDefault();
           zone.classList.remove("drag-over");
+          zone.classList.remove("blocked");
           let payload = null;
           try {
             payload = JSON.parse(ev.dataTransfer.getData("text/plain") || "{}");
@@ -1362,6 +1806,7 @@
           }
           if (!payload || !payload.id) return;
           const targetStage = zone.dataset.drop;
+          clearDropTargets();
           moveToStage(payload.id, targetStage).catch(() => null);
         });
       });
@@ -1370,6 +1815,9 @@
     async function loadData() {
       const rows = await fetchProcessosPaged();
       DATA = rows.filter(isRepasseItem).map(fromBackend);
+      if (selectedCardId && !DATA.some((row) => row.id === selectedCardId)) {
+        selectedCardId = "";
+      }
     }
 
     async function refresh(force = false) {

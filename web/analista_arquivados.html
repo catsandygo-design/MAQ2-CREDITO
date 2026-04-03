@@ -279,6 +279,39 @@
       padding:5px 10px;
       font-weight:600;
     }
+    .process-strip{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:8px;
+      padding:0 12px 8px;
+    }
+    .process-card{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:10px 12px;
+      display:grid;
+      gap:5px;
+      background:linear-gradient(180deg, #ffffff, #f7fbff);
+      box-shadow:0 10px 22px rgba(15,23,42,.05);
+    }
+    .process-card .label{
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+    .process-card strong{
+      font-size:24px;
+      line-height:1;
+      color:#0f172a;
+    }
+    .process-card p{
+      margin:0;
+      font-size:11px;
+      color:var(--muted);
+      line-height:1.35;
+    }
     body.analista-pro .filters{
       grid-template-columns:minmax(230px, 1.3fr) repeat(6, minmax(130px, 1fr)) auto auto auto;
       gap:8px;
@@ -303,6 +336,82 @@
       font-size:11px;
       margin-top:0;
     }
+    .board-toolbar{
+      display:grid;
+      grid-template-columns:minmax(360px, 1.08fr) minmax(340px, .92fr);
+      gap:8px;
+      padding:0 12px 10px;
+    }
+    .dock-card,
+    .dock-chip{
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:linear-gradient(180deg, #ffffff, #f6fbff);
+      box-shadow:0 12px 24px rgba(15,23,42,.06);
+    }
+    .dock-card{
+      padding:12px 14px;
+      display:grid;
+      gap:6px;
+    }
+    .dock-chip-grid{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:8px;
+    }
+    .dock-chip{
+      padding:12px;
+      display:grid;
+      gap:5px;
+      align-content:start;
+    }
+    .dock-label{
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+    .dock-card strong,
+    .dock-chip strong{
+      color:#0f172a;
+      line-height:1.1;
+    }
+    .dock-card strong{ font-size:18px; }
+    .dock-chip strong{ font-size:22px; }
+    .dock-card p,
+    .dock-chip span{
+      margin:0;
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.4;
+    }
+    .dock-meta-grid{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:8px;
+      margin-top:2px;
+    }
+    .dock-meta{
+      border:1px solid rgba(15,23,42,.08);
+      border-radius:12px;
+      padding:8px 10px;
+      background:#fff;
+      display:grid;
+      gap:3px;
+    }
+    .dock-meta span{
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+    .dock-meta b{
+      font-size:12px;
+      color:#0f172a;
+      line-height:1.3;
+    }
     body.analista-pro .insights{
       padding:8px 12px 10px;
       gap:8px;
@@ -311,6 +420,16 @@
       border-radius:13px;
       padding:8px 10px;
       min-width:135px;
+      cursor:pointer;
+      transition:border-color .12s ease, box-shadow .12s ease, transform .12s ease;
+    }
+    body.analista-pro .kpi:hover{
+      transform:translateY(-1px);
+      box-shadow:0 10px 18px rgba(14,116,144,.08);
+    }
+    body.analista-pro .kpi.active{
+      border-color:rgba(14,165,233,.44);
+      box-shadow:0 0 0 2px rgba(14,165,233,.10), 0 12px 22px rgba(14,116,144,.08);
     }
     body.analista-pro .kpi .k{
       font-size:11px;
@@ -338,6 +457,9 @@
       padding:10px 11px;
       line-height:1.3;
     }
+    body.analista-pro tbody tr.selected{
+      background:linear-gradient(180deg, #e8f5ff, #f5fbff);
+    }
     body.analista-pro .name{
       font-size:13px;
     }
@@ -351,6 +473,14 @@
       font-weight:700;
     }
     @media (max-width: 1400px){
+      .process-strip,
+      .dock-chip-grid,
+      .dock-meta-grid{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+      }
+      .board-toolbar{
+        grid-template-columns:1fr;
+      }
       body.analista-pro .filters{
         grid-template-columns:repeat(4, minmax(0, 1fr));
       }
@@ -361,6 +491,11 @@
       }
       body.analista-pro .actions{
         justify-content:flex-start;
+      }
+      .process-strip,
+      .dock-chip-grid,
+      .dock-meta-grid{
+        grid-template-columns:1fr;
       }
       body.analista-pro .filters{
         grid-template-columns:repeat(2, minmax(0, 1fr));
@@ -417,6 +552,29 @@
         <span class="chip">Auto refresh: <b id="refreshLabel">60s</b></span>
       </div>
 
+      <section class="process-strip" aria-label="Leitura dos arquivados">
+        <article class="process-card">
+          <span class="label">Comercial</span>
+          <strong id="sumArquivadosComercial">0</strong>
+          <p>Arquivados ainda presos na leitura comercial do periodo.</p>
+        </article>
+        <article class="process-card">
+          <span class="label">Credito</span>
+          <strong id="sumArquivadosCredito">0</strong>
+          <p>Casos encerrados enquanto estavam em credito ou secretaria.</p>
+        </article>
+        <article class="process-card">
+          <span class="label">Repasse</span>
+          <strong id="sumArquivadosRepasse">0</strong>
+          <p>Processos que chegaram na reta de repasse antes do arquivamento.</p>
+        </article>
+        <article class="process-card">
+          <span class="label">Assinados</span>
+          <strong id="sumArquivadosAssinados">0</strong>
+          <p>Registros com Caixa em assinatura no momento da referencia.</p>
+        </article>
+      </section>
+
       <div class="filters">
         <div class="field">
           <label for="q">Buscar (cliente / empreendimento / corretor / imobiliaria)</label>
@@ -464,6 +622,45 @@
         <button class="btn primary" id="btnSalvarMeta" type="button">Salvar meta</button>
         <div class="meta-status" id="metaStatus">Meta por periodo fica salva por mes/ano.</div>
       </div>
+
+      <section class="board-toolbar" aria-label="Mesa de leitura dos arquivados">
+        <article class="dock-card">
+          <span class="dock-label">Registro em foco</span>
+          <strong id="archiveDockStatus">Selecione um registro ou use um cluster para focar a leitura.</strong>
+          <p id="archiveDockHint">Os cards abaixo filtram a mesa. Clique em uma linha para travar o contexto do cliente no topo.</p>
+          <div class="dock-meta-grid">
+            <div class="dock-meta">
+              <span>Cliente</span>
+              <b id="archiveDockCliente">Nenhum selecionado</b>
+            </div>
+            <div class="dock-meta">
+              <span>Etapa</span>
+              <b id="archiveDockEtapa">-</b>
+            </div>
+            <div class="dock-meta">
+              <span>Referencia</span>
+              <b id="archiveDockReferencia">-</b>
+            </div>
+          </div>
+        </article>
+        <div class="dock-chip-grid">
+          <article class="dock-chip">
+            <span class="dock-label">Filtro ativo</span>
+            <strong id="archiveFilterLabel">Todos</strong>
+            <span>Cluster atual aplicado na mesa.</span>
+          </article>
+          <article class="dock-chip">
+            <span class="dock-label">No recorte</span>
+            <strong id="archiveFilteredCount">0</strong>
+            <span>Quantidade de registros no encaixe atual.</span>
+          </article>
+          <article class="dock-chip">
+            <span class="dock-label">Comercial +15d</span>
+            <strong id="archivePriorityCount">0</strong>
+            <span>Casos antigos que merecem leitura mais cuidadosa.</span>
+          </article>
+        </div>
+      </section>
 
       <div class="insights" id="insights"></div>
 
@@ -514,6 +711,10 @@
     let currentMetaSemanal = 0;
     let currentMetaMensal = 0;
     let lastTotalPeriodo = 0;
+    let activeInsightFilter = "todos";
+    let selectedProcessId = "";
+    let currentItems = [];
+    let currentPeriod = getDefaultPeriod();
 
     function statusClass(v){
       const key = norm(v).replace(/\s+/g, "_");
@@ -571,6 +772,79 @@
       if (!source) return 0;
       const diff = periodEnd.getTime() - source.getTime();
       return Math.max(0, Math.floor(diff / 86400000));
+    }
+
+    function insightFilterLabel(filter){
+      if (filter === "comercial") return "Comercial";
+      if (filter === "credito") return "Credito";
+      if (filter === "repasse") return "Repasse";
+      if (filter === "assinados") return "Assinados";
+      if (filter === "prioridade") return "Prioridade alta";
+      if (filter === "agehab") return "Aviso Agehab";
+      return "Todos";
+    }
+
+    function itemMatchesInsight(item, filter, periodEnd){
+      const comercialKey = norm(item.estagio_comercial).replace(/\s+/g, "_");
+      const caixaKey = norm(item.status_cca).replace(/\s+/g, "_");
+      const agehabKey = norm(item.status_agehab).replace(/\s+/g, "_");
+      const repasseKey = norm(item.etapa_repasse || "sem_repasse").replace(/\s+/g, "_");
+      const espelhoValidado = caixaKey === "aprovado" || caixaKey === "dar_qv";
+      const agehabValidado = agehabKey === "validado_agehab";
+      const contratoJa = repasseKey === "assinatura_autorizada" || caixaKey === "assinatura_caixa" || caixaKey === "finalizado";
+
+      if (filter === "comercial") return COMERCIAL_STAGES.has(comercialKey);
+      if (filter === "credito") return CREDITO_STAGES.has(comercialKey);
+      if (filter === "repasse") return REPASSE_STAGES.has(comercialKey);
+      if (filter === "assinados") return ASSINADOS_STATUS.has(caixaKey);
+      if (filter === "prioridade") return COMERCIAL_STAGES.has(comercialKey) && openDaysAtPeriodEnd(item, periodEnd) > 15;
+      if (filter === "agehab") return comercialKey === "venda_finalizada" && espelhoValidado && agehabValidado && !contratoJa;
+      return true;
+    }
+
+    function applyInsightFilter(itens, ano, mes){
+      const { fim } = getPeriodBounds(ano, mes);
+      return itens.filter((item) => itemMatchesInsight(item, activeInsightFilter, fim));
+    }
+
+    function renderArchiveStageStrip(itens){
+      const comercial = itens.reduce((acc, item) => acc + (COMERCIAL_STAGES.has(norm(item.estagio_comercial).replace(/\s+/g, "_")) ? 1 : 0), 0);
+      const credito = itens.reduce((acc, item) => acc + (CREDITO_STAGES.has(norm(item.estagio_comercial).replace(/\s+/g, "_")) ? 1 : 0), 0);
+      const repasse = itens.reduce((acc, item) => acc + (REPASSE_STAGES.has(norm(item.estagio_comercial).replace(/\s+/g, "_")) ? 1 : 0), 0);
+      const assinados = itens.reduce((acc, item) => acc + (ASSINADOS_STATUS.has(norm(item.status_cca).replace(/\s+/g, "_")) ? 1 : 0), 0);
+      $("sumArquivadosComercial").textContent = String(comercial);
+      $("sumArquivadosCredito").textContent = String(credito);
+      $("sumArquivadosRepasse").textContent = String(repasse);
+      $("sumArquivadosAssinados").textContent = String(assinados);
+    }
+
+    function updateArchiveDock(itens, ano, mes){
+      const filtered = applyInsightFilter(itens, ano, mes);
+      const { fim } = getPeriodBounds(ano, mes);
+      const selected = filtered.find((item) => String(item.processo_id) === String(selectedProcessId)) || filtered[0] || null;
+      const priorityCount = itens.reduce((acc, item) => acc + (itemMatchesInsight(item, "prioridade", fim) ? 1 : 0), 0);
+      $("archiveFilterLabel").textContent = insightFilterLabel(activeInsightFilter);
+      $("archiveFilteredCount").textContent = String(filtered.length);
+      $("archivePriorityCount").textContent = String(priorityCount);
+
+      if (!selected) {
+        $("archiveDockStatus").textContent = "Nenhum registro no filtro atual.";
+        $("archiveDockHint").textContent = "Ajuste o periodo, os filtros ou clique em outro cluster para reencontrar a carteira arquivada.";
+        $("archiveDockCliente").textContent = "Nenhum selecionado";
+        $("archiveDockEtapa").textContent = "-";
+        $("archiveDockReferencia").textContent = "-";
+        return;
+      }
+
+      selectedProcessId = String(selected.processo_id || "");
+      const referencia = (selected.arquivado_ref_ano && selected.arquivado_ref_mes)
+        ? `${String(selected.arquivado_ref_mes).padStart(2, "0")}/${selected.arquivado_ref_ano}`
+        : "-";
+      $("archiveDockStatus").textContent = `${selected.cliente_nome || "-"} em ${label(selected.estagio_comercial || selected.status_geral)}`;
+      $("archiveDockHint").textContent = `Arquivado em ${fmtDate(selected.arquivado_em)}. Use os clusters para comparar rapidamente clientes em situacoes parecidas.`;
+      $("archiveDockCliente").textContent = selected.cliente_nome || "-";
+      $("archiveDockEtapa").textContent = `${label(selected.estagio_comercial || "-")} / ${label(selected.etapa_repasse || "sem_repasse")}`;
+      $("archiveDockReferencia").textContent = referencia;
     }
 
     function refreshCountdown(){
@@ -713,39 +987,43 @@
       const avgSlaCredito = avg(itens.map((item) => Number(item.sla_analista_horas || 0)));
 
       $("insights").innerHTML = `
-        <div class="kpi"><div class="k">Total na fila</div><div class="v">${total}</div><div class="s">periodo filtrado</div></div>
-        <div class="kpi good"><div class="k">Comercial</div><div class="v">${comercial}</div><div class="s">Em Processo + Venda Finalizada</div></div>
-        <div class="kpi"><div class="k">Credito</div><div class="v">${credito}</div><div class="s">Credito + Secretaria de Vendas</div></div>
-        <div class="kpi warn"><div class="k">Repasse</div><div class="v">${repasse}</div><div class="s">Assinatura Diretoria + Aprovacao Diretoria + Envio Sienge + Venda Finalizada</div></div>
-        <div class="kpi good"><div class="k">Assinados</div><div class="v">${assinados}</div><div class="s">Status Caixa = Assinatura Caixa</div></div>
-        <div class="kpi bad"><div class="k">Prioridade alta</div><div class="v">${prioridadeAlta}</div><div class="s">comercial acima de 15 dias</div></div>
-        <div class="kpi warn"><div class="k">Aviso Agehab</div><div class="v">${avisoAgehab}</div><div class="s">espelho validado + agehab validado</div></div>
+        <div class="kpi ${activeInsightFilter === "todos" ? "active" : ""}" data-filter="todos"><div class="k">Total na fila</div><div class="v">${total}</div><div class="s">periodo filtrado</div></div>
+        <div class="kpi good ${activeInsightFilter === "comercial" ? "active" : ""}" data-filter="comercial"><div class="k">Comercial</div><div class="v">${comercial}</div><div class="s">Em Processo + Venda Finalizada</div></div>
+        <div class="kpi ${activeInsightFilter === "credito" ? "active" : ""}" data-filter="credito"><div class="k">Credito</div><div class="v">${credito}</div><div class="s">Credito + Secretaria de Vendas</div></div>
+        <div class="kpi warn ${activeInsightFilter === "repasse" ? "active" : ""}" data-filter="repasse"><div class="k">Repasse</div><div class="v">${repasse}</div><div class="s">Assinatura Diretoria + Aprovacao Diretoria + Envio Sienge + Venda Finalizada</div></div>
+        <div class="kpi good ${activeInsightFilter === "assinados" ? "active" : ""}" data-filter="assinados"><div class="k">Assinados</div><div class="v">${assinados}</div><div class="s">Status Caixa = Assinatura Caixa</div></div>
+        <div class="kpi bad ${activeInsightFilter === "prioridade" ? "active" : ""}" data-filter="prioridade"><div class="k">Prioridade alta</div><div class="v">${prioridadeAlta}</div><div class="s">comercial acima de 15 dias</div></div>
+        <div class="kpi warn ${activeInsightFilter === "agehab" ? "active" : ""}" data-filter="agehab"><div class="k">Aviso Agehab</div><div class="v">${avisoAgehab}</div><div class="s">espelho validado + agehab validado</div></div>
         <div class="kpi ${clsSla(avgSlaComercial)}"><div class="k">SLA medio comercial</div><div class="v">${avgSlaComercial}h</div><div class="s">media do periodo filtrado</div></div>
         <div class="kpi ${clsSla(avgSlaCredito)}"><div class="k">SLA medio credito</div><div class="v">${avgSlaCredito}h</div><div class="s">media do periodo filtrado</div></div>
       `;
 
       lastTotalPeriodo = total;
       renderMetaResumo(total);
+      renderArchiveStageStrip(itens);
     }
 
-    function renderRows(itens){
+    function renderRows(itens, ano, mes){
       const tbody = $("tbody");
       const empty = $("emptyState");
-      if (!itens.length) {
+      const filtered = applyInsightFilter(itens, ano, mes);
+      $("kpiExibidos").textContent = String(filtered.length);
+      if (!filtered.length) {
         tbody.innerHTML = "";
         empty.classList.remove("hidden");
         return;
       }
       empty.classList.add("hidden");
-      tbody.innerHTML = itens.map((item) => {
+      tbody.innerHTML = filtered.map((item) => {
         const repasse = item.etapa_repasse || "sem_repasse";
         const caixa = item.status_cca || "-";
         const referencia = (item.arquivado_ref_ano && item.arquivado_ref_mes)
           ? `${String(item.arquivado_ref_mes).padStart(2, "0")}/${item.arquivado_ref_ano}`
           : "-";
         const href = `/app/analise?processo_id=${encodeURIComponent(item.processo_id)}`;
+        const selectedClass = String(item.processo_id) === String(selectedProcessId) ? "selected" : "";
         return `
-          <tr>
+          <tr class="${selectedClass}" data-processo-id="${esc(item.processo_id)}">
             <td>
               <div class="name"><a href="${href}" style="color:inherit;text-decoration:none;">${esc(item.cliente_nome || "-")}</a></div>
               <div class="sub">ID: ${esc(String(item.processo_id || "").slice(0, 8))}</div>
@@ -776,7 +1054,12 @@
 
     async function loadAndRender(force = false){
       const filters = readFilters();
+      currentPeriod = { ano: filters.ano, mes: filters.mes };
       const data = await loadArquivados(filters);
+      currentItems = data.itens || [];
+      if (selectedProcessId && !currentItems.some((item) => String(item.processo_id) === String(selectedProcessId))) {
+        selectedProcessId = "";
+      }
       renderTotals(data, filters);
       try {
         await loadMetaPeriodo(filters.ano, filters.mes);
@@ -786,8 +1069,9 @@
         $("metaMensal").value = "0";
         $("metaStatus").textContent = `Falha ao carregar meta do periodo: ${error?.message || "erro desconhecido"}`;
       }
-      renderInsights(data.itens || [], filters.ano, filters.mes);
-      renderRows(data.itens || []);
+      renderInsights(currentItems, filters.ano, filters.mes);
+      renderRows(currentItems, filters.ano, filters.mes);
+      updateArchiveDock(currentItems, filters.ano, filters.mes);
       countdown = REFRESH_SECONDS;
       $("refreshLabel").textContent = `${countdown}s`;
     }
@@ -803,6 +1087,8 @@
       $("obra").value = "";
       $("corretor").value = "";
       $("imobiliaria").value = "";
+      activeInsightFilter = "todos";
+      selectedProcessId = "";
       $("metaStatus").textContent = "Meta por periodo fica salva por mes/ano.";
       loadAndRender(true).catch(() => null);
     });
@@ -815,6 +1101,23 @@
       saveMetaPeriodo().catch((error) => {
         $("metaStatus").textContent = `Falha ao salvar meta: ${error?.message || "erro desconhecido"}`;
       });
+    });
+    $("insights").addEventListener("click", (event) => {
+      const card = event.target.closest("[data-filter]");
+      if (!card) return;
+      activeInsightFilter = card.dataset.filter || "todos";
+      selectedProcessId = "";
+      renderInsights(currentItems, currentPeriod.ano, currentPeriod.mes);
+      renderRows(currentItems, currentPeriod.ano, currentPeriod.mes);
+      updateArchiveDock(currentItems, currentPeriod.ano, currentPeriod.mes);
+    });
+    $("tbody").addEventListener("click", (event) => {
+      if (event.target.closest("a")) return;
+      const row = event.target.closest("[data-processo-id]");
+      if (!row) return;
+      selectedProcessId = row.dataset.processoId || "";
+      renderRows(currentItems, currentPeriod.ano, currentPeriod.mes);
+      updateArchiveDock(currentItems, currentPeriod.ano, currentPeriod.mes);
     });
     $("btnSair").addEventListener("click", logout);
 

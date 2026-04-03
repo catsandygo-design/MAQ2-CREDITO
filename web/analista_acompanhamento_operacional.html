@@ -1493,6 +1493,12 @@
       };
     }
   }
+  function isEntregaPlannerItem(item){
+    if (String(item?.meta_kind || "").trim() === "entrega") return true;
+    if (item?.meta_cliente || item?.meta_status_oper) return true;
+    const rawDesc = String(item?.descricao || "");
+    return rawDesc.startsWith(ENTREGA_META_PREFIX);
+  }
   function encodeDiaTodoMeta(meta){
     return `${DIA_TODO_META_PREFIX}${JSON.stringify({
       acao: String(meta?.acao || "").trim(),
@@ -1679,9 +1685,27 @@
     };
   }
   function plannerItemHeadline(item){
+    if (isEntregaPlannerItem(item)) {
+      const meta = parseEntregaMeta(item);
+      return meta.cliente || String(item?.display_titulo || item?.titulo || item?.responsavel || "Sem titulo").trim() || "Sem titulo";
+    }
     return String(item?.display_titulo || item?.titulo || item?.responsavel || "Sem titulo").trim() || "Sem titulo";
   }
+  function plannerItemDescription(item){
+    if (isEntregaPlannerItem(item)) {
+      const meta = parseEntregaMeta(item);
+      return meta.acao || meta.observacao || `Cliente em destaque: ${meta.cliente || item?.titulo || "-"}.`;
+    }
+    return String(item?.display_descricao || item?.descricao || "").trim();
+  }
   function plannerItemSupport(item){
+    if (isEntregaPlannerItem(item)) {
+      const meta = parseEntregaMeta(item);
+      const parts = [];
+      if (meta.responsavel) parts.push(`Resp: ${meta.responsavel}`);
+      parts.push(ENTREGA_STATUS_LABELS[normalizeEntregaStatus(meta.statusOper)] || "Pendenciado");
+      return parts.join(" | ");
+    }
     if (String(item?.display_meta || "").trim()) return String(item.display_meta).trim();
     const parts = [];
     const win = timeWindow(item);
@@ -1730,7 +1754,7 @@
         tone:"bad",
         tag:"Urgente",
         title:plannerItemHeadline(item),
-        desc:String(item?.descricao || "Existe uma tarefa critica pedindo acao imediata.").trim(),
+        desc:plannerItemDescription(item) || "Existe uma tarefa critica pedindo acao imediata.",
         meta:plannerItemSupport(item),
         target:"opBoxUrgentes",
         action:"Ver urgencias",
@@ -1891,8 +1915,7 @@
     const filtered = !query
       ? filteredByMode
       : filteredByMode.filter((item) => {
-          const itemType = norm(item?.tipo).replace(/\s+/g, "_");
-          if (itemType === "entrega"){
+          if (isEntregaPlannerItem(item)){
             const meta = parseEntregaMeta(item);
             return `${meta.cliente} ${meta.acao} ${meta.observacao} ${meta.responsavel}`.toLowerCase().includes(query);
           }
@@ -1904,11 +1927,12 @@
       const done = norm(item?.status).replace(/\s+/g, "_") === "concluido";
       const late = norm(item?.status).replace(/\s+/g, "_") === "atrasado";
       const urgent = Boolean(item?.urgente) || norm(item?.tipo).replace(/\s+/g, "_") === "urgente";
-      const itemType = norm(item?.tipo).replace(/\s+/g, "_");
-      const entregaMeta = itemType === "entrega" ? parseEntregaMeta(item) : null;
+      const entregaMeta = isEntregaPlannerItem(item) ? parseEntregaMeta(item) : null;
       const entregaStatus = entregaMeta ? normalizeEntregaStatus(entregaMeta.statusOper) : "";
       const displayTitle = String(item?.display_titulo || entregaMeta?.cliente || item?.titulo || "-").trim() || "-";
-      const displayDesc = String(item?.display_descricao || (entregaMeta ? (entregaMeta.acao || entregaMeta.observacao || "") : item?.descricao || "")).trim();
+      const displayDesc = entregaMeta
+        ? String(entregaMeta.acao || entregaMeta.observacao || "").trim()
+        : String(item?.display_descricao || item?.descricao || "").trim();
       const parts = [];
       if (entregaMeta?.responsavel) {
         parts.push(`Resp: ${entregaMeta.responsavel}`);
