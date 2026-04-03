@@ -34,9 +34,9 @@ from sqlalchemy.sql import func
 from openpyxl import load_workbook
 from security_utils import decrypt_pii, encrypt_pii, generate_pii_encryption_key, hash_email, hash_optional, hash_token, last4_digits, mask_document, mask_email, pii_encryption_enabled
 from simulacao_engine import SimulacaoInput, engine_calculo_imobiliario
-from yvy_operacional import AnaliseInput as YvyAnaliseInput
-from yvy_operacional import RespostaYvy as YvyRespostaOperacional
-from yvy_operacional import analisar_operacao_yvy
+from frankstein_operacional import AnaliseInput as FranksteinAnaliseInput
+from frankstein_operacional import RespostaFrankstein as FranksteinRespostaOperacional
+from frankstein_operacional import analisar_operacao_frankstein
 import psycopg
 
 logger = logging.getLogger("sistema_credito")
@@ -45,12 +45,29 @@ WEB_DIR = Path(__file__).resolve().parent / "web"
 REACT_DIST_DIR = Path(__file__).resolve().parent / "frontend-react" / "dist"
 DATA_DIR = Path(__file__).resolve().parent / "data"
 DATA_DIR.mkdir(exist_ok=True, parents=True)
+FRANKSTEIN_RAW_DIR = DATA_DIR / "raw"
+FRANKSTEIN_PROCESSED_DIR = DATA_DIR / "processed"
+FRANKSTEIN_MODELS_DIR = DATA_DIR / "models"
+FRANKSTEIN_CURRENT_MODELS_DIR = FRANKSTEIN_MODELS_DIR / "current"
+FRANKSTEIN_CANDIDATES_DIR = FRANKSTEIN_MODELS_DIR / "candidates"
+FRANKSTEIN_ARCHIVE_MODELS_DIR = FRANKSTEIN_MODELS_DIR / "archive"
+FRANKSTEIN_RAW_DIR.mkdir(exist_ok=True, parents=True)
 IA_FEEDBACK_PATH = DATA_DIR / "ia_feedback.json"
-YVY_EVENTS_PATH = DATA_DIR / "yvy_events.json"
-YVY_MODEL_PATH = DATA_DIR / "yvy_model.json"
+FRANKSTEIN_EVENTS_PATH = FRANKSTEIN_RAW_DIR / "frankstein_events.json"
+FRANKSTEIN_EVENTS_LEGACY_PATH = DATA_DIR / "yvy_events.json"
+FRANKSTEIN_MODEL_PATH = DATA_DIR / "frankstein_model.json"
+FRANKSTEIN_MODEL_LEGACY_PATH = DATA_DIR / "yvy_model.json"
+FRANKSTEIN_CURRENT_SKLEARN_MODEL_PATH = FRANKSTEIN_CURRENT_MODELS_DIR / "frankstein_model.pkl"
+FRANKSTEIN_CURRENT_SKLEARN_MODEL_LEGACY_PATH = FRANKSTEIN_CURRENT_MODELS_DIR / "yvy_model.pkl"
+FRANKSTEIN_CURRENT_FEATURE_COLUMNS_PATH = FRANKSTEIN_CURRENT_MODELS_DIR / "feature_columns.json"
+FRANKSTEIN_CURRENT_METRICS_PATH = FRANKSTEIN_CURRENT_MODELS_DIR / "metrics.json"
+FRANKSTEIN_CURRENT_MODEL_INFO_PATH = FRANKSTEIN_CURRENT_MODELS_DIR / "model_info.json"
+FRANKSTEIN_REGISTRY_DIR = Path(__file__).resolve().parent / "registry"
+FRANKSTEIN_MODEL_REGISTRY_PATH = FRANKSTEIN_REGISTRY_DIR / "model_registry.json"
+FRANKSTEIN_METRICS_HISTORY_PATH = FRANKSTEIN_REGISTRY_DIR / "metrics_history.json"
 TABELA_PRECO_PATH = DATA_DIR / "tabela_precos.json"
 TABELA_PRECO_CACHE: list[dict[str, Any]] = []
-YVY_DB_URL = os.getenv("YVY_DB_URL") or os.getenv("DATABASE_URL")
+FRANKSTEIN_DB_URL = os.getenv("FRANKSTEIN_DB_URL") or os.getenv("YVY_DB_URL") or os.getenv("DATABASE_URL")
 
 ANALISE_DB_PATH = DATA_DIR / "analises.db"
 analise_engine = create_engine(f"sqlite:///{ANALISE_DB_PATH}", future=True)
@@ -1994,6 +2011,8 @@ class Processo(Base):
     sla_analista_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     sla_corretor_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     sla_cca_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    frankstein_last_event_id: Mapped[Optional[str]] = mapped_column(String(36))
+    frankstein_last_event_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     observacao: Mapped[Optional[str]] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -4827,6 +4846,8 @@ def _ensure_runtime_schema(db: Session) -> None:
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_analista_seconds INTEGER DEFAULT 0",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_corretor_seconds INTEGER DEFAULT 0",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS sla_cca_seconds INTEGER DEFAULT 0",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS frankstein_last_event_id VARCHAR(36)",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS frankstein_last_event_at TIMESTAMPTZ",
     ]
     for stmt in statements:
         db.execute(text(stmt))
@@ -4856,6 +4877,7 @@ def _ensure_runtime_schema(db: Session) -> None:
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_estagio_comercial ON processos (estagio_comercial)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_etapa_repasse ON processos (etapa_repasse)"))
     db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_arquivado ON processos (arquivado)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS ix_processos_frankstein_last_event_id ON processos (frankstein_last_event_id)"))
     db.execute(
         text(
             """
@@ -5569,7 +5591,7 @@ async def lifespan(_: FastAPI):
             logger.exception("Falha ao preparar tabela de usuarios da aplicacao.")
             if os.getenv("STARTUP_DB_STRICT", "false").lower() in {"1", "true", "yes"}:
                 raise
-    _ensure_yvy_tables()
+    _ensure_frankstein_tables()
     try:
         yield
     finally:
@@ -5596,7 +5618,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         loc = ".".join(str(x) for x in err.get("loc", []))
         msg = err.get("msg", "")
         errors.append(f"{loc}: {msg}")
-    detail = "; ".join(errors) or "Dados inválidos."
+    detail = "; ".join(errors) or "Dados invÃ¡lidos."
     return JSONResponse(status_code=422, content={"detail": detail})
 
 def _react_app_unavailable_response() -> HTMLResponse:
@@ -6762,6 +6784,7 @@ def corretor_reservar_pre_cadastro(
     )
 
     db.commit()
+    _sync_frankstein_events_for_processo(db, processo, lead=lead)
     _invalidate_process_list_cache()
     return LeadReservaOut(
         lead_id=lead.id,
@@ -7804,6 +7827,7 @@ def create_processo(
     db.add(processo)
     db.commit()
     db.refresh(processo)
+    _sync_frankstein_events_for_processo(db, processo)
     _ensure_default_documentos(db, processo.id)
     _invalidate_process_list_cache()
     return processo
@@ -7900,6 +7924,7 @@ def patch_processo(
 
     db.commit()
     db.refresh(processo)
+    _sync_frankstein_events_for_processo(db, processo)
     _invalidate_process_list_cache()
     return processo
 
@@ -8420,6 +8445,7 @@ def app_patch_cca_analise(
         .order_by(LeadPreCadastro.updated_at.desc(), LeadPreCadastro.created_at.desc())
         .first()
     )
+    _sync_frankstein_events_for_processo(db, processo, lead=lead)
     docs_rows = (
         db.query(Documento.status_doc)
         .filter(Documento.processo_id == processo.id)
@@ -10523,6 +10549,7 @@ def app_patch_processo(
 
     db.commit()
     db.refresh(processo)
+    _sync_frankstein_events_for_processo(db, processo)
     _invalidate_process_list_cache()
 
     now = _utcnow()
@@ -10820,6 +10847,7 @@ def app_bulk_upsert_documentos(
     )
 
     db.commit()
+    _sync_frankstein_events_for_processo(db, processo)
     _invalidate_process_list_cache()
     documentos = (
         db.query(Documento)
@@ -10854,7 +10882,7 @@ async def simular_proposta(
 ):
     resultado = engine_calculo_imobiliario(payload)
     if isinstance(resultado, dict) and resultado.get("erro_politica"):
-        raise HTTPException(status_code=422, detail=resultado.get("mensagem", "Valor abaixo da política comercial"))
+        raise HTTPException(status_code=422, detail=resultado.get("mensagem", "Valor abaixo da polÃ­tica comercial"))
     return resultado
 
 
@@ -10865,12 +10893,12 @@ async def recomendar_proposta(
 ):
     resultado = engine_calculo_imobiliario(payload)
     if isinstance(resultado, dict) and resultado.get("erro_politica"):
-        raise HTTPException(status_code=422, detail=resultado.get("mensagem", "Valor abaixo da política comercial"))
+        raise HTTPException(status_code=422, detail=resultado.get("mensagem", "Valor abaixo da polÃ­tica comercial"))
 
     preco_sugerido = resultado["apresentacao_cliente"]["valor_imovel"]
     status_ia = resultado["leitura_executiva_corretor"]["status_ia"]
     risco = resultado["leitura_executiva_corretor"]["risco_exposicao"]
-    confianca = 0.62  # placeholder heurístico
+    confianca = 0.62  # placeholder heurÃ­stico
 
     return {
         "preco_sugerido": preco_sugerido,
@@ -10899,6 +10927,8 @@ async def feedback_recomendacao(
 
 
 def _safe_load_json_list(path: Path) -> list[dict[str, Any]]:
+    if path == FRANKSTEIN_EVENTS_PATH and (not path.exists()) and FRANKSTEIN_EVENTS_LEGACY_PATH.exists():
+        path = FRANKSTEIN_EVENTS_LEGACY_PATH
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
@@ -10907,16 +10937,105 @@ def _safe_load_json_list(path: Path) -> list[dict[str, Any]]:
 
 def _persist_json_list(path: Path, items: list[dict[str, Any]], *, max_len: int = 5000) -> None:
     trimmed = items[-max_len:]
+    path.parent.mkdir(exist_ok=True, parents=True)
     path.write_text(json.dumps(trimmed, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def _load_yvy_model() -> Optional[dict[str, Any]]:
-    if not YVY_MODEL_PATH.exists():
+def _clean_optional_text(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _clean_optional_uuid(value: Any) -> Optional[uuid.UUID]:
+    text = _clean_optional_text(value)
+    if not text:
         return None
     try:
-        return json.loads(YVY_MODEL_PATH.read_text(encoding="utf-8"))
+        return uuid.UUID(text)
+    except (TypeError, ValueError, AttributeError):
+        return None
+
+
+def _clean_optional_float(value: Any, *, digits: int = 6) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        return round(float(value), digits)
+    except (TypeError, ValueError):
+        return None
+
+
+def _clean_optional_bool(value: Any) -> Optional[bool]:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes", "sim"}:
+        return True
+    if text in {"0", "false", "no", "nao", "nÃ£o"}:
+        return False
+    return None
+
+
+def _load_json_file(path: Path) -> Any:
+    if not path.exists():
+        return None
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
-        logger.exception("Falha ao carregar modelo yvy; seguindo sem modelo.")
+        logger.exception("Falha ao carregar arquivo JSON: %s", path)
+        return None
+    return loaded
+
+
+def _load_sklearn_frankstein_model_bundle() -> Optional[dict[str, Any]]:
+    model_path = FRANKSTEIN_CURRENT_SKLEARN_MODEL_PATH
+    if not model_path.exists() and FRANKSTEIN_CURRENT_SKLEARN_MODEL_LEGACY_PATH.exists():
+        model_path = FRANKSTEIN_CURRENT_SKLEARN_MODEL_LEGACY_PATH
+    if not model_path.exists():
+        return None
+    try:
+        import joblib
+    except Exception:
+        logger.exception("Joblib indisponivel para carregar modelo FRANKSTEIN atual.")
+        return None
+
+    try:
+        bundle: dict[str, Any] = {
+            "_kind": "sklearn_pipeline",
+            "model": joblib.load(model_path),
+            "feature_columns": [],
+            "metrics": {},
+            "model_info": {},
+        }
+        feature_columns = _load_json_file(FRANKSTEIN_CURRENT_FEATURE_COLUMNS_PATH)
+        bundle["feature_columns"] = feature_columns if isinstance(feature_columns, list) else []
+        bundle["metrics"] = _load_json_file(FRANKSTEIN_CURRENT_METRICS_PATH) or {}
+        bundle["model_info"] = _load_json_file(FRANKSTEIN_CURRENT_MODEL_INFO_PATH) or {}
+        return bundle
+    except Exception:
+        logger.exception("Falha ao carregar bundle sklearn atual do FRANKSTEIN.")
+        return None
+
+
+def _load_frankstein_model() -> Optional[dict[str, Any]]:
+    sklearn_bundle = _load_sklearn_frankstein_model_bundle()
+    if sklearn_bundle:
+        return sklearn_bundle
+    model_path = FRANKSTEIN_MODEL_PATH if FRANKSTEIN_MODEL_PATH.exists() else FRANKSTEIN_MODEL_LEGACY_PATH
+    if not model_path.exists():
+        return None
+    try:
+        loaded = json.loads(model_path.read_text(encoding="utf-8"))
+        if isinstance(loaded, dict):
+            loaded["_kind"] = "legacy_json"
+            return loaded
+        return None
+    except Exception:
+        logger.exception("Falha ao carregar modelo frankstein; seguindo sem modelo.")
         return None
 
 
@@ -10927,16 +11046,16 @@ def _sigmoid(x: float) -> float:
         return 0.0 if x < 0 else 1.0
 
 
-def _log_yvy_event(event: dict[str, Any]) -> None:
-    if not _log_yvy_event_db(event) and not YVY_DB_URL:
-        events = _safe_load_json_list(YVY_EVENTS_PATH)
+def _log_frankstein_event(event: dict[str, Any]) -> None:
+    if not _log_frankstein_event_db(event) and not FRANKSTEIN_DB_URL:
+        events = _safe_load_json_list(FRANKSTEIN_EVENTS_PATH)
         events.append(event)
-        _persist_json_list(YVY_EVENTS_PATH, events)
+        _persist_json_list(FRANKSTEIN_EVENTS_PATH, events)
 
 
-class YvySugestaoOut(BaseModel):
+class FranksteinSugestaoOut(BaseModel):
     preco_heuristico: float
-    preco_yvy: float
+    preco_frankstein: float
     prob_aceite: float
     status_ia: str
     risco_exposicao: str
@@ -10947,24 +11066,56 @@ class YvySugestaoOut(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-class YvyRecomendacaoOut(BaseModel):
+class FranksteinRecomendacaoOut(BaseModel):
+    event_id: Optional[str] = None
+    modelo_versao: Optional[str] = None
     heuristica: dict[str, Any]
-    yvy: YvySugestaoOut
+    frankstein: FranksteinSugestaoOut
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-def _yvy_features(payload: SimulacaoInput, heuristica: dict[str, Any]) -> list[float]:
-    expo = 0.0
+class FranksteinEventResultadoUpdate(BaseModel):
+    teve_pendencia_cca: Optional[bool] = None
+    teve_pendencia_agehab: Optional[bool] = None
+    foi_aprovado: Optional[bool] = None
+    foi_reprovado: Optional[bool] = None
+    virou_condicionado: Optional[bool] = None
+    assinou_caixa: Optional[bool] = None
+    finalizou: Optional[bool] = None
+    tempo_ate_assinatura_horas: Optional[float] = Field(None, ge=0)
+    tempo_total_processo_horas: Optional[float] = Field(None, ge=0)
+    retorno_cca: Optional[str] = None
+    resultado_real: Optional[str] = None
+
+
+def _safe_ratio_percent(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    text = str(value).strip().replace("%", "").replace(",", ".")
+    if not text:
+        return None
     try:
-        expo = float(heuristica["leitura_executiva_corretor"]["risco_exposicao"].strip("%")) / 100.0
-    except Exception:
-        expo = 0.0
-    is_pos = 0.0
-    try:
-        is_pos = float(heuristica["leitura_executiva_corretor"]["is_pos_chaves"].strip("%")) / 100.0
-    except Exception:
-        is_pos = 0.0
+        return round(float(text) / 100.0, 6)
+    except (TypeError, ValueError):
+        return None
+
+
+def _frankstein_model_version(model: Optional[dict[str, Any]]) -> Optional[str]:
+    if not model:
+        return None
+    model_info = model.get("model_info") if isinstance(model.get("model_info"), dict) else {}
+    return (
+        _clean_optional_text(model_info.get("version"))
+        or _clean_optional_text(model.get("version"))
+        or _clean_optional_text(model_info.get("model_name"))
+    )
+
+
+def _frankstein_features(payload: SimulacaoInput, heuristica: dict[str, Any]) -> list[float]:
+    leitura = heuristica.get("leitura_executiva_corretor", {})
+    expo = _safe_ratio_percent(leitura.get("risco_exposicao")) or 0.0
+    is_pos = _safe_ratio_percent(leitura.get("is_pos_chaves")) or 0.0
     return [
         float(payload.renda_bruta),
         float(payload.valor_tabela),
@@ -10977,7 +11128,485 @@ def _yvy_features(payload: SimulacaoInput, heuristica: dict[str, Any]) -> list[f
     ]
 
 
-def _yvy_predict_prob(model: dict[str, Any], feats: list[float]) -> float:
+def _frankstein_feature_payload(payload: SimulacaoInput, heuristica: dict[str, Any]) -> dict[str, Any]:
+    apresentacao = heuristica.get("apresentacao_cliente", {})
+    leitura = heuristica.get("leitura_executiva_corretor", {})
+    preco_base_politica = round(max(float(payload.valor_tabela), float(payload.valor_obtido)) + float(payload.sobrepreco_vila), 2)
+    preco_final = _clean_optional_float(apresentacao.get("valor_imovel"), digits=2)
+    entrada_liquida = _clean_optional_float(apresentacao.get("entrada_facilitada"), digits=2)
+    valor_parcela_entrada = _clean_optional_float(apresentacao.get("valor_parcela"), digits=2)
+    exposicao_risco = round(
+        max(0.0, (float(payload.valor_tabela) - float(payload.valor_obtido)) / max(float(payload.valor_tabela), 1.0)),
+        6,
+    )
+    is_pos_chaves = round(
+        (float(payload.parcela_caixa) + float(valor_parcela_entrada or 0.0)) / max(float(payload.renda_bruta), 1.0),
+        6,
+    )
+    return {
+        "perfil": _clean_optional_text(getattr(payload, "perfil", None)),
+        "empreendimento": _clean_optional_text(getattr(payload, "empreendimento", None)),
+        "renda_bruta": _clean_optional_float(payload.renda_bruta, digits=2),
+        "valor_tabela": _clean_optional_float(payload.valor_tabela, digits=2),
+        "sobrepreco_vila": _clean_optional_float(payload.sobrepreco_vila, digits=2),
+        "valor_obtido": _clean_optional_float(payload.valor_obtido, digits=2),
+        "parcela_caixa": _clean_optional_float(payload.parcela_caixa, digits=2),
+        "preco_digitado_corretor": _clean_optional_float(payload.preco_digitado_corretor or 0.0, digits=2),
+        "preco_base_politica": preco_base_politica,
+        "preco_final": preco_final,
+        "entrada_liquida": entrada_liquida,
+        "valor_parcela_entrada": valor_parcela_entrada,
+        "exposicao_risco": exposicao_risco,
+        "is_pos_chaves": is_pos_chaves,
+        "garantidores_necessarios": leitura.get("garantidores_necessarios"),
+        "status_ia_heuristica": _clean_optional_text(leitura.get("status_ia")),
+        "alerta_preco": _clean_optional_text(leitura.get("alerta_preco")),
+        "bloqueio_critico": bool(leitura.get("bloqueio_critico", False)),
+    }
+
+
+def _frankstein_operacional_features(payload: FranksteinAnaliseInput, resposta: FranksteinRespostaOperacional) -> dict[str, Any]:
+    faltante = 0.0
+    cobertura_total = float(payload.garantido) + float(payload.cheque_moradia)
+    if cobertura_total < float(payload.valor_venda):
+        faltante = round(float(payload.valor_venda) - cobertura_total, 2)
+    return {
+        "perfil": _clean_optional_text(payload.perfil),
+        "empreendimento": _clean_optional_text(getattr(payload, "empreendimento", None)),
+        "valor_venda": _clean_optional_float(payload.valor_venda, digits=2),
+        "garantido": _clean_optional_float(payload.garantido, digits=2),
+        "cheque_moradia": _clean_optional_float(payload.cheque_moradia, digits=2),
+        "faltante": _clean_optional_float(faltante, digits=2),
+        "qtd_problemas_documentais": len(resposta.frankstein.campos_com_problema),
+        "score_risco_regra": _clean_optional_float(resposta.frankstein.score.valor, digits=4),
+        "status_geral_regra": _clean_optional_text(resposta.frankstein.status_geral),
+        "decisao_recomendada_regra": _clean_optional_text(resposta.frankstein.decisao_recomendada.codigo),
+        "doc_rg_cpf_ok": bool(payload.documentos.rg_cpf),
+        "doc_comprovante_residencia_ok": bool(payload.documentos.comprovante_residencia),
+        "doc_comprovante_renda_ok": bool(payload.documentos.comprovante_renda),
+        "doc_fgts_validado": bool(payload.documentos.fgts_validado),
+        "renda_informada": _clean_optional_float(payload.renda_informada, digits=2),
+        "score_classificacao_regra": _clean_optional_text(resposta.frankstein.score.classificacao),
+        "resumo_regra": _clean_optional_text(resposta.frankstein.resumo),
+    }
+
+
+def _find_latest_lead_for_processo(db: Session, processo_id: uuid.UUID) -> Optional[LeadPreCadastro]:
+    return (
+        db.query(LeadPreCadastro)
+        .filter(LeadPreCadastro.processo_id == processo_id)
+        .order_by(LeadPreCadastro.updated_at.desc(), LeadPreCadastro.created_at.desc())
+        .first()
+    )
+
+
+def _resolve_frankstein_process_context(
+    db: Session,
+    *,
+    processo_id: Any = None,
+    cliente_id: Any = None,
+    reserva_id: Any = None,
+    lead_id: Any = None,
+) -> tuple[Optional[Processo], Optional[LeadPreCadastro]]:
+    processo: Optional[Processo] = None
+    lead: Optional[LeadPreCadastro] = None
+
+    processo_uuid = _clean_optional_uuid(processo_id)
+    if processo_uuid is not None:
+        processo = db.get(Processo, processo_uuid)
+
+    lead_uuid = _clean_optional_uuid(lead_id) or _clean_optional_uuid(reserva_id)
+    if lead_uuid is not None:
+        lead = db.get(LeadPreCadastro, lead_uuid)
+        if lead is not None and getattr(lead, "processo_id", None) and processo is None:
+            processo = db.get(Processo, lead.processo_id)
+
+    cliente_uuid = _clean_optional_uuid(cliente_id)
+    if processo is None and cliente_uuid is not None:
+        processo = (
+            db.query(Processo)
+            .filter(Processo.cliente_id == cliente_uuid)
+            .order_by(Processo.arquivado.asc(), Processo.updated_at.desc(), Processo.created_at.desc())
+            .first()
+        )
+
+    if processo is not None and lead is None:
+        lead = _find_latest_lead_for_processo(db, processo.id)
+
+    return processo, lead
+
+
+def _attach_frankstein_event_context(
+    event: dict[str, Any],
+    *,
+    processo: Optional[Processo],
+    lead: Optional[LeadPreCadastro],
+) -> dict[str, Any]:
+    if processo is not None:
+        event["processo_id"] = str(processo.id)
+        event["cliente_id"] = event.get("cliente_id") or str(processo.cliente_id)
+    if lead is not None:
+        lead_id = str(lead.id)
+        event["lead_id"] = lead_id
+        event["reserva_id"] = event.get("reserva_id") or lead_id
+    return event
+
+
+def _frankstein_event_timestamp(value: Any) -> Optional[datetime]:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return _as_utc(value)
+    text = _clean_optional_text(value)
+    if not text:
+        return None
+    try:
+        return _as_utc(datetime.fromisoformat(text))
+    except ValueError:
+        return None
+
+
+def _remember_processo_frankstein_event(processo: Processo, event: dict[str, Any]) -> None:
+    event_id = _clean_optional_text(event.get("event_id"))
+    event_at = _frankstein_event_timestamp(event.get("timestamp"))
+    if event_id:
+        processo.frankstein_last_event_id = event_id
+    if event_at is not None:
+        processo.frankstein_last_event_at = event_at
+
+
+def _cliente_has_single_processo(db: Session, cliente_id: uuid.UUID) -> bool:
+    total = int(db.query(func.count(Processo.id)).filter(Processo.cliente_id == cliente_id).scalar() or 0)
+    return total == 1
+
+
+def _link_frankstein_events_to_processo(
+    db: Session,
+    processo: Processo,
+    *,
+    lead: Optional[LeadPreCadastro] = None,
+) -> int:
+    if processo is None:
+        return 0
+
+    resolved_lead = lead or _find_latest_lead_for_processo(db, processo.id)
+    processo_id_text = str(processo.id)
+    cliente_id_text = str(processo.cliente_id)
+    lead_id_text = str(resolved_lead.id) if resolved_lead is not None else None
+    allow_cliente_match = _cliente_has_single_processo(db, processo.cliente_id)
+    updated = 0
+
+    conn = _frankstein_db_conn()
+    if conn is not None:
+        try:
+            with conn, conn.cursor() as cur:
+                if lead_id_text:
+                    cur.execute(
+                        """
+                        update frankstein_events
+                           set processo_id = %s,
+                               lead_id = coalesce(lead_id, %s),
+                               updated_at = now()
+                         where (processo_id is null or trim(coalesce(processo_id, '')) = '')
+                           and (
+                               trim(coalesce(lead_id, '')) = %s
+                               or trim(coalesce(reserva_id, '')) = %s
+                           )
+                        """,
+                        (processo_id_text, lead_id_text, lead_id_text, lead_id_text),
+                    )
+                    updated += cur.rowcount or 0
+                if allow_cliente_match:
+                    cur.execute(
+                        """
+                        update frankstein_events
+                           set processo_id = %s,
+                               lead_id = coalesce(lead_id, %s),
+                               updated_at = now()
+                         where (processo_id is null or trim(coalesce(processo_id, '')) = '')
+                           and trim(coalesce(cliente_id, '')) = %s
+                        """,
+                        (processo_id_text, lead_id_text, cliente_id_text),
+                    )
+                    updated += cur.rowcount or 0
+                if lead_id_text:
+                    cur.execute(
+                        """
+                        update frankstein_events
+                           set lead_id = %s,
+                               updated_at = now()
+                         where trim(coalesce(processo_id, '')) = %s
+                           and (lead_id is null or trim(coalesce(lead_id, '')) = '')
+                        """,
+                        (lead_id_text, processo_id_text),
+                    )
+        except Exception:
+            logger.exception("Falha ao vincular eventos FRANKSTEIN ao processo %s no banco; fallback arquivo.", processo_id_text)
+        finally:
+            conn.close()
+
+    events = _safe_load_json_list(FRANKSTEIN_EVENTS_PATH)
+    if not events:
+        return updated
+
+    file_updated = False
+    for event in events:
+        event_processo_id = _clean_optional_text(event.get("processo_id"))
+        event_cliente_id = _clean_optional_text(event.get("cliente_id"))
+        event_lead_id = _clean_optional_text(event.get("lead_id"))
+        event_reserva_id = _clean_optional_text(event.get("reserva_id"))
+        matches_processo = event_processo_id == processo_id_text
+        matches_lead = bool(lead_id_text) and (event_lead_id == lead_id_text or event_reserva_id == lead_id_text)
+        matches_cliente = allow_cliente_match and event_cliente_id == cliente_id_text
+        if matches_processo or matches_lead or matches_cliente:
+            if event_processo_id != processo_id_text:
+                event["processo_id"] = processo_id_text
+                updated += 1
+                file_updated = True
+            if lead_id_text and event_lead_id != lead_id_text:
+                event["lead_id"] = lead_id_text
+                file_updated = True
+
+    if file_updated:
+        _persist_json_list(FRANKSTEIN_EVENTS_PATH, events)
+    return updated
+
+
+def _load_frankstein_status_history(
+    db: Session,
+    processo_id: uuid.UUID,
+) -> list[tuple[str, str, Optional[datetime]]]:
+    rows = (
+        db.query(ProcessoEvento.field_name, ProcessoEvento.new_value, ProcessoEvento.created_at)
+        .filter(
+            ProcessoEvento.processo_id == processo_id,
+            ProcessoEvento.field_name.in_(["status_credito", "status_geral", "status_cca", "status_agehab"]),
+        )
+        .order_by(ProcessoEvento.created_at.asc())
+        .all()
+    )
+    history: list[tuple[str, str, Optional[datetime]]] = []
+    for field_name, new_value, created_at in rows:
+        history.append(((field_name or "").strip().lower(), _status_token(new_value), _as_utc(created_at)))
+    return history
+
+
+def _first_frankstein_status_change_at(
+    history: list[tuple[str, str, Optional[datetime]]],
+    *,
+    field_names: set[str],
+    new_values: set[str],
+) -> Optional[datetime]:
+    for field_name, new_value, created_at in history:
+        if field_name in field_names and new_value in new_values and created_at is not None:
+            return created_at
+    return None
+
+
+def _frankstein_resultado_real_from_statuses(
+    *,
+    status_credito: str,
+    status_geral: str,
+    status_cca: str,
+    status_agehab: str,
+) -> Optional[str]:
+    if status_cca == "FINALIZADO":
+        return "FINALIZADO"
+    if status_cca == "ASSINATURA_CAIXA":
+        return "ASSINATURA_CAIXA"
+    if status_geral in {"DISTRATO", "CANCELADO"}:
+        return status_geral
+    if status_cca in {"REPROVADO", "BLOQUEADO"} or status_credito == "REPROVADO" or status_geral == "REPROVADO":
+        return "REPROVADO"
+    if status_cca in {"APROVADO", "DAR_QV"} or status_credito == "APROVADO":
+        return "APROVADO"
+    if status_cca == "CONDICIONADO":
+        return "CONDICIONADO"
+    if status_cca == "PENDENTE_CCA":
+        return "PENDENCIA_CCA"
+    if status_agehab == "PENDENTE_AGEHAB":
+        return "PENDENCIA_AGEHAB"
+    if status_geral == "PENDENCIADO" or status_credito == "PENDENCIADO":
+        return "PENDENCIADO"
+    return status_cca or status_credito or status_geral or status_agehab or None
+
+
+def _frankstein_hours_between(start_at: Optional[datetime], end_at: Optional[datetime]) -> Optional[float]:
+    start_utc = _as_utc(start_at)
+    end_utc = _as_utc(end_at)
+    if start_utc is None or end_utc is None or end_utc < start_utc:
+        return None
+    return round((end_utc - start_utc).total_seconds() / 3600.0, 2)
+
+
+def _build_frankstein_process_outcome(
+    db: Session,
+    processo: Processo,
+) -> tuple[dict[str, Any], Optional[datetime], Optional[datetime]]:
+    history = _load_frankstein_status_history(db, processo.id)
+    status_credito = _status_token(getattr(processo, "status_credito", None))
+    status_geral = _status_token(getattr(processo, "status_geral", None))
+    status_cca = _status_token(getattr(processo, "status_cca", None))
+    status_agehab = _status_token(getattr(processo, "status_agehab", None))
+
+    teve_pendencia_cca = status_cca in {"PENDENTE_CCA", "CONDICIONADO"} or any(
+        field_name == "status_cca" and new_value in {"PENDENTE_CCA", "CONDICIONADO"}
+        for field_name, new_value, _ in history
+    )
+    teve_pendencia_agehab = status_agehab == "PENDENTE_AGEHAB" or any(
+        field_name == "status_agehab" and new_value == "PENDENTE_AGEHAB"
+        for field_name, new_value, _ in history
+    )
+    virou_condicionado = status_cca == "CONDICIONADO" or any(
+        field_name == "status_cca" and new_value == "CONDICIONADO"
+        for field_name, new_value, _ in history
+    )
+    assinatura_at = _first_frankstein_status_change_at(
+        history,
+        field_names={"status_cca"},
+        new_values={"ASSINATURA_CAIXA", "FINALIZADO"},
+    )
+
+    finalizacao_at: Optional[datetime] = None
+    if status_cca == "FINALIZADO":
+        finalizacao_at = _first_frankstein_status_change_at(
+            history,
+            field_names={"status_cca"},
+            new_values={"FINALIZADO"},
+        )
+    elif status_geral in {"REPROVADO", "DISTRATO", "CANCELADO"}:
+        finalizacao_at = _first_frankstein_status_change_at(
+            history,
+            field_names={"status_geral"},
+            new_values={status_geral},
+        )
+    elif status_credito == "REPROVADO" or status_cca in {"REPROVADO", "BLOQUEADO"}:
+        finalizacao_at = _first_frankstein_status_change_at(
+            history,
+            field_names={"status_credito", "status_cca"},
+            new_values={"REPROVADO", "BLOQUEADO"},
+        )
+
+    assinou_caixa = status_cca in {"ASSINATURA_CAIXA", "FINALIZADO"} or assinatura_at is not None
+    foi_aprovado = status_credito == "APROVADO" or status_cca in {"APROVADO", "DAR_QV", "ASSINATURA_CAIXA", "FINALIZADO"}
+    foi_reprovado = status_credito == "REPROVADO" or status_geral == "REPROVADO" or status_cca in {"REPROVADO", "BLOQUEADO"}
+    finalizou = (
+        status_cca == "FINALIZADO"
+        or status_geral in {"REPROVADO", "DISTRATO", "CANCELADO"}
+        or finalizacao_at is not None
+    )
+
+    outcome = {
+        "teve_pendencia_cca": teve_pendencia_cca,
+        "teve_pendencia_agehab": teve_pendencia_agehab,
+        "foi_aprovado": foi_aprovado,
+        "foi_reprovado": foi_reprovado,
+        "virou_condicionado": virou_condicionado,
+        "assinou_caixa": assinou_caixa,
+        "finalizou": finalizou,
+        "retorno_cca": status_cca or None,
+        "resultado_real": _frankstein_resultado_real_from_statuses(
+            status_credito=status_credito,
+            status_geral=status_geral,
+            status_cca=status_cca,
+            status_agehab=status_agehab,
+        ),
+    }
+    return outcome, assinatura_at, finalizacao_at
+
+
+def _sync_frankstein_events_for_processo(
+    db: Session,
+    processo: Processo,
+    *,
+    lead: Optional[LeadPreCadastro] = None,
+) -> int:
+    if processo is None:
+        return 0
+
+    try:
+        resolved_lead = lead or _find_latest_lead_for_processo(db, processo.id)
+        _link_frankstein_events_to_processo(db, processo, lead=resolved_lead)
+        outcome, assinatura_at, finalizacao_at = _build_frankstein_process_outcome(db, processo)
+        processo_id_text = str(processo.id)
+
+        conn = _frankstein_db_conn()
+        if conn is not None:
+            try:
+                updated = 0
+                with conn, conn.cursor() as cur:
+                    cur.execute(
+                        'select event_id, "timestamp" from frankstein_events where trim(coalesce(processo_id, \'\')) = %s',
+                        (processo_id_text,),
+                    )
+                    for event_id, event_timestamp in cur.fetchall():
+                        event_at = _frankstein_event_timestamp(event_timestamp)
+                        changes = dict(outcome)
+                        changes["tempo_ate_assinatura_horas"] = _frankstein_hours_between(event_at, assinatura_at)
+                        changes["tempo_total_processo_horas"] = _frankstein_hours_between(event_at, finalizacao_at)
+                        assignments = ", ".join(f"{field} = %s" for field in changes.keys())
+                        params = [changes[field] for field in changes.keys()]
+                        params.extend([datetime.now(timezone.utc), event_id])
+                        cur.execute(
+                            f"""
+                            update frankstein_events
+                               set {assignments},
+                                   updated_at = %s
+                             where event_id = %s::uuid
+                            """,
+                            params,
+                        )
+                        updated += cur.rowcount or 0
+                if updated > 0:
+                    return updated
+            except Exception:
+                logger.exception("Falha ao sincronizar eventos FRANKSTEIN do processo %s no banco; fallback arquivo.", processo_id_text)
+            finally:
+                conn.close()
+
+        events = _safe_load_json_list(FRANKSTEIN_EVENTS_PATH)
+        if not events:
+            return 0
+
+        updated = 0
+        for event in events:
+            if _clean_optional_text(event.get("processo_id")) != processo_id_text:
+                continue
+            event_at = _frankstein_event_timestamp(event.get("timestamp"))
+            event.update(outcome)
+            event["tempo_ate_assinatura_horas"] = _frankstein_hours_between(event_at, assinatura_at)
+            event["tempo_total_processo_horas"] = _frankstein_hours_between(event_at, finalizacao_at)
+            updated += 1
+
+        if updated > 0:
+            _persist_json_list(FRANKSTEIN_EVENTS_PATH, events)
+        return updated
+    except Exception:
+        logger.exception("Falha ao sincronizar resultados FRANKSTEIN para o processo %s.", getattr(processo, "id", None))
+        return 0
+
+
+def _frankstein_predict_prob(model: dict[str, Any], feats: list[float], feature_payload: Optional[dict[str, Any]] = None) -> float:
+    kind = _clean_optional_text(model.get("_kind")) or "legacy_json"
+    if kind == "sklearn_pipeline":
+        try:
+            import pandas as pd
+        except Exception:
+            logger.exception("Pandas indisponivel para inferencia do modelo sklearn do FRANKSTEIN.")
+            return 0.62
+
+        predictor = model.get("model")
+        feature_columns = model.get("feature_columns") or []
+        if predictor is None or not feature_columns:
+            return 0.62
+        row = {column: (feature_payload or {}).get(column) for column in feature_columns}
+        df = pd.DataFrame([row], columns=feature_columns)
+        try:
+            return max(0.0, min(1.0, float(predictor.predict_proba(df)[0][1])))
+        except Exception:
+            logger.exception("Falha na inferencia do modelo sklearn do FRANKSTEIN.")
+            return 0.62
+
     means = model.get("means", [])
     stds = model.get("stds", [])
     weights = model.get("weights", [])
@@ -10991,45 +11620,316 @@ def _yvy_predict_prob(model: dict[str, Any], feats: list[float]) -> float:
     return max(0.0, min(1.0, _sigmoid(total)))
 
 
-def _yvy_db_conn():
-    if not YVY_DB_URL:
+def _build_frankstein_recomendacao_event(
+    payload: SimulacaoInput,
+    heuristica: dict[str, Any],
+    frankstein_payload: FranksteinSugestaoOut,
+    request: Request,
+    *,
+    model_version: Optional[str] = None,
+) -> dict[str, Any]:
+    feature_payload = _frankstein_feature_payload(payload, heuristica)
+    event_timestamp = datetime.now().astimezone().isoformat()
+    input_payload = payload.model_dump()
+    frankstein_dict = frankstein_payload.model_dump()
+
+    return {
+        "event_id": str(uuid.uuid4()),
+        "timestamp": event_timestamp,
+        "processo_id": _clean_optional_text(getattr(payload, "processo_id", None)),
+        "lead_id": _clean_optional_text(getattr(payload, "lead_id", None)),
+        "cliente_id": _clean_optional_text(getattr(payload, "cliente_id", None)),
+        "reserva_id": _clean_optional_text(getattr(payload, "reserva_id", None)),
+        "corretor_id": _clean_optional_text(getattr(payload, "corretor_id", None)),
+        "empreendimento": feature_payload.get("empreendimento"),
+        "perfil": feature_payload.get("perfil"),
+        "renda_bruta": feature_payload.get("renda_bruta"),
+        "valor_tabela": feature_payload.get("valor_tabela"),
+        "sobrepreco_vila": feature_payload.get("sobrepreco_vila"),
+        "valor_obtido": feature_payload.get("valor_obtido"),
+        "parcela_caixa": feature_payload.get("parcela_caixa"),
+        "preco_digitado_corretor": feature_payload.get("preco_digitado_corretor"),
+        "preco_base_politica": feature_payload.get("preco_base_politica"),
+        "preco_final": feature_payload.get("preco_final"),
+        "entrada_liquida": feature_payload.get("entrada_liquida"),
+        "valor_parcela_entrada": feature_payload.get("valor_parcela_entrada"),
+        "is_pos_chaves": feature_payload.get("is_pos_chaves"),
+        "status_ia_heuristica": feature_payload.get("status_ia_heuristica"),
+        "bloqueio_critico": feature_payload.get("bloqueio_critico"),
+        "motivo_auditoria": _clean_optional_text(heuristica.get("leitura_executiva_corretor", {}).get("motivo_auditoria")),
+        "garantidores_necessarios": heuristica.get("leitura_executiva_corretor", {}).get("garantidores_necessarios"),
+        "exposicao_risco": feature_payload.get("exposicao_risco"),
+        "alerta_preco": feature_payload.get("alerta_preco"),
+        "valor_venda": None,
+        "garantido": None,
+        "cheque_moradia": None,
+        "faltante": None,
+        "qtd_problemas_documentais": None,
+        "score_risco_regra": None,
+        "status_geral_regra": None,
+        "decisao_recomendada_regra": None,
+        "probabilidade_modelo": _clean_optional_float(frankstein_payload.prob_aceite, digits=6),
+        "preco_frankstein": _clean_optional_float(frankstein_payload.preco_frankstein, digits=2),
+        "confianca_modelo": _clean_optional_float(frankstein_payload.confianca, digits=6),
+        "modelo_versao": _clean_optional_text(model_version),
+        "teve_pendencia_cca": None,
+        "teve_pendencia_agehab": None,
+        "foi_aprovado": None,
+        "foi_reprovado": None,
+        "virou_condicionado": None,
+        "assinou_caixa": None,
+        "finalizou": None,
+        "tempo_ate_assinatura_horas": None,
+        "tempo_total_processo_horas": None,
+        "retorno_cca": None,
+        "resultado_real": None,
+        "input_json": input_payload,
+        "heuristica_json": heuristica,
+        "frankstein_json": frankstein_dict,
+        "features_json": feature_payload,
+        "input": input_payload,
+        "heuristica": heuristica,
+        "frankstein": frankstein_dict,
+        "features": feature_payload,
+        "origem": "app_frankstein_recomendacao",
+        "user_agent": request.headers.get("user-agent"),
+        "client_host": request.client.host if request.client else None,
+    }
+
+
+def _build_frankstein_operacional_event(
+    payload: FranksteinAnaliseInput,
+    resposta: FranksteinRespostaOperacional,
+    request: Request,
+) -> dict[str, Any]:
+    feature_payload = _frankstein_operacional_features(payload, resposta)
+    event_timestamp = datetime.now().astimezone().isoformat()
+    input_payload = payload.model_dump()
+    frankstein_payload = resposta.model_dump()
+
+    return {
+        "event_id": str(uuid.uuid4()),
+        "timestamp": event_timestamp,
+        "processo_id": _clean_optional_text(getattr(payload, "processo_id", None)),
+        "lead_id": _clean_optional_text(getattr(payload, "lead_id", None)),
+        "cliente_id": _clean_optional_text(getattr(payload, "cliente_id", None)),
+        "reserva_id": _clean_optional_text(getattr(payload, "reserva_id", None)),
+        "corretor_id": _clean_optional_text(getattr(payload, "corretor_id", None)),
+        "empreendimento": feature_payload.get("empreendimento"),
+        "perfil": feature_payload.get("perfil"),
+        "renda_bruta": feature_payload.get("renda_informada"),
+        "valor_tabela": None,
+        "sobrepreco_vila": None,
+        "valor_obtido": None,
+        "parcela_caixa": None,
+        "preco_digitado_corretor": None,
+        "preco_base_politica": None,
+        "preco_final": None,
+        "entrada_liquida": None,
+        "valor_parcela_entrada": None,
+        "is_pos_chaves": None,
+        "status_ia_heuristica": None,
+        "bloqueio_critico": None,
+        "motivo_auditoria": None,
+        "garantidores_necessarios": None,
+        "exposicao_risco": None,
+        "alerta_preco": None,
+        "valor_venda": feature_payload.get("valor_venda"),
+        "garantido": feature_payload.get("garantido"),
+        "cheque_moradia": feature_payload.get("cheque_moradia"),
+        "faltante": feature_payload.get("faltante"),
+        "qtd_problemas_documentais": feature_payload.get("qtd_problemas_documentais"),
+        "score_risco_regra": feature_payload.get("score_risco_regra"),
+        "status_geral_regra": feature_payload.get("status_geral_regra"),
+        "decisao_recomendada_regra": feature_payload.get("decisao_recomendada_regra"),
+        "probabilidade_modelo": None,
+        "preco_frankstein": None,
+        "confianca_modelo": _clean_optional_float(resposta.frankstein.metricas_operacionais.confianca_modelo, digits=6),
+        "modelo_versao": _clean_optional_text(getattr(resposta, "modelo_versao", None) or resposta.frankstein.auditoria.versao),
+        "teve_pendencia_cca": None,
+        "teve_pendencia_agehab": None,
+        "foi_aprovado": None,
+        "foi_reprovado": None,
+        "virou_condicionado": None,
+        "assinou_caixa": None,
+        "finalizou": None,
+        "tempo_ate_assinatura_horas": None,
+        "tempo_total_processo_horas": None,
+        "retorno_cca": None,
+        "resultado_real": None,
+        "input_json": input_payload,
+        "heuristica_json": None,
+        "frankstein_json": frankstein_payload,
+        "features_json": feature_payload,
+        "input": input_payload,
+        "heuristica": None,
+        "frankstein": frankstein_payload,
+        "features": feature_payload,
+        "origem": "app_frankstein_operacional",
+        "user_agent": request.headers.get("user-agent"),
+        "client_host": request.client.host if request.client else None,
+    }
+
+
+def _serialize_jsonb_payload(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _frankstein_db_conn():
+    if not FRANKSTEIN_DB_URL:
         return None
     try:
-        return psycopg.connect(YVY_DB_URL, connect_timeout=10)
+        return psycopg.connect(FRANKSTEIN_DB_URL, connect_timeout=10)
     except Exception:
-        logger.exception("Falha ao conectar YVY_DB_URL; fallback para arquivo.")
+        logger.exception("Falha ao conectar FRANKSTEIN_DB_URL; fallback para arquivo.")
         return None
 
 
-def _ensure_yvy_tables():
-    conn = _yvy_db_conn()
+def _ensure_frankstein_tables():
+    conn = _frankstein_db_conn()
     if conn is None:
         return
     try:
         with conn, conn.cursor() as cur:
             cur.execute(
                 """
-                create table if not exists yvy_events(
+                DO $$
+                BEGIN
+                    IF to_regclass('public.frankstein_events') IS NULL AND to_regclass('public.yvy_events') IS NOT NULL THEN
+                        EXECUTE 'ALTER TABLE yvy_events RENAME TO frankstein_events';
+                    END IF;
+                    IF to_regclass('public.frankstein_models') IS NULL AND to_regclass('public.yvy_models') IS NOT NULL THEN
+                        EXECUTE 'ALTER TABLE yvy_models RENAME TO frankstein_models';
+                    END IF;
+                END
+                $$;
+                """
+            )
+            cur.execute(
+                """
+                create table if not exists frankstein_events(
                     id bigserial primary key,
-                    created_at timestamptz default now(),
+                    event_id uuid,
+                    "timestamp" timestamptz default now(),
+                    processo_id text,
+                    lead_id text,
+                    cliente_id text,
+                    reserva_id text,
+                    corretor_id text,
+                    empreendimento text,
+                    perfil text,
                     renda_bruta numeric,
                     valor_tabela numeric,
                     sobrepreco_vila numeric,
                     valor_obtido numeric,
                     parcela_caixa numeric,
                     preco_digitado_corretor numeric,
-                    expo numeric,
+                    preco_base_politica numeric,
+                    preco_final numeric,
+                    entrada_liquida numeric,
+                    valor_parcela_entrada numeric,
                     is_pos_chaves numeric,
-                    heuristica jsonb,
-                    yvy jsonb,
-                    aceitou boolean,
-                    origem text
+                    status_ia_heuristica text,
+                    bloqueio_critico boolean,
+                    motivo_auditoria text,
+                    garantidores_necessarios integer,
+                    exposicao_risco numeric,
+                    alerta_preco text,
+                    valor_venda numeric,
+                    garantido numeric,
+                    cheque_moradia numeric,
+                    faltante numeric,
+                    qtd_problemas_documentais integer,
+                    score_risco_regra numeric,
+                    status_geral_regra text,
+                    decisao_recomendada_regra text,
+                    probabilidade_modelo numeric,
+                    preco_frankstein numeric,
+                    confianca_modelo numeric,
+                    modelo_versao text,
+                    teve_pendencia_cca boolean,
+                    teve_pendencia_agehab boolean,
+                    foi_aprovado boolean,
+                    foi_reprovado boolean,
+                    virou_condicionado boolean,
+                    assinou_caixa boolean,
+                    finalizou boolean,
+                    tempo_ate_assinatura_horas numeric,
+                    tempo_total_processo_horas numeric,
+                    retorno_cca text,
+                    resultado_real text,
+                    input_json jsonb,
+                    heuristica_json jsonb,
+                    frankstein_json jsonb,
+                    features_json jsonb,
+                    origem text,
+                    created_at timestamptz default now(),
+                    updated_at timestamptz default now()
                 );
                 """
             )
+            alter_statements = [
+                'alter table frankstein_events add column if not exists event_id uuid',
+                'alter table frankstein_events add column if not exists "timestamp" timestamptz',
+                'alter table frankstein_events add column if not exists processo_id text',
+                'alter table frankstein_events add column if not exists lead_id text',
+                'alter table frankstein_events add column if not exists cliente_id text',
+                'alter table frankstein_events add column if not exists reserva_id text',
+                'alter table frankstein_events add column if not exists corretor_id text',
+                'alter table frankstein_events add column if not exists empreendimento text',
+                'alter table frankstein_events add column if not exists perfil text',
+                'alter table frankstein_events add column if not exists preco_base_politica numeric',
+                'alter table frankstein_events add column if not exists preco_final numeric',
+                'alter table frankstein_events add column if not exists entrada_liquida numeric',
+                'alter table frankstein_events add column if not exists valor_parcela_entrada numeric',
+                'alter table frankstein_events add column if not exists status_ia_heuristica text',
+                'alter table frankstein_events add column if not exists bloqueio_critico boolean',
+                'alter table frankstein_events add column if not exists motivo_auditoria text',
+                'alter table frankstein_events add column if not exists garantidores_necessarios integer',
+                'alter table frankstein_events add column if not exists exposicao_risco numeric',
+                'alter table frankstein_events add column if not exists alerta_preco text',
+                'alter table frankstein_events add column if not exists valor_venda numeric',
+                'alter table frankstein_events add column if not exists garantido numeric',
+                'alter table frankstein_events add column if not exists cheque_moradia numeric',
+                'alter table frankstein_events add column if not exists faltante numeric',
+                'alter table frankstein_events add column if not exists qtd_problemas_documentais integer',
+                'alter table frankstein_events add column if not exists score_risco_regra numeric',
+                'alter table frankstein_events add column if not exists status_geral_regra text',
+                'alter table frankstein_events add column if not exists decisao_recomendada_regra text',
+                'alter table frankstein_events add column if not exists probabilidade_modelo numeric',
+                'alter table frankstein_events add column if not exists preco_frankstein numeric',
+                'alter table frankstein_events add column if not exists confianca_modelo numeric',
+                'alter table frankstein_events add column if not exists modelo_versao text',
+                'alter table frankstein_events add column if not exists teve_pendencia_cca boolean',
+                'alter table frankstein_events add column if not exists teve_pendencia_agehab boolean',
+                'alter table frankstein_events add column if not exists foi_aprovado boolean',
+                'alter table frankstein_events add column if not exists foi_reprovado boolean',
+                'alter table frankstein_events add column if not exists virou_condicionado boolean',
+                'alter table frankstein_events add column if not exists assinou_caixa boolean',
+                'alter table frankstein_events add column if not exists finalizou boolean',
+                'alter table frankstein_events add column if not exists tempo_ate_assinatura_horas numeric',
+                'alter table frankstein_events add column if not exists tempo_total_processo_horas numeric',
+                'alter table frankstein_events add column if not exists retorno_cca text',
+                'alter table frankstein_events add column if not exists resultado_real text',
+                'alter table frankstein_events add column if not exists input_json jsonb',
+                'alter table frankstein_events add column if not exists heuristica_json jsonb',
+                'alter table frankstein_events add column if not exists frankstein_json jsonb',
+                'alter table frankstein_events add column if not exists features_json jsonb',
+                'alter table frankstein_events add column if not exists origem text',
+                'alter table frankstein_events add column if not exists updated_at timestamptz default now()',
+            ]
+            for statement in alter_statements:
+                cur.execute(statement)
+            cur.execute("create unique index if not exists ix_frankstein_events_event_id on frankstein_events(event_id)")
+            cur.execute('create index if not exists ix_frankstein_events_timestamp on frankstein_events("timestamp")')
+            cur.execute("create index if not exists ix_frankstein_events_processo_id on frankstein_events(processo_id)")
+            cur.execute("create index if not exists ix_frankstein_events_lead_id on frankstein_events(lead_id)")
+            cur.execute("create index if not exists ix_frankstein_events_resultado_real on frankstein_events(resultado_real)")
             cur.execute(
                 """
-                create table if not exists yvy_models(
+                create table if not exists frankstein_models(
                     id bigserial primary key,
                     version text not null,
                     created_at timestamptz default now(),
@@ -11039,76 +11939,199 @@ def _ensure_yvy_tables():
                 """
             )
     except Exception:
-        logger.exception("Nao foi possivel garantir tabelas yvy no banco.")
+        logger.exception("Nao foi possivel garantir tabelas frankstein no banco.")
     finally:
         conn.close()
 
 
-def _log_yvy_event_db(event: dict[str, Any]) -> bool:
-    conn = _yvy_db_conn()
+def _log_frankstein_event_db(event: dict[str, Any]) -> bool:
+    conn = _frankstein_db_conn()
     if conn is None:
         return False
     try:
         with conn, conn.cursor() as cur:
             cur.execute(
                 """
-                insert into yvy_events(
-                    renda_bruta, valor_tabela, sobrepreco_vila, valor_obtido,
-                    parcela_caixa, preco_digitado_corretor, expo, is_pos_chaves,
-                    heuristica, yvy, aceitou, origem
+                insert into frankstein_events(
+                    event_id, "timestamp", processo_id, lead_id, cliente_id, reserva_id, corretor_id, empreendimento, perfil,
+                    renda_bruta, valor_tabela, sobrepreco_vila, valor_obtido, parcela_caixa, preco_digitado_corretor,
+                    preco_base_politica, preco_final, entrada_liquida, valor_parcela_entrada, is_pos_chaves,
+                    status_ia_heuristica, bloqueio_critico, motivo_auditoria, garantidores_necessarios,
+                    exposicao_risco, alerta_preco, valor_venda, garantido, cheque_moradia, faltante,
+                    qtd_problemas_documentais, score_risco_regra, status_geral_regra, decisao_recomendada_regra,
+                    probabilidade_modelo, preco_frankstein, confianca_modelo, modelo_versao,
+                    teve_pendencia_cca, teve_pendencia_agehab, foi_aprovado, foi_reprovado, virou_condicionado,
+                    assinou_caixa, finalizou, tempo_ate_assinatura_horas, tempo_total_processo_horas,
+                    retorno_cca, resultado_real, input_json, heuristica_json, frankstein_json, features_json, origem,
+                    updated_at
                 )
-                values (%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s::jsonb,%s,%s)
+                values (
+                    %s,%s,%s,%s,%s,%s,%s,%s,%s,
+                    %s,%s,%s,%s,%s,%s,
+                    %s,%s,%s,%s,%s,
+                    %s,%s,%s,%s,
+                    %s,%s,%s,%s,%s,%s,
+                    %s,%s,%s,%s,
+                    %s,%s,%s,%s,
+                    %s,%s,%s,%s,%s,
+                    %s,%s,%s,%s,
+                    %s,%s,%s::jsonb,%s::jsonb,%s::jsonb,%s::jsonb,%s,now()
+                )
                 """,
                 (
-                    event.get("input", {}).get("renda_bruta"),
-                    event.get("input", {}).get("valor_tabela"),
-                    event.get("input", {}).get("sobrepreco_vila"),
-                    event.get("input", {}).get("valor_obtido"),
-                    event.get("input", {}).get("parcela_caixa"),
-                    event.get("input", {}).get("preco_digitado_corretor"),
-                    event.get("features", {}).get("expo"),
-                    event.get("features", {}).get("is_pos"),
-                    json.dumps(event.get("heuristica")),
-                    json.dumps(event.get("yvy")),
-                    None,
+                    event.get("event_id"),
+                    event.get("timestamp"),
+                    event.get("processo_id"),
+                    event.get("lead_id"),
+                    event.get("cliente_id"),
+                    event.get("reserva_id"),
+                    event.get("corretor_id"),
+                    event.get("empreendimento"),
+                    event.get("perfil"),
+                    event.get("renda_bruta"),
+                    event.get("valor_tabela"),
+                    event.get("sobrepreco_vila"),
+                    event.get("valor_obtido"),
+                    event.get("parcela_caixa"),
+                    event.get("preco_digitado_corretor"),
+                    event.get("preco_base_politica"),
+                    event.get("preco_final"),
+                    event.get("entrada_liquida"),
+                    event.get("valor_parcela_entrada"),
+                    event.get("is_pos_chaves"),
+                    event.get("status_ia_heuristica"),
+                    event.get("bloqueio_critico"),
+                    event.get("motivo_auditoria"),
+                    event.get("garantidores_necessarios"),
+                    event.get("exposicao_risco"),
+                    event.get("alerta_preco"),
+                    event.get("valor_venda"),
+                    event.get("garantido"),
+                    event.get("cheque_moradia"),
+                    event.get("faltante"),
+                    event.get("qtd_problemas_documentais"),
+                    event.get("score_risco_regra"),
+                    event.get("status_geral_regra"),
+                    event.get("decisao_recomendada_regra"),
+                    event.get("probabilidade_modelo"),
+                    event.get("preco_frankstein"),
+                    event.get("confianca_modelo"),
+                    event.get("modelo_versao"),
+                    event.get("teve_pendencia_cca"),
+                    event.get("teve_pendencia_agehab"),
+                    event.get("foi_aprovado"),
+                    event.get("foi_reprovado"),
+                    event.get("virou_condicionado"),
+                    event.get("assinou_caixa"),
+                    event.get("finalizou"),
+                    event.get("tempo_ate_assinatura_horas"),
+                    event.get("tempo_total_processo_horas"),
+                    event.get("retorno_cca"),
+                    event.get("resultado_real"),
+                    _serialize_jsonb_payload(event.get("input_json") or event.get("input")),
+                    _serialize_jsonb_payload(event.get("heuristica_json") or event.get("heuristica")),
+                    _serialize_jsonb_payload(event.get("frankstein_json") or event.get("frankstein")),
+                    _serialize_jsonb_payload(event.get("features_json") or event.get("features")),
                     event.get("origem") or "app",
                 ),
             )
         return True
     except Exception:
-        logger.exception("Falha ao gravar evento yvy no banco; fallback arquivo.")
+        logger.exception("Falha ao gravar evento frankstein no banco; fallback arquivo.")
         return False
     finally:
         conn.close()
 
 
-def _load_latest_yvy_model_from_db() -> Optional[dict[str, Any]]:
-    conn = _yvy_db_conn()
+def _update_frankstein_event_store(event_id: str, changes: dict[str, Any]) -> bool:
+    normalized_event_id = _clean_optional_text(event_id)
+    if not normalized_event_id:
+        return False
+
+    allowed_fields = {
+        "teve_pendencia_cca",
+        "teve_pendencia_agehab",
+        "foi_aprovado",
+        "foi_reprovado",
+        "virou_condicionado",
+        "assinou_caixa",
+        "finalizou",
+        "tempo_ate_assinatura_horas",
+        "tempo_total_processo_horas",
+        "retorno_cca",
+        "resultado_real",
+    }
+    updates = {key: value for key, value in changes.items() if key in allowed_fields and value is not None}
+    if not updates:
+        return False
+
+    conn = _frankstein_db_conn()
+    if conn is not None:
+        try:
+            assignments = ", ".join(f"{field} = %s" for field in updates.keys())
+            params = [updates[field] for field in updates.keys()]
+            params.extend([datetime.now(timezone.utc), normalized_event_id])
+            with conn, conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    update frankstein_events
+                    set {assignments}, updated_at = %s
+                    where event_id = %s::uuid
+                    """,
+                    params,
+                )
+                if cur.rowcount > 0:
+                    return True
+        except Exception:
+            logger.exception("Falha ao atualizar frankstein_event %s no banco; fallback arquivo.", normalized_event_id)
+        finally:
+            conn.close()
+
+    events = _safe_load_json_list(FRANKSTEIN_EVENTS_PATH)
+    updated = False
+    for event in events:
+        if _clean_optional_text(event.get("event_id")) != normalized_event_id:
+            continue
+        event.update(updates)
+        updated = True
+        break
+    if updated:
+        _persist_json_list(FRANKSTEIN_EVENTS_PATH, events)
+    return updated
+
+
+def _load_latest_frankstein_model_from_db() -> Optional[dict[str, Any]]:
+    conn = _frankstein_db_conn()
     if conn is None:
         return None
     try:
         with conn, conn.cursor() as cur:
-            cur.execute("select artifact from yvy_models order by created_at desc limit 1;")
+            cur.execute("select artifact from frankstein_models order by created_at desc limit 1;")
             row = cur.fetchone()
             if row and row[0]:
-                return row[0]
+                artifact = row[0]
+                if isinstance(artifact, dict):
+                    artifact["_kind"] = "legacy_json_db"
+                    return artifact
+                return None
     except Exception:
-        logger.exception("Falha ao carregar modelo yvy do banco.")
+        logger.exception("Falha ao carregar modelo frankstein do banco.")
     finally:
         conn.close()
     return None
 
 
-@app.post("/app/api/yvy/recomendacao", response_model=YvyRecomendacaoOut)
-async def recomendar_proposta_yvy(
+@app.post("/app/api/frankstein/recomendacao", response_model=FranksteinRecomendacaoOut)
+async def recomendar_proposta_frankstein(
     payload: SimulacaoInput,
     request: Request,
     _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
 ):
     """
-    Camada \"yvy\":
-    - Mantém cálculo determinístico existente.
-    - Acrescenta sugestão baseada em regras suaves ou modelo leve, e registra evento para futuro treinamento.
+    Camada \"frankstein\":
+    - MantÃ©m cÃ¡lculo determinÃ­stico existente.
+    - Acrescenta sugestÃ£o baseada em regras suaves ou modelo leve, e registra evento para futuro treinamento.
     """
     resultado = engine_calculo_imobiliario(payload)
     heur_valor = float(resultado["apresentacao_cliente"]["valor_imovel"])
@@ -11116,33 +12139,34 @@ async def recomendar_proposta_yvy(
     risco = resultado["leitura_executiva_corretor"]["risco_exposicao"]
     bloqueio = bool(resultado["leitura_executiva_corretor"].get("bloqueio_critico", False))
 
-    preco_yvy = heur_valor
+    preco_frankstein = heur_valor
     sugestoes: list[str] = []
     motivos: list[str] = []
     prob_aceite = 0.62
 
-    model = _load_yvy_model() or _load_latest_yvy_model_from_db()
-    feats = _yvy_features(payload, resultado)
+    model = _load_frankstein_model() or _load_latest_frankstein_model_from_db()
+    feats = _frankstein_features(payload, resultado)
+    feature_payload = _frankstein_feature_payload(payload, resultado)
     if model:
-        prob_aceite = _yvy_predict_prob(model, feats)
-        motivos.append("Probabilidade estimada via modelo yvy.")
+        prob_aceite = _frankstein_predict_prob(model, feats, feature_payload)
+        motivos.append("Probabilidade estimada via modelo frankstein.")
     if bloqueio:
-        preco_yvy = round(heur_valor * 0.97, 2)
-        sugestoes.append("Reduzir preço em ~3% para aliviar IS pós-chaves.")
-        motivos.append("Bloqueio crítico pela regra de IS >= 40%.")
+        preco_frankstein = round(heur_valor * 0.97, 2)
+        sugestoes.append("Reduzir preÃ§o em ~3% para aliviar IS pÃ³s-chaves.")
+        motivos.append("Bloqueio crÃ­tico pela regra de IS >= 40%.")
         prob_aceite = min(prob_aceite, 0.4)
     else:
-        motivos.append("Perfil dentro dos limites heurísticos atuais.")
+        motivos.append("Perfil dentro dos limites heurÃ­sticos atuais.")
         if risco:
-            motivos.append(f"Risco de exposição: {risco}.")
+            motivos.append(f"Risco de exposiÃ§Ã£o: {risco}.")
 
-    # Ajuste suave de preço baseado na probabilidade.
-    preco_yvy = round(heur_valor * (0.97 + 0.06 * prob_aceite), 2)
+    # Ajuste suave de preÃ§o baseado na probabilidade.
+    preco_frankstein = round(heur_valor * (0.97 + 0.06 * prob_aceite), 2)
     confianca = prob_aceite
 
-    yvy_payload = YvySugestaoOut(
+    frankstein_payload = FranksteinSugestaoOut(
         preco_heuristico=heur_valor,
-        preco_yvy=preco_yvy,
+        preco_frankstein=preco_frankstein,
         prob_aceite=prob_aceite,
         status_ia=status_ia,
         risco_exposicao=risco,
@@ -11151,28 +12175,84 @@ async def recomendar_proposta_yvy(
         sugestoes=sugestoes,
     )
 
-    _log_yvy_event(
-        {
-            "timestamp": datetime.utcnow().isoformat(),
-            "input": payload.model_dump(),
-            "heuristica": resultado,
-            "yvy": yvy_payload.model_dump(),
-            "features": {"expo": feats[6], "is_pos": feats[7]},
-            "user_agent": request.headers.get("user-agent"),
-            "client_host": request.client.host if request.client else None,
-        }
+    event = _build_frankstein_recomendacao_event(
+        payload,
+        resultado,
+        frankstein_payload,
+        request,
+        model_version=_frankstein_model_version(model) or "fallback-0.62",
+    )
+    processo, lead = _resolve_frankstein_process_context(
+        db,
+        processo_id=getattr(payload, "processo_id", None),
+        cliente_id=getattr(payload, "cliente_id", None),
+        reserva_id=getattr(payload, "reserva_id", None),
+        lead_id=getattr(payload, "lead_id", None),
+    )
+    event = _attach_frankstein_event_context(event, processo=processo, lead=lead)
+    _log_frankstein_event(event)
+    if processo is not None:
+        _remember_processo_frankstein_event(processo, event)
+        try:
+            db.commit()
+        except SQLAlchemyError:
+            db.rollback()
+            logger.exception("Falha ao persistir rastreio do ultimo evento FRANKSTEIN para processo %s.", processo.id)
+        else:
+            _sync_frankstein_events_for_processo(db, processo, lead=lead)
+
+    return FranksteinRecomendacaoOut(
+        event_id=event["event_id"],
+        modelo_versao=event.get("modelo_versao"),
+        heuristica=resultado,
+        frankstein=frankstein_payload,
     )
 
-    return YvyRecomendacaoOut(heuristica=resultado, yvy=yvy_payload)
 
-
-@app.post("/app/api/yvy/analisar", response_model=YvyRespostaOperacional)
-@app.post("/yvy/analisar", response_model=YvyRespostaOperacional)
-def yvy_analisar_operacional(
-    payload: YvyAnaliseInput,
+@app.post("/app/api/frankstein/analisar", response_model=FranksteinRespostaOperacional)
+@app.post("/frankstein/analisar", response_model=FranksteinRespostaOperacional)
+def frankstein_analisar_operacional(
+    payload: FranksteinAnaliseInput,
+    request: Request,
     _: dict[str, Any] = Depends(require_roles(ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
-) -> YvyRespostaOperacional:
-    return analisar_operacao_yvy(payload)
+    db: Session = Depends(get_db),
+) -> FranksteinRespostaOperacional:
+    resposta = analisar_operacao_frankstein(payload)
+    event = _build_frankstein_operacional_event(payload, resposta, request)
+    processo, lead = _resolve_frankstein_process_context(
+        db,
+        processo_id=getattr(payload, "processo_id", None),
+        cliente_id=getattr(payload, "cliente_id", None),
+        reserva_id=getattr(payload, "reserva_id", None),
+        lead_id=getattr(payload, "lead_id", None),
+    )
+    event = _attach_frankstein_event_context(event, processo=processo, lead=lead)
+    _log_frankstein_event(event)
+    if processo is not None:
+        _remember_processo_frankstein_event(processo, event)
+        try:
+            db.commit()
+        except SQLAlchemyError:
+            db.rollback()
+            logger.exception("Falha ao persistir rastreio do ultimo evento FRANKSTEIN para processo %s.", processo.id)
+        else:
+            _sync_frankstein_events_for_processo(db, processo, lead=lead)
+    resposta.event_id = event["event_id"]
+    resposta.modelo_versao = event.get("modelo_versao")
+    return resposta
+
+
+@app.patch("/app/api/frankstein/events/{event_id}")
+def atualizar_resultado_frankstein_event(
+    event_id: str,
+    payload: FranksteinEventResultadoUpdate,
+    _: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+):
+    changes = payload.model_dump(exclude_none=True)
+    updated = _update_frankstein_event_store(event_id, changes)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Evento FRANKSTEIN nao encontrado")
+    return {"ok": True, "event_id": event_id, "updated_fields": sorted(changes.keys())}
 
 
 @app.post("/app/api/analises")
@@ -11242,3 +12322,4 @@ async def listar_analises(
         }
         for row in rows
     ]
+

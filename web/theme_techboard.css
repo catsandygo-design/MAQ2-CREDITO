@@ -394,3 +394,95 @@
     border-radius: 10px !important;
   }
 }
+
+/* Processo mais claro nas telas legadas */
+:where(body.theme-corporate, body.tech-commercial) .topbar,
+:where(body.theme-corporate, body.tech-commercial) .top,
+:where(body.theme-corporate, body.tech-commercial) header,
+:where(body.theme-corporate, body.tech-commercial) .toolbar,
+:where(body.theme-corporate, body.tech-commercial) .filters {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px !important;
+}
+
+:where(body.theme-corporate, body.tech-commercial) .topbar::before,
+:where(body.theme-corporate, body.tech-commercial) .top::before,
+:where(body.theme-corporate, body.tech-commercial) header::before,
+:where(body.theme-corporate, body.tech-commercial) .toolbar::before,
+:where(body.theme-corporate, body.tech-commercial) .filters::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 0;
+  height: 4px;
+  border-radius: 0 0 10px 10px;
+  background: linear-gradient(90deg, rgba(15, 159, 152, 0.92), rgba(14, 165, 233, 0.88));
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+:where(body.theme-corporate, body.tech-commercial) .board-shell,
+:where(body.theme-corporate, body.tech-commercial) .scroll,
+:where(body.theme-corporate, body.tech-commercial) .tableWrap,
+:where(body.theme-corporate, body.tech-commercial) .list-box,
+:where(body.theme-corporate, body.tech-commercial) .column {
+  border-radius: 18px !important;
+  overflow: hidden;
+}
+
+:where(body.theme-corporate, body.tech-commercial) .tableWrap,
+:where(body.theme-corporate, body.tech-commercial) .scroll {
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+}
+
+:where(body.theme-corporate, body.tech-commercial) .tableWrap tbody td,
+:where(body.theme-corporate, body.tech-commercial) tbody td,
+:where(body.theme-corporate, body.tech-commercial) .fase-item,
+:where(body.theme-corporate, body.tech-commercial) .item {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+:where(body.theme-corporate, body.tech-commercial) .doc-table thead th,
+:where(body.theme-corporate, body.tech-commercial) thead th,
+:where(body.theme-corporate, body.tech-commercial) .fase-header-row,
+:where(body.theme-corporate, body.tech-commercial) .list-head,
+:where(body.theme-corporate, body.tech-commercial) .cmp th {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+
+:where(body.theme-corporate, body.tech-commercial) .tableWrap tbody tr:hover,
+:where(body.theme-corporate, body.tech-commercial) tbody tr:hover,
+:where(body.theme-corporate, body.tech-commercial) .fase-item:hover,
+:where(body.theme-corporate, body.tech-commercial) .item:hover {
+  box-shadow: inset 4px 0 0 rgba(14, 165, 233, 0.22);
+}
+
+:where(body.theme-corporate, body.tech-commercial) .chip,
+:where(body.theme-corporate, body.tech-commercial) .pill,
+:where(body.theme-corporate, body.tech-commercial) .badge,
+:where(body.theme-corporate, body.tech-commercial) .status,
+:where(body.theme-corporate, body.tech-commercial) .fase-status {
+  font-weight: 800 !important;
+  letter-spacing: 0.02em;
+}
+
+:where(body.theme-corporate, body.tech-commercial) .col-head,
+:where(body.theme-corporate, body.tech-commercial) .list-head,
+:where(body.theme-corporate, body.tech-commercial) .fase-title,
+:where(body.theme-corporate, body.tech-commercial) .section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+:where(body.theme-corporate, body.tech-commercial) .col-head strong,
+:where(body.theme-corporate, body.tech-commercial) .list-head strong,
+:where(body.theme-corporate, body.tech-commercial) .fase-title strong,
+:where(body.theme-corporate, body.tech-commercial) .section-title strong {
+  color: #0a3357 !important;
+}

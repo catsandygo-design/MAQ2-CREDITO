@@ -13,3 +13,10 @@ dist/
 !frontend-react/dist/
 !frontend-react/dist/**
 backups/*.bundle
+data/models/current/*
+data/models/candidates/*
+data/models/archive/*
+!data/models/current/.gitkeep
+!data/models/candidates/.gitkeep
+!data/models/archive/.gitkeep
+data/processed/*.parquet

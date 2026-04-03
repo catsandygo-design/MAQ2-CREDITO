@@ -47,7 +47,7 @@
     window.addEventListener('message', (event) => {
       if (location.origin && event.origin !== location.origin) return;
       const data = event.data || {};
-      if (data.type === 'yvy:mood') {
+      if (data.type === 'frankstein:mood') {
         const energy = Math.max(0, Math.min(1, data.energy ?? 0));
         userEnergy = Math.max(userEnergy, energy);
         if (data.mood === 'alerta') { setMood('alerta', 6000); alertCount++; }

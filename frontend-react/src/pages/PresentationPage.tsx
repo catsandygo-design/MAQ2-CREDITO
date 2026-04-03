@@ -278,10 +278,10 @@ export function PresentationPage() {
     const selected = BG_BY_EMPREENDIMENTO[empreendimento] ?? BACKGROUND_IMAGES
     return selected.map((path) => (path.startsWith('/imagens/') ? encodeURI(path) : path))
   }, [empreendimento])
-  const yvyFrameRef = useRef<HTMLIFrameElement | null>(null)
+  const franksteinFrameRef = useRef<HTMLIFrameElement | null>(null)
 
-  const sendYvyMood = (payload: { type: 'yvy:mood'; mood: string; energy?: number }) => {
-    const win = yvyFrameRef.current?.contentWindow
+  const sendFranksteinMood = (payload: { type: 'frankstein:mood'; mood: string; energy?: number }) => {
+    const win = franksteinFrameRef.current?.contentWindow
     if (win) {
       win.postMessage(payload, window.location.origin)
     }
@@ -570,7 +570,7 @@ export function PresentationPage() {
   }, [precoDigitadoCorretor, pricing.precoMinimoPermitido])
 
   useEffect(() => {
-    const eye = document.getElementById('yvy-eye')
+    const eye = document.getElementById('frankstein-eye')
     if (eye) eye.remove()
   }, [])
 
@@ -581,7 +581,7 @@ export function PresentationPage() {
     const handler = () => {
       if (debounce) window.clearTimeout(debounce)
       debounce = window.setTimeout(() => {
-        sendYvyMood({ type: 'yvy:mood', mood: 'aprendendo', energy: 0.35 })
+        sendFranksteinMood({ type: 'frankstein:mood', mood: 'aprendendo', energy: 0.35 })
       }, 120)
     }
     container.addEventListener('input', handler, true)
@@ -593,13 +593,13 @@ export function PresentationPage() {
 
   useEffect(() => {
     if (precoErro) {
-      sendYvyMood({ type: 'yvy:mood', mood: 'alerta', energy: 0.7 })
+      sendFranksteinMood({ type: 'frankstein:mood', mood: 'alerta', energy: 0.7 })
     }
   }, [precoErro])
 
   useEffect(() => {
     if (iaErro) {
-      sendYvyMood({ type: 'yvy:mood', mood: 'alerta', energy: 0.6 })
+      sendFranksteinMood({ type: 'frankstein:mood', mood: 'alerta', energy: 0.6 })
     }
   }, [iaErro])
 
@@ -829,12 +829,12 @@ export function PresentationPage() {
                   <div className="sm:col-span-3 grid gap-3 rounded-2xl border border-white/12 bg-slate-950/70 p-4">
                   <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="yvy-mini">
+                        <div className="frankstein-mini">
                           <iframe
-                            ref={yvyFrameRef}
-                            title="YVY Core"
-                            src="/assets/yvy.html"
-                            className="yvy-mini__frame"
+                            ref={franksteinFrameRef}
+                            title="FRANKSTEIN Core"
+                            src="/assets/frankstein.html"
+                            className="frankstein-mini__frame"
                             loading="lazy"
                           />
                         </div>
@@ -1396,4 +1396,5 @@ export function PresentationPage() {
     </>
   )
 }
+
 

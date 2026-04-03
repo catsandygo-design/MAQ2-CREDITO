@@ -10,7 +10,7 @@ import {
 } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError, fetchAnalistaPlannerDashboard, fetchCCAs, fetchProcessosPaged, fetchSession, logout } from '../lib/api'
-import type { TimelineStep } from '../components/TimelineLane'
+import { TimelineLane, type TimelineStep } from '../components/TimelineLane'
 import type { CreditoPlanejamentoDashboard, CreditoPlanejamentoItem, ProcessoApiItem, ProcessoLinha } from '../types'
 
 const REFRESH_SECONDS = 60
@@ -483,6 +483,94 @@ function repasseTimelineKey(row: ProcessoLinha): string {
   return statusFromBackend(row.repasse)
 }
 
+function processOwner(row: ProcessoLinha): string {
+  if (row.foraContagemMes) return 'Carteira pausada'
+  if (isWaitingDocs(row)) return 'Corretor'
+
+  const caixa = statusFromBackend(row.statusCaixa)
+  if (['analise_credito', 'pendente_credito', 'analise_cca', 'pendente_cca', 'condicionado', 'bloqueado'].includes(caixa)) {
+    return 'CCA'
+  }
+
+  const agehab = statusFromBackend(row.statusAgehab)
+  const repasse = statusFromBackend(row.repasse)
+  if (
+    ['envio_agehab', 'pendente_agehab', 'validado_agehab'].includes(agehab) ||
+    ['em_repasse', 'inicio_repasse', 'assinatura_caixa', 'inicio_garantia'].includes(repasse)
+  ) {
+    return 'Repasse'
+  }
+
+  if (FLOW_COMMERCIAL_KEYS.has(statusFromBackend(row.geral))) return 'Analista'
+  return 'Operacao'
+}
+
+function processOwnerContext(row: ProcessoLinha): string {
+  const owner = processOwner(row)
+  if (owner === 'Carteira pausada') return 'Caso fora da contagem mensal e sem cadencia ativa.'
+  if (owner === 'Corretor') return 'A proxima liberacao depende do corretor completar o envio.'
+  if (owner === 'CCA') return 'A analise formal precisa de retorno do CCA para evoluir.'
+  if (owner === 'Repasse') return 'A esteira de repasse e Agehab virou o dono do prazo.'
+  if (owner === 'Analista') return 'A carteira esta em conducao interna do time de credito.'
+  return 'Fluxo segue monitorado sem um dono critico concentrado.'
+}
+
+function processOwnerTone(row: ProcessoLinha): 'ok' | 'warn' | 'bad' | 'neutral' {
+  const owner = processOwner(row)
+  if (owner === 'Repasse') return 'ok'
+  if (owner === 'CCA') return 'warn'
+  if (owner === 'Carteira pausada') return 'bad'
+  return 'neutral'
+}
+
+function primaryBlocker(row: ProcessoLinha): string {
+  if (row.foraContagemMes) return 'Processo fora da contagem mensal'
+  if (row.avisoContratoAgehab) return 'Contrato Agehab pronto para emitir'
+  if (isWaitingDocs(row)) {
+    if (row.docsPendentes > 0) return `${row.docsPendentes} documento(s) pendente(s)`
+    return 'Envio documental nao iniciado'
+  }
+
+  const pendencias = pendingItems(row)
+  if (pendencias.length > 0) return pendencias[0]
+  if (isFinalizadoRow(row)) return 'Assinatura e formalizacao'
+  return 'Sem gargalo principal'
+}
+
+function shortNextActionLabel(row: ProcessoLinha): string {
+  if (row.foraContagemMes) return 'Retomar no proximo ciclo'
+  if (row.avisoContratoAgehab) return 'Emitir contrato Agehab'
+  if (isWaitingDocs(row)) return 'Cobrar documentos'
+
+  const pendencias = pendingItems(row)
+  if (pendencias.length > 0) {
+    if (pendencias[0].startsWith('Caixa')) return 'Atuar com CCA'
+    if (pendencias[0].startsWith('Agehab')) return 'Atuar com Agehab'
+    if (pendencias[0].startsWith('Sinal')) return 'Regularizar sinal'
+    if (pendencias[0].startsWith('Fiador')) return 'Regularizar fiador'
+    return 'Tratar pendencia principal'
+  }
+
+  if (isFinalizadoRow(row)) return 'Concluir assinatura'
+  return 'Preparar proximo passo'
+}
+
+function blockerBucket(row: ProcessoLinha): 'docs' | 'caixa' | 'agehab' | 'garantia' | 'pausa' | 'fechamento' | 'livre' {
+  if (row.foraContagemMes) return 'pausa'
+  if (isWaitingDocs(row)) return 'docs'
+
+  const caixa = statusFromBackend(row.statusCaixa)
+  if (['analise_credito', 'pendente_credito', 'analise_cca', 'pendente_cca', 'condicionado', 'bloqueado'].includes(caixa)) {
+    return 'caixa'
+  }
+
+  const agehab = statusFromBackend(row.statusAgehab)
+  if (row.avisoContratoAgehab || ['envio_agehab', 'pendente_agehab', 'validado_agehab'].includes(agehab)) return 'agehab'
+  if (!isResolved('sinal', row.sinal) || !isResolved('fiador', row.fiador)) return 'garantia'
+  if (isFinalizadoRow(row)) return 'fechamento'
+  return 'livre'
+}
+
 function buildMiniTimelineSnapshot(steps: TimelineStep[], currentKey: string) {
   const normalized = statusFromBackend(currentKey)
   const currentIndex = steps.findIndex((step) => step.key === normalized)
@@ -727,6 +815,70 @@ export function AnalistaPainelPage() {
     }
   }, [filteredRows])
 
+  const processOverview = useMemo(() => {
+    const countedRows = filteredRows.filter((row) => !row.foraContagemMes)
+    const focus = executiveView.hottest || countedRows[0] || filteredRows[0] || null
+    const focusCommercialKey = focus ? commercialTimelineKey(focus) : ''
+    const focusRepasseKey = focus ? repasseTimelineKey(focus) : ''
+    const focusCommercialSnapshot = buildMiniTimelineSnapshot(COMMERCIAL_FLOW_STEPS, focusCommercialKey)
+    const focusRepasseSnapshot = buildMiniTimelineSnapshot(REPASSE_FLOW_STEPS, focusRepasseKey)
+
+    const commercialCounts = COMMERCIAL_FLOW_STEPS.map((step) => ({
+      ...step,
+      count: countedRows.filter((row) => commercialTimelineKey(row) === step.key).length,
+    }))
+
+    const repasseCounts = REPASSE_FLOW_STEPS.map((step) => ({
+      ...step,
+      count: countedRows.filter((row) => repasseTimelineKey(row) === step.key).length,
+    }))
+
+    const blockers = [
+      {
+        key: 'docs',
+        label: 'Documentos',
+        count: countedRows.filter((row) => blockerBucket(row) === 'docs').length,
+        note: 'Envio ou validacao ainda com corretor.',
+      },
+      {
+        key: 'caixa',
+        label: 'CCA / Caixa',
+        count: countedRows.filter((row) => blockerBucket(row) === 'caixa').length,
+        note: 'Pendencia, analise ou condicionado no retorno.',
+      },
+      {
+        key: 'agehab',
+        label: 'Agehab',
+        count: countedRows.filter((row) => blockerBucket(row) === 'agehab').length,
+        note: 'Contrato, envio ou validacao da esteira publica.',
+      },
+      {
+        key: 'garantia',
+        label: 'Sinal / Fiador',
+        count: countedRows.filter((row) => blockerBucket(row) === 'garantia').length,
+        note: 'Estrutura financeira ainda nao limpou o fluxo.',
+      },
+    ]
+
+    const ownershipLabels = ['Corretor', 'Analista', 'CCA', 'Repasse', 'Operacao', 'Carteira pausada'] as const
+    const ownership = ownershipLabels.map((label) => ({
+      label,
+      count: filteredRows.filter((row) => processOwner(row) === label).length,
+    }))
+
+    return {
+      focus,
+      focusCommercialKey,
+      focusRepasseKey,
+      focusCommercialSnapshot,
+      focusRepasseSnapshot,
+      commercialCounts,
+      repasseCounts,
+      blockers,
+      ownership,
+    }
+  }, [executiveView.hottest, filteredRows])
+
   const onChangeFilter = (key: keyof FiltersState, value: string) => {
     startTransition(() => {
       setFilters((prev) => ({ ...prev, [key]: value }))
@@ -791,6 +943,151 @@ export function AnalistaPainelPage() {
             </button>
           </div>
 
+          <div className="analista-command-grid">
+            <section className="command-card command-card-intro">
+              <div className="command-card-head">
+                <span className="hero-kicker">Mapa operacional</span>
+                <span className="section-inline-note">Leitura fiel do processo</span>
+              </div>
+              <h1>Painel do Analista</h1>
+              <p>Carteira organizada por etapa oficial, gargalo principal, ownership atual e proxima acao. A tela deixa de vender narrativa e passa a sustentar a decisao diaria.</p>
+
+              <div className="command-metric-grid">
+                <article className="command-metric tone-danger">
+                  <span className="command-label">Pressao imediata</span>
+                  <strong>{kpis.prios}</strong>
+                  <p>Carteira acima de 15 dias em comercial.</p>
+                </article>
+                <article className="command-metric tone-warn">
+                  <span className="command-label">Pendencias ativas</span>
+                  <strong>{executiveView.pending}</strong>
+                  <p>Caixa, docs, sinal ou fiador fora do ideal.</p>
+                </article>
+                <article className="command-metric tone-ok">
+                  <span className="command-label">Prontos para avancar</span>
+                  <strong>{executiveView.readyFlow}</strong>
+                  <p>Sem trava principal na leitura atual.</p>
+                </article>
+                <article className={`command-metric tone-${kpiToneByHours(kpis.avgSlaCred)}`}>
+                  <span className="command-label">SLA medio credito</span>
+                  <strong>{formatElapsedHours(kpis.avgSlaCred)}</strong>
+                  <p>Media operacional do recorte filtrado.</p>
+                </article>
+              </div>
+            </section>
+
+            <section className="command-card command-card-focus">
+              <div className="command-card-head">
+                <span className="command-label">Cliente em foco</span>
+                {processOverview.focus ? <span className={`chip ${processOwnerTone(processOverview.focus)}`}>{processOwner(processOverview.focus)}</span> : null}
+              </div>
+              <strong>{processOverview.focus?.cliente || 'Carteira estabilizada'}</strong>
+              <p>
+                {processOverview.focus
+                  ? `${primaryBlocker(processOverview.focus)}. ${nextActionSummary(processOverview.focus)}`
+                  : 'Sem cliente critico no momento. O cabecalho continua mostrando quem esta segurando a carteira.'}
+              </p>
+
+              <div className="owner-load-grid">
+                {processOverview.ownership.map((item) => (
+                  <article key={item.label} className="owner-load-card">
+                    <span>{item.label}</span>
+                    <strong>{item.count}</strong>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <div className="process-truth-grid">
+            <section className="process-truth-card">
+              <div className="process-truth-head">
+                <div>
+                  <span className="command-label">Fluxo comercial</span>
+                  <h2>Etapa oficial da carteira</h2>
+                </div>
+                <span className="section-inline-note">
+                  {processOverview.focus ? `Atual: ${labelFor('geral', processOverview.focusCommercialKey || processOverview.focus.geral)}` : `${kpis.comercial} em comercial`}
+                </span>
+              </div>
+              <div className="process-truth-lane">
+                <TimelineLane
+                  title="Comercial"
+                  steps={COMMERCIAL_FLOW_STEPS}
+                  currentKey={processOverview.focusCommercialSnapshot.currentKey}
+                  doneKeys={processOverview.focusCommercialSnapshot.doneKeys}
+                  height={74}
+                  className="process-lane"
+                />
+              </div>
+              <div className="process-chip-grid">
+                {processOverview.commercialCounts.map((step) => (
+                  <span key={step.key} className="process-chip">
+                    <strong>{step.count}</strong>
+                    <span>{step.label}</span>
+                  </span>
+                ))}
+              </div>
+            </section>
+
+            <section className="process-truth-card">
+              <div className="process-truth-head">
+                <div>
+                  <span className="command-label">Fluxo de repasse</span>
+                  <h2>Quem segura a reta final</h2>
+                </div>
+                <span className="section-inline-note">
+                  {processOverview.focus ? `Atual: ${labelFor('repasse', processOverview.focusRepasseKey || processOverview.focus.repasse)}` : `${kpis.repasse} em repasse`}
+                </span>
+              </div>
+              <div className="process-truth-lane">
+                <TimelineLane
+                  title="Repasse"
+                  steps={REPASSE_FLOW_STEPS}
+                  currentKey={processOverview.focusRepasseSnapshot.currentKey}
+                  doneKeys={processOverview.focusRepasseSnapshot.doneKeys}
+                  height={74}
+                  className="process-lane"
+                />
+              </div>
+              <div className="process-chip-grid">
+                {processOverview.repasseCounts.map((step) => (
+                  <span key={step.key} className="process-chip">
+                    <strong>{step.count}</strong>
+                    <span>{step.label}</span>
+                  </span>
+                ))}
+              </div>
+            </section>
+
+            <section className="process-truth-card process-truth-card-blockers">
+              <div className="process-truth-head">
+                <div>
+                  <span className="command-label">Gargalos</span>
+                  <h2>Onde a fila entorta</h2>
+                </div>
+                <span className="section-inline-note">{executiveView.pending} com pendencia ativa</span>
+              </div>
+
+              <div className="process-blocker-grid">
+                {processOverview.blockers.map((item) => (
+                  <article key={item.key} className="process-blocker-card">
+                    <span>{item.label}</span>
+                    <strong>{item.count}</strong>
+                    <p>{item.note}</p>
+                  </article>
+                ))}
+              </div>
+
+              {processOverview.focus ? (
+                <div className="process-focus-note">
+                  <strong>{shortNextActionLabel(processOverview.focus)}</strong>
+                  <span>{processOwnerContext(processOverview.focus)}</span>
+                </div>
+              ) : null}
+            </section>
+          </div>
+
           <div className="analista-hero-layout">
             <div className="analista-hero">
               <span className="hero-kicker">Operacao de credito</span>
@@ -852,7 +1149,7 @@ export function AnalistaPainelPage() {
           {executiveView.focusRows.map((row) => (
             <a key={row.processoId} className="hero-ribbon-link" href={`#cliente-${row.processoId}`}>
               <span>{row.cliente}</span>
-              <strong>{labelFor('geral', commercialTimelineKey(row) || row.geral)}</strong>
+              <strong>{shortNextActionLabel(row)}</strong>
             </a>
           ))}
         </div>
@@ -1119,7 +1416,7 @@ export function AnalistaPainelPage() {
       <SectionShell
         eyebrow="Fila viva"
         title="Fluxo do cliente"
-        description="Cards com sombra, recuo visual e detalhes sob demanda por cliente."
+        description="Cada card mostra etapa oficial, gargalo principal, ownership atual e proxima acao."
         open={sections.queue}
         onToggle={() => toggleSection('queue')}
         aside={
@@ -1179,6 +1476,7 @@ export function AnalistaPainelPage() {
                         {isHighPriority(row) ? <span className="chip danger">Prioridade alta</span> : null}
                         {row.avisoContratoAgehab ? <span className="chip warn">Solicitar contrato Agehab</span> : null}
                         {row.foraContagemMes ? <span className="chip bad">Fora da contagem do mes</span> : null}
+                        <span className={`chip ${processOwnerTone(row)}`}>{processOwner(row)}</span>
                       </div>
                     </div>
 
@@ -1201,24 +1499,24 @@ export function AnalistaPainelPage() {
                   <div className="client-flow-stack">
                     <div className="client-story-grid">
                       <article className="client-story-card tone-neutral">
-                        <span className="client-story-label">Momento do cliente</span>
+                        <span className="client-story-label">Etapa oficial</span>
                         <strong>{comercialLabel}</strong>
-                        <p>{nextActionSummary(row)}</p>
+                        <p>{`Repasse em ${repasseLabel}. Aging total de ${formatElapsedHours(openHours(row))}.`}</p>
                       </article>
                       <article className={`client-story-card ${pendencias.length > 0 ? 'tone-danger' : 'tone-ok'}`}>
-                        <span className="client-story-label">Leitura executiva</span>
-                        <strong>{pendencias.length > 0 ? pendencias[0] : 'Fluxo alinhado'}</strong>
-                        <p>{pendencias.length > 1 ? `${pendencias.length} travas mapeadas na linha` : 'Sem pendencia principal neste momento'}</p>
+                        <span className="client-story-label">Gargalo principal</span>
+                        <strong>{primaryBlocker(row)}</strong>
+                        <p>{pendencias.length > 0 ? `${pendencias.length} ponto(s) ainda exigem atuacao.` : 'Sem pendencia principal neste momento.'}</p>
                       </article>
-                      <article className={`client-story-card ${row.semDocumento ? 'tone-warn' : 'tone-neutral'}`}>
-                        <span className="client-story-label">Documentos</span>
-                        <strong>{row.docsRecebidos}/{row.docsTotal}</strong>
-                        <p>{documentsSummary(row)}</p>
+                      <article className={`client-story-card ${row.semDocumento || pendencias.length > 0 ? 'tone-warn' : 'tone-neutral'}`}>
+                        <span className="client-story-label">Proxima acao</span>
+                        <strong>{shortNextActionLabel(row)}</strong>
+                        <p>{nextActionSummary(row)}</p>
                       </article>
                       <article className="client-story-card tone-neutral">
-                        <span className="client-story-label">Observacao</span>
-                        <strong>{row.observacao ? 'Atualizada' : 'Sem nota'}</strong>
-                        <p>{summarizeObservation(row)}</p>
+                        <span className="client-story-label">Ownership atual</span>
+                        <strong>{processOwner(row)}</strong>
+                        <p>{processOwnerContext(row)}</p>
                       </article>
                     </div>
 

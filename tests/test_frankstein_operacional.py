@@ -1,7 +1,7 @@
-from yvy_operacional import AnaliseInput, analisar_operacao_yvy
+﻿from frankstein_operacional import AnaliseInput, analisar_operacao_frankstein
 
 
-def test_yvy_operacional_returns_viavel_when_documentos_and_valor_ok():
+def test_frankstein_operacional_returns_viavel_when_documentos_and_valor_ok():
     payload = AnaliseInput(
         nome_cliente="Cliente Teste",
         perfil="CLT",
@@ -17,14 +17,14 @@ def test_yvy_operacional_returns_viavel_when_documentos_and_valor_ok():
         },
     )
 
-    resposta = analisar_operacao_yvy(payload)
+    resposta = analisar_operacao_frankstein(payload)
 
-    assert resposta.yvy.status_geral == "viavel"
-    assert resposta.yvy.score.classificacao == "baixo_risco"
-    assert resposta.yvy.decisao_recomendada.codigo == "AVANCAR"
+    assert resposta.frankstein.status_geral == "viavel"
+    assert resposta.frankstein.score.classificacao == "baixo_risco"
+    assert resposta.frankstein.decisao_recomendada.codigo == "AVANCAR"
 
 
-def test_yvy_operacional_marks_ajustar_when_missing_docs_and_gap():
+def test_frankstein_operacional_marks_ajustar_when_missing_docs_and_gap():
     payload = AnaliseInput(
         nome_cliente="Cliente Teste",
         perfil="CLT",
@@ -40,8 +40,9 @@ def test_yvy_operacional_marks_ajustar_when_missing_docs_and_gap():
         },
     )
 
-    resposta = analisar_operacao_yvy(payload)
+    resposta = analisar_operacao_frankstein(payload)
 
-    assert resposta.yvy.status_geral == "ajustar"
-    assert resposta.yvy.score.classificacao in {"alto_risco", "medio_risco"}
-    assert len(resposta.yvy.campos_com_problema) >= 3
+    assert resposta.frankstein.status_geral == "ajustar"
+    assert resposta.frankstein.score.classificacao in {"alto_risco", "medio_risco"}
+    assert len(resposta.frankstein.campos_com_problema) >= 3
+

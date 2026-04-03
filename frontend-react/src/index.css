@@ -15,6 +15,7 @@ body {
 }
 
 /* Oculta eye antigo se aparecer em builds legados */
-#yvy-eye {
+#frankstein-eye {
   display: none !important;
 }
+

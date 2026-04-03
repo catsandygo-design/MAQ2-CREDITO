@@ -1,10 +1,10 @@
-"""
-Treinamento leve do modelo yvy com 500 amostras sintéticas.
-- Mantém compatibilidade com endpoint /app/api/yvy/recomendacao (mesmas features).
-- Gera yvy_model.json em data/.
+﻿"""
+Treinamento leve do modelo frankstein com 500 amostras sintÃ©ticas.
+- MantÃ©m compatibilidade com endpoint /app/api/frankstein/recomendacao (mesmas features).
+- Gera frankstein_model.json em data/.
 
-Obs.: Como não há ainda rótulos reais de aceitação, usamos regras heurísticas
-para criar rótulos sintéticos apenas para bootstrap. Substitua por dados reais
+Obs.: Como nÃ£o hÃ¡ ainda rÃ³tulos reais de aceitaÃ§Ã£o, usamos regras heurÃ­sticas
+para criar rÃ³tulos sintÃ©ticos apenas para bootstrap. Substitua por dados reais
 assim que houver feedbacks com aceitou=0/1.
 """
 
@@ -17,7 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
-MODEL_PATH = DATA_DIR / "yvy_model.json"
+MODEL_PATH = DATA_DIR / "frankstein_model.json"
 
 
 def _sigmoid(x: float) -> float:
@@ -39,9 +39,9 @@ def _gen_synthetic(n: int = 500) -> tuple[list[list[float]], list[int]]:
         preco_digitado = 0.0
         expo = max(0.0, (valor_tabela - valor_obtido) / max(valor_tabela, 1))
         is_pos = parcela_caixa / renda + expo * 0.12
-        # Regras sintéticas de aceitação: baixo risco e IS < 0.35
+        # Regras sintÃ©ticas de aceitaÃ§Ã£o: baixo risco e IS < 0.35
         aceitou = 1 if (expo < 0.25 and is_pos < 0.35) else 0
-        # Ruído para robustez
+        # RuÃ­do para robustez
         if random.random() < 0.1:
             aceitou = 1 - aceitou
         feats.append(
@@ -88,7 +88,7 @@ def _train_logistic(X: list[list[float]], y: list[int], lr: float = 0.01, epochs
             for j in range(len(weights)):
                 grad_w[j] += diff * xi[j]
             grad_b += diff
-        # média
+        # mÃ©dia
         grad_w = [g / n for g in grad_w]
         grad_b /= n
         weights = [w - lr * g for w, g in zip(weights, grad_w)]
@@ -125,8 +125,9 @@ def main() -> None:
         ),
         encoding="utf-8",
     )
-    print(f"Modelo salvo em {MODEL_PATH} (500 sintéticos)")
+    print(f"Modelo salvo em {MODEL_PATH} (500 sintÃ©ticos)")
 
 
 if __name__ == "__main__":
     main()
+

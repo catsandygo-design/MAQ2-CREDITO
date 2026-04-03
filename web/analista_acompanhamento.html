@@ -302,6 +302,42 @@
       color: var(--text);
     }
 
+    .process-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .process-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 10px 12px;
+      display: grid;
+      gap: 5px;
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
+      box-shadow: 0 10px 20px rgba(2, 6, 23, .10);
+    }
+
+    .process-card .label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .process-card strong {
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .process-card p {
+      margin: 0;
+      font-size: 11px;
+      line-height: 1.4;
+      color: var(--muted);
+    }
+
     .filters {
       border: 1px solid var(--line);
       border-radius: 14px;
@@ -872,9 +908,15 @@
       body.analista-pro .filters{
         grid-template-columns:repeat(2, minmax(0, 1fr));
       }
+      .process-strip{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+      }
     }
     @media (max-width: 760px){
       body.analista-pro .filters{
+        grid-template-columns:1fr;
+      }
+      .process-strip{
         grid-template-columns:1fr;
       }
       body.analista-pro .title h1{
@@ -937,6 +979,29 @@
       <span class="chip">Auto refresh: <strong id="refreshLabel">60s</strong></span>
       <span class="chip">Movimentacao: <strong>livre com confirmacao</strong></span>
       <span class="chip">Sincronizacao: <strong>repasse acompanha a etapa comercial</strong></span>
+    </section>
+
+    <section class="process-strip" aria-label="Resumo do fluxo comercial">
+      <article class="process-card">
+        <span class="label">Carteira ativa</span>
+        <strong id="sumAtivos">0</strong>
+        <p>Clientes dentro da contagem oficial do comercial.</p>
+      </article>
+      <article class="process-card">
+        <span class="label">Credito em curso</span>
+        <strong id="sumCreditoFluxo">0</strong>
+        <p>Processos em Credito ou Secretaria de Vendas.</p>
+      </article>
+      <article class="process-card">
+        <span class="label">Porta do repasse</span>
+        <strong id="sumRetaFinal">0</strong>
+        <p>Clientes ja encostando na transicao para repasse.</p>
+      </article>
+      <article class="process-card">
+        <span class="label">Pausados</span>
+        <strong id="sumPausados">0</strong>
+        <p>Casos fora da contagem mensal no recorte atual.</p>
+      </article>
     </section>
 
     <section class="filters">
@@ -1307,7 +1372,13 @@
 
       const outCount = filtered.reduce((acc, row) => acc + (row.foraContagemMes ? 1 : 0), 0);
       const counted = Math.max(0, filtered.length - outCount);
+      const creditoFluxo = filtered.filter((row) => row.stage === "credito" || row.stage === "secretaria_vendas").length;
+      const retaFinal = filtered.filter((row) => REPASSE_COMMERCIAL_KEYS.has(row.stage)).length;
       $("totalCount").textContent = outCount > 0 ? `${counted} + ${outCount} fora` : String(counted);
+      $("sumAtivos").textContent = String(counted);
+      $("sumCreditoFluxo").textContent = String(creditoFluxo);
+      $("sumRetaFinal").textContent = String(retaFinal);
+      $("sumPausados").textContent = String(outCount);
       bindDragEvents();
     }
 

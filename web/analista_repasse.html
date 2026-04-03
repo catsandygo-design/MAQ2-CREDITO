@@ -77,6 +77,11 @@
       background: #ffffff;
       border-color: rgba(15, 23, 42, 0.18);
     }
+    body.theme-corporate .title-badge {
+      color: #0c4a6e;
+      border-color: rgba(14, 165, 233, .18);
+      background: linear-gradient(180deg, rgba(224, 242, 254, .96), rgba(240, 249, 255, .98));
+    }
     body.theme-corporate .card.finalizado {
       background: #f0fdf4;
       border-color: rgba(22, 163, 74, .45);
@@ -121,6 +126,25 @@
 
     .title {
       min-width: 0;
+    }
+
+    .title-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      max-width: 100%;
+      margin-bottom: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(255, 255, 255, 0.05);
+      color: #cbd5e1;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      white-space: nowrap;
     }
 
     .title h1 {
@@ -180,6 +204,42 @@
 
     .chip strong {
       color: var(--text);
+    }
+
+    .process-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .process-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 10px 12px;
+      display: grid;
+      gap: 5px;
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
+      box-shadow: 0 10px 20px rgba(2, 6, 23, .10);
+    }
+
+    .process-card .label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .process-card strong {
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .process-card p {
+      margin: 0;
+      font-size: 11px;
+      line-height: 1.4;
+      color: var(--muted);
     }
 
     .filters {
@@ -477,6 +537,9 @@
       .filters {
         grid-template-columns: 1fr 1fr;
       }
+      .process-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
       .board {
         grid-template-columns: repeat(5, minmax(210px, 1fr));
       }
@@ -617,9 +680,15 @@
       body.analista-pro .filters{
         grid-template-columns:repeat(2, minmax(0, 1fr));
       }
+      .process-strip{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+      }
     }
     @media (max-width: 760px){
       body.analista-pro .filters{
+        grid-template-columns:1fr;
+      }
+      .process-strip{
         grid-template-columns:1fr;
       }
       body.analista-pro .title h1{
@@ -662,6 +731,7 @@
   <div class="wrap">
     <section class="topbar">
       <div class="title">
+        <span class="title-badge">Reta final oficial</span>
         <h1>Acompanhamento de Repasse (Kanban)</h1>
         <p>Fluxo paralelo ao comercial: assinatura na Caixa apenas quando pendencias de repasse estiverem sanadas.</p>
       </div>
@@ -679,6 +749,29 @@
       <span class="chip">Total no Kanban: <strong id="totalCount">0</strong></span>
       <span class="chip">Auto refresh: <strong id="refreshLabel">60s</strong></span>
       <span class="chip">Regra: <strong>proxima coluna, retorno para Inicio de Repasse ou encerramento</strong></span>
+    </section>
+
+    <section class="process-strip" aria-label="Resumo do fluxo de repasse">
+      <article class="process-card">
+        <span class="label">Aptos para assinatura</span>
+        <strong id="sumAptosAssinatura">0</strong>
+        <p>Sem bloqueio critico para chegar na Caixa.</p>
+      </article>
+      <article class="process-card">
+        <span class="label">Travados no CCA</span>
+        <strong id="sumBloqueioCaixa">0</strong>
+        <p>Caixa ainda nao atingiu a faixa minima para assinatura.</p>
+      </article>
+      <article class="process-card">
+        <span class="label">Pendente Agehab</span>
+        <strong id="sumBloqueioAgehab">0</strong>
+        <p>Validacao publica ainda segura o repasse.</p>
+      </article>
+      <article class="process-card">
+        <span class="label">Sinal ou fiador</span>
+        <strong id="sumBloqueioGarantia">0</strong>
+        <p>Estrutura financeira ainda precisa limpar pendencia.</p>
+      </article>
     </section>
 
     <section class="filters">
@@ -1117,7 +1210,18 @@
 
       const outCount = filtered.reduce((acc, row) => acc + (row.foraContagemMes ? 1 : 0), 0);
       const counted = Math.max(0, filtered.length - outCount);
+      const aptosAssinatura = filtered.filter((row) => assinaturaBlockers(row).length === 0).length;
+      const bloqueioCaixa = filtered.filter((row) => assinaturaBlockers(row).some((item) => item.includes("Caixa"))).length;
+      const bloqueioAgehab = filtered.filter((row) => assinaturaBlockers(row).some((item) => item.includes("Agehab"))).length;
+      const bloqueioGarantia = filtered.filter((row) => {
+        const blockers = assinaturaBlockers(row);
+        return blockers.some((item) => item.includes("sinal")) || blockers.some((item) => item.includes("fiador"));
+      }).length;
       $("totalCount").textContent = outCount > 0 ? `${counted} + ${outCount} fora` : String(counted);
+      $("sumAptosAssinatura").textContent = String(aptosAssinatura);
+      $("sumBloqueioCaixa").textContent = String(bloqueioCaixa);
+      $("sumBloqueioAgehab").textContent = String(bloqueioAgehab);
+      $("sumBloqueioGarantia").textContent = String(bloqueioGarantia);
       bindDragEvents();
     }
 

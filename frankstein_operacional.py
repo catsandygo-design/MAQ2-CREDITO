@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
@@ -14,6 +14,12 @@ class DocumentosInput(BaseModel):
 class AnaliseInput(BaseModel):
     nome_cliente: str = Field(..., min_length=2)
     perfil: Literal["CLT", "AUTONOMO", "APOSENTADO", "OUTRO"] = "CLT"
+    processo_id: Optional[str] = None
+    lead_id: Optional[str] = None
+    cliente_id: Optional[str] = None
+    reserva_id: Optional[str] = None
+    corretor_id: Optional[str] = None
+    empreendimento: Optional[str] = None
     valor_venda: float = Field(..., gt=0)
     garantido: float = Field(..., ge=0)
     cheque_moradia: float = Field(0, ge=0)
@@ -64,7 +70,7 @@ class AuditoriaOutput(BaseModel):
     timestamp: str
 
 
-class YvyOutput(BaseModel):
+class FranksteinOutput(BaseModel):
     status_geral: Literal["viavel", "ajustar", "bloquear"]
     score: ScoreOutput
     resumo: str
@@ -75,8 +81,10 @@ class YvyOutput(BaseModel):
     auditoria: AuditoriaOutput
 
 
-class RespostaYvy(BaseModel):
-    yvy: YvyOutput
+class RespostaFrankstein(BaseModel):
+    event_id: Optional[str] = None
+    modelo_versao: Optional[str] = None
+    frankstein: FranksteinOutput
 
 
 def limitar_entre_0_e_1(valor: float) -> float:
@@ -267,7 +275,7 @@ def montar_baloes(
                 mensagem="Corrigir pendencias antes do reenvio.",
                 impacto="Reduz retrabalho e melhora o SLA.",
                 decisao="Preparar o caso para nova validacao.",
-                acao="Apos anexar os documentos e ajustar a composicao, rodar nova analise YVY.",
+                acao="Apos anexar os documentos e ajustar a composicao, rodar nova analise FRANKSTEIN.",
                 campo_relacionado=None,
                 visivel=True,
             )
@@ -361,7 +369,7 @@ def montar_decisao_recomendada(
     )
 
 
-def analisar_operacao_yvy(payload: AnaliseInput) -> RespostaYvy:
+def analisar_operacao_frankstein(payload: AnaliseInput) -> RespostaFrankstein:
     analise_valor = analisar_valor(
         venda=payload.valor_venda,
         garantido=payload.garantido,
@@ -379,8 +387,8 @@ def analisar_operacao_yvy(payload: AnaliseInput) -> RespostaYvy:
     decisao = montar_decisao_recomendada(status_geral, analise_valor, campos_problema)
     baloes = montar_baloes(analise_valor, campos_problema, score)
 
-    return RespostaYvy(
-        yvy=YvyOutput(
+    return RespostaFrankstein(
+        frankstein=FranksteinOutput(
             status_geral=status_geral,
             score=score,
             resumo=resumo,
@@ -393,9 +401,10 @@ def analisar_operacao_yvy(payload: AnaliseInput) -> RespostaYvy:
                 confianca_modelo=0.81,
             ),
             auditoria=AuditoriaOutput(
-                origem="yvy_rules_plus_engine_v1",
+                origem="frankstein_rules_plus_engine_v1",
                 versao="1.0.0",
                 timestamp=datetime.now().astimezone().isoformat(),
             ),
         )
     )
+

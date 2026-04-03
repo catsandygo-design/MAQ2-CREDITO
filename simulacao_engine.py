@@ -13,6 +13,13 @@ class SimulacaoInput(BaseModel):
     valor_obtido: float = Field(..., ge=0)
     parcela_caixa: float = Field(..., ge=0)
     preco_digitado_corretor: Optional[float] = 0
+    processo_id: Optional[str] = None
+    lead_id: Optional[str] = None
+    cliente_id: Optional[str] = None
+    reserva_id: Optional[str] = None
+    corretor_id: Optional[str] = None
+    empreendimento: Optional[str] = None
+    perfil: Optional[str] = None
 
     @validator("preco_digitado_corretor", "sobrepreco_vila", "valor_obtido", "parcela_caixa", pre=True, always=True)
     def _coerce_numbers(cls, v):
