@@ -1,7 +1,7 @@
-﻿{
+{
   "metadata": {
     "nome": "regras_credito",
-    "versao": "2026-04-02",
+    "versao": "2026-04-03",
     "origem": "extraido_do_codigo",
     "descricao": "Consolidacao das regras de credito, comercial, documentos, SLA e analise FRANKSTEIN atualmente implementadas no sistema.",
     "arquivos_origem": [
@@ -44,6 +44,19 @@
           "_apply_sla_rules",
           "_lead_reserva_block_reason",
           "recomendar_proposta_frankstein"
+        ]
+      },
+      {
+        "arquivo": "web/analista.html",
+        "funcoes": [
+          "atualizarDependente",
+          "atualizarPerfilRenda",
+          "atualizarCtps",
+          "atualizarConjuge",
+          "atualizarCca",
+          "updateSectionCounters",
+          "buildPendenciasResumo",
+          "marcarTudo"
         ]
       }
     ],
@@ -370,6 +383,420 @@
       "risco_pendencia": "limitar_entre_0_e_1(score + 0.05)",
       "risco_atraso_sla": "limitar_entre_0_e_1(score - 0.10)",
       "confianca_modelo": 0.81
+    }
+  },
+  "conferencia_documental_analista": {
+    "contexto": {
+      "tela_origem": "web/analista.html",
+      "titulo": "Checklist (Conferencia de Documentos)",
+      "modo_atual": "front_end_com_regras_dinamicas_e_integracao_parcial_ao_backend",
+      "objetivo": "Servir de base para o retorno do analista, consolidando checklist documental, pendencias e atualizacao dos status operacionais."
+    },
+    "campos_de_contexto": {
+      "somente_leitura": [
+        "cliente",
+        "corretor",
+        "data_criacao_reserva",
+        "imobiliaria"
+      ],
+      "editaveis_na_tela": [
+        "empreendimento",
+        "perfil_renda",
+        "estado_civil_proponente",
+        "tipo_dependente",
+        "cotista_3_anos",
+        "irpf_informal",
+        "conjuge_tem_renda",
+        "cca_gerou_formularios"
+      ],
+      "valores_perfil_renda": [
+        "clt",
+        "informal",
+        "aposentado",
+        "domestico"
+      ],
+      "valores_estado_civil_proponente": [
+        "solteiro",
+        "casado",
+        "divorciado",
+        "viuvo",
+        "uniao-estavel"
+      ],
+      "valores_tipo_dependente": [
+        "nao-definido",
+        "filho-menor",
+        "filho-maior",
+        "tio-tia",
+        "irmao-irma",
+        "pai-mae",
+        "avos",
+        "bisavos",
+        "sobrinho-sobrinha"
+      ]
+    },
+    "status_do_checklist": {
+      "valores_por_documento": [
+        "Aguardando",
+        "Pendente",
+        "Aprovado",
+        "Reprovado",
+        "Bloqueado"
+      ],
+      "status_que_entram_no_resumo_de_pendencia": [
+        "Aguardando",
+        "Pendente",
+        "Reprovado",
+        "Bloqueado"
+      ],
+      "status_aprovado_total_da_secao": "Somente 'Aprovado' conta no numerador das pills por secao."
+    },
+    "regras_de_exibicao": [
+      {
+        "condicao": "perfil_renda == clt",
+        "efeitos": [
+          "exibir secao renda_clt",
+          "ocultar secoes renda_informal, aposentado e domestico",
+          "exibir documento proponente.fgts"
+        ]
+      },
+      {
+        "condicao": "perfil_renda == informal",
+        "efeitos": [
+          "exibir secao renda_informal",
+          "ocultar secoes renda_clt, aposentado e domestico",
+          "exibir campo irpf_informal",
+          "ocultar documento proponente.fgts"
+        ]
+      },
+      {
+        "condicao": "perfil_renda == aposentado",
+        "efeitos": [
+          "exibir secao aposentado",
+          "ocultar secoes renda_clt, renda_informal e domestico",
+          "ocultar campo irpf_informal",
+          "ocultar documento proponente.fgts"
+        ]
+      },
+      {
+        "condicao": "perfil_renda == domestico",
+        "efeitos": [
+          "exibir secao domestico",
+          "ocultar secoes renda_clt, renda_informal e aposentado",
+          "ocultar campo irpf_informal",
+          "ocultar documento proponente.fgts"
+        ]
+      },
+      {
+        "condicao": "perfil_renda == informal e irpf_informal == sim",
+        "efeitos": [
+          "exibir documento proponente.irpf"
+        ]
+      },
+      {
+        "condicao": "perfil_renda != informal ou irpf_informal != sim",
+        "efeitos": [
+          "ocultar documento proponente.irpf",
+          "forcar irpf_informal = nao quando o perfil sair de informal"
+        ]
+      },
+      {
+        "condicao": "cotista_3_anos == sim",
+        "efeitos": [
+          "exibir documento proponente.ctps"
+        ]
+      },
+      {
+        "condicao": "cotista_3_anos != sim",
+        "efeitos": [
+          "ocultar documento proponente.ctps"
+        ]
+      },
+      {
+        "condicao": "estado_civil_proponente em [casado, uniao-estavel]",
+        "efeitos": [
+          "exibir campo conjuge_tem_renda"
+        ]
+      },
+      {
+        "condicao": "estado_civil_proponente fora de [casado, uniao-estavel]",
+        "efeitos": [
+          "ocultar campo conjuge_tem_renda"
+        ]
+      },
+      {
+        "condicao": "tipo_dependente == nao-definido",
+        "efeitos": [
+          "exibir secao dependente_nao_definido",
+          "ocultar secoes dependente_menor e dependente_maior",
+          "habilitar checkbox avancar_sem_dependente"
+        ]
+      },
+      {
+        "condicao": "tipo_dependente == filho-menor",
+        "efeitos": [
+          "ocultar secao dependente_nao_definido",
+          "exibir secao dependente_menor",
+          "ocultar secao dependente_maior",
+          "desmarcar avancar_sem_dependente"
+        ]
+      },
+      {
+        "condicao": "tipo_dependente diferente de nao-definido e diferente de filho-menor",
+        "efeitos": [
+          "ocultar secao dependente_nao_definido",
+          "ocultar secao dependente_menor",
+          "exibir secao dependente_maior",
+          "desmarcar avancar_sem_dependente"
+        ]
+      },
+      {
+        "condicao": "cca_gerou_formularios == sim",
+        "efeitos": [
+          "exibir documentos caixa.chequeazul, caixa.formcartao e caixa.propcartao"
+        ]
+      },
+      {
+        "condicao": "cca_gerou_formularios != sim",
+        "efeitos": [
+          "ocultar documentos caixa.chequeazul, caixa.formcartao e caixa.propcartao"
+        ]
+      }
+    ],
+    "acoes_em_massa": [
+      {
+        "acao": "Marcar tudo como Aprovado",
+        "efeito": "Define 'Aprovado' em todos os selects visiveis do checklist; linhas ocultas por regra e secoes ocultas nao sao alteradas."
+      },
+      {
+        "acao": "Marcar tudo como Aguardando",
+        "efeito": "Define 'Aguardando' em todos os selects visiveis do checklist; linhas ocultas por regra e secoes ocultas nao sao alteradas."
+      }
+    ],
+    "contadores_e_resumo": {
+      "pill_por_secao": "Cada secao exibe approved/total apenas com os documentos atualmente renderizados para aquela secao.",
+      "resumo_automatico_de_pendencias": [
+        "Considera apenas selects visiveis na tela.",
+        "Se tipo_dependente == nao-definido, documentos das secoes depmenor e depmaior sao ignorados no resumo.",
+        "Entram no resumo os status Aguardando, Pendente, Reprovado e Bloqueado.",
+        "Cada item e escrito no formato 'Documento (Status)'.",
+        "Se houver motivo preenchido no campo auxiliar do documento, o resumo anexa ' - Motivo: ...'.",
+        "Se nao houver nenhuma pendencia visivel, o resumo vira 'Nenhuma pendencia marcada. (Tudo Aprovado nas secoes visiveis.)'."
+      ],
+      "mensagem_dependente_nao_definido": {
+        "desmarcado": "DEPENDENTE NAO DEFINIDO, VAI AVANCAR SEM DEPENDENTE?",
+        "marcado": "VENDA SEM DEPENDENTE."
+      }
+    },
+    "catalogo_documental": {
+      "proponente": [
+        {
+          "id": "idcpf",
+          "nome": "Identidade e CPF",
+          "aceito": "CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fe publica, dentro da validade.",
+          "visibilidade": "sempre"
+        },
+        {
+          "id": "estadocivil",
+          "nome": "Comp. de estado civil",
+          "aceito": "Certidao conforme o estado civil do proponente.",
+          "visibilidade": "sempre"
+        },
+        {
+          "id": "residencia",
+          "nome": "Comprovante de residencia",
+          "aceito": "Comprovante aberto; nao precisa estar no nome do cliente. Agua, luz, telefone, internet, celular ou cartao de credito.",
+          "visibilidade": "sempre"
+        },
+        {
+          "id": "irpf",
+          "nome": "IRPF + recibo de entrega",
+          "aceito": "Declaracao completa do ano atual, recibo de entrega e DARF pago se houver.",
+          "visibilidade": "somente se perfil_renda == informal e irpf_informal == sim"
+        },
+        {
+          "id": "fgts",
+          "nome": "Extrato FGTS",
+          "aceito": "App FGTS, site Caixa ou agencia. Militar/soldado: anexar tambem 3 ultimos extratos da conta salario.",
+          "visibilidade": "somente se perfil_renda == clt"
+        },
+        {
+          "id": "ctps",
+          "nome": "Carteira de Trabalho (CTPS)",
+          "aceito": "Carteira Digital com todas as informacoes ou CTPS fisica com qualificacao, contratos e anotacoes.",
+          "visibilidade": "somente se cotista_3_anos == sim"
+        }
+      ],
+      "dependente_nao_definido": {
+        "acao": "avancar_sem_dependente",
+        "descricao": "Fluxo auxiliar para confirmar que a venda seguira sem dependente quando o tipo ainda nao estiver definido."
+      },
+      "dependente_menor": [
+        {
+          "id": "certidao-menor",
+          "nome": "Certidao de nascimento",
+          "aceito": "Certidao de nascimento; em caso de guarda ou adocao, anexar os termos respectivos.",
+          "visibilidade": "somente se tipo_dependente == filho-menor"
+        }
+      ],
+      "dependente_maior": [
+        {
+          "id": "idcpf-dep",
+          "nome": "Identidade e CPF",
+          "aceito": "Documento valido do dependente com fe publica.",
+          "visibilidade": "somente se tipo_dependente nao for filho-menor nem nao-definido"
+        },
+        {
+          "id": "estadocivil-dep",
+          "nome": "Comp. de estado civil",
+          "aceito": "Solteiro: certidao de nascimento. Casado: certidao de casamento e RG/CPF do conjuge se houver renda. Viuvo: certidao de casamento e obito. Divorciado: certidao averbada.",
+          "visibilidade": "somente se tipo_dependente nao for filho-menor nem nao-definido"
+        },
+        {
+          "id": "parentesco",
+          "nome": "Declaracao de parentesco",
+          "aceito": "Declaracao conforme regras Caixa, vinculando dependente ao proponente.",
+          "visibilidade": "somente se tipo_dependente nao for filho-menor nem nao-definido"
+        }
+      ],
+      "renda_clt": [
+        {
+          "id": "holerite",
+          "nome": "Holerites / contracheques",
+          "aceito": "3 ultimos holerites ou contracheques, com nome, CNPJ, cargo, admissao e bruto.",
+          "visibilidade": "somente se perfil_renda == clt"
+        },
+        {
+          "id": "variavel",
+          "nome": "Comprovante de renda variavel",
+          "aceito": "Comissoes, horas extras e adicionais em volume suficiente para media conforme Caixa.",
+          "visibilidade": "somente se perfil_renda == clt"
+        }
+      ],
+      "renda_informal": [
+        {
+          "id": "extrato",
+          "nome": "Extrato bancario",
+          "aceito": "3 ultimos meses, preferencialmente mes fechado. Aceita PDF, impresso e bancos digitais.",
+          "visibilidade": "somente se perfil_renda == informal"
+        }
+      ],
+      "aposentado": [
+        {
+          "id": "beneficio",
+          "nome": "Extrato do beneficio",
+          "aceito": "Ultimo extrato obtido em Meu INSS ou Dataprev.",
+          "visibilidade": "somente se perfil_renda == aposentado"
+        }
+      ],
+      "domestico": [
+        {
+          "id": "esocial",
+          "nome": "eSocial",
+          "aceito": "3 ultimos comprovantes do eSocial.",
+          "visibilidade": "somente se perfil_renda == domestico"
+        }
+      ],
+      "caixa": [
+        {
+          "id": "damp",
+          "nome": "DAMP",
+          "aceito": "Preenchida corretamente e assinada digitalmente; no fisico, apenas com aprovacao do credito.",
+          "visibilidade": "sempre"
+        },
+        {
+          "id": "ficha",
+          "nome": "Ficha de cadastro Caixa",
+          "aceito": "Preenchida com endereco igual ao cadastro; assinatura digital. No fisico, exige aprovacao.",
+          "visibilidade": "sempre"
+        },
+        {
+          "id": "abertura",
+          "nome": "Ficha de abertura de conta",
+          "aceito": "Assinada digitalmente; no fisico, exige aprovacao do credito.",
+          "visibilidade": "sempre"
+        },
+        {
+          "id": "mo",
+          "nome": "MO",
+          "aceito": "Assinatura correta, preferencialmente na segunda pagina; casal assina junto.",
+          "visibilidade": "sempre"
+        },
+        {
+          "id": "chequeazul",
+          "nome": "Formulario Cheque Azul",
+          "aceito": "Formulario de contratacao com assinatura digital; no fisico, somente com aprovacao.",
+          "visibilidade": "somente se cca_gerou_formularios == sim"
+        },
+        {
+          "id": "formcartao",
+          "nome": "Formulario Cartao de Credito",
+          "aceito": "Formulario do cartao Caixa com campos obrigatorios preenchidos e assinatura digital.",
+          "visibilidade": "somente se cca_gerou_formularios == sim"
+        },
+        {
+          "id": "propcartao",
+          "nome": "Proposta de Cartao de Credito",
+          "aceito": "Proposta comercial vinculada ao cliente e assinada digitalmente.",
+          "visibilidade": "somente se cca_gerou_formularios == sim"
+        }
+      ],
+      "agehab": [
+        {
+          "id": "decl-end",
+          "nome": "Declaracao de endereco",
+          "aceito": "Quando necessario, assinada via GOV.BR ou Clicksign.",
+          "visibilidade": "sempre"
+        },
+        {
+          "id": "decl-renda",
+          "nome": "Declaracao renda informal",
+          "aceito": "Assinada pelo dependente via GOV.BR ou Clicksign conforme modelo Agehab.",
+          "visibilidade": "sempre"
+        },
+        {
+          "id": "decl-naorenda",
+          "nome": "Declaracao de nao renda",
+          "aceito": "Para dependentes sem renda, assinada via GOV.BR ou Clicksign.",
+          "visibilidade": "sempre"
+        },
+        {
+          "id": "vinculo",
+          "nome": "Vinculo >= 3 anos",
+          "aceito": "Documentos com fe publica que comprovem vinculo minimo na cidade participante do Cheque Moradia.",
+          "visibilidade": "sempre"
+        },
+        {
+          "id": "check",
+          "nome": "Checklist Agehab",
+          "aceito": "Preenchido corretamente e assinado via GOV.BR ou, pontualmente, a proprio punho.",
+          "visibilidade": "sempre"
+        },
+        {
+          "id": "ficha",
+          "nome": "Ficha Agehab",
+          "aceito": "Preenchida pelo Assistente de Credito e assinada via GOV.BR ou, pontualmente, a proprio punho.",
+          "visibilidade": "sempre"
+        }
+      ]
+    },
+    "painel_retorno_analista": {
+      "campos": [
+        "cca_responsavel",
+        "status_caixa",
+        "status_agehab",
+        "status_sinal",
+        "valor_sinal",
+        "status_fiador",
+        "sla_credito_horas",
+        "nao_contar_mes",
+        "observacao",
+        "resumo_pendencias"
+      ],
+      "regras": [
+        "valor_sinal aparece apenas quando status_sinal == pendente ou pago.",
+        "resumo_pendencias e gerado automaticamente com base no checklist visivel.",
+        "Em producao, cada alteracao deve gravar usuario, data, hora e recalcular SLA/status do processo."
+      ]
     }
   },
   "workflow_processo_credito": {

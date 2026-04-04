@@ -879,6 +879,16 @@ export function AnalistaPainelPage() {
     }
   }, [executiveView.hottest, filteredRows])
 
+  useEffect(() => {
+    if (!filteredRows.length) {
+      if (activeRowId) setActiveRowId('')
+      return
+    }
+    if (!filteredRows.some((row) => row.processoId === activeRowId)) {
+      setActiveRowId(filteredRows[0].processoId)
+    }
+  }, [activeRowId, filteredRows])
+
   const onChangeFilter = (key: keyof FiltersState, value: string) => {
     startTransition(() => {
       setFilters((prev) => ({ ...prev, [key]: value }))
@@ -1464,7 +1474,7 @@ export function AnalistaPainelPage() {
                       <div className="client-name-row">
                         <span className={`anim-dot ${animState}`} aria-hidden="true" />
                         <a href={`/app/analise?processo_id=${encodeURIComponent(row.processoId)}`}>{row.cliente}</a>
-                        {expanded ? <span className="client-focus-flag">Cliente em foco</span> : null}
+                        {isFocused ? <span className="client-focus-flag">Cliente em foco</span> : null}
                       </div>
                       <span className="meta-line">{row.emp}</span>
                       <span className="meta-line">{row.corretor}</span>
@@ -1472,12 +1482,11 @@ export function AnalistaPainelPage() {
                         <span className="client-assignee-label">CCA responsavel</span>
                         <span className="client-assignee-value">{row.cca || '-'}</span>
                       </div>
-                      <div className="badges-row">
-                        {isHighPriority(row) ? <span className="chip danger">Prioridade alta</span> : null}
-                        {row.avisoContratoAgehab ? <span className="chip warn">Solicitar contrato Agehab</span> : null}
-                        {row.foraContagemMes ? <span className="chip bad">Fora da contagem do mes</span> : null}
-                        <span className={`chip ${processOwnerTone(row)}`}>{processOwner(row)}</span>
-                      </div>
+                      {isHighPriority(row) ? (
+                        <div className="badges-row">
+                          <span className="chip danger">Prioridade alta</span>
+                        </div>
+                      ) : null}
                     </div>
 
                     <div className="client-card-tools">
@@ -1491,95 +1500,97 @@ export function AnalistaPainelPage() {
                         onClick={() => toggleRow(row.processoId)}
                         aria-expanded={expanded}
                       >
-                        {expanded ? 'Fechar detalhes' : 'Abrir detalhes'}
+                        {expanded ? 'Fechar detalhes' : 'Detalhes'}
                       </button>
                     </div>
                   </div>
 
-                  <div className="client-flow-stack">
-                    <div className="client-story-grid">
-                      <article className="client-story-card tone-neutral">
-                        <span className="client-story-label">Etapa oficial</span>
-                        <strong>{comercialLabel}</strong>
-                        <p>{`Repasse em ${repasseLabel}. Aging total de ${formatElapsedHours(openHours(row))}.`}</p>
-                      </article>
-                      <article className={`client-story-card ${pendencias.length > 0 ? 'tone-danger' : 'tone-ok'}`}>
-                        <span className="client-story-label">Gargalo principal</span>
-                        <strong>{primaryBlocker(row)}</strong>
-                        <p>{pendencias.length > 0 ? `${pendencias.length} ponto(s) ainda exigem atuacao.` : 'Sem pendencia principal neste momento.'}</p>
-                      </article>
-                      <article className={`client-story-card ${row.semDocumento || pendencias.length > 0 ? 'tone-warn' : 'tone-neutral'}`}>
-                        <span className="client-story-label">Proxima acao</span>
-                        <strong>{shortNextActionLabel(row)}</strong>
-                        <p>{nextActionSummary(row)}</p>
-                      </article>
-                      <article className="client-story-card tone-neutral">
-                        <span className="client-story-label">Ownership atual</span>
-                        <strong>{processOwner(row)}</strong>
-                        <p>{processOwnerContext(row)}</p>
-                      </article>
-                    </div>
-
-                    <MiniTimeline
-                      tone="commercial"
-                      laneLabel="Comercial"
-                      currentLabel={comercialLabel}
-                      currentKey={comercialKey}
-                      steps={COMMERCIAL_FLOW_STEPS}
-                      tooltipForStep={(step) => timelineTooltip(row, 'Comercial', step)}
-                    />
-                    <MiniTimeline
-                      tone="repasse"
-                      laneLabel="Repasse"
-                      currentLabel={repasseLabel}
-                      currentKey={repasseKey}
-                      steps={REPASSE_FLOW_STEPS}
-                      tooltipForStep={(step) => timelineTooltip(row, 'Repasse', step)}
-                    />
-                  </div>
-
                   {expanded ? (
-                    <div className="client-card-details">
-                      <div className="detail-grid">
-                        <div className="detail-block">
-                          <span className="detail-label">Caixa</span>
-                          <span className={`status-pill ${classForStatus(row.statusCaixa)}`}>{labelFor('statusCaixa', row.statusCaixa)}</span>
+                    <>
+                      <div className="client-flow-stack">
+                        <div className="client-story-grid">
+                          <article className="client-story-card tone-neutral">
+                            <span className="client-story-label">Momento do cliente</span>
+                            <strong>{comercialLabel}</strong>
+                            <p>{`Repasse em ${repasseLabel}. Aging total de ${formatElapsedHours(openHours(row))}.`}</p>
+                          </article>
+                          <article className={`client-story-card ${pendencias.length > 0 ? 'tone-danger' : 'tone-ok'}`}>
+                            <span className="client-story-label">Leitura executiva</span>
+                            <strong>{primaryBlocker(row)}</strong>
+                            <p>{pendencias.length > 0 ? `${pendencias.length} trava(s) mapeada(s) na linha.` : 'Fluxo sem gargalo principal neste momento.'}</p>
+                          </article>
+                          <article className={`client-story-card ${row.semDocumento || pendencias.length > 0 ? 'tone-warn' : 'tone-neutral'}`}>
+                            <span className="client-story-label">Documentos</span>
+                            <strong>{row.documentosResumo}</strong>
+                            <p>{row.semDocumento ? 'Documentos: nenhum enviado' : row.documentosResumo}</p>
+                          </article>
+                          <article className="client-story-card tone-neutral">
+                            <span className="client-story-label">Observacao</span>
+                            <strong>{row.observacaoResumo || 'Sem nota'}</strong>
+                            <p>{row.observacaoResumo || 'Sem observacao registrada'}</p>
+                          </article>
                         </div>
-                        <div className="detail-block">
-                          <span className="detail-label">Agehab</span>
-                          <span className={`status-pill ${classForStatus(row.statusAgehab)}`}>{labelFor('statusAgehab', row.statusAgehab)}</span>
-                        </div>
-                        <div className="detail-block">
-                          <span className="detail-label">Sinal</span>
-                          <span className={`status-pill ${classForStatus(row.sinal)}`}>{labelFor('sinal', row.sinal)}</span>
-                        </div>
-                        <div className="detail-block">
-                          <span className="detail-label">Fiador</span>
-                          <span className={`status-pill ${classForStatus(row.fiador)}`}>{labelFor('fiador', row.fiador)}</span>
-                        </div>
-                        <div className="detail-block">
-                          <span className="detail-label">SLA CCA</span>
-                          <span className={`status-pill ${kpiToneByHours(row.slaCca)}`}>{formatElapsedHours(row.slaCca)}</span>
-                        </div>
-                        <div className="detail-block">
-                          <span className="detail-label">Aging</span>
-                          <span className="status-pill neutral">{formatElapsedHours(openHours(row))}</span>
-                        </div>
+
+                        <MiniTimeline
+                          tone="commercial"
+                          laneLabel="Comercial"
+                          currentLabel={comercialLabel}
+                          currentKey={comercialKey}
+                          steps={COMMERCIAL_FLOW_STEPS}
+                          tooltipForStep={(step) => timelineTooltip(row, 'Comercial', step)}
+                        />
+                        <MiniTimeline
+                          tone="repasse"
+                          laneLabel="Repasse"
+                          currentLabel={repasseLabel}
+                          currentKey={repasseKey}
+                          steps={REPASSE_FLOW_STEPS}
+                          tooltipForStep={(step) => timelineTooltip(row, 'Repasse', step)}
+                        />
                       </div>
 
-                      <div className="detail-subpanel">
-                        <h3>Falta para avancar</h3>
-                        {pendencias.length > 0 ? (
-                          <ul className="detail-list">
-                            {pendencias.map((item) => (
-                              <li key={item}>{item}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="detail-empty">Sem pendencias principais neste momento.</p>
-                        )}
+                      <div className="client-card-details">
+                        <div className="detail-grid">
+                          <div className="detail-block">
+                            <span className="detail-label">Caixa</span>
+                            <span className={`status-pill ${classForStatus(row.statusCaixa)}`}>{labelFor('statusCaixa', row.statusCaixa)}</span>
+                          </div>
+                          <div className="detail-block">
+                            <span className="detail-label">Agehab</span>
+                            <span className={`status-pill ${classForStatus(row.statusAgehab)}`}>{labelFor('statusAgehab', row.statusAgehab)}</span>
+                          </div>
+                          <div className="detail-block">
+                            <span className="detail-label">Sinal</span>
+                            <span className={`status-pill ${classForStatus(row.sinal)}`}>{labelFor('sinal', row.sinal)}</span>
+                          </div>
+                          <div className="detail-block">
+                            <span className="detail-label">Fiador</span>
+                            <span className={`status-pill ${classForStatus(row.fiador)}`}>{labelFor('fiador', row.fiador)}</span>
+                          </div>
+                          <div className="detail-block">
+                            <span className="detail-label">SLA CCA</span>
+                            <span className={`status-pill ${kpiToneByHours(row.slaCca)}`}>{formatElapsedHours(row.slaCca)}</span>
+                          </div>
+                          <div className="detail-block">
+                            <span className="detail-label">Aging</span>
+                            <span className="status-pill neutral">{formatElapsedHours(openHours(row))}</span>
+                          </div>
+                        </div>
+
+                        <div className="detail-subpanel">
+                          <h3>Falta para avancar</h3>
+                          {pendencias.length > 0 ? (
+                            <ul className="detail-list">
+                              {pendencias.map((item) => (
+                                <li key={item}>{item}</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="detail-empty">Sem pendencias principais neste momento.</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    </>
                   ) : null}
                 </article>
               )

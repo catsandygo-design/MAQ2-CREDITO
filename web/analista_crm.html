@@ -405,6 +405,65 @@
       line-height: 1.35;
     }
 
+    .spotlight {
+      display: grid;
+      grid-template-columns: 1.35fr repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .focus-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 250, 255, 0.96)),
+        radial-gradient(260px 140px at 0% 0%, rgba(14, 165, 233, 0.08), transparent 70%);
+      box-shadow: var(--shadow);
+      padding: 12px 14px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .focus-card.hero {
+      background:
+        linear-gradient(180deg, rgba(240, 249, 255, 0.98), rgba(255, 255, 255, 0.98)),
+        radial-gradient(280px 160px at 0% 0%, rgba(14, 165, 233, 0.12), transparent 72%);
+      border-color: rgba(14, 165, 233, 0.18);
+    }
+
+    .focus-card span {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #7b8aa0;
+    }
+
+    .focus-card strong {
+      font-size: 18px;
+      line-height: 1.05;
+      color: #11284b;
+    }
+
+    .focus-card p {
+      margin: 0;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.42;
+    }
+
+    .focus-main {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .focus-stack {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
     .board {
       min-height: 0;
       padding: 12px;
@@ -531,6 +590,7 @@
       padding: 10px 12px 10px 16px;
       border-bottom: 1px solid rgba(15, 23, 42, 0.06);
       transition: 0.12s ease;
+      cursor: pointer;
     }
 
     .row::before {
@@ -555,6 +615,13 @@
     .row:hover {
       background: linear-gradient(180deg, rgba(14, 165, 233, 0.04), rgba(139, 92, 246, 0.03));
       transform: translateX(1px);
+    }
+
+    .row.selected {
+      background:
+        linear-gradient(180deg, rgba(224, 242, 254, 0.80), rgba(248, 251, 255, 0.98)),
+        linear-gradient(90deg, rgba(14, 165, 233, 0.08), rgba(139, 92, 246, 0.04));
+      box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.12);
     }
 
     .client,
@@ -623,8 +690,10 @@
       .tools { grid-template-columns: 1fr 1fr 1fr auto auto; }
       .tools > :first-child { grid-column: 1 / -1; }
       .dockbar,
-      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stats,
+      .spotlight { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .dockbar .hero { grid-column: 1 / -1; }
+      .spotlight .hero { grid-column: 1 / -1; }
     }
 
     @media (max-width: 980px) {
@@ -639,7 +708,8 @@
       .main { padding: 12px; }
       .tools,
       .dockbar,
-      .stats { grid-template-columns: 1fr; }
+      .stats,
+      .spotlight { grid-template-columns: 1fr; }
       .copy h1 { font-size: 30px; }
     }
   </style>
@@ -731,6 +801,23 @@
         <article class="stat"><span>Atualizacao</span><strong id="metaAtualizacao">-</strong><p>Hora da ultima leitura desse quadro.</p></article>
       </section>
 
+      <section class="spotlight" aria-label="Processo em foco">
+        <article class="focus-card hero">
+          <span>Processo em foco</span>
+          <div class="focus-main">
+            <div class="focus-stack">
+              <strong id="focusName">Nenhum processo selecionado</strong>
+              <p id="focusSub">Clique em uma linha para manter o caso em foco e navegar pelo quadro sem perder contexto.</p>
+            </div>
+            <a class="primary" id="focusLink" href="/app/analista">Abrir analise</a>
+          </div>
+        </article>
+        <article class="focus-card"><span>Etapa</span><strong id="focusStage">-</strong><p id="focusStageHint">Sem etapa em foco.</p></article>
+        <article class="focus-card"><span>Pendencias</span><strong id="focusPendencias">-</strong><p id="focusPendenciasHint">Sem pendencias ativas no foco.</p></article>
+        <article class="focus-card"><span>Documentos</span><strong id="focusDocs">-</strong><p id="focusDocsHint">Sem leitura documental em foco.</p></article>
+        <article class="focus-card"><span>FRANKSTEIN</span><strong id="focusMotor">-</strong><p id="focusMotorHint">Sem evento do motor registrado.</p></article>
+      </section>
+
       <section class="board">
         <div id="crmBoard"></div>
       </section>
@@ -754,6 +841,7 @@
     let activeSideFilter = "all";
     let activeView = "main";
     let lastRefreshAt = "";
+    let selectedId = "";
 
     function esc(value) {
       return String(value ?? "")
@@ -913,16 +1001,46 @@
       $("count-pendencias").textContent = String(base.filter((row) => hasPendencia(row)).length);
     }
 
+    function renderFocus(row) {
+      if (!row) {
+        $("focusName").textContent = "Nenhum processo selecionado";
+        $("focusSub").textContent = "Clique em uma linha para manter o caso em foco e navegar pelo quadro sem perder contexto.";
+        $("focusStage").textContent = "-";
+        $("focusStageHint").textContent = "Sem etapa em foco.";
+        $("focusPendencias").textContent = "-";
+        $("focusPendenciasHint").textContent = "Sem pendencias ativas no foco.";
+        $("focusDocs").textContent = "-";
+        $("focusDocsHint").textContent = "Sem leitura documental em foco.";
+        $("focusMotor").textContent = "-";
+        $("focusMotorHint").textContent = "Sem evento do motor registrado.";
+        $("focusLink").href = "/app/analista";
+        return;
+      }
+
+      const pendencia = hasPendencia(row);
+      $("focusName").textContent = row.cliente;
+      $("focusSub").textContent = `${row.obra} • ${row.corretor} • ${row.imobiliaria}`;
+      $("focusStage").textContent = row.estagioComercial;
+      $("focusStageHint").textContent = `${row.repasseFase} • Atualizado ${fmtDate(row.updatedAt)}`;
+      $("focusPendencias").textContent = pendencia ? "Ajustar agora" : "Fluxo controlado";
+      $("focusPendenciasHint").textContent = row.pendenciasResumo;
+      $("focusDocs").textContent = row.docsResumo;
+      $("focusDocsHint").textContent = row.docsPendentes > 0 ? `${row.docsPendentes} documento(s) ainda dependem de retorno.` : "Dossie sem pendencia documental visivel.";
+      $("focusMotor").textContent = row.franksteinAt ? "FRANKSTEIN ativo" : "Sem evento";
+      $("focusMotorHint").textContent = row.franksteinAt ? `Ultimo evento em ${fmtDate(row.franksteinAt)}` : "Este processo ainda nao registrou evento do motor.";
+      $("focusLink").href = row.link;
+    }
+
     function rowHtml(row) {
       const pending = hasPendencia(row);
       const frank = Boolean(row.franksteinAt);
-      const rowClass = ["row", pending ? "pending" : "", frank ? "frank" : ""].filter(Boolean).join(" ");
+      const rowClass = ["row", pending ? "pending" : "", frank ? "frank" : "", selectedId === row.id ? "selected" : ""].filter(Boolean).join(" ");
       const spotlight = pending ? "Pendencia ativa" : row.groupKey === "repasse" ? "Reta final" : "Fluxo em curso";
       const observacao = row.observacaoResumo && row.observacaoResumo !== "-" ? row.observacaoResumo : row.pendenciasResumo;
       const motorLabel = frank ? `Evento em ${fmtDate(row.franksteinAt)}` : "Sem evento registrado";
 
       return `
-        <div class="${rowClass}">
+        <div class="${rowClass}" data-row-id="${esc(row.id)}" tabindex="0" role="button" aria-label="Focar processo de ${esc(row.cliente)}">
           <div class="client">
             <a href="${esc(row.link)}">${esc(row.cliente)}</a>
             <small>${esc(row.imobiliaria)}</small>
@@ -1021,6 +1139,12 @@
       const base = filteredByText();
       renderSidebarCounts(base);
       filtered = base.filter((row) => sideMatch(row) && viewMatch(row));
+      if (filtered.length && !filtered.some((row) => row.id === selectedId)) {
+        selectedId = filtered[0].id;
+      }
+      if (!filtered.length) {
+        selectedId = "";
+      }
 
       const pendencias = filtered.filter((row) => hasPendencia(row)).length;
       const retaFinal = filtered.filter((row) => ["diretoria", "repasse"].includes(row.groupKey)).length;
@@ -1043,6 +1167,7 @@
       if (activeView === "frankstein") hint = "Leitura dedicada aos processos que ja passaram pelo motor FRANKSTEIN.";
       if (activeSideFilter === "pendencias") hint = "A lateral esta focada em pendencias. Combine com busca para achar gargalos especificos.";
       $("dockHint").textContent = hint;
+      renderFocus(filtered.find((row) => row.id === selectedId) || filtered[0] || null);
 
       const board = $("crmBoard");
       if (!data.length) {
@@ -1080,6 +1205,23 @@
         document.querySelectorAll("[data-view]").forEach((item) => item.classList.toggle("active", item === button));
         render();
       });
+    });
+
+    $("crmBoard").addEventListener("click", (event) => {
+      if (event.target.closest("a")) return;
+      const row = event.target.closest("[data-row-id]");
+      if (!row) return;
+      selectedId = row.dataset.rowId || "";
+      render();
+    });
+
+    $("crmBoard").addEventListener("keydown", (event) => {
+      if (!["Enter", " "].includes(event.key)) return;
+      const row = event.target.closest("[data-row-id]");
+      if (!row) return;
+      event.preventDefault();
+      selectedId = row.dataset.rowId || "";
+      render();
     });
 
     $("btnFiltrar").addEventListener("click", render);

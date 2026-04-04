@@ -886,6 +886,125 @@
       justify-content:flex-end;
     }
 
+    .workspace-ribbon{
+      margin-top: 12px;
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap:10px;
+    }
+    .ribbon-card{
+      border:1px solid rgba(148,163,184,.14);
+      border-radius: 16px;
+      padding: 12px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01)),
+        radial-gradient(120px 80px at 0% 0%, rgba(34,197,94,.10), transparent 72%);
+      display:grid;
+      gap:5px;
+      min-width:0;
+    }
+    .ribbon-card span{
+      font-size: var(--fs-xxs);
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      font-weight:900;
+    }
+    .ribbon-card strong{
+      font-size: 16px;
+      line-height:1.1;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .ribbon-card p{
+      margin:0;
+      font-size: var(--fs-xs);
+      color: var(--muted);
+      line-height:1.35;
+      min-height: 30px;
+    }
+    .ribbon-card.accent{
+      background:
+        linear-gradient(180deg, rgba(14,165,233,.12), rgba(14,165,233,.05)),
+        linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border-color: rgba(14,165,233,.24);
+    }
+
+    .section-nav{
+      margin-top: 12px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .section-chip{
+      min-height: 38px;
+      border-radius: 999px;
+      border:1px solid rgba(148,163,184,.16);
+      background: rgba(255,255,255,.03);
+      color: var(--text);
+      padding: 7px 11px;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size: var(--fs-xs);
+      font-weight:800;
+      cursor:pointer;
+      transition:.14s ease;
+    }
+    .section-chip:hover{
+      transform: translateY(-1px);
+      border-color: rgba(148,163,184,.26);
+    }
+    .section-chip.active{
+      border-color: rgba(14,165,233,.35);
+      background: rgba(14,165,233,.10);
+      color:#e0f2fe;
+    }
+    .section-chip.is-muted{
+      opacity:.62;
+    }
+    .section-chip b{
+      min-width: 44px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(2,6,23,.44);
+      font-size: var(--fs-xxs);
+      text-align:center;
+    }
+
+    .section.in-focus{
+      box-shadow: 0 0 0 2px rgba(14,165,233,.22), 0 12px 24px rgba(14,165,233,.08);
+    }
+
+    body.theme-corporate .workspace-ribbon .ribbon-card{
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,251,255,.96)),
+        radial-gradient(120px 80px at 0% 0%, rgba(14,165,233,.10), transparent 72%);
+      border-color: rgba(15,23,42,.14);
+      box-shadow: 0 10px 22px rgba(15,23,42,.06);
+    }
+    body.theme-corporate .workspace-ribbon .ribbon-card.accent{
+      background:
+        linear-gradient(180deg, rgba(224,242,254,.92), rgba(240,249,255,.98)),
+        linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,251,255,.96));
+      border-color: rgba(14,165,233,.22);
+    }
+    body.theme-corporate .section-chip{
+      background:#ffffff;
+      color:#0f172a;
+      border-color: rgba(15,23,42,.14);
+    }
+    body.theme-corporate .section-chip.active{
+      background:#e0f2fe;
+      color:#0c4a6e;
+      border-color: rgba(14,165,233,.30);
+    }
+    body.theme-corporate .section-chip b{
+      background:#eff6ff;
+      color:#334155;
+    }
+
     .pulseDot{
       width:8px;height:8px;border-radius:999px;display:inline-block;
       background: rgba(34,197,94,.9);
@@ -899,6 +1018,16 @@
     }
 
     /* Mobile improvements */
+    @media (max-width: 1200px){
+      .workspace-ribbon{
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 760px){
+      .workspace-ribbon{
+        grid-template-columns: 1fr;
+      }
+    }
     @media (max-width: 640px){
       .doc-actions{justify-content:flex-start}
       .status{min-width: 100%}
@@ -981,6 +1110,41 @@
           <div class="right">
             <span class="pill neutral">Modo: Front-end</span>
           </div>
+        </div>
+
+        <div class="workspace-ribbon" aria-label="Leitura guiada do checklist">
+          <article class="ribbon-card accent">
+            <span>Perfil ativo</span>
+            <strong id="summaryPerfil">-</strong>
+            <p id="summaryPerfilHint">Ajuste o perfil de renda para encaixar os documentos certos.</p>
+          </article>
+          <article class="ribbon-card">
+            <span>Dependente</span>
+            <strong id="summaryDependente">-</strong>
+            <p id="summaryDependenteHint">Defina o tipo de dependente para liberar a trilha documental correta.</p>
+          </article>
+          <article class="ribbon-card">
+            <span>Caixa e Agehab</span>
+            <strong id="summaryCaixa">-</strong>
+            <p id="summaryCaixaHint">Acompanhe os gatilhos de formularios e a trilha de retorno do analista.</p>
+          </article>
+          <article class="ribbon-card">
+            <span>Ritmo do dossie</span>
+            <strong id="summaryProgresso">0/0 aprovados</strong>
+            <p id="summaryProgressoHint">Nenhuma pendencia visivel neste momento.</p>
+          </article>
+        </div>
+
+        <div class="section-nav" aria-label="Navegacao rapida por secoes">
+          <button class="section-chip active" type="button" data-section-nav="sec-proponente" data-docs="proponente"><span>Proponente</span><b>0/0</b></button>
+          <button class="section-chip" type="button" data-section-nav="sec-dep-menor" data-docs="depmenor"><span>Dep. menor</span><b>0/0</b></button>
+          <button class="section-chip" type="button" data-section-nav="sec-dep-maior" data-docs="depmaior"><span>Dep. maior</span><b>0/0</b></button>
+          <button class="section-chip" type="button" data-section-nav="sec-renda-clt" data-docs="rendaclt"><span>Renda CLT</span><b>0/0</b></button>
+          <button class="section-chip" type="button" data-section-nav="sec-renda-informal" data-docs="rendainf"><span>Renda informal</span><b>0/0</b></button>
+          <button class="section-chip" type="button" data-section-nav="sec-aposentado" data-docs="apos"><span>Aposentado</span><b>0/0</b></button>
+          <button class="section-chip" type="button" data-section-nav="sec-domestico" data-docs="dom"><span>Domestico</span><b>0/0</b></button>
+          <button class="section-chip" type="button" data-section-nav="sec-caixa" data-docs="caixa"><span>Caixa</span><b>0/0</b></button>
+          <button class="section-chip" type="button" data-section-nav="sec-agehab" data-docs="agehab"><span>Agehab</span><b>0/0</b></button>
         </div>
 
         <!-- ====== Dados / Regras (compacto) ====== -->
@@ -2166,6 +2330,72 @@ DIVORCIADO: Certidão averbada.</td>
     setPillCount("pill-agehab", "agehab");
   }
 
+  function getVisibleChecklistSelects(docKeys = null){
+    const allowed = docKeys ? new Set(docKeys) : null;
+    return Array.from(document.querySelectorAll("select.status.status-pill[data-doc][data-id]"))
+      .filter((sel)=>{
+        if (allowed && !allowed.has(sel.dataset.doc || "")) return false;
+        const tr = sel.closest("tr");
+        if (tr && tr.style.display === "none") return false;
+        return sel.offsetParent !== null;
+      });
+  }
+
+  function getSelectedLabel(id){
+    const el = $(id);
+    if(!el) return "-";
+    const option = el.options?.[el.selectedIndex];
+    return option ? String(option.textContent || "").trim() : "-";
+  }
+
+  function updateSectionNavigator(){
+    document.querySelectorAll("[data-section-nav]").forEach((btn)=>{
+      const targetId = btn.dataset.sectionNav || "";
+      const docs = String(btn.dataset.docs || "")
+        .split(",")
+        .map((part)=> part.trim())
+        .filter(Boolean);
+      const target = $(targetId);
+      const visible = getVisibleChecklistSelects(docs);
+      const approved = visible.filter((sel)=> toLower(sel.value) === "aprovado").length;
+      const badge = btn.querySelector("b");
+      if (badge) badge.textContent = `${approved}/${visible.length}`;
+      btn.classList.toggle("is-muted", !target || target.offsetParent === null || visible.length === 0);
+    });
+  }
+
+  function updateChecklistWorkspace(){
+    const perfil = getSelectedLabel("perfil-renda");
+    const tipoDependente = getSelectedLabel("tipo-dependente");
+    const ccaLabel = getSelectedLabel("cca-gerou");
+    const statusCaixa = getSelectedLabel("status-caixa");
+    const statusAgehab = getSelectedLabel("status-agehab");
+    const statusSinal = getSelectedLabel("status-sinal");
+    const visible = getVisibleChecklistSelects();
+    const approved = visible.filter((sel)=> toLower(sel.value) === "aprovado").length;
+    const pendentes = visible.filter((sel)=> ["aguardando","pendente","reprovado","bloqueado"].includes(toLower(sel.value))).length;
+
+    $("summaryPerfil").textContent = perfil;
+    $("summaryPerfilHint").textContent = [
+      rowFgts?.style.display !== "none" ? "FGTS ativo" : "FGTS oculto",
+      rowIrpf?.style.display !== "none" ? "IRPF visivel" : "IRPF fora do fluxo",
+      rowCtps?.style.display !== "none" ? "CTPS exigida" : "CTPS nao exigida",
+    ].join(" • ");
+
+    $("summaryDependente").textContent = tipoDependente;
+    $("summaryDependenteHint").textContent = $("tipo-dependente").value === "nao-definido"
+      ? (depAvancarSemDependente?.checked ? "Venda sinalizada para seguir sem dependente." : "Dependente ainda nao definido; confirme a direcao do processo.")
+      : `Secao documental encaixada para ${tipoDependente}.`;
+
+    $("summaryCaixa").textContent = ccaLabel;
+    $("summaryCaixaHint").textContent = `Caixa em ${statusCaixa} • Agehab em ${statusAgehab} • Sinal em ${statusSinal}`;
+
+    $("summaryProgresso").textContent = `${approved}/${visible.length} aprovados`;
+    $("summaryProgressoHint").textContent = pendentes
+      ? `${pendentes} itens ainda exigem retorno do analista ou ajuste documental.`
+      : "Nenhuma pendencia visivel neste momento.";
+  }
+
   // ====== Resumo pendências (automatic) ======
   function buildPendenciasResumo(){
     const groups = [
@@ -2223,6 +2453,8 @@ DIVORCIADO: Certidão averbada.</td>
     $("resumoPendencias").value = lines.length
       ? lines.join("\n").trim()
       : "Nenhuma pendência marcada. (Tudo Aprovado nas seções visíveis.)";
+    updateSectionNavigator();
+    updateChecklistWorkspace();
   }
 
   // ===== Bulk actions =====
@@ -2284,6 +2516,17 @@ DIVORCIADO: Certidão averbada.</td>
   $("btnVoltar").addEventListener("click", ()=> history.back());
   $("btnSair").addEventListener("click", ()=> alert("Front-end: sair (mock)."));
 
+  document.querySelectorAll("[data-section-nav]").forEach((btn)=>{
+    btn.addEventListener("click", ()=>{
+      const target = $(btn.dataset.sectionNav || "");
+      if(!target || target.offsetParent === null) return;
+      document.querySelectorAll("[data-section-nav]").forEach((item)=> item.classList.toggle("active", item === btn));
+      target.classList.add("in-focus");
+      target.scrollIntoView({behavior:"smooth", block:"start"});
+      window.setTimeout(()=> target.classList.remove("in-focus"), 1400);
+    });
+  });
+
   // ===== Right panel listeners =====
   ["status-caixa","status-agehab","status-sinal","status-fiador","cca-responsavel"].forEach(id=>{
     $(id).addEventListener("change", ()=>{
@@ -2292,6 +2535,7 @@ DIVORCIADO: Certidão averbada.</td>
       }
       setRightPills();
       setSlaBadges();
+      updateChecklistWorkspace();
     });
   });
   ["valor-sinal"].forEach(id=>{
