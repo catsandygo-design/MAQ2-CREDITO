@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CRM do Credito | Analista</title>
+  <style>
+    :root {
+      --line: rgba(15, 23, 42, 0.11);
+      --text: #112845;
+      --muted: #6b7a90;
+      --shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+      --radius: 18px;
+      --gold: #ffb24a;
+      --cyan: #8ee8f4;
+      --green: #41d58d;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(900px 420px at 8% -12%, rgba(14, 165, 233, 0.12), transparent 58%),
+        radial-gradient(860px 360px at 100% 0, rgba(139, 92, 246, 0.08), transparent 56%),
+        linear-gradient(180deg, #fbfcff, #f1f5fd 58%, #eef3fb);
+    }
+
+    .shell {
+      min-height: 100%;
+      display: grid;
+      grid-template-columns: 252px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 16px;
+      border-right: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 249, 255, 0.94));
+      display: grid;
+      grid-template-rows: auto auto auto 1fr auto;
+      gap: 14px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #27d3f2 0, #19c6f0 52%, #fff 52%, #82ebf4 100%);
+      box-shadow: 0 10px 18px rgba(14, 165, 233, 0.18);
+    }
+
+    .brand strong {
+      display: block;
+      font-size: 22px;
+      letter-spacing: -0.04em;
+    }
+
+    .brand span {
+      display: block;
+      margin-top: 2px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .cta,
+    .side-link,
+    .side-filter,
+    .ghost,
+    .primary,
+    .action {
+      min-height: 40px;
+      border-radius: 14px;
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: 0.12s ease;
+    }
+
+    .cta,
+    .primary {
+      background: linear-gradient(180deg, #23cdf4, #0ec4ea);
+      color: #fff;
+      border-color: rgba(14, 165, 233, 0.34);
+      box-shadow: 0 12px 20px rgba(14, 165, 233, 0.15);
+    }
+
+    .ghost,
+    .side-link,
+    .side-filter,
+    .action {
+      background: rgba(255, 255, 255, 0.88);
+      color: #17365a;
+      justify-content: flex-start;
+    }
+
+    .cta:hover,
+    .primary:hover,
+    .ghost:hover,
+    .side-link:hover,
+    .side-filter:hover,
+    .action:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(15, 23, 42, 0.09);
+    }
+
+    .side-title {
+      padding: 0 4px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #7a8aa1;
+    }
+
+    .side-links,
+    .side-filters {
+      display: grid;
+      gap: 6px;
+    }
+
+    .side-link.active,
+    .side-filter.active {
+      background: linear-gradient(180deg, #e8f6ff, #f3fbff);
+      border-color: rgba(14, 165, 233, 0.28);
+      color: #0b628d;
+    }
+
+    .side-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 9px;
+      background: rgba(14, 165, 233, 0.1);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #0b7299;
+      flex-shrink: 0;
+    }
+
+    .side-filter b {
+      margin-left: auto;
+      min-width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.06);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+
+    .side-note {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(180deg, #f9fcff, #eef5ff);
+      padding: 12px;
+      display: grid;
+      gap: 5px;
+      box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05);
+    }
+
+    .side-note strong {
+      font-size: 13px;
+    }
+
+    .side-note span {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .main {
+      padding: 18px;
+      display: grid;
+      grid-template-rows: auto auto auto auto auto minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .pill-top {
+      width: fit-content;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      background: rgba(255, 255, 255, 0.84);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #0d6d97;
+    }
+
+    .copy h1 {
+      margin: 6px 0 0;
+      font-size: 38px;
+      line-height: 1.02;
+      letter-spacing: -0.05em;
+      color: #17345d;
+    }
+
+    .copy p {
+      margin: 8px 0 0;
+      max-width: 920px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .head-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <style>
+    .tabs,
+    .tools,
+    .dockbar,
+    .stats,
+    .board {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: var(--shadow);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 6px;
+      overflow: auto;
+    }
+
+    .tab {
+      border: 0;
+      background: transparent;
+      color: #718098;
+      min-height: 40px;
+      padding: 10px 16px;
+      border-radius: 13px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+      position: relative;
+    }
+
+    .tab.active {
+      background: linear-gradient(180deg, #e8f7ff, #f4fbff);
+      color: #0f6f99;
+    }
+
+    .tab.active::after {
+      content: "";
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 6px;
+      height: 3px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #29d3f3, #0ea5e9);
+    }
+
+    .dockbar {
+      display: grid;
+      grid-template-columns: 1.3fr repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      padding: 12px;
+    }
+
+    .dock {
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 15px;
+      background: linear-gradient(180deg, #fff, #f6faff);
+      padding: 10px 12px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .dock.hero {
+      background: linear-gradient(180deg, #f6fdff, #edf8ff);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+    }
+
+    .dock span {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #7b8aa0;
+    }
+
+    .dock strong {
+      font-size: 21px;
+      line-height: 1;
+      color: #11284b;
+    }
+
+    .dock p {
+      margin: 0;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .tools {
+      display: grid;
+      grid-template-columns: auto minmax(220px, 0.95fr) minmax(180px, 0.72fr) minmax(180px, 0.72fr) auto auto;
+      gap: 10px;
+      padding: 12px;
+      align-items: end;
+    }
+
+    .field {
+      display: grid;
+      gap: 4px;
+    }
+
+    .field label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: #7b8aa0;
+    }
+
+    .field input {
+      min-height: 42px;
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      border-radius: 13px;
+      background: #fff;
+      padding: 9px 12px;
+      font-size: 13px;
+      color: #133253;
+      outline: none;
+    }
+
+    .field input:focus {
+      border-color: rgba(14, 165, 233, 0.34);
+      box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      padding: 12px;
+    }
+
+    .stat {
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 15px;
+      background: linear-gradient(180deg, #fff, #f5f9ff);
+      padding: 10px 12px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .stat span {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #7b8aa0;
+    }
+
+    .stat strong {
+      font-size: 25px;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat p {
+      margin: 0;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .board {
+      min-height: 0;
+      padding: 12px;
+      overflow: auto;
+      display: grid;
+      gap: 14px;
+    }
+
+    .empty {
+      border: 1px dashed rgba(15, 23, 42, 0.16);
+      border-radius: 18px;
+      padding: 24px;
+      text-align: center;
+      color: var(--muted);
+      background: linear-gradient(180deg, #fbfdff, #f5f9ff);
+    }
+  </style>
+
+  <style>
+    .group {
+      position: relative;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 20px;
+      background: linear-gradient(180deg, #fff, #f8fbff);
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
+      overflow: hidden;
+    }
+
+    .group::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 4px;
+      background: var(--group);
+      opacity: 0.95;
+    }
+
+    .group-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 16px 14px 18px;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+      background: linear-gradient(180deg, color-mix(in srgb, var(--group) 8%, #ffffff), rgba(247, 250, 255, 0.94));
+    }
+
+    .group-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .accent {
+      width: 6px;
+      align-self: stretch;
+      border-radius: 999px;
+      background: var(--group);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55), 0 0 18px color-mix(in srgb, var(--group) 22%, transparent);
+    }
+
+    .group-copy h2 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 300;
+      letter-spacing: -0.03em;
+      color: color-mix(in srgb, var(--group) 74%, #1e293b);
+    }
+
+    .group-copy p {
+      margin: 5px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .group-stats {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .gchip {
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.82);
+      font-size: 11px;
+      color: #42536c;
+      white-space: nowrap;
+    }
+
+    .table {
+      padding: 0 10px 10px;
+      overflow: auto;
+    }
+
+    .grid {
+      min-width: 1220px;
+    }
+
+    .head-row,
+    .row {
+      display: grid;
+      grid-template-columns: 2.2fr 1.15fr 1.15fr 1fr 1fr 1fr 1fr 0.95fr 0.95fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .head-row {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      padding: 12px;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+      font-size: 12px;
+      color: #6f7d92;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 250, 255, 0.96));
+    }
+
+    .row {
+      position: relative;
+      padding: 10px 12px 10px 16px;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+      transition: 0.12s ease;
+    }
+
+    .row::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 8px;
+      bottom: 8px;
+      width: 3px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.07);
+    }
+
+    .row.pending::before {
+      background: linear-gradient(180deg, #f59e0b, #ef4444);
+    }
+
+    .row.frank::before {
+      background: linear-gradient(180deg, #8b5cf6, #0ec5ea);
+    }
+
+    .row:hover {
+      background: linear-gradient(180deg, rgba(14, 165, 233, 0.04), rgba(139, 92, 246, 0.03));
+      transform: translateX(1px);
+    }
+
+    .client,
+    .stack {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+    }
+
+    .client a {
+      font-size: 16px;
+      font-weight: 700;
+      color: #18355a;
+      text-decoration: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .client small,
+    .sub {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .stack strong {
+      font-size: 13px;
+      color: #203959;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tag {
+      width: fit-content;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(15, 23, 42, 0.10);
+      background: #f8fbff;
+      color: #29445f;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .action {
+      justify-content: center;
+      min-width: 72px;
+      white-space: nowrap;
+    }
+
+    .ok { background: #ecfdf5; border-color: rgba(34, 197, 94, 0.30); color: #166534; }
+    .warn { background: #fff7ed; border-color: rgba(245, 158, 11, 0.32); color: #9a3412; }
+    .bad { background: #fef2f2; border-color: rgba(239, 68, 68, 0.30); color: #991b1b; }
+    .info { background: #eff6ff; border-color: rgba(14, 165, 233, 0.28); color: #075985; }
+
+    @media (max-width: 1320px) {
+      .shell { grid-template-columns: 220px minmax(0, 1fr); }
+      .tools { grid-template-columns: 1fr 1fr 1fr auto auto; }
+      .tools > :first-child { grid-column: 1 / -1; }
+      .dockbar,
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .dockbar .hero { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 980px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        grid-template-rows: auto;
+      }
+      .main { padding: 12px; }
+      .tools,
+      .dockbar,
+      .stats { grid-template-columns: 1fr; }
+      .copy h1 { font-size: 30px; }
+    }
+  </style>
+
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="mark" aria-hidden="true"></div>
+        <div><strong>SIOCRED CRM</strong><span>workspace do credito</span></div>
+      </div>
+      <a class="cta" href="/app/analista/importacao">Nova entrada</a>
+
+      <section>
+        <div class="side-title">Navegacao</div>
+        <div class="side-links">
+          <a class="side-link" href="/app/analista"><span class="side-icon">PI</span><span>Painel</span></a>
+          <a class="side-link" href="/app/analista/acompanhamento"><span class="side-icon">AK</span><span>Acompanhamento</span></a>
+          <a class="side-link" href="/app/analista/acompanhamento-operacional"><span class="side-icon">OP</span><span>Operacional</span></a>
+          <a class="side-link" href="/app/analista/repasse"><span class="side-icon">RP</span><span>Repasse</span></a>
+          <a class="side-link" href="/app/analista/importacao"><span class="side-icon">IM</span><span>Importacao</span></a>
+          <a class="side-link" href="/app/analista/arquivados"><span class="side-icon">AR</span><span>Arquivados</span></a>
+          <a class="side-link active" href="/app/analista/crm"><span class="side-icon">CR</span><span>CRM</span></a>
+        </div>
+      </section>
+
+      <section>
+        <div class="side-title">Recortes</div>
+        <div class="side-filters">
+          <button class="side-filter active" type="button" data-side-filter="all"><span class="side-icon">TD</span><span>Todas</span><b id="count-all">0</b></button>
+          <button class="side-filter" type="button" data-side-filter="entrada"><span class="side-icon">EN</span><span>Entrada</span><b id="count-entrada">0</b></button>
+          <button class="side-filter" type="button" data-side-filter="credito"><span class="side-icon">CR</span><span>Credito</span><b id="count-credito">0</b></button>
+          <button class="side-filter" type="button" data-side-filter="diretoria"><span class="side-icon">DR</span><span>Diretoria</span><b id="count-diretoria">0</b></button>
+          <button class="side-filter" type="button" data-side-filter="repasse"><span class="side-icon">RP</span><span>Repasse</span><b id="count-repasse">0</b></button>
+          <button class="side-filter" type="button" data-side-filter="pendencias"><span class="side-icon">PD</span><span>Pendencias</span><b id="count-pendencias">0</b></button>
+        </div>
+      </section>
+
+      <div class="side-note">
+        <strong>Leitura operacional</strong>
+        <span>Visao estilo CRM com dados reais do sistema, agrupada por etapa e pronta para abrir a analise individual.</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="head">
+        <div class="copy">
+          <span class="pill-top">CRM do credito</span>
+          <h1>Quadro comercial e operacional</h1>
+          <p>Visual inspirado em CRM, mas alimentado pelo processo real do sistema: grupos por etapa, filtros de pendencia e leitura de FRANKSTEIN sem perder a leveza grafica da referencia.</p>
+        </div>
+        <div class="head-actions">
+          <a class="ghost" href="/app/analista/reuniao-comercial">Reuniao comercial</a>
+          <a class="primary" href="/app/analista/importacao">Criar elemento</a>
+        </div>
+      </header>
+
+      <section class="tabs">
+        <button class="tab active" type="button" data-view="main">Quadro principal</button>
+        <button class="tab" type="button" data-view="pendencias">Pendencias</button>
+        <button class="tab" type="button" data-view="assinatura">Assinatura</button>
+        <button class="tab" type="button" data-view="frankstein">FRANKSTEIN</button>
+      </section>
+
+      <section class="dockbar" aria-label="Resumo ativo do recorte">
+        <article class="dock hero">
+          <span>Recorte ativo</span>
+          <strong id="dockFilter">Todas as pecas</strong>
+          <p id="dockHint">Use a lateral e as abas para mudar o encaixe da carteira sem sair do quadro.</p>
+        </article>
+        <article class="dock"><span>Visao</span><strong id="dockView">Quadro principal</strong><p>Modo atual dessa leitura.</p></article>
+        <article class="dock"><span>Exibidos</span><strong id="dockVisible">0</strong><p>Processos dentro do filtro atual.</p></article>
+        <article class="dock"><span>Com FRANKSTEIN</span><strong id="dockFrankstein">0</strong><p>Eventos do motor presentes no recorte.</p></article>
+      </section>
+
+      <section class="tools">
+        <a class="primary" href="/app/analista/importacao">Criar elemento</a>
+        <div class="field"><label for="q">Pesquisar</label><input id="q" placeholder="Cliente, empreendimento, corretor ou imobiliaria" /></div>
+        <div class="field"><label for="emp">Empreendimento</label><input id="emp" placeholder="Ex: AGL30" /></div>
+        <div class="field"><label for="cor">Corretor</label><input id="cor" placeholder="Ex: Gabriela" /></div>
+        <button class="ghost" id="btnFiltrar" type="button">Filtrar</button>
+        <button class="ghost" id="btnLimpar" type="button">Limpar</button>
+      </section>
+
+      <section class="stats">
+        <article class="stat"><span>Total vivo</span><strong id="metaTotal">0</strong><p>Processos ativos no recorte atual.</p></article>
+        <article class="stat"><span>Pendencias</span><strong id="metaPendencias">0</strong><p>CCA, Agehab, sinal ou fiador ainda segurando o fluxo.</p></article>
+        <article class="stat"><span>Reta final</span><strong id="metaRetaFinal">0</strong><p>Casos ja na diretoria ou no repasse.</p></article>
+        <article class="stat"><span>FRANKSTEIN</span><strong id="metaFrankstein">0</strong><p>Processos com evento do motor registrado.</p></article>
+        <article class="stat"><span>Atualizacao</span><strong id="metaAtualizacao">-</strong><p>Hora da ultima leitura desse quadro.</p></article>
+      </section>
+
+      <section class="board">
+        <div id="crmBoard"></div>
+      </section>
+    </main>
+  </div>
+  <script>
+    const API_BASE = "/app/api";
+    const PAGE_SIZE = 120;
+    const MAX_PAGES = 20;
+    const GROUPS = [
+      { key: "entrada", title: "Entrada comercial", desc: "Reservas e processos ainda formando aderencia comercial.", color: "var(--gold)" },
+      { key: "credito", title: "Credito em curso", desc: "Clientes que ja passaram da entrada e precisam consolidar documentacao e credito.", color: "var(--cyan)" },
+      { key: "diretoria", title: "Reta da diretoria", desc: "Casos no encaixe final antes do pacote operacional.", color: "#64d2ff" },
+      { key: "repasse", title: "Operacao e repasse", desc: "Processos ja ligados ao repasse, Caixa ou fechamento operacional.", color: "var(--green)" },
+    ];
+
+    const $ = (id) => document.getElementById(id);
+    const norm = (value) => String(value || "").trim().toLowerCase();
+    let data = [];
+    let filtered = [];
+    let activeSideFilter = "all";
+    let activeView = "main";
+    let lastRefreshAt = "";
+
+    function esc(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function label(value) {
+      const raw = norm(value).replaceAll("_", " ");
+      return raw ? raw.replace(/\b\w/g, (char) => char.toUpperCase()) : "-";
+    }
+
+    function fmtDate(value) {
+      if (!value) return "-";
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+    }
+
+    function sideLabel(value) {
+      return ({
+        all: "Todas as pecas",
+        entrada: "Entrada comercial",
+        credito: "Credito em curso",
+        diretoria: "Reta da diretoria",
+        repasse: "Operacao e repasse",
+        pendencias: "Com pendencias",
+      })[value] || "Todas as pecas";
+    }
+
+    function viewLabel(value) {
+      return ({
+        main: "Quadro principal",
+        pendencias: "Pendencias",
+        assinatura: "Assinatura",
+        frankstein: "FRANKSTEIN",
+      })[value] || "Quadro principal";
+    }
+
+    function statusClass(value) {
+      const key = norm(value).replace(/\s+/g, "_");
+      if (["finalizado", "assinatura_caixa", "validado_agehab", "pago", "conforme", "assinatura_autorizada", "avancar", "viavel"].includes(key)) return "ok";
+      if (["pendente", "pendente_credito", "pendente_cca", "pendente_agehab", "reprovado", "cancelado", "distrato", "ajustar", "bloquear"].includes(key)) return "bad";
+      if (["sem_repasse", "nao_tem", "inicio_repasse", "em_repasse", "condicionado"].includes(key)) return "warn";
+      return "info";
+    }
+
+    function stageKey(raw) {
+      const key = norm(raw).replace(/\s+/g, "_");
+      if (["reserva", "processo", "em_processo"].includes(key)) return "em_processo";
+      if (key === "credito") return "credito";
+      if (["secretaria_de_vendas", "secretaria_vendas"].includes(key)) return "secretaria_vendas";
+      if (key === "assinatura_diretoria") return "assinatura_diretoria";
+      if (["aprovacao_diretoria", "autorizacao_diretoria"].includes(key)) return "autorizacao_diretoria";
+      if (key === "envio_sienge") return "envio_sienge";
+      if (key === "venda_finalizada") return "venda_finalizada";
+      return "em_processo";
+    }
+
+    function hasPendencia(row) {
+      return [row.statusCaixa, row.statusAgehab, row.statusSinal, row.statusFiador, row.statusGeral]
+        .some((value) => ["pendente", "pendente_credito", "pendente_cca", "pendente_agehab", "reprovado", "ajustar", "bloquear", "condicionado"].includes(norm(value).replace(/\s+/g, "_")));
+    }
+
+    function inAssinatura(row) {
+      const caixa = norm(row.statusCaixa).replace(/\s+/g, "_");
+      return ["conforme", "tratando_produto", "agendado", "assinatura_caixa", "finalizado"].includes(caixa)
+        || ["diretoria", "repasse"].includes(row.groupKey);
+    }
+
+    function groupFor(row) {
+      if (!["sem_repasse", "nao_tem", ""].includes(row.repasseKey) || ["envio_sienge", "venda_finalizada"].includes(row.stage)) return "repasse";
+      if (["secretaria_vendas", "assinatura_diretoria", "autorizacao_diretoria"].includes(row.stage)) return "diretoria";
+      if (row.stage === "credito") return "credito";
+      return "entrada";
+    }
+
+    function fromBackend(item) {
+      const row = {
+        id: String(item.processo_id || ""),
+        cliente: item.cliente_nome || "-",
+        obra: item.obra || "-",
+        corretor: item.corretor || "-",
+        imobiliaria: item.imobiliaria || "Sem imobiliaria",
+        stage: stageKey(item.estagio_comercial_key || item.estagio_comercial || item.status_geral),
+        repasseKey: norm(item.etapa_repasse_key || item.etapa_repasse || "sem_repasse").replace(/\s+/g, "_"),
+        estagioComercial: item.estagio_comercial_label || item.estagio_comercial || "-",
+        etapaRepasse: item.etapa_repasse_label || item.etapa_repasse || "Sem repasse",
+        repasseFase: item.repasse_fase_label || item.etapa_repasse_label || item.etapa_repasse || "Sem repasse",
+        statusCaixa: item.status_cca_label || item.status_cca || "-",
+        statusAgehab: item.status_agehab_label || item.status_agehab || "-",
+        statusSinal: item.status_sinal_label || item.status_sinal || "-",
+        statusFiador: item.status_fiador_label || item.status_fiador || "-",
+        statusGeral: label(item.status_geral || "-"),
+        docsResumo: item.documentos_resumo || "Sem documentos",
+        docsPendentes: Number(item.docs_pendentes || 0),
+        pendenciasResumo: item.status_pendencias_resumo || "Sem pendencias criticas",
+        statusTudoOk: Boolean(item.status_tudo_ok),
+        avisoContratoAgehab: Boolean(item.aviso_gerar_contrato_agehab),
+        observacaoResumo: item.observacao_resumo || "",
+        franksteinAt: item.frankstein_last_event_at || item.yvy_last_event_at || null,
+        updatedAt: item.updated_at || item.frankstein_last_event_at || item.created_at || item.data_cadastro_origem || null,
+        link: `/app/analise?processo_id=${encodeURIComponent(item.processo_id || "")}`,
+      };
+      row.groupKey = groupFor(row);
+      row.searchText = norm([row.cliente, row.obra, row.corretor, row.imobiliaria, row.estagioComercial, row.repasseFase].join(" "));
+      return row;
+    }
+
+    async function api(path) {
+      const response = await fetch(`${API_BASE}${path}`, {
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (response.status === 401) {
+        window.location.href = "/login";
+        throw new Error("Nao autenticado");
+      }
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.detail || "Falha ao carregar dados");
+      return payload;
+    }
+
+    async function fetchProcessos() {
+      const rows = [];
+      for (let page = 0, offset = 0; page < MAX_PAGES; page += 1, offset += PAGE_SIZE) {
+        const chunk = await api(`/processos?limit=${PAGE_SIZE}&offset=${offset}`);
+        if (!Array.isArray(chunk) || !chunk.length) break;
+        rows.push(...chunk);
+        if (chunk.length < PAGE_SIZE) break;
+      }
+      return rows;
+    }
+
+    function sideMatch(row) {
+      if (activeSideFilter === "all") return true;
+      if (activeSideFilter === "pendencias") return hasPendencia(row);
+      return row.groupKey === activeSideFilter;
+    }
+
+    function viewMatch(row) {
+      if (activeView === "main") return true;
+      if (activeView === "pendencias") return hasPendencia(row);
+      if (activeView === "assinatura") return inAssinatura(row);
+      if (activeView === "frankstein") return Boolean(row.franksteinAt);
+      return true;
+    }
+
+    function renderSidebarCounts(base) {
+      $("count-all").textContent = String(base.length);
+      $("count-entrada").textContent = String(base.filter((row) => row.groupKey === "entrada").length);
+      $("count-credito").textContent = String(base.filter((row) => row.groupKey === "credito").length);
+      $("count-diretoria").textContent = String(base.filter((row) => row.groupKey === "diretoria").length);
+      $("count-repasse").textContent = String(base.filter((row) => row.groupKey === "repasse").length);
+      $("count-pendencias").textContent = String(base.filter((row) => hasPendencia(row)).length);
+    }
+
+    function rowHtml(row) {
+      const pending = hasPendencia(row);
+      const frank = Boolean(row.franksteinAt);
+      const rowClass = ["row", pending ? "pending" : "", frank ? "frank" : ""].filter(Boolean).join(" ");
+      const spotlight = pending ? "Pendencia ativa" : row.groupKey === "repasse" ? "Reta final" : "Fluxo em curso";
+      const observacao = row.observacaoResumo && row.observacaoResumo !== "-" ? row.observacaoResumo : row.pendenciasResumo;
+      const motorLabel = frank ? `Evento em ${fmtDate(row.franksteinAt)}` : "Sem evento registrado";
+
+      return `
+        <div class="${rowClass}">
+          <div class="client">
+            <a href="${esc(row.link)}">${esc(row.cliente)}</a>
+            <small>${esc(row.imobiliaria)}</small>
+          </div>
+          <div class="stack">
+            <strong>${esc(row.obra)}</strong>
+            <span class="sub">Atualizado ${esc(fmtDate(row.updatedAt))}</span>
+          </div>
+          <div class="stack">
+            <strong>${esc(row.corretor)}</strong>
+            <span class="sub">${esc(spotlight)}</span>
+          </div>
+          <div class="stack">
+            <strong>${esc(row.estagioComercial)}</strong>
+            <span class="sub">${esc(row.repasseFase)}</span>
+          </div>
+          <div><span class="tag ${esc(statusClass(row.statusCaixa))}">${esc(row.statusCaixa)}</span></div>
+          <div><span class="tag ${esc(statusClass(row.statusAgehab))}">${esc(row.statusAgehab)}</span></div>
+          <div class="stack">
+            <strong>${esc(`Sinal: ${row.statusSinal}`)}</strong>
+            <span class="sub">${esc(`Fiador: ${row.statusFiador}`)}</span>
+          </div>
+          <div class="stack">
+            <strong>${esc(row.docsResumo)}</strong>
+            <span class="sub">${esc(observacao)}</span>
+          </div>
+          <div class="stack">
+            <strong>${esc(frank ? "FRANKSTEIN ativo" : "Motor ausente")}</strong>
+            <span class="sub">${esc(motorLabel)}</span>
+          </div>
+          <div><a class="action" href="${esc(row.link)}">Abrir</a></div>
+        </div>
+      `;
+    }
+
+    function groupHtml(group, rows) {
+      const pendencias = rows.filter((row) => hasPendencia(row)).length;
+      const frankstein = rows.filter((row) => Boolean(row.franksteinAt)).length;
+      const empty = `
+        <div class="empty">
+          Nenhum processo encaixado nesse grupo com o filtro atual.
+        </div>
+      `;
+
+      return `
+        <section class="group" style="--group:${group.color}">
+          <div class="group-head">
+            <div class="group-main">
+              <span class="accent" aria-hidden="true"></span>
+              <div class="group-copy">
+                <h2>${esc(group.title)}</h2>
+                <p>${esc(group.desc)}</p>
+              </div>
+            </div>
+            <div class="group-stats">
+              <span class="gchip">${rows.length} processos</span>
+              <span class="gchip">${pendencias} com pendencia</span>
+              <span class="gchip">${frankstein} com FRANKSTEIN</span>
+            </div>
+          </div>
+          <div class="table">
+            <div class="grid">
+              <div class="head-row">
+                <div>Cliente</div>
+                <div>Empreendimento</div>
+                <div>Corretor</div>
+                <div>Etapa</div>
+                <div>Caixa</div>
+                <div>Agehab</div>
+                <div>Estrutura</div>
+                <div>Documentos</div>
+                <div>Motor</div>
+                <div>Abrir</div>
+              </div>
+              ${rows.length ? rows.map((row) => rowHtml(row)).join("") : empty}
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    function filteredByText() {
+      const q = norm($("q").value);
+      const emp = norm($("emp").value);
+      const cor = norm($("cor").value);
+
+      return data.filter((row) => {
+        if (q && !row.searchText.includes(q)) return false;
+        if (emp && !norm(row.obra).includes(emp)) return false;
+        if (cor && !norm(row.corretor).includes(cor)) return false;
+        return true;
+      });
+    }
+
+    function render() {
+      const base = filteredByText();
+      renderSidebarCounts(base);
+      filtered = base.filter((row) => sideMatch(row) && viewMatch(row));
+
+      const pendencias = filtered.filter((row) => hasPendencia(row)).length;
+      const retaFinal = filtered.filter((row) => ["diretoria", "repasse"].includes(row.groupKey)).length;
+      const frankstein = filtered.filter((row) => Boolean(row.franksteinAt)).length;
+
+      $("metaTotal").textContent = String(filtered.length);
+      $("metaPendencias").textContent = String(pendencias);
+      $("metaRetaFinal").textContent = String(retaFinal);
+      $("metaFrankstein").textContent = String(frankstein);
+      $("metaAtualizacao").textContent = lastRefreshAt || "-";
+
+      $("dockFilter").textContent = sideLabel(activeSideFilter);
+      $("dockView").textContent = viewLabel(activeView);
+      $("dockVisible").textContent = String(filtered.length);
+      $("dockFrankstein").textContent = String(frankstein);
+
+      let hint = "Use a lateral e as abas para mudar o encaixe da carteira sem sair do quadro.";
+      if (activeView === "pendencias") hint = "Recorte de tensao operacional: priorize quem travou Caixa, Agehab, sinal ou fiador.";
+      if (activeView === "assinatura") hint = "Visao de reta final para separar quem ja esta em assinatura ou muito perto dela.";
+      if (activeView === "frankstein") hint = "Leitura dedicada aos processos que ja passaram pelo motor FRANKSTEIN.";
+      if (activeSideFilter === "pendencias") hint = "A lateral esta focada em pendencias. Combine com busca para achar gargalos especificos.";
+      $("dockHint").textContent = hint;
+
+      const board = $("crmBoard");
+      if (!data.length) {
+        board.innerHTML = `<div class="empty">Nenhum processo ativo disponivel no sistema agora.</div>`;
+        return;
+      }
+      if (!filtered.length) {
+        board.innerHTML = `<div class="empty">Nenhum processo encontrado com esse encaixe. Ajuste os filtros e tente de novo.</div>`;
+        return;
+      }
+
+      board.innerHTML = GROUPS.map((group) => groupHtml(group, filtered.filter((row) => row.groupKey === group.key))).join("");
+    }
+
+    async function refresh() {
+      const processos = await fetchProcessos();
+      data = processos
+        .filter((item) => !["cancelado", "distrato"].includes(norm(item.status_geral).replace(/\s+/g, "_")))
+        .map((item) => fromBackend(item));
+      lastRefreshAt = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      render();
+    }
+
+    document.querySelectorAll("[data-side-filter]").forEach((button) => {
+      button.addEventListener("click", () => {
+        activeSideFilter = button.dataset.sideFilter || "all";
+        document.querySelectorAll("[data-side-filter]").forEach((item) => item.classList.toggle("active", item === button));
+        render();
+      });
+    });
+
+    document.querySelectorAll("[data-view]").forEach((button) => {
+      button.addEventListener("click", () => {
+        activeView = button.dataset.view || "main";
+        document.querySelectorAll("[data-view]").forEach((item) => item.classList.toggle("active", item === button));
+        render();
+      });
+    });
+
+    $("btnFiltrar").addEventListener("click", render);
+    $("btnLimpar").addEventListener("click", () => {
+      $("q").value = "";
+      $("emp").value = "";
+      $("cor").value = "";
+      render();
+    });
+
+    ["q", "emp", "cor"].forEach((id) => {
+      $(id).addEventListener("keydown", (event) => {
+        if (event.key === "Enter") render();
+      });
+    });
+
+    refresh().catch((error) => {
+      $("crmBoard").innerHTML = `<div class="empty">${esc(error.message || "Falha ao carregar o CRM.")}</div>`;
+    });
+  </script>
+</body>
+</html>

@@ -5956,6 +5956,19 @@ def app_analista_importacao_page(request: Request):
     return _html_page("analista_importacao.html")
 
 
+@app.get("/app/analista/crm")
+def app_analista_crm_page(request: Request):
+    session = _read_session(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=302)
+    if bool(session.get("must_change_password")):
+        return RedirectResponse(url="/app/trocar-senha", status_code=302)
+    role = _normalize_role(str(session.get("role", "")))
+    if role not in {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO}:
+        return RedirectResponse(url=_home_for_role(role), status_code=302)
+    return _html_page("analista_crm.html")
+
+
 @app.get("/app/gestor-credito")
 def app_gestor_credito_page(request: Request):
     session = _read_session(request)
