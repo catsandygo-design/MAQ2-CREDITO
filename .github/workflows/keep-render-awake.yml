@@ -1,0 +1,43 @@
+name: Keep Render Awake
+
+on:
+  schedule:
+    - cron: "*/14 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keep-render-awake-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Resolve target URL
+        id: target
+        shell: bash
+        env:
+          RENDER_APP_URL: ${{ secrets.RENDER_APP_URL }}
+        run: |
+          RAW="${RENDER_APP_URL:-https://siocred.onrender.com}"
+          RAW="${RAW//$'\r'/}"
+          RAW="${RAW//$'\n'/}"
+          RAW="${RAW%/}"
+
+          if [[ "$RAW" != http://* && "$RAW" != https://* ]]; then
+            RAW="https://$RAW"
+          fi
+
+          echo "url=$RAW/health" >> "$GITHUB_OUTPUT"
+
+      - name: Ping Render
+        shell: bash
+        env:
+          TARGET_URL: ${{ steps.target.outputs.url }}
+        run: |
+          echo "Pinging $TARGET_URL"
+          curl -fsS --max-time 90 --retry 2 --retry-delay 5 "$TARGET_URL" || true
