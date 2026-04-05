@@ -879,16 +879,6 @@ export function AnalistaPainelPage() {
     }
   }, [executiveView.hottest, filteredRows])
 
-  useEffect(() => {
-    if (!filteredRows.length) {
-      if (activeRowId) setActiveRowId('')
-      return
-    }
-    if (!filteredRows.some((row) => row.processoId === activeRowId)) {
-      setActiveRowId(filteredRows[0].processoId)
-    }
-  }, [activeRowId, filteredRows])
-
   const onChangeFilter = (key: keyof FiltersState, value: string) => {
     startTransition(() => {
       setFilters((prev) => ({ ...prev, [key]: value }))
@@ -1458,7 +1448,7 @@ export function AnalistaPainelPage() {
               const comercialLabel = comercialKey ? labelFor('geral', comercialKey) : labelFor('geral', row.geral)
               const repasseLabel = repasseKey ? labelFor('repasse', repasseKey) : labelFor('repasse', row.repasse)
               const pendencias = pendingItems(row)
-              const isFocused = activeRowId === row.processoId
+              const isFocused = expanded && activeRowId === row.processoId
 
               return (
                 <article
@@ -1500,7 +1490,7 @@ export function AnalistaPainelPage() {
                         onClick={() => toggleRow(row.processoId)}
                         aria-expanded={expanded}
                       >
-                        {expanded ? 'Fechar detalhes' : 'Detalhes'}
+                        {expanded ? 'Fechar detalhes' : 'Abrir detalhes'}
                       </button>
                     </div>
                   </div>
