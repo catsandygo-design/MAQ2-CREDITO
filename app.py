@@ -5645,8 +5645,9 @@ def _serve_react_app(path: str = ""):
         return RedirectResponse(url="/app/gestor", status_code=302)
 
     index_file = REACT_DIST_DIR / "index.html"
+    index_headers = {"Cache-Control": "no-store, max-age=0, must-revalidate"}
     if not path:
-        return FileResponse(index_file)
+        return FileResponse(index_file, headers=index_headers)
 
     dist_root = REACT_DIST_DIR.resolve()
     candidate = (REACT_DIST_DIR / path).resolve()
@@ -5661,7 +5662,7 @@ def _serve_react_app(path: str = ""):
     if Path(path).suffix:
         raise HTTPException(status_code=404, detail="Not Found")
 
-    return FileResponse(index_file)
+    return FileResponse(index_file, headers=index_headers)
 
 
 def _corretor_presentation_url(request: Optional[Request] = None) -> str:
