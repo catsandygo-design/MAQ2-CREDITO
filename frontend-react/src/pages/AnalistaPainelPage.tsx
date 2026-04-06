@@ -943,135 +943,148 @@ export function AnalistaPainelPage() {
             </button>
           </div>
 
-          <div className="analista-command-grid">
-            <section className="command-card command-card-intro">
-              <div className="command-card-head">
-                <span className="hero-kicker">Mapa operacional</span>
-                <span className="section-inline-note">Leitura fiel do processo</span>
+          <div className="analista-brief-grid">
+            <section className="analista-brief-card analista-brief-card-primary">
+              <div className="analista-brief-head">
+                <div className="analista-brief-copy">
+                  <span className="hero-kicker">Mapa operacional</span>
+                  <h1>Painel do Analista</h1>
+                  <p>Resumo rapido da carteira e do que pede acao agora.</p>
+                </div>
+                <span className="section-inline-note">
+                  {kpis.total} ativos
+                  {kpis.outCount > 0 ? ` + ${kpis.outCount} fora do mes` : ''}
+                </span>
               </div>
-              <h1>Painel do Analista</h1>
-              <p>Carteira organizada por etapa oficial, gargalo principal, ownership atual e proxima acao. A tela deixa de vender narrativa e passa a sustentar a decisao diaria.</p>
 
-              <div className="command-metric-grid">
-                <article className="command-metric tone-danger">
-                  <span className="command-label">Pressao imediata</span>
-                  <strong>{kpis.prios}</strong>
-                  <p>Carteira acima de 15 dias em comercial.</p>
+              <div className="brief-kpi-grid">
+                <article className="brief-kpi-card">
+                  <span className="command-label">Docs</span>
+                  <strong>{executiveView.waitingDocs}</strong>
+                  <p>Aguardando envio ou validacao.</p>
                 </article>
-                <article className="command-metric tone-warn">
-                  <span className="command-label">Pendencias ativas</span>
+                <article className="brief-kpi-card">
+                  <span className="command-label">Pendencias</span>
                   <strong>{executiveView.pending}</strong>
-                  <p>Caixa, docs, sinal ou fiador fora do ideal.</p>
+                  <p>Processos com trava ativa.</p>
                 </article>
-                <article className="command-metric tone-ok">
-                  <span className="command-label">Prontos para avancar</span>
-                  <strong>{executiveView.readyFlow}</strong>
-                  <p>Sem trava principal na leitura atual.</p>
+                <article className="brief-kpi-card">
+                  <span className="command-label">Pressao</span>
+                  <strong>{kpis.prios}</strong>
+                  <p>Casos acima de 15 dias no comercial.</p>
                 </article>
-                <article className={`command-metric tone-${kpiToneByHours(kpis.avgSlaCred)}`}>
-                  <span className="command-label">SLA medio credito</span>
-                  <strong>{formatElapsedHours(kpis.avgSlaCred)}</strong>
-                  <p>Media operacional do recorte filtrado.</p>
+                <article className="brief-kpi-card">
+                  <span className="command-label">Fechamento</span>
+                  <strong>{executiveView.finalFlow}</strong>
+                  <p>Assinatura ou fechamento em curso.</p>
                 </article>
               </div>
-            </section>
 
-            <section className="command-card command-card-focus">
-              <div className="command-card-head">
-                <span className="command-label">Cliente em foco</span>
-                {processOverview.focus ? <span className={`chip ${processOwnerTone(processOverview.focus)}`}>{processOwner(processOverview.focus)}</span> : null}
-              </div>
-              <strong>{processOverview.focus?.cliente || 'Carteira estabilizada'}</strong>
-              <p>
-                {processOverview.focus
-                  ? `${primaryBlocker(processOverview.focus)}. ${nextActionSummary(processOverview.focus)}`
-                  : 'Sem cliente critico no momento. O cabecalho continua mostrando quem esta segurando a carteira.'}
-              </p>
-
-              <div className="owner-load-grid">
-                {processOverview.ownership.map((item) => (
-                  <article key={item.label} className="owner-load-card">
-                    <span>{item.label}</span>
-                    <strong>{item.count}</strong>
-                  </article>
-                ))}
-              </div>
-            </section>
-          </div>
-
-          <div className="process-truth-grid">
-            <section className="process-truth-card">
-              <div className="process-truth-head">
-                <div>
-                  <span className="command-label">Fluxo comercial</span>
-                  <h2>Etapa oficial da carteira</h2>
+              <div className="brief-focus-stack">
+                <div className="brief-focus-head">
+                  <span className="command-label">Cliente em foco</span>
+                  {processOverview.focus ? <span className={`chip ${processOwnerTone(processOverview.focus)}`}>{processOwner(processOverview.focus)}</span> : null}
                 </div>
-                <span className="section-inline-note">
-                  {processOverview.focus ? `Atual: ${labelFor('geral', processOverview.focusCommercialKey || processOverview.focus.geral)}` : `${kpis.comercial} em comercial`}
+                <strong>{processOverview.focus?.cliente || 'Carteira estabilizada'}</strong>
+                <p>
+                  {processOverview.focus
+                    ? `${primaryBlocker(processOverview.focus)}. ${nextActionSummary(processOverview.focus)}`
+                    : 'Sem cliente critico no momento no filtro atual.'}
+                </p>
+
+                {executiveView.focusRows.length > 0 ? (
+                  <div className="brief-focus-links">
+                    {executiveView.focusRows.map((row) => (
+                      <a key={row.processoId} className="brief-focus-link" href={`#cliente-${row.processoId}`}>
+                        <span>{row.cliente}</span>
+                        <strong>{shortNextActionLabel(row)}</strong>
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </section>
+
+            <section className="analista-brief-card analista-brief-card-flow">
+              <div className="analista-brief-head">
+                <div className="analista-brief-copy">
+                  <span className="command-label">Fluxo da carteira</span>
+                  <h2>Etapa real da fila</h2>
+                </div>
+              </div>
+
+              <div className="brief-flow-stack">
+                <article className="brief-flow-card">
+                  <div className="brief-flow-head">
+                    <strong>Comercial</strong>
+                    <span className="section-inline-note">
+                      {processOverview.focus ? `Atual: ${labelFor('geral', processOverview.focusCommercialKey || processOverview.focus.geral)}` : `${kpis.comercial} em comercial`}
+                    </span>
+                  </div>
+                  <div className="process-truth-lane">
+                    <TimelineLane
+                      title="Comercial"
+                      steps={COMMERCIAL_FLOW_STEPS}
+                      currentKey={processOverview.focusCommercialSnapshot.currentKey}
+                      doneKeys={processOverview.focusCommercialSnapshot.doneKeys}
+                      height={62}
+                      className="process-lane"
+                    />
+                  </div>
+                </article>
+
+                <article className="brief-flow-card">
+                  <div className="brief-flow-head">
+                    <strong>Repasse</strong>
+                    <span className="section-inline-note">
+                      {processOverview.focus ? `Atual: ${labelFor('repasse', processOverview.focusRepasseKey || processOverview.focus.repasse)}` : `${kpis.repasse} em repasse`}
+                    </span>
+                  </div>
+                  <div className="process-truth-lane">
+                    <TimelineLane
+                      title="Repasse"
+                      steps={REPASSE_FLOW_STEPS}
+                      currentKey={processOverview.focusRepasseSnapshot.currentKey}
+                      doneKeys={processOverview.focusRepasseSnapshot.doneKeys}
+                      height={62}
+                      className="process-lane"
+                    />
+                  </div>
+                </article>
+              </div>
+
+              <div className="brief-flow-summary">
+                <span className="process-chip">
+                  <strong>{kpis.comercial}</strong>
+                  <span>Comercial</span>
+                </span>
+                <span className="process-chip">
+                  <strong>{kpis.credito}</strong>
+                  <span>Credito</span>
+                </span>
+                <span className="process-chip">
+                  <strong>{kpis.repasse}</strong>
+                  <span>Repasse</span>
+                </span>
+                <span className="process-chip">
+                  <strong>{kpis.assinados}</strong>
+                  <span>Assinados</span>
                 </span>
               </div>
-              <div className="process-truth-lane">
-                <TimelineLane
-                  title="Comercial"
-                  steps={COMMERCIAL_FLOW_STEPS}
-                  currentKey={processOverview.focusCommercialSnapshot.currentKey}
-                  doneKeys={processOverview.focusCommercialSnapshot.doneKeys}
-                  height={74}
-                  className="process-lane"
-                />
-              </div>
-              <div className="process-chip-grid">
-                {processOverview.commercialCounts.map((step) => (
-                  <span key={step.key} className="process-chip">
-                    <strong>{step.count}</strong>
-                    <span>{step.label}</span>
-                  </span>
-                ))}
-              </div>
             </section>
 
-            <section className="process-truth-card">
-              <div className="process-truth-head">
-                <div>
-                  <span className="command-label">Fluxo de repasse</span>
-                  <h2>Quem segura a reta final</h2>
-                </div>
-                <span className="section-inline-note">
-                  {processOverview.focus ? `Atual: ${labelFor('repasse', processOverview.focusRepasseKey || processOverview.focus.repasse)}` : `${kpis.repasse} em repasse`}
-                </span>
-              </div>
-              <div className="process-truth-lane">
-                <TimelineLane
-                  title="Repasse"
-                  steps={REPASSE_FLOW_STEPS}
-                  currentKey={processOverview.focusRepasseSnapshot.currentKey}
-                  doneKeys={processOverview.focusRepasseSnapshot.doneKeys}
-                  height={74}
-                  className="process-lane"
-                />
-              </div>
-              <div className="process-chip-grid">
-                {processOverview.repasseCounts.map((step) => (
-                  <span key={step.key} className="process-chip">
-                    <strong>{step.count}</strong>
-                    <span>{step.label}</span>
-                  </span>
-                ))}
-              </div>
-            </section>
-
-            <section className="process-truth-card process-truth-card-blockers">
-              <div className="process-truth-head">
-                <div>
-                  <span className="command-label">Gargalos</span>
-                  <h2>Onde a fila entorta</h2>
+            <section className="analista-brief-card analista-brief-card-blockers">
+              <div className="analista-brief-head">
+                <div className="analista-brief-copy">
+                  <span className="command-label">Gargalo e decisao</span>
+                  <h2>O que realmente trava a fila</h2>
                 </div>
                 <span className="section-inline-note">{executiveView.pending} com pendencia ativa</span>
               </div>
 
-              <div className="process-blocker-grid">
+              <div className="brief-blocker-grid">
                 {processOverview.blockers.map((item) => (
-                  <article key={item.key} className="process-blocker-card">
+                  <article key={item.key} className="brief-blocker-card">
                     <span>{item.label}</span>
                     <strong>{item.count}</strong>
                     <p>{item.note}</p>
@@ -1079,79 +1092,12 @@ export function AnalistaPainelPage() {
                 ))}
               </div>
 
-              {processOverview.focus ? (
-                <div className="process-focus-note">
-                  <strong>{shortNextActionLabel(processOverview.focus)}</strong>
-                  <span>{processOwnerContext(processOverview.focus)}</span>
-                </div>
-              ) : null}
+              <div className="brief-next-action">
+                <strong>{processOverview.focus ? shortNextActionLabel(processOverview.focus) : 'Sem acao urgente'}</strong>
+                <span>{processOverview.focus ? processOwnerContext(processOverview.focus) : 'Fila sem pendencia relevante no momento.'}</span>
+              </div>
             </section>
           </div>
-
-          <div className="analista-hero-layout">
-            <div className="analista-hero">
-              <span className="hero-kicker">Operacao de credito</span>
-              <h1>Painel do Analista</h1>
-              <p>Apresentacao executiva da carteira com leitura comercial, pressão da fila e progresso por cliente em uma unica tela.</p>
-            </div>
-
-            <div className="analista-hero-board">
-              <article className="hero-spotlight-card">
-                <span className="hero-spotlight-label">Foco agora</span>
-                <strong>{executiveView.hottest?.cliente || 'Carteira estabilizada'}</strong>
-                <p>
-                  {executiveView.hottest
-                    ? `${labelFor('geral', executiveView.hottest.geral)} • ${nextActionSummary(executiveView.hottest)}`
-                    : 'Sem cliente critico no momento.'}
-                </p>
-              </article>
-
-              <div className="hero-stat-grid">
-                <article className="hero-stat-card tone-danger">
-                  <span className="hero-stat-label">Pressao imediata</span>
-                  <strong>{kpis.prios}</strong>
-                  <p>Carteira acima de 15 dias em comercial</p>
-                </article>
-                <article className="hero-stat-card tone-warn">
-                  <span className="hero-stat-label">Pendencias ativas</span>
-                  <strong>{executiveView.pending}</strong>
-                  <p>Status, documentos, sinal ou fiador fora do ideal</p>
-                </article>
-                <article className="hero-stat-card tone-ok">
-                  <span className="hero-stat-label">Prontos para avancar</span>
-                  <strong>{executiveView.readyFlow}</strong>
-                  <p>Sem trava principal mapeada na leitura atual</p>
-                </article>
-                <article className={`hero-stat-card tone-${kpiToneByHours(kpis.avgSlaCred)}`}>
-                  <span className="hero-stat-label">SLA medio credito</span>
-                  <strong>{formatElapsedHours(kpis.avgSlaCred)}</strong>
-                  <p>Media operacional do filtro atual</p>
-                </article>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        <div className="analista-ribbon">
-          <span className="hero-ribbon-item">
-            <strong>{kpis.total}</strong>
-            <span>ativos em carteira</span>
-          </span>
-          <span className="hero-ribbon-item">
-            <strong>{executiveView.waitingDocs}</strong>
-            <span>aguardando documentos</span>
-          </span>
-          <span className="hero-ribbon-item">
-            <strong>{executiveView.finalFlow}</strong>
-            <span>em fechamento ou assinatura</span>
-          </span>
-          {executiveView.focusRows.map((row) => (
-            <a key={row.processoId} className="hero-ribbon-link" href={`#cliente-${row.processoId}`}>
-              <span>{row.cliente}</span>
-              <strong>{shortNextActionLabel(row)}</strong>
-            </a>
-          ))}
         </div>
 
         <nav className="analista-nav" aria-label="Navegacao do analista">
