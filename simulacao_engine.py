@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from typing import Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class SimulacaoInput(BaseModel):
@@ -21,7 +21,8 @@ class SimulacaoInput(BaseModel):
     empreendimento: Optional[str] = None
     perfil: Optional[str] = None
 
-    @validator("preco_digitado_corretor", "sobrepreco_vila", "valor_obtido", "parcela_caixa", pre=True, always=True)
+    @field_validator("preco_digitado_corretor", "sobrepreco_vila", "valor_obtido", "parcela_caixa", mode="before")
+    @classmethod
     def _coerce_numbers(cls, v):
         try:
             return float(v or 0)

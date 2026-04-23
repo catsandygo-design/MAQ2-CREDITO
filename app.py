@@ -7,8 +7,6 @@ import math
 import contextlib
 import smtplib
 import logging
-import hashlib
-import hmac
 import secrets
 import calendar
 import unicodedata
@@ -17,6 +15,7 @@ from contextlib import asynccontextmanager
 from datetime import date, datetime, time, timedelta, timezone
 from email.message import EmailMessage
 from pathlib import Path
+from threading import RLock
 from typing import Any, Optional
 from urllib.parse import urlparse
 
@@ -32,11 +31,63 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
 from sqlalchemy.sql import func
 from openpyxl import load_workbook
+from auth_runtime import (
+    PasswordPolicyConfig,
+    SessionConfig,
+    SessionManager,
+    hash_password as runtime_hash_password,
+    new_salt as runtime_new_salt,
+    password_policy_error as runtime_password_policy_error,
+    verify_password as runtime_verify_password,
+)
+from bootstrap_runtime import ensure_frankstein_tables as runtime_ensure_frankstein_tables
 from security_utils import decrypt_pii, encrypt_pii, generate_pii_encryption_key, hash_email, hash_optional, hash_token, last4_digits, mask_document, mask_email, pii_encryption_enabled
 from simulacao_engine import SimulacaoInput, engine_calculo_imobiliario
 from frankstein_operacional import AnaliseInput as FranksteinAnaliseInput
 from frankstein_operacional import RespostaFrankstein as FranksteinRespostaOperacional
 from frankstein_operacional import analisar_operacao_frankstein
+from workflow_constants import (
+    CAIXA_ASSINATURA_APTA_STATUSES,
+    CSV_IMPORT_DELIMITERS,
+    CSV_IMPORT_ENCODINGS,
+    ESTAGIOS_DASH_COMERCIAL,
+    ESTAGIOS_REPASSE_COMERCIAL,
+    ESTAGIO_COMERCIAL_INDEX,
+    ESTAGIO_COMERCIAL_SET,
+    ESTAGIO_COMERCIAL_VALUES,
+    IMPORT_COLUMN_ALIASES,
+    IMPORT_REQUIRED_COLUMNS,
+    LEAD_CCA_DECISION_SET,
+    LEAD_CCA_DECISION_VALUES,
+    LEAD_STAGE_SET,
+    LEAD_STAGE_VALUES,
+    PLANEJAMENTO_DIA_TODO_META_PREFIX,
+    PLANEJAMENTO_ENTREGA_META_PREFIX,
+    PLANEJAMENTO_ENTREGA_STATUS_LABELS,
+    PLANEJAMENTO_STATUS_LABELS,
+    PLANEJAMENTO_TIPO_LABELS,
+    PROCESS_AGEHAB_STATUSES,
+    PROCESS_CAIXA_STATUSES,
+    PROCESS_CCA_FINAL_STATUSES,
+    PROCESS_CREDITO_STATUSES,
+    PROCESS_FIADOR_STATUSES,
+    PROCESS_GERAL_ARQUIVO_IMEDIATO,
+    PROCESS_GERAL_FINAL_STATUSES,
+    PROCESS_GERAL_STATUSES,
+    PROCESS_OVERVIEW_LABELS,
+    PROCESS_READY_STATUS_KEYS,
+    PROCESS_RECOLHA_FGTS_STATUSES,
+    PROCESS_SINAL_STATUSES,
+    REPASSE_ETAPAS_SET,
+    REPASSE_ETAPAS_VALUES,
+    SLA_OWNER_ANALISTA,
+    SLA_OWNER_CCA,
+    SLA_OWNER_CORRETOR,
+    SLA_OWNER_NONE,
+    SLA_OWNER_VALUES,
+    UNIDADE_STATUS_SET,
+    UNIDADE_STATUS_VALUES,
+)
 import psycopg
 
 logger = logging.getLogger("sistema_credito")
@@ -67,6 +118,7 @@ FRANKSTEIN_MODEL_REGISTRY_PATH = FRANKSTEIN_REGISTRY_DIR / "model_registry.json"
 FRANKSTEIN_METRICS_HISTORY_PATH = FRANKSTEIN_REGISTRY_DIR / "metrics_history.json"
 TABELA_PRECO_PATH = DATA_DIR / "tabela_precos.json"
 TABELA_PRECO_CACHE: list[dict[str, Any]] = []
+TABELA_PRECO_CACHE_LOCK = RLock()
 FRANKSTEIN_DB_URL = os.getenv("FRANKSTEIN_DB_URL") or os.getenv("YVY_DB_URL") or os.getenv("DATABASE_URL")
 
 ANALISE_DB_PATH = DATA_DIR / "analises.db"
@@ -80,6 +132,13 @@ SESSION_DB_SYNC_INTERVAL_SECONDS = int(os.getenv("SESSION_DB_SYNC_INTERVAL_SECON
 SESSION_IDLE_PASSIVE_PATHS = {
     "/app/api/processos",
 }
+AUTH_SESSION_CONFIG = SessionConfig(
+    session_cookie_name=SESSION_COOKIE_NAME,
+    ttl_seconds=SESSION_TTL_SECONDS,
+    idle_timeout_seconds=SESSION_IDLE_TIMEOUT_SECONDS,
+    db_sync_interval_seconds=SESSION_DB_SYNC_INTERVAL_SECONDS,
+    idle_passive_paths=set(SESSION_IDLE_PASSIVE_PATHS),
+)
 SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() in {"1", "true", "yes"}
 CORRETOR_ROUTE_ENABLED = os.getenv("CORRETOR_ROUTE_ENABLED", "true").lower() in {"1", "true", "yes"}
 try:
@@ -192,23 +251,27 @@ def carregar_tabela_precos() -> list[TabelaPrecoItem]:
         payload = _tabela_precos_payload(
             db.query(TabelaPreco).order_by(TabelaPreco.empreendimento.asc(), TabelaPreco.unidade.asc()).all()
         )
-        TABELA_PRECO_CACHE[:] = payload
+        with TABELA_PRECO_CACHE_LOCK:
+          TABELA_PRECO_CACHE[:] = payload
         return payload
     except SQLAlchemyError:
       logger.exception("Falha ao carregar tabela de precos do banco.")
-      if TABELA_PRECO_CACHE:
-        return TABELA_PRECO_CACHE
+      with TABELA_PRECO_CACHE_LOCK:
+        if TABELA_PRECO_CACHE:
+          return list(TABELA_PRECO_CACHE)
       raise
 
-  if TABELA_PRECO_CACHE:
-    return TABELA_PRECO_CACHE
+  with TABELA_PRECO_CACHE_LOCK:
+    if TABELA_PRECO_CACHE:
+      return list(TABELA_PRECO_CACHE)
   if not TABELA_PRECO_PATH.exists():
     return []
   try:
     payload = json.loads(TABELA_PRECO_PATH.read_text(encoding="utf-8"))
   except json.JSONDecodeError:
     return []
-  TABELA_PRECO_CACHE[:] = payload
+  with TABELA_PRECO_CACHE_LOCK:
+    TABELA_PRECO_CACHE[:] = payload
   return payload
 
 
@@ -222,13 +285,15 @@ def salvar_tabela_precos(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         payload = _tabela_precos_payload(
             db.query(TabelaPreco).order_by(TabelaPreco.empreendimento.asc(), TabelaPreco.unidade.asc()).all()
         )
-        TABELA_PRECO_CACHE[:] = payload
+        with TABELA_PRECO_CACHE_LOCK:
+          TABELA_PRECO_CACHE[:] = payload
         return payload
     except SQLAlchemyError:
       logger.exception("Falha ao salvar tabela de precos no banco.")
       raise
 
-  TABELA_PRECO_CACHE[:] = rows
+  with TABELA_PRECO_CACHE_LOCK:
+    TABELA_PRECO_CACHE[:] = rows
   TABELA_PRECO_PATH.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
   return rows
 
@@ -349,9 +414,19 @@ PASSWORD_REQUIRE_UPPER = os.getenv("PASSWORD_REQUIRE_UPPER", "true").lower() in 
 PASSWORD_REQUIRE_LOWER = os.getenv("PASSWORD_REQUIRE_LOWER", "true").lower() in {"1", "true", "yes"}
 PASSWORD_REQUIRE_DIGIT = os.getenv("PASSWORD_REQUIRE_DIGIT", "true").lower() in {"1", "true", "yes"}
 PASSWORD_REQUIRE_SYMBOL = os.getenv("PASSWORD_REQUIRE_SYMBOL", "true").lower() in {"1", "true", "yes"}
+PASSWORD_POLICY = PasswordPolicyConfig(
+    iterations=PASSWORD_HASH_ITERATIONS,
+    min_length=PASSWORD_MIN_LENGTH,
+    require_upper=PASSWORD_REQUIRE_UPPER,
+    require_lower=PASSWORD_REQUIRE_LOWER,
+    require_digit=PASSWORD_REQUIRE_DIGIT,
+    require_symbol=PASSWORD_REQUIRE_SYMBOL,
+)
 ALLOW_WEAK_SEED_PASSWORDS = os.getenv("ALLOW_WEAK_SEED_PASSWORDS", "false").lower() in {"1", "true", "yes"}
 ENABLE_LEGACY_DEMO_USERS = os.getenv("ENABLE_LEGACY_DEMO_USERS", "false").lower() in {"1", "true", "yes"}
 ACTIVE_SESSIONS: dict[str, dict[str, Any]] = {}
+ACTIVE_SESSIONS_LOCK = RLock()
+AUTH_SESSION_MANAGER: Optional[SessionManager] = None
 PROCESS_LIST_CACHE_TTL_SECONDS = int(os.getenv("PROCESS_LIST_CACHE_TTL_SECONDS", "8"))
 try:
     FALL_RISK_DAYS = max(1, int(os.getenv("FALL_RISK_DAYS", "15")))
@@ -371,6 +446,7 @@ except ValueError:
 RUNTIME_SCHEMA_REVISION = "2026-03-01-cca-analise-financeira-v2"
 PENDENCIA_INFO_MIN_LENGTH = 0
 PROCESS_LIST_CACHE: dict[str, dict[str, Any]] = {}
+PROCESS_LIST_CACHE_LOCK = RLock()
 SEED_USERS_READY = False
 CREDITO_PLANEJAMENTO_TIPOS = {"tarefa", "subtarefa", "agendamento", "entrega", "urgente", "anotacao"}
 CREDITO_PLANEJAMENTO_STATUS = {"pendente", "em_andamento", "concluido", "atrasado"}
@@ -537,6 +613,30 @@ def _db_error_hint(exc: SQLAlchemyError) -> str:
     return "Falha de conexao com banco. Revise o DATABASE_URL e a conectividade com o Supabase."
 
 
+def _open_auth_db_session():
+    if SessionLocal is None:
+        return None
+    return SessionLocal()
+
+
+def _get_auth_session_manager() -> SessionManager:
+    global AUTH_SESSION_MANAGER
+    if AUTH_SESSION_MANAGER is None:
+        AUTH_SESSION_MANAGER = SessionManager(
+            config=AUTH_SESSION_CONFIG,
+            open_db_session=_open_auth_db_session,
+            app_session_model=AppSession,
+            app_user_model=AppUser,
+            active_sessions=ACTIVE_SESSIONS,
+            active_sessions_lock=ACTIVE_SESSIONS_LOCK,
+            logger=logger,
+            normalize_role=_normalize_role,
+            session_token_hash=_session_token_hash,
+            utcnow=_utcnow,
+        )
+    return AUTH_SESSION_MANAGER
+
+
 def _warn_default_credentials() -> None:
     defaults = {
         "Troque#Corretor123",
@@ -568,40 +668,19 @@ def _utcnow() -> datetime:
 
 
 def _new_salt() -> str:
-    return secrets.token_hex(16)
+    return runtime_new_salt()
 
 
 def _hash_password(password: str, salt: str) -> str:
-    raw = hashlib.pbkdf2_hmac(
-        "sha256",
-        password.encode("utf-8"),
-        bytes.fromhex(salt),
-        PASSWORD_HASH_ITERATIONS,
-    )
-    return raw.hex()
+    return runtime_hash_password(password, salt, PASSWORD_POLICY.iterations)
 
 
 def _verify_password(password: str, password_hash: str, password_salt: str) -> bool:
-    try:
-        computed = _hash_password(password, password_salt)
-    except Exception:
-        return False
-    return hmac.compare_digest(computed, password_hash)
+    return runtime_verify_password(password, password_hash, password_salt, PASSWORD_POLICY.iterations)
 
 
 def _password_policy_error(password: str) -> Optional[str]:
-    value = password or ""
-    if len(value) < PASSWORD_MIN_LENGTH:
-        return f"Senha deve ter ao menos {PASSWORD_MIN_LENGTH} caracteres."
-    if PASSWORD_REQUIRE_UPPER and not any(ch.isupper() for ch in value):
-        return "Senha deve conter ao menos 1 letra maiuscula."
-    if PASSWORD_REQUIRE_LOWER and not any(ch.islower() for ch in value):
-        return "Senha deve conter ao menos 1 letra minuscula."
-    if PASSWORD_REQUIRE_DIGIT and not any(ch.isdigit() for ch in value):
-        return "Senha deve conter ao menos 1 numero."
-    if PASSWORD_REQUIRE_SYMBOL and not any(not ch.isalnum() for ch in value):
-        return "Senha deve conter ao menos 1 simbolo."
-    return None
+    return runtime_password_policy_error(password, PASSWORD_POLICY)
 
 
 def _normalize_role(value: Optional[str]) -> str:
@@ -635,21 +714,12 @@ def _home_for_role(role: Optional[str]) -> str:
 
 
 def _new_session(user_id: uuid.UUID, username: str, role: str, must_change_password: bool) -> str:
-    token = uuid.uuid4().hex
-    now = _utcnow()
-    session = {
-        "user_id": str(user_id),
-        "username": username,
-        "role": role,
-        "must_change_password": bool(must_change_password),
-        "created_at": now,
-        "last_seen_at": now,
-        "db_checked_at": now,
-        "expires_at": now + timedelta(seconds=SESSION_TTL_SECONDS),
-    }
-    ACTIVE_SESSIONS[token] = session
-    _persist_session_record(token, session)
-    return token
+    return _get_auth_session_manager().new_session(
+        user_id=user_id,
+        username=username,
+        role=role,
+        must_change_password=must_change_password,
+    )
 
 
 def _session_token_hash(token: str) -> str:
@@ -657,181 +727,27 @@ def _session_token_hash(token: str) -> str:
 
 
 def _persist_session_record(token: str, session: dict[str, Any]) -> None:
-    if SessionLocal is None:
-        return
-    db = SessionLocal()
-    try:
-        token_hash = _session_token_hash(token)
-        row = db.query(AppSession).filter(AppSession.session_token_hash == token_hash).first()
-        if row is None:
-            row = AppSession(
-                session_token_hash=token_hash,
-                user_id=uuid.UUID(str(session["user_id"])),
-                username=str(session.get("username", "")),
-                role=_normalize_role(str(session.get("role", ""))),
-                must_change_password=bool(session.get("must_change_password")),
-                created_at=session.get("created_at") or _utcnow(),
-                last_seen_at=session.get("last_seen_at") or _utcnow(),
-                db_checked_at=session.get("db_checked_at") or _utcnow(),
-                expires_at=session.get("expires_at") or (_utcnow() + timedelta(seconds=SESSION_TTL_SECONDS)),
-            )
-            db.add(row)
-        else:
-            row.username = str(session.get("username", ""))
-            row.role = _normalize_role(str(session.get("role", "")))
-            row.must_change_password = bool(session.get("must_change_password"))
-            row.last_seen_at = session.get("last_seen_at") or row.last_seen_at
-            row.db_checked_at = session.get("db_checked_at") or row.db_checked_at
-            row.expires_at = session.get("expires_at") or row.expires_at
-        db.commit()
-    except Exception:
-        db.rollback()
-        logger.exception("Falha ao persistir sessao autenticada.")
-    finally:
-        db.close()
+    _get_auth_session_manager().persist_session_record(token, session)
 
 
 def _load_session_from_store(token: str) -> Optional[dict[str, Any]]:
-    if SessionLocal is None:
-        return None
-    db = SessionLocal()
-    now = _utcnow()
-    try:
-        row = db.query(AppSession).filter(AppSession.session_token_hash == _session_token_hash(token)).first()
-        if not row:
-            return None
-        if row.expires_at <= now:
-            db.delete(row)
-            db.commit()
-            return None
-        return {
-            "user_id": str(row.user_id),
-            "username": row.username,
-            "role": _normalize_role(row.role),
-            "must_change_password": bool(row.must_change_password),
-            "created_at": row.created_at,
-            "last_seen_at": row.last_seen_at,
-            "db_checked_at": row.db_checked_at,
-            "expires_at": row.expires_at,
-        }
-    except Exception:
-        logger.exception("Falha ao carregar sessao persistida.")
-        return None
-    finally:
-        db.close()
+    return _get_auth_session_manager().load_session_from_store(token)
 
 
 def _delete_session_record(token: str) -> None:
-    ACTIVE_SESSIONS.pop(token, None)
-    if SessionLocal is None:
-        return
-    db = SessionLocal()
-    try:
-        row = db.query(AppSession).filter(AppSession.session_token_hash == _session_token_hash(token)).first()
-        if row:
-            db.delete(row)
-            db.commit()
-    except Exception:
-        db.rollback()
-        logger.exception("Falha ao remover sessao persistida.")
-    finally:
-        db.close()
+    _get_auth_session_manager().delete_session_record(token)
 
 
 def _persist_session_activity(token: str, session: dict[str, Any]) -> None:
-    if SessionLocal is None:
-        return
-    db = SessionLocal()
-    try:
-        row = db.query(AppSession).filter(AppSession.session_token_hash == _session_token_hash(token)).first()
-        if not row:
-            return
-        row.username = str(session.get("username", row.username))
-        row.role = _normalize_role(str(session.get("role", row.role)))
-        row.must_change_password = bool(session.get("must_change_password", row.must_change_password))
-        row.last_seen_at = session.get("last_seen_at") or row.last_seen_at
-        row.db_checked_at = session.get("db_checked_at") or row.db_checked_at
-        row.expires_at = session.get("expires_at") or row.expires_at
-        db.commit()
-    except Exception:
-        db.rollback()
-        logger.exception("Falha ao atualizar atividade da sessao.")
-    finally:
-        db.close()
+    _get_auth_session_manager().persist_session_activity(token, session)
 
 
 def _sync_session_from_db(token: str, session: dict[str, Any]) -> Optional[dict[str, Any]]:
-    now = _utcnow()
-    sync_interval_seconds = SESSION_DB_SYNC_INTERVAL_SECONDS
-    if sync_interval_seconds > 0:
-        checked_at = session.get("db_checked_at")
-        if isinstance(checked_at, datetime):
-            checked_at_utc = checked_at if checked_at.tzinfo else checked_at.replace(tzinfo=timezone.utc)
-            if checked_at_utc + timedelta(seconds=sync_interval_seconds) > now:
-                return session
-
-    user_id_raw = str(session.get("user_id", "")).strip()
-    if not user_id_raw or SessionLocal is None:
-        return session
-
-    try:
-        user_id = uuid.UUID(user_id_raw)
-    except ValueError:
-        _delete_session_record(token)
-        return None
-
-    db = SessionLocal()
-    try:
-        row = db.query(AppSession).filter(AppSession.session_token_hash == _session_token_hash(token)).first()
-        if not row:
-            ACTIVE_SESSIONS.pop(token, None)
-            return None
-        if row.expires_at <= now:
-            db.delete(row)
-            db.commit()
-            ACTIVE_SESSIONS.pop(token, None)
-            return None
-        user = db.get(AppUser, user_id)
-        if not user or not user.is_active:
-            db.delete(row)
-            db.commit()
-            ACTIVE_SESSIONS.pop(token, None)
-            return None
-        row.username = user.username
-        row.role = _normalize_role(user.role)
-        row.must_change_password = bool(user.must_change_password)
-        row.db_checked_at = now
-        db.commit()
-        session["username"] = user.username
-        session["role"] = _normalize_role(user.role)
-        session["must_change_password"] = bool(user.must_change_password)
-        session["db_checked_at"] = now
-        session["expires_at"] = row.expires_at
-        return session
-    except Exception:
-        db.rollback()
-        logger.exception("Falha ao validar usuario da sessao no banco.")
-        return session
-    finally:
-        db.close()
+    return _get_auth_session_manager().sync_session_from_db(token, session)
 
 
 def _drop_sessions_for_user(user_id: uuid.UUID) -> None:
-    user_id_str = str(user_id)
-    stale_tokens = [token for token, data in ACTIVE_SESSIONS.items() if str(data.get("user_id", "")) == user_id_str]
-    for token in stale_tokens:
-        ACTIVE_SESSIONS.pop(token, None)
-    if SessionLocal is None:
-        return
-    db = SessionLocal()
-    try:
-        db.query(AppSession).filter(AppSession.user_id == user_id).delete()
-        db.commit()
-    except Exception:
-        db.rollback()
-        logger.exception("Falha ao invalidar sessoes do usuario.")
-    finally:
-        db.close()
+    _get_auth_session_manager().drop_sessions_for_user(user_id)
 
 
 def _process_list_cache_key(
@@ -846,31 +762,34 @@ def _process_list_cache_key(
 def _get_cached_process_list(cache_key: str) -> Optional[list["ProcessoOverviewOut"]]:
     if PROCESS_LIST_CACHE_TTL_SECONDS <= 0:
         return None
-    cached = PROCESS_LIST_CACHE.get(cache_key)
-    if not cached:
-        return None
-    expires_at = cached.get("expires_at")
-    if not isinstance(expires_at, datetime) or expires_at <= _utcnow():
-        PROCESS_LIST_CACHE.pop(cache_key, None)
-        return None
-    data = cached.get("data")
-    if isinstance(data, list):
-        return data
+    with PROCESS_LIST_CACHE_LOCK:
+        cached = PROCESS_LIST_CACHE.get(cache_key)
+        if not cached:
+            return None
+        expires_at = cached.get("expires_at")
+        if not isinstance(expires_at, datetime) or expires_at <= _utcnow():
+            PROCESS_LIST_CACHE.pop(cache_key, None)
+            return None
+        data = cached.get("data")
+        if isinstance(data, list):
+            return data
     return None
 
 
 def _set_cached_process_list(cache_key: str, data: list["ProcessoOverviewOut"]) -> None:
     if PROCESS_LIST_CACHE_TTL_SECONDS <= 0:
         return
-    PROCESS_LIST_CACHE[cache_key] = {
-        "data": data,
-        "expires_at": _utcnow() + timedelta(seconds=PROCESS_LIST_CACHE_TTL_SECONDS),
-    }
+    with PROCESS_LIST_CACHE_LOCK:
+        PROCESS_LIST_CACHE[cache_key] = {
+            "data": data,
+            "expires_at": _utcnow() + timedelta(seconds=PROCESS_LIST_CACHE_TTL_SECONDS),
+        }
 
 
 def _invalidate_process_list_cache() -> None:
-    if PROCESS_LIST_CACHE:
-        PROCESS_LIST_CACHE.clear()
+    with PROCESS_LIST_CACHE_LOCK:
+        if PROCESS_LIST_CACHE:
+            PROCESS_LIST_CACHE.clear()
 
 
 def _extract_origin_host(value: Optional[str]) -> str:
@@ -916,308 +835,32 @@ def _request_client_ip(request: Request) -> str:
     return host
 
 
-def _should_touch_session(request: Request) -> bool:
-    method = (request.method or "").upper()
-    if method != "GET":
-        return True
-
-    path = (request.url.path or "").rstrip("/") or "/"
-    return path not in SESSION_IDLE_PASSIVE_PATHS
-
-
 def _read_session(request: Request) -> Optional[dict[str, Any]]:
-    token = request.cookies.get(SESSION_COOKIE_NAME)
-    if not token:
-        return None
-
-    session = ACTIVE_SESSIONS.get(token)
-    if not session:
-        session = _load_session_from_store(token)
-        if not session:
-            return None
-        ACTIVE_SESSIONS[token] = session
-
-    synced = _sync_session_from_db(token, session)
-    if not synced:
-        return None
-    session = synced
-
-    now = _utcnow()
-    expires_at = session.get("expires_at")
-    if not isinstance(expires_at, datetime) or expires_at <= now:
-        _delete_session_record(token)
-        return None
-
-    if SESSION_IDLE_TIMEOUT_SECONDS > 0:
-        last_seen = session.get("last_seen_at") or session.get("created_at")
-        if not isinstance(last_seen, datetime):
-            _delete_session_record(token)
-            return None
-        if last_seen + timedelta(seconds=SESSION_IDLE_TIMEOUT_SECONDS) <= now:
-            _delete_session_record(token)
-            return None
-
-    # Sliding idle timeout: requisicoes passivas (polling) nao renovam atividade.
-    if _should_touch_session(request):
-        session["last_seen_at"] = now
-        session["db_checked_at"] = now
-        session["expires_at"] = now + timedelta(seconds=SESSION_TTL_SECONDS)
-        _persist_session_activity(token, session)
-    return session
+    return _get_auth_session_manager().read_session(request)
 
 
 def _read_session_user(request: Request) -> Optional[str]:
-    session = _read_session(request)
-    if not session:
-        return None
-    return str(session.get("username", ""))
+    return _get_auth_session_manager().read_session_user(request)
 
 
 def _read_session_role(request: Request) -> Optional[str]:
-    session = _read_session(request)
-    if not session:
-        return None
-    return str(session.get("role", ""))
+    return _get_auth_session_manager().read_session_role(request)
 
 
 def require_app_session(request: Request) -> dict[str, Any]:
-    session = _read_session(request)
-    if not session:
-        raise HTTPException(status_code=401, detail="Nao autenticado")
-    return session
+    return _get_auth_session_manager().require_app_session(request)
 
 
 def require_fully_authenticated_session(request: Request) -> dict[str, Any]:
-    session = require_app_session(request)
-    if bool(session.get("must_change_password")):
-        raise HTTPException(status_code=403, detail="Troca de senha obrigatoria")
-    return session
+    return _get_auth_session_manager().require_fully_authenticated_session(request)
 
 
 def require_app_user(request: Request) -> str:
-    session = require_fully_authenticated_session(request)
-    username = str(session.get("username", ""))
-    if not username:
-        raise HTTPException(status_code=401, detail="Nao autenticado")
-    return username
+    return _get_auth_session_manager().require_app_user(request)
 
 
 def require_roles(*roles: str):
-    allowed_roles = {_normalize_role(role) for role in roles if role}
-
-    def _dependency(request: Request) -> dict[str, Any]:
-        session = require_fully_authenticated_session(request)
-        role = _normalize_role(str(session.get("role", "")))
-        if allowed_roles and role not in allowed_roles:
-            raise HTTPException(status_code=403, detail="Sem permissao para este perfil")
-        return session
-
-    return _dependency
-
-
-PROCESS_CREDITO_STATUSES = {"EM_ANALISE", "PENDENCIADO", "APROVADO", "REPROVADO"}
-PROCESS_GERAL_STATUSES = {"NOVO", "EM_ANDAMENTO", "PENDENCIADO", "APROVADO", "REPROVADO", "DISTRATO", "CANCELADO"}
-PROCESS_CAIXA_STATUSES = {
-    "ANALISE_CREDITO",
-    "PENDENTE_CREDITO",
-    "ANALISE_CCA",
-    "PENDENTE_CCA",
-    "APROVADO",
-    "REPROVADO",
-    "CONDICIONADO",
-    "BLOQUEADO",
-    "DAR_QV",
-    "AGUARDANDO_CONFORMIDADE",
-    "CONFORME",
-    "TRATANDO_PRODUTO",
-    "AGENDADO",
-    "ASSINATURA_CAIXA",
-    "FINALIZADO",
-}
-PROCESS_AGEHAB_STATUSES = {"ANALISE_CREDITO", "PENDENTE_CREDITO", "ENVIO_AGEHAB", "PENDENTE_AGEHAB", "VALIDADO_AGEHAB"}
-PROCESS_SINAL_STATUSES = {"NAO_TEM", "PENDENTE", "PAGO"}
-PROCESS_FIADOR_STATUSES = {"NAO_TEM", "PENDENTE", "FINALIZADO"}
-PROCESS_RECOLHA_FGTS_STATUSES = {"OK", "NAO_RECOLHIDO", "VALIDADO_PELO_BANCO", "RECOLHENDO"}
-PROCESS_GERAL_FINAL_STATUSES = {"APROVADO", "REPROVADO", "DISTRATO", "CANCELADO"}
-PROCESS_GERAL_ARQUIVO_IMEDIATO = {"CANCELADO", "DISTRATO"}
-PROCESS_CCA_FINAL_STATUSES = {"ASSINATURA_CAIXA", "FINALIZADO"}
-CAIXA_ASSINATURA_APTA_STATUSES = {
-    "APROVADO",
-    "DAR_QV",
-    "CONFORME",
-    "TRATANDO_PRODUTO",
-    "AGENDADO",
-    "ASSINATURA_CAIXA",
-    "FINALIZADO",
-}
-
-ESTAGIO_COMERCIAL_VALUES = [
-    "RESERVA",
-    "EM_PROCESSO",
-    "CREDITO",
-    "SECRETARIA_VENDAS",
-    "ASSINATURA_DIRETORIA",
-    "AUTORIZACAO_DIRETORIA",
-    "ENVIO_SIENGE",
-    "VENDA_FINALIZADA",
-]
-ESTAGIO_COMERCIAL_SET = set(ESTAGIO_COMERCIAL_VALUES)
-ESTAGIO_COMERCIAL_INDEX = {value: idx for idx, value in enumerate(ESTAGIO_COMERCIAL_VALUES)}
-REPASSE_ETAPAS_VALUES = [
-    "EM_REPASSE",
-    "INICIO_REPASSE",
-    "ASSINATURA_AUTORIZADA",
-]
-REPASSE_ETAPAS_SET = set(REPASSE_ETAPAS_VALUES)
-ESTAGIOS_REPASSE_COMERCIAL = {
-    "ASSINATURA_DIRETORIA",
-    "AUTORIZACAO_DIRETORIA",
-    "ENVIO_SIENGE",
-    "VENDA_FINALIZADA",
-}
-ESTAGIOS_DASH_COMERCIAL = {"EM_PROCESSO", "CREDITO", "SECRETARIA_VENDAS"}
-PROCESS_OVERVIEW_LABELS = {
-    "geral": {
-        "reserva": "Reserva",
-        "em_processo": "Em Processo",
-        "credito": "Credito",
-        "secretaria_vendas": "Secretaria de Vendas",
-        "assinatura_diretoria": "Assinatura Diretoria",
-        "autorizacao_diretoria": "Aprovacao Diretoria",
-        "envio_sienge": "Envio Sienge",
-        "venda_finalizada": "Venda Finalizada",
-    },
-    "repasse": {
-        "em_repasse": "Em Repasse",
-        "inicio_repasse": "Inicio Repasse",
-        "assinatura_autorizada": "Assinatura Autorizada",
-        "assinatura_caixa": "Assinatura Caixa",
-        "inicio_garantia": "Inicio Garantia",
-        "sem_repasse": "Sem Repasse",
-    },
-    "status_cca": {
-        "nao_iniciado": "Nao iniciado",
-        "analise_credito": "Analise Credito",
-        "pendente_credito": "Pendente Credito",
-        "analise_cca": "Analise CCA",
-        "pendente_cca": "Pendente CCA",
-        "aprovado": "Aprovado",
-        "reprovado": "Reprovado",
-        "condicionado": "Condicionado",
-        "bloqueado": "Bloqueado",
-        "dar_qv": "Dar QV",
-        "aguardando_conformidade": "Aguardando Conformidade",
-        "conforme": "Conforme",
-        "tratando_produto": "Tratando Produto",
-        "agendado": "Agendado",
-        "assinatura_caixa": "Assinatura Caixa",
-        "finalizado": "Finalizado",
-    },
-    "status_agehab": {
-        "nao_iniciado": "Nao iniciado",
-        "analise_credito": "Analise Credito",
-        "pendente_credito": "Pendente Credito",
-        "envio_agehab": "Envio Agehab",
-        "pendente_agehab": "Pendente Agehab",
-        "validado_agehab": "Validado Agehab",
-    },
-    "status_sinal": {
-        "nao_tem": "Nao tem",
-        "pendente": "Pendente",
-        "pago": "Pago",
-    },
-    "status_fiador": {
-        "nao_tem": "Nao tem",
-        "pendente": "Pendente",
-        "finalizado": "Finalizado",
-    },
-}
-PROCESS_READY_STATUS_KEYS = {
-    "status_cca": {"aprovado", "dar_qv", "conforme", "tratando_produto", "agendado", "assinatura_caixa", "finalizado"},
-    "status_agehab": {"validado_agehab"},
-    "status_sinal": {"nao_tem", "pago"},
-    "status_fiador": {"nao_tem", "finalizado"},
-}
-PLANEJAMENTO_ENTREGA_META_PREFIX = "__entrega_meta__:"
-PLANEJAMENTO_DIA_TODO_META_PREFIX = "__dia_todo_meta__:"
-PLANEJAMENTO_ENTREGA_STATUS_LABELS = {
-    "entregue": "Entregue",
-    "caixa": "Caixa",
-    "agehab": "Agehab",
-    "pendenciado": "Pendenciado",
-}
-PLANEJAMENTO_TIPO_LABELS = {
-    "tarefa": "Tarefa",
-    "subtarefa": "Subtarefa",
-    "agendamento": "Agendamento",
-    "entrega": "Entrega",
-    "urgente": "Urgente",
-    "anotacao": "Anotacao",
-}
-PLANEJAMENTO_STATUS_LABELS = {
-    "pendente": "Pendente",
-    "em_andamento": "Em andamento",
-    "concluido": "Concluido",
-    "atrasado": "Atrasado",
-}
-LEAD_STAGE_VALUES = [
-    "LEAD",
-    "AGENDAMENTO",
-    "VISITA",
-    "PRECADASTRO",
-    "RESERVA",
-    "PERDIDO",
-]
-LEAD_STAGE_SET = set(LEAD_STAGE_VALUES)
-LEAD_CCA_DECISION_VALUES = [
-    "EM_ANALISE",
-    "APROVADO",
-    "CONDICIONADO",
-    "REPROVADO",
-    "BLOQUEADO",
-    "DAR_QV",
-]
-LEAD_CCA_DECISION_SET = set(LEAD_CCA_DECISION_VALUES)
-UNIDADE_STATUS_VALUES = ["DISPONIVEL", "RESERVADA", "VENDIDA", "BLOQUEADA"]
-UNIDADE_STATUS_SET = set(UNIDADE_STATUS_VALUES)
-IMPORT_REQUIRED_COLUMNS = {
-    "reserva",
-    "nome_cliente",
-    "data_cadastro",
-    "estagio",
-    "empreendimento",
-    "corretor",
-    "imobiliaria",
-}
-IMPORT_COLUMN_ALIASES = {
-    "reserva": "reserva",
-    "data_reserva": "reserva",
-    "data_da_reserva": "reserva",
-    "data_criacao_reserva": "reserva",
-    "nome": "nome_cliente",
-    "cliente": "nome_cliente",
-    "nome_cliente": "nome_cliente",
-    "nome_do_cliente": "nome_cliente",
-    "data": "data_cadastro",
-    "data_cad": "data_cadastro",
-    "data_cadastro": "data_cadastro",
-    "data_de_cadastro": "data_cadastro",
-    "status": "estagio",
-    "situacao": "estagio",
-    "estagio": "estagio",
-    "empreendimento": "empreendimento",
-    "obra": "empreendimento",
-    "corretor": "corretor",
-    "imobiliaria": "imobiliaria",
-}
-CSV_IMPORT_ENCODINGS = ("utf-8-sig", "utf-8", "cp1252", "latin-1")
-CSV_IMPORT_DELIMITERS = (",", ";", "\t", "|")
-
-SLA_OWNER_NONE = "NONE"
-SLA_OWNER_CORRETOR = "CORRETOR"
-SLA_OWNER_ANALISTA = "ANALISTA"
-SLA_OWNER_CCA = "CCA"
-SLA_OWNER_VALUES = {SLA_OWNER_NONE, SLA_OWNER_CORRETOR, SLA_OWNER_ANALISTA, SLA_OWNER_CCA}
+    return _get_auth_session_manager().require_roles(*roles)
 
 
 def _status_token(value: Optional[str]) -> str:
@@ -5641,9 +5284,6 @@ def _serve_react_app(path: str = ""):
         return _react_app_unavailable_response()
 
     normalized_path = path.strip("/")
-    if normalized_path == "gestor" or normalized_path.startswith("gestor/"):
-        return RedirectResponse(url="/app/gestor", status_code=302)
-
     index_file = REACT_DIST_DIR / "index.html"
     index_headers = {"Cache-Control": "no-store, max-age=0, must-revalidate"}
     if not path:
@@ -5980,6 +5620,8 @@ def app_gestor_credito_page(request: Request):
     role = _normalize_role(str(session.get("role", "")))
     if role not in {ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
+    if REACT_DIST_DIR.exists():
+        return RedirectResponse(url="/app-react/gestor", status_code=302)
     return _html_page("gestor_credito.html")
 
 
@@ -6006,6 +5648,8 @@ def app_gestor_page(request: Request):
     role = _normalize_role(str(session.get("role", "")))
     if role not in {ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN}:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
+    if REACT_DIST_DIR.exists():
+        return RedirectResponse(url="/app-react/gestor", status_code=302)
     return _html_page("gestor.html")
 
 
@@ -6157,12 +5801,17 @@ def auth_change_password(
     db.refresh(user)
 
     token = request.cookies.get(SESSION_COOKIE_NAME)
-    if token and token in ACTIVE_SESSIONS:
-        ACTIVE_SESSIONS[token]["must_change_password"] = False
-        ACTIVE_SESSIONS[token]["role"] = _normalize_role(user.role)
-        ACTIVE_SESSIONS[token]["username"] = user.username
-        ACTIVE_SESSIONS[token]["db_checked_at"] = _utcnow()
-        _persist_session_activity(token, ACTIVE_SESSIONS[token])
+    session = None
+    if token:
+        with ACTIVE_SESSIONS_LOCK:
+            session = ACTIVE_SESSIONS.get(token)
+            if session:
+                session["must_change_password"] = False
+                session["role"] = _normalize_role(user.role)
+                session["username"] = user.username
+                session["db_checked_at"] = _utcnow()
+        if session:
+            _persist_session_activity(token, session)
 
     return {
         "ok": True,
@@ -7710,7 +7359,8 @@ def admin_reset_sistema(
 
     db.commit()
     _invalidate_process_list_cache()
-    ACTIVE_SESSIONS.clear()
+    with ACTIVE_SESSIONS_LOCK:
+        ACTIVE_SESSIONS.clear()
     db.query(AppSession).delete()
     db.commit()
     SEED_USERS_READY = False
@@ -11802,160 +11452,7 @@ def _frankstein_db_conn():
 
 
 def _ensure_frankstein_tables():
-    conn = _frankstein_db_conn()
-    if conn is None:
-        return
-    try:
-        with conn, conn.cursor() as cur:
-            cur.execute(
-                """
-                DO $$
-                BEGIN
-                    IF to_regclass('public.frankstein_events') IS NULL AND to_regclass('public.yvy_events') IS NOT NULL THEN
-                        EXECUTE 'ALTER TABLE yvy_events RENAME TO frankstein_events';
-                    END IF;
-                    IF to_regclass('public.frankstein_models') IS NULL AND to_regclass('public.yvy_models') IS NOT NULL THEN
-                        EXECUTE 'ALTER TABLE yvy_models RENAME TO frankstein_models';
-                    END IF;
-                END
-                $$;
-                """
-            )
-            cur.execute(
-                """
-                create table if not exists frankstein_events(
-                    id bigserial primary key,
-                    event_id uuid,
-                    "timestamp" timestamptz default now(),
-                    processo_id text,
-                    lead_id text,
-                    cliente_id text,
-                    reserva_id text,
-                    corretor_id text,
-                    empreendimento text,
-                    perfil text,
-                    renda_bruta numeric,
-                    valor_tabela numeric,
-                    sobrepreco_vila numeric,
-                    valor_obtido numeric,
-                    parcela_caixa numeric,
-                    preco_digitado_corretor numeric,
-                    preco_base_politica numeric,
-                    preco_final numeric,
-                    entrada_liquida numeric,
-                    valor_parcela_entrada numeric,
-                    is_pos_chaves numeric,
-                    status_ia_heuristica text,
-                    bloqueio_critico boolean,
-                    motivo_auditoria text,
-                    garantidores_necessarios integer,
-                    exposicao_risco numeric,
-                    alerta_preco text,
-                    valor_venda numeric,
-                    garantido numeric,
-                    cheque_moradia numeric,
-                    faltante numeric,
-                    qtd_problemas_documentais integer,
-                    score_risco_regra numeric,
-                    status_geral_regra text,
-                    decisao_recomendada_regra text,
-                    probabilidade_modelo numeric,
-                    preco_frankstein numeric,
-                    confianca_modelo numeric,
-                    modelo_versao text,
-                    teve_pendencia_cca boolean,
-                    teve_pendencia_agehab boolean,
-                    foi_aprovado boolean,
-                    foi_reprovado boolean,
-                    virou_condicionado boolean,
-                    assinou_caixa boolean,
-                    finalizou boolean,
-                    tempo_ate_assinatura_horas numeric,
-                    tempo_total_processo_horas numeric,
-                    retorno_cca text,
-                    resultado_real text,
-                    input_json jsonb,
-                    heuristica_json jsonb,
-                    frankstein_json jsonb,
-                    features_json jsonb,
-                    origem text,
-                    created_at timestamptz default now(),
-                    updated_at timestamptz default now()
-                );
-                """
-            )
-            alter_statements = [
-                'alter table frankstein_events add column if not exists event_id uuid',
-                'alter table frankstein_events add column if not exists "timestamp" timestamptz',
-                'alter table frankstein_events add column if not exists processo_id text',
-                'alter table frankstein_events add column if not exists lead_id text',
-                'alter table frankstein_events add column if not exists cliente_id text',
-                'alter table frankstein_events add column if not exists reserva_id text',
-                'alter table frankstein_events add column if not exists corretor_id text',
-                'alter table frankstein_events add column if not exists empreendimento text',
-                'alter table frankstein_events add column if not exists perfil text',
-                'alter table frankstein_events add column if not exists preco_base_politica numeric',
-                'alter table frankstein_events add column if not exists preco_final numeric',
-                'alter table frankstein_events add column if not exists entrada_liquida numeric',
-                'alter table frankstein_events add column if not exists valor_parcela_entrada numeric',
-                'alter table frankstein_events add column if not exists status_ia_heuristica text',
-                'alter table frankstein_events add column if not exists bloqueio_critico boolean',
-                'alter table frankstein_events add column if not exists motivo_auditoria text',
-                'alter table frankstein_events add column if not exists garantidores_necessarios integer',
-                'alter table frankstein_events add column if not exists exposicao_risco numeric',
-                'alter table frankstein_events add column if not exists alerta_preco text',
-                'alter table frankstein_events add column if not exists valor_venda numeric',
-                'alter table frankstein_events add column if not exists garantido numeric',
-                'alter table frankstein_events add column if not exists cheque_moradia numeric',
-                'alter table frankstein_events add column if not exists faltante numeric',
-                'alter table frankstein_events add column if not exists qtd_problemas_documentais integer',
-                'alter table frankstein_events add column if not exists score_risco_regra numeric',
-                'alter table frankstein_events add column if not exists status_geral_regra text',
-                'alter table frankstein_events add column if not exists decisao_recomendada_regra text',
-                'alter table frankstein_events add column if not exists probabilidade_modelo numeric',
-                'alter table frankstein_events add column if not exists preco_frankstein numeric',
-                'alter table frankstein_events add column if not exists confianca_modelo numeric',
-                'alter table frankstein_events add column if not exists modelo_versao text',
-                'alter table frankstein_events add column if not exists teve_pendencia_cca boolean',
-                'alter table frankstein_events add column if not exists teve_pendencia_agehab boolean',
-                'alter table frankstein_events add column if not exists foi_aprovado boolean',
-                'alter table frankstein_events add column if not exists foi_reprovado boolean',
-                'alter table frankstein_events add column if not exists virou_condicionado boolean',
-                'alter table frankstein_events add column if not exists assinou_caixa boolean',
-                'alter table frankstein_events add column if not exists finalizou boolean',
-                'alter table frankstein_events add column if not exists tempo_ate_assinatura_horas numeric',
-                'alter table frankstein_events add column if not exists tempo_total_processo_horas numeric',
-                'alter table frankstein_events add column if not exists retorno_cca text',
-                'alter table frankstein_events add column if not exists resultado_real text',
-                'alter table frankstein_events add column if not exists input_json jsonb',
-                'alter table frankstein_events add column if not exists heuristica_json jsonb',
-                'alter table frankstein_events add column if not exists frankstein_json jsonb',
-                'alter table frankstein_events add column if not exists features_json jsonb',
-                'alter table frankstein_events add column if not exists origem text',
-                'alter table frankstein_events add column if not exists updated_at timestamptz default now()',
-            ]
-            for statement in alter_statements:
-                cur.execute(statement)
-            cur.execute("create unique index if not exists ix_frankstein_events_event_id on frankstein_events(event_id)")
-            cur.execute('create index if not exists ix_frankstein_events_timestamp on frankstein_events("timestamp")')
-            cur.execute("create index if not exists ix_frankstein_events_processo_id on frankstein_events(processo_id)")
-            cur.execute("create index if not exists ix_frankstein_events_lead_id on frankstein_events(lead_id)")
-            cur.execute("create index if not exists ix_frankstein_events_resultado_real on frankstein_events(resultado_real)")
-            cur.execute(
-                """
-                create table if not exists frankstein_models(
-                    id bigserial primary key,
-                    version text not null,
-                    created_at timestamptz default now(),
-                    artifact jsonb not null,
-                    notes text
-                );
-                """
-            )
-    except Exception:
-        logger.exception("Nao foi possivel garantir tabelas frankstein no banco.")
-    finally:
-        conn.close()
+    runtime_ensure_frankstein_tables(conn_factory=_frankstein_db_conn, logger=logger)
 
 
 def _log_frankstein_event_db(event: dict[str, Any]) -> bool:

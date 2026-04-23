@@ -31,12 +31,25 @@ export interface ClienteFaseItem {
   imobiliaria?: string | null
   estagio_comercial?: string
   etapa_repasse?: string
+  fila_atual?: string
+  status_geral?: string
+  status_credito?: string
   status_cca?: string
   status_agehab?: string
   status_sinal?: string
+  valor_sinal?: number | null
   status_fiador?: string
+  recolha_fgts?: string
   dias_em_aberto?: number | null
+  data_cadastro_origem?: string | null
+  pendencias_documentos?: number | null
+  tem_pendencia_status?: boolean
+  tem_pendencia?: boolean
+  docs_total?: number | null
+  docs_todos_aguardando?: boolean
+  docs_pendentes_tooltip?: string | null
   nao_contar_mes?: boolean
+  pronto_para_repassar?: boolean
 }
 
 export interface ImobiliariaResumo {
@@ -47,10 +60,16 @@ export interface ImobiliariaResumo {
 
 export interface GestorDashboardResponse {
   total: number
+  total_bruto?: number
+  assinados?: number
   total_assinados: number
   conformidade_ok: number
   enviados_conformidade: number
   em_analise: number
+  com_pendencias?: number
+  passiveis_cair?: number
+  nao_iniciado?: number
+  processos_ativos?: number
   perdas_mes: number
   provaveis_cair: number
   nao_contar_mes: number
@@ -64,6 +83,25 @@ export interface GestorDashboardResponse {
   real_semanal: number
   previsao_semanal: number
   media_necessaria_dia: number
+  media_necessaria_semana_dia_util?: number
+  chegadas_ultimos_7_dias?: number
+  media_chegadas_dia_7d?: number
+  projecao_chegadas_30_dias?: number
+  janela_chegadas_dias?: number
+  janela_projecao_chegadas_dias?: number
+  dias_estimativa_queda?: number
+  total_comercial?: number
+  total_repasse?: number
+  total_credito?: number
+  meta_fonte?: string
+  meta_semanal_fonte?: string
+  meta_periodo_ano?: number
+  meta_periodo_mes?: number
+  dias_uteis_decorridos_semana?: number
+  dias_uteis_restantes_semana?: number
+  semana_inicio?: string
+  semana_fim_util?: string
+  semana_fim_contagem?: string
   clientes_por_fase: Record<string, ClienteFaseItem[]>
   clientes_estagios: ClienteFaseItem[]
   imobiliarias: ImobiliariaResumo[]
@@ -135,6 +173,7 @@ export interface ProcessoApiItem {
   cliente_nome?: string | null
   obra?: string | null
   corretor?: string | null
+  imobiliaria?: string | null
   cca_responsavel?: string | null
   status_credito?: string | null
   estagio_comercial?: string | null
