@@ -1536,7 +1536,7 @@
 
     document.getElementById("btnResetSistema").addEventListener("click", async () => {
       const confirmacao = confirm(
-        "Apagar banco total remove clientes, processos, documentos, empreendimentos, logs e metadados. Usuarios cadastrados sao preservados."
+        "Apagar banco total remove clientes, processos, documentos, pre-cadastros, itens de planejamento, empreendimentos, logs e metadados. Usuarios cadastrados sao preservados."
       );
       if (!confirmacao) return;
       const prova = prompt("Digite APAGAR TUDO para confirmar a limpeza total:");
@@ -1551,6 +1551,8 @@
           `Clientes removidos: ${result.cliente_registros_removidos || 0}\n` +
           `Processos removidos: ${result.processos_removidos || 0}\n` +
           `Documentos removidos: ${result.documentos_removidos || 0}\n` +
+          `Pre-cadastros removidos: ${result.pre_cadastros_removidos || 0}\n` +
+          `Itens de planejamento removidos: ${result.planejamento_itens_removidos || 0}\n` +
           `Empreendimentos removidos: ${result.empreendimentos_removidos || 0}\n` +
           `Eventos removidos: ${result.processo_eventos_removidos || 0}\n` +
           `Logs removidos: ${result.sistema_logs_removidos || 0}\n` +

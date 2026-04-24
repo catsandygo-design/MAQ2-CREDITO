@@ -7300,9 +7300,16 @@ def admin_reset_sistema(
 ):
     global SEED_USERS_READY
 
+    admin_username = _normalize_username(RESET_ADMIN_USERNAME) or _normalize_username(APP_ADMIN_USER)
+    admin_password = (APP_ADMIN_PASSWORD or "").strip()
+    if not admin_password:
+        raise HTTPException(status_code=503, detail="APP_ADMIN_PASSWORD precisa estar configurada para reset administrativo.")
+
     clientes_total = int(db.query(func.count(Cliente.id)).scalar() or 0)
     processos_total = int(db.query(func.count(Processo.id)).scalar() or 0)
     documentos_total = int(db.query(func.count(Documento.id)).scalar() or 0)
+    pre_cadastros_total = int(db.query(func.count(LeadPreCadastro.id)).scalar() or 0)
+    planejamento_total = int(db.query(func.count(CreditoPlanejamentoItem.id)).scalar() or 0)
     empreendimentos_total = int(db.query(func.count(Empreendimento.id)).scalar() or 0)
     unidades_total = int(db.query(func.count(UnidadeDisponivel.id)).scalar() or 0)
     eventos_total = int(db.query(func.count(ProcessoEvento.id)).scalar() or 0)
@@ -7313,20 +7320,22 @@ def admin_reset_sistema(
     if runtime_meta_exists:
         runtime_meta_total = int(db.execute(text("SELECT COUNT(*) FROM app_runtime_meta")).scalar() or 0)
 
+    # Remove entidades dependentes de processo explicitamente para nao depender
+    # apenas de cascades do banco e garantir limpeza completa da carteira.
+    db.query(AnalistaReuniaoCompromisso).delete(synchronize_session=False)
+    db.query(AnalistaReuniaoComercial).delete(synchronize_session=False)
     db.query(Documento).delete(synchronize_session=False)
     db.query(ProcessoEvento).delete(synchronize_session=False)
+    db.query(LeadPreCadastro).delete(synchronize_session=False)
     db.query(Processo).delete(synchronize_session=False)
     db.query(Cliente).delete(synchronize_session=False)
+    db.query(CreditoPlanejamentoItem).delete(synchronize_session=False)
     db.query(Empreendimento).delete(synchronize_session=False)
     db.query(UnidadeDisponivel).delete(synchronize_session=False)
     db.query(SistemaLog).delete(synchronize_session=False)
     if runtime_meta_exists:
         db.execute(text("DELETE FROM app_runtime_meta"))
 
-    admin_username = _normalize_username(RESET_ADMIN_USERNAME) or _normalize_username(APP_ADMIN_USER)
-    admin_password = (APP_ADMIN_PASSWORD or "").strip()
-    if not admin_password:
-        raise HTTPException(status_code=503, detail="APP_ADMIN_PASSWORD precisa estar configurada para reset administrativo.")
     admin_user = db.query(AppUser).filter(func.lower(AppUser.username) == admin_username).first()
     admin_criado = False
 
@@ -7370,6 +7379,8 @@ def admin_reset_sistema(
         "cliente_registros_removidos": clientes_total,
         "processos_removidos": processos_total,
         "documentos_removidos": documentos_total,
+        "pre_cadastros_removidos": pre_cadastros_total,
+        "planejamento_itens_removidos": planejamento_total,
         "empreendimentos_removidos": empreendimentos_total,
         "unidades_disponiveis_removidas": unidades_total,
         "processo_eventos_removidos": eventos_total,
