@@ -7310,15 +7310,24 @@ def admin_reset_sistema(
     documentos_total = int(db.query(func.count(Documento.id)).scalar() or 0)
     pre_cadastros_total = int(db.query(func.count(LeadPreCadastro.id)).scalar() or 0)
     planejamento_total = int(db.query(func.count(CreditoPlanejamentoItem.id)).scalar() or 0)
+    analises_total = int(db.query(func.count(AnaliseRegistroDB.id)).scalar() or 0)
+    feedback_total = int(db.query(func.count(IaFeedback.id)).scalar() or 0)
     empreendimentos_total = int(db.query(func.count(Empreendimento.id)).scalar() or 0)
     unidades_total = int(db.query(func.count(UnidadeDisponivel.id)).scalar() or 0)
     eventos_total = int(db.query(func.count(ProcessoEvento.id)).scalar() or 0)
     logs_total = int(db.query(func.count(SistemaLog.id)).scalar() or 0)
     usuarios_total = int(db.query(func.count(AppUser.id)).scalar() or 0)
+    analises_legacy_total = 0
     runtime_meta_total = 0
     runtime_meta_exists = bool(db.execute(text("SELECT to_regclass('public.app_runtime_meta')")).scalar())
     if runtime_meta_exists:
         runtime_meta_total = int(db.execute(text("SELECT COUNT(*) FROM app_runtime_meta")).scalar() or 0)
+    if AnaliseSessionLocal is not None:
+        analise_db = AnaliseSessionLocal()
+        try:
+            analises_legacy_total = int(analise_db.query(func.count(Analise.id)).scalar() or 0)
+        finally:
+            analise_db.close()
 
     # Remove entidades dependentes de processo explicitamente para nao depender
     # apenas de cascades do banco e garantir limpeza completa da carteira.
@@ -7330,6 +7339,8 @@ def admin_reset_sistema(
     db.query(Processo).delete(synchronize_session=False)
     db.query(Cliente).delete(synchronize_session=False)
     db.query(CreditoPlanejamentoItem).delete(synchronize_session=False)
+    db.query(AnaliseRegistroDB).delete(synchronize_session=False)
+    db.query(IaFeedback).delete(synchronize_session=False)
     db.query(Empreendimento).delete(synchronize_session=False)
     db.query(UnidadeDisponivel).delete(synchronize_session=False)
     db.query(SistemaLog).delete(synchronize_session=False)
@@ -7374,6 +7385,36 @@ def admin_reset_sistema(
     db.commit()
     SEED_USERS_READY = False
 
+    analises_legacy_remanescentes = 0
+    if AnaliseSessionLocal is not None:
+        analise_db = AnaliseSessionLocal()
+        try:
+            analise_db.query(Analise).delete(synchronize_session=False)
+            analise_db.commit()
+            analises_legacy_remanescentes = int(analise_db.query(func.count(Analise.id)).scalar() or 0)
+        except Exception:
+            analise_db.rollback()
+            analises_legacy_remanescentes = analises_legacy_total
+            logger.exception("Falha ao limpar base legada de analises no reset administrativo.")
+        finally:
+            analise_db.close()
+
+    remanescentes = {
+        "clientes": int(db.query(func.count(Cliente.id)).scalar() or 0),
+        "processos": int(db.query(func.count(Processo.id)).scalar() or 0),
+        "documentos": int(db.query(func.count(Documento.id)).scalar() or 0),
+        "pre_cadastros": int(db.query(func.count(LeadPreCadastro.id)).scalar() or 0),
+        "planejamento_itens": int(db.query(func.count(CreditoPlanejamentoItem.id)).scalar() or 0),
+        "analises": int(db.query(func.count(AnaliseRegistroDB.id)).scalar() or 0),
+        "ia_feedback": int(db.query(func.count(IaFeedback.id)).scalar() or 0),
+        "empreendimentos": int(db.query(func.count(Empreendimento.id)).scalar() or 0),
+        "unidades_disponiveis": int(db.query(func.count(UnidadeDisponivel.id)).scalar() or 0),
+        "processo_eventos": int(db.query(func.count(ProcessoEvento.id)).scalar() or 0),
+        "sistema_logs": int(db.query(func.count(SistemaLog.id)).scalar() or 0),
+        "analises_legacy": analises_legacy_remanescentes,
+    }
+    remanescentes = {key: value for key, value in remanescentes.items() if value > 0}
+
     return {
         "ok": True,
         "cliente_registros_removidos": clientes_total,
@@ -7381,6 +7422,9 @@ def admin_reset_sistema(
         "documentos_removidos": documentos_total,
         "pre_cadastros_removidos": pre_cadastros_total,
         "planejamento_itens_removidos": planejamento_total,
+        "analises_removidas": analises_total,
+        "ia_feedback_removidos": feedback_total,
+        "analises_legacy_removidas": analises_legacy_total,
         "empreendimentos_removidos": empreendimentos_total,
         "unidades_disponiveis_removidas": unidades_total,
         "processo_eventos_removidos": eventos_total,
@@ -7391,6 +7435,7 @@ def admin_reset_sistema(
         "usuario_preservado": admin_username,
         "usuario_preservado_criado": admin_criado,
         "relogin_obrigatorio": True,
+        "registros_remanescentes": remanescentes,
     }
 
 

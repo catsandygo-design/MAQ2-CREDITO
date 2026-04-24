@@ -1546,6 +1546,12 @@
       }
       try {
         const result = await api("/app/api/admin/maintenance/reset-sistema", { method: "POST" });
+        const remanescentes = result.registros_remanescentes && typeof result.registros_remanescentes === "object"
+          ? Object.entries(result.registros_remanescentes)
+              .filter(([, value]) => Number(value || 0) > 0)
+              .map(([key, value]) => `${key}: ${value}`)
+              .join("\n")
+          : "";
         alert(
           `Reset concluido.\n` +
           `Clientes removidos: ${result.cliente_registros_removidos || 0}\n` +
@@ -1553,12 +1559,16 @@
           `Documentos removidos: ${result.documentos_removidos || 0}\n` +
           `Pre-cadastros removidos: ${result.pre_cadastros_removidos || 0}\n` +
           `Itens de planejamento removidos: ${result.planejamento_itens_removidos || 0}\n` +
+          `Analises removidas: ${result.analises_removidas || 0}\n` +
+          `Feedback IA removidos: ${result.ia_feedback_removidos || 0}\n` +
+          `Analises legadas removidas: ${result.analises_legacy_removidas || 0}\n` +
           `Empreendimentos removidos: ${result.empreendimentos_removidos || 0}\n` +
           `Eventos removidos: ${result.processo_eventos_removidos || 0}\n` +
           `Logs removidos: ${result.sistema_logs_removidos || 0}\n` +
           `Metadados removidos: ${result.runtime_meta_removidos || 0}\n` +
           `Usuarios removidos (preservados por seguranca): ${result.usuarios_removidos || 0}\n` +
-          `Usuario preservado: ${result.usuario_preservado || "douglasadm"}`
+          `Usuario preservado: ${result.usuario_preservado || "douglasadm"}` +
+          (remanescentes ? `\n\nAinda restaram registros em:\n${remanescentes}` : "")
         );
         window.location.href = "/login";
       } catch (error) {
