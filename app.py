@@ -7295,15 +7295,14 @@ def admin_purge_historicos(
 
 @app.post("/app/api/admin/maintenance/reset-sistema")
 def admin_reset_sistema(
-    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
     global SEED_USERS_READY
 
-    admin_username = _normalize_username(RESET_ADMIN_USERNAME) or _normalize_username(APP_ADMIN_USER)
-    admin_password = (APP_ADMIN_PASSWORD or "").strip()
-    if not admin_password:
-        raise HTTPException(status_code=503, detail="APP_ADMIN_PASSWORD precisa estar configurada para reset administrativo.")
+    session_user_id = str(session.get("user_id", "")).strip()
+    session_username = _normalize_username(str(session.get("username", "")))
+    admin_username = session_username or _normalize_username(RESET_ADMIN_USERNAME) or _normalize_username(APP_ADMIN_USER)
 
     clientes_total = int(db.query(func.count(Cliente.id)).scalar() or 0)
     processos_total = int(db.query(func.count(Processo.id)).scalar() or 0)
@@ -7347,27 +7346,22 @@ def admin_reset_sistema(
     if runtime_meta_exists:
         db.execute(text("DELETE FROM app_runtime_meta"))
 
-    admin_user = db.query(AppUser).filter(func.lower(AppUser.username) == admin_username).first()
+    admin_user = None
+    if session_user_id:
+        try:
+            admin_user = db.get(AppUser, uuid.UUID(session_user_id))
+        except ValueError:
+            admin_user = None
+    if admin_user is None and admin_username:
+        admin_user = db.query(AppUser).filter(func.lower(AppUser.username) == admin_username).first()
     admin_criado = False
 
     if not admin_user:
-        admin_user = AppUser(
-            username=admin_username,
-            role=ROLE_ADMIN,
-            is_active=True,
-            must_change_password=True,
-        )
-        _set_user_password(admin_user, admin_password, must_change_password=True)
-        db.add(admin_user)
-        db.flush()
-        admin_criado = True
+        raise HTTPException(status_code=401, detail="Sessao administrativa invalida. Faca login novamente.")
     else:
-        admin_user.username = admin_username
         admin_user.role = ROLE_ADMIN
         admin_user.is_active = True
-        # Mantem a senha atual do admin para evitar bloqueio apos reset.
-    admin_user.must_change_password = True
-    admin_user.last_login_at = None
+        admin_user.username = admin_username or admin_user.username
 
     # Nao remove usuarios cadastrados no reset geral.
     usuarios_removidos = 0
