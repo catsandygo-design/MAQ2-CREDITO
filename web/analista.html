@@ -1017,6 +1017,128 @@
       100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}
     }
 
+    .vencimento-simulator{
+      margin: 0 0 12px;
+      padding: 12px;
+      border: 1px solid rgba(148,163,184,.14);
+      border-radius: 14px;
+      background: rgba(2,6,23,.42);
+    }
+    .vencimento-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .vencimento-head h3{
+      margin:0;
+      font-size:var(--fs-md);
+      letter-spacing:.2px;
+    }
+    .vencimento-head p{
+      margin:3px 0 0;
+      color:var(--muted);
+      font-size:var(--fs-xs);
+      line-height:1.25;
+    }
+    .vencimento-calendar{
+      display:grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap:5px;
+      margin-top:10px;
+    }
+    .vencimento-day{
+      min-height:34px;
+      border:1px solid rgba(148,163,184,.16);
+      border-radius:8px;
+      background: rgba(15,23,42,.50);
+      color:var(--text);
+      cursor:pointer;
+      font-size:var(--fs-xs);
+      font-weight:900;
+      transition:.12s ease;
+    }
+    .vencimento-day:hover{
+      transform:translateY(-1px);
+      border-color: rgba(15,23,42,.28);
+    }
+    .vencimento-day.is-blocked{
+      background:#fee2e2;
+      color:#991b1b;
+      border-color:#fecaca;
+    }
+    .vencimento-day.is-risk{
+      background:#fef3c7;
+      color:#92400e;
+      border-color:#fde68a;
+    }
+    .vencimento-day.is-good{
+      background:#dcfce7;
+      color:#166534;
+      border-color:#bbf7d0;
+    }
+    .vencimento-day.is-selected{
+      outline:2px solid rgba(15,23,42,.82);
+      outline-offset:1px;
+    }
+    .vencimento-legend{
+      display:flex;
+      flex-wrap:wrap;
+      gap:7px;
+      margin-top:10px;
+      color:var(--muted);
+      font-size:var(--fs-xxs);
+      font-weight:800;
+    }
+    .vencimento-legend span{
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+    }
+    .vencimento-legend i{
+      width:9px;
+      height:9px;
+      border-radius:3px;
+      display:inline-block;
+    }
+    .vencimento-result{
+      margin-top:10px;
+      padding:10px;
+      min-height:74px;
+      border-radius:12px;
+      border:1px solid rgba(148,163,184,.14);
+      background: rgba(15,23,42,.48);
+      color:var(--text);
+      font-size:var(--fs-sm);
+      line-height:1.45;
+      white-space:pre-line;
+    }
+    .vencimento-result.is-blocked{
+      border-color: rgba(239,68,68,.35);
+      background: rgba(239,68,68,.08);
+    }
+    .vencimento-result.is-risk{
+      border-color: rgba(245,158,11,.35);
+      background: rgba(245,158,11,.10);
+    }
+    .vencimento-result.is-good{
+      border-color: rgba(34,197,94,.35);
+      background: rgba(34,197,94,.10);
+    }
+    body.theme-corporate .vencimento-simulator{
+      background:#ffffff;
+      border-color: rgba(15,23,42,.14);
+    }
+    body.theme-corporate .vencimento-result{
+      background:#f8fafc;
+      color:#0f172a;
+      border-color: rgba(15,23,42,.14);
+    }
+    body.theme-corporate .vencimento-result.is-blocked{background:#fef2f2;border-color:#fecaca}
+    body.theme-corporate .vencimento-result.is-risk{background:#fffbeb;border-color:#fde68a}
+    body.theme-corporate .vencimento-result.is-good{background:#ecfdf5;border-color:#bbf7d0}
+
     /* Mobile improvements */
     @media (max-width: 1200px){
       .workspace-ribbon{
@@ -1651,6 +1773,38 @@ DIVORCIADO: Certidão averbada.</td>
           <div class="right">
             <span class="sla ok" id="slaCred">SLA Credito: 0h</span>
           </div>
+        </div>
+
+        <div class="vencimento-simulator" aria-label="Validador de vencimento">
+          <div class="vencimento-head">
+            <div>
+              <h3>Validador de vencimento</h3>
+              <p>Simule a assinatura e confira se o primeiro vencimento respeita a regra operacional.</p>
+            </div>
+            <span class="pill neutral" id="vencimentoStatus">Aguardando</span>
+          </div>
+
+          <div class="form-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom:0;">
+            <div class="fg">
+              <label for="diaClienteVencimento">Dia desejado pelo cliente</label>
+              <input id="diaClienteVencimento" type="number" min="1" max="31" placeholder="Ex.: 10" />
+            </div>
+            <div class="fg">
+              <label for="mesBaseVencimento">Mes base</label>
+              <input id="mesBaseVencimento" type="month" />
+            </div>
+          </div>
+
+          <button class="btn" id="btnGerarCalendarioVencimento" type="button" style="width:100%;margin-top:10px;">Gerar calendario</button>
+
+          <div class="vencimento-legend" aria-label="Legenda do calendario">
+            <span><i style="background:#fee2e2;border:1px solid #fecaca"></i>Bloqueado</span>
+            <span><i style="background:#fef3c7;border:1px solid #fde68a"></i>Atencao</span>
+            <span><i style="background:#dcfce7;border:1px solid #bbf7d0"></i>Ideal</span>
+          </div>
+
+          <div id="calendarioVencimento" class="vencimento-calendar"></div>
+          <div id="resultadoVencimento" class="vencimento-result">Informe o dia desejado e o mes base para gerar a simulacao.</div>
         </div>
 
         <div class="form-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
@@ -2580,6 +2734,162 @@ DIVORCIADO: Certidão averbada.</td>
 </script>
 <script>
   (function () {
+    const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+    function byId(id) {
+      return document.getElementById(id);
+    }
+
+    function pad2(value) {
+      return String(value).padStart(2, "0");
+    }
+
+    function formatDateBr(date) {
+      if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "-";
+      return date.toLocaleDateString("pt-BR");
+    }
+
+    function monthValueFromDateLike(value) {
+      const raw = String(value || "").trim();
+      const match = raw.match(/^(\d{4})-(\d{2})/);
+      if (match) return `${match[1]}-${match[2]}`;
+      const parsed = new Date(raw);
+      if (Number.isNaN(parsed.getTime())) return "";
+      return `${parsed.getFullYear()}-${pad2(parsed.getMonth() + 1)}`;
+    }
+
+    function setResult(kind, text) {
+      const result = byId("resultadoVencimento");
+      if (!result) return;
+      result.className = `vencimento-result${kind ? ` is-${kind}` : ""}`;
+      result.textContent = text;
+    }
+
+    function setStatus(kind, text) {
+      const status = byId("vencimentoStatus");
+      if (!status) return;
+      status.className = `pill ${kind || "neutral"}`;
+      status.textContent = text;
+    }
+
+    function getInputs() {
+      const mesBase = byId("mesBaseVencimento")?.value || "";
+      let diaCliente = Number.parseInt(byId("diaClienteVencimento")?.value || "", 10);
+      if (!Number.isFinite(diaCliente)) diaCliente = 0;
+      if (diaCliente > 25) diaCliente = 25;
+      if (diaCliente < 1) diaCliente = 0;
+      const [ano, mes] = mesBase.split("-").map(Number);
+      return { mesBase, diaCliente, ano, mes };
+    }
+
+    function classificarDia(dia, diaCliente, ano, mes) {
+      const assinatura = new Date(ano, mes - 1, dia);
+      const vencimento = new Date(ano, mes, diaCliente);
+      const prazo = Math.ceil((vencimento - assinatura) / MS_PER_DAY);
+      if (dia > 25 || prazo < 15) return { kind: "blocked", prazo, assinatura, vencimento };
+      if (prazo <= 30) return { kind: "risk", prazo, assinatura, vencimento };
+      return { kind: "good", prazo, assinatura, vencimento };
+    }
+
+    function simularVencimento(dia, diaCliente, ano, mes) {
+      const info = classificarDia(dia, diaCliente, ano, mes);
+
+      document.querySelectorAll(".vencimento-day.is-selected").forEach((node) => {
+        node.classList.remove("is-selected");
+      });
+      const selected = byId(`vencimentoDia-${dia}`);
+      if (selected) selected.classList.add("is-selected");
+
+      if (dia > 25) {
+        setStatus("bad", "Bloqueado");
+        setResult(
+          "blocked",
+          `Dia ${dia} bloqueado.\n\nA assinatura deve ocorrer ate o dia 25 do mes base.`
+        );
+        return;
+      }
+
+      if (info.prazo < 15) {
+        const novoVencimento = new Date(info.vencimento);
+        novoVencimento.setMonth(novoVencimento.getMonth() + 1);
+        const novaAssinatura = new Date(novoVencimento);
+        novaAssinatura.setDate(novaAssinatura.getDate() - 40);
+
+        setStatus("bad", "Bloqueado");
+        setResult(
+          "blocked",
+          `Prazo curto: ${info.prazo} dias.\n\nNova assinatura sugerida: ${formatDateBr(novaAssinatura)}\nNovo vencimento: ${formatDateBr(novoVencimento)}`
+        );
+        return;
+      }
+
+      if (info.prazo <= 30) {
+        setStatus("warn", "Atencao");
+        setResult(
+          "risk",
+          `Assinatura: ${formatDateBr(info.assinatura)}\nVencimento: ${formatDateBr(info.vencimento)}\n\nCliente deve guardar o valor para o proximo mes.\nPrazo: ${info.prazo} dias.`
+        );
+        return;
+      }
+
+      const quintoDia = new Date(info.vencimento.getFullYear(), info.vencimento.getMonth(), 5);
+      setStatus("ok", "Ideal");
+      setResult(
+        "good",
+        `Assinatura: ${formatDateBr(info.assinatura)}\nSugestao: ${formatDateBr(quintoDia)}\n\nSituacao ideal.\nPrazo: ${info.prazo} dias.`
+      );
+    }
+
+    function gerarCalendarioVencimento() {
+      const { mesBase, diaCliente, ano, mes } = getInputs();
+      const calendar = byId("calendarioVencimento");
+      if (!calendar) return;
+      calendar.innerHTML = "";
+
+      if (!mesBase || !diaCliente || !ano || !mes) {
+        setStatus("neutral", "Aguardando");
+        setResult("", "Informe o dia desejado e o mes base para gerar a simulacao.");
+        return;
+      }
+
+      const diasNoMes = new Date(ano, mes, 0).getDate();
+      for (let dia = 1; dia <= diasNoMes; dia += 1) {
+        const info = classificarDia(dia, diaCliente, ano, mes);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.id = `vencimentoDia-${dia}`;
+        button.className = `vencimento-day is-${info.kind}`;
+        button.textContent = String(dia);
+        button.title = `Prazo: ${info.prazo} dias`;
+        button.addEventListener("click", () => simularVencimento(dia, diaCliente, ano, mes));
+        calendar.appendChild(button);
+      }
+
+      setStatus("neutral", "Calendario pronto");
+      setResult("", "Clique no dia de assinatura para ver a orientacao.");
+    }
+
+    function initVencimentoSimulator() {
+      const now = new Date();
+      const mesBase = byId("mesBaseVencimento");
+      if (mesBase && !mesBase.value) mesBase.value = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}`;
+
+      byId("btnGerarCalendarioVencimento")?.addEventListener("click", gerarCalendarioVencimento);
+      byId("diaClienteVencimento")?.addEventListener("input", gerarCalendarioVencimento);
+      byId("mesBaseVencimento")?.addEventListener("input", gerarCalendarioVencimento);
+    }
+
+    window.__setSimuladorVencimentoMesBase = function (value) {
+      const month = monthValueFromDateLike(value);
+      const input = byId("mesBaseVencimento");
+      if (month && input) input.value = month;
+    };
+
+    initVencimentoSimulator();
+  })();
+</script>
+<script>
+  (function () {
     const API_BASE = "/app/api";
     const url = new URL(window.location.href);
     const processoId = url.searchParams.get("processo_id");
@@ -2955,6 +3265,9 @@ DIVORCIADO: Certidão averbada.</td>
       if (byId("obra")) byId("obra").value = cliente.obra || "";
       if (byId("imobiliaria")) byId("imobiliaria").value = cliente.imobiliaria || "";
       if (byId("data-reserva")) byId("data-reserva").value = formatDateBr(cliente.data_reserva_origem);
+      if (typeof window.__setSimuladorVencimentoMesBase === "function") {
+        window.__setSimuladorVencimentoMesBase(cliente.data_reserva_origem || processo.created_at);
+      }
 
       await loadCcaOptions(processo.cca_responsavel || "");
 
