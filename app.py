@@ -1623,6 +1623,10 @@ class Processo(Base):
     renda_bruta: Mapped[Optional[float]] = mapped_column(Float)
     renda_liquida: Mapped[Optional[float]] = mapped_column(Float)
     valor_parcela: Mapped[Optional[float]] = mapped_column(Float)
+    valor_parcela_7lm: Mapped[Optional[float]] = mapped_column(Float)
+    renda_complementar_valor: Mapped[Optional[float]] = mapped_column(Float)
+    renda_complementar_responsavel: Mapped[Optional[str]] = mapped_column(Text)
+    renda_complementar_vinculo: Mapped[Optional[str]] = mapped_column(String(40))
     valor_imovel: Mapped[Optional[float]] = mapped_column(Float)
     valor_avaliacao: Mapped[Optional[float]] = mapped_column(Float)
     valor_financiamento: Mapped[Optional[float]] = mapped_column(Float)
@@ -2109,6 +2113,10 @@ class ProcessoUpdate(BaseModel):
     renda_bruta: Optional[float] = None
     renda_liquida: Optional[float] = None
     valor_parcela: Optional[float] = None
+    valor_parcela_7lm: Optional[float] = None
+    renda_complementar_valor: Optional[float] = None
+    renda_complementar_responsavel: Optional[str] = None
+    renda_complementar_vinculo: Optional[str] = None
     valor_imovel: Optional[float] = None
     valor_avaliacao: Optional[float] = None
     valor_financiamento: Optional[float] = None
@@ -2141,6 +2149,10 @@ class ProcessoOut(BaseModel):
     renda_bruta: Optional[float] = None
     renda_liquida: Optional[float] = None
     valor_parcela: Optional[float] = None
+    valor_parcela_7lm: Optional[float] = None
+    renda_complementar_valor: Optional[float] = None
+    renda_complementar_responsavel: Optional[str] = None
+    renda_complementar_vinculo: Optional[str] = None
     valor_imovel: Optional[float] = None
     valor_avaliacao: Optional[float] = None
     valor_financiamento: Optional[float] = None
@@ -4462,6 +4474,10 @@ def _ensure_runtime_schema(db: Session) -> None:
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS renda_bruta DOUBLE PRECISION",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS renda_liquida DOUBLE PRECISION",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_parcela DOUBLE PRECISION",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_parcela_7lm DOUBLE PRECISION",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS renda_complementar_valor DOUBLE PRECISION",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS renda_complementar_responsavel TEXT",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS renda_complementar_vinculo VARCHAR(40)",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_imovel DOUBLE PRECISION",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_avaliacao DOUBLE PRECISION",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_financiamento DOUBLE PRECISION",

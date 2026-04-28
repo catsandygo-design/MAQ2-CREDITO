@@ -1188,9 +1188,100 @@
       font-size:var(--fs-xs);
       font-weight:800;
     }
+    .comprometimento-box{
+      margin:0 0 12px;
+      padding:12px;
+      border:1px solid rgba(148,163,184,.14);
+      border-radius:14px;
+      background: rgba(2,6,23,.42);
+    }
+    .comprometimento-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .comprometimento-head h3{
+      margin:0;
+      font-size:var(--fs-md);
+      letter-spacing:.2px;
+    }
+    .comprometimento-head p{
+      margin:3px 0 0;
+      color:var(--muted);
+      font-size:var(--fs-xs);
+      line-height:1.25;
+    }
+    .comprometimento-result{
+      margin-top:10px;
+      padding:10px;
+      border-radius:12px;
+      border:1px solid rgba(148,163,184,.14);
+      background: rgba(15,23,42,.48);
+      font-size:var(--fs-sm);
+      line-height:1.35;
+    }
+    .comprometimento-result strong{
+      display:block;
+      font-size:18px;
+      margin-bottom:2px;
+    }
+    .comprometimento-result span{
+      color:var(--muted);
+      font-size:var(--fs-xs);
+    }
+    .comprometimento-result.is-ok{
+      border-color: rgba(34,197,94,.35);
+      background: rgba(34,197,94,.10);
+    }
+    .comprometimento-result.is-warn{
+      border-color: rgba(245,158,11,.35);
+      background: rgba(245,158,11,.10);
+    }
+    .comprometimento-result.is-critical{
+      border-color: rgba(239,68,68,.42);
+      background: rgba(239,68,68,.10);
+    }
+    .comprometimento-result.is-complementar{
+      border-color: rgba(127,29,29,.48);
+      background: rgba(127,29,29,.16);
+    }
+    .renda-complementar-fields{
+      margin-top:10px;
+      padding:10px;
+      border:1px dashed rgba(239,68,68,.38);
+      border-radius:12px;
+      background: rgba(239,68,68,.06);
+      display:none;
+    }
+    .renda-complementar-fields.is-visible{
+      display:block;
+    }
+    .renda-complementar-fields .tiny{
+      margin:0 0 8px;
+      color:var(--muted);
+    }
     body.theme-corporate .vencimento-simulator{
       background:#ffffff;
       border-color: rgba(15,23,42,.14);
+    }
+    body.theme-corporate .comprometimento-box{
+      background:#ffffff;
+      border-color: rgba(15,23,42,.14);
+    }
+    body.theme-corporate .comprometimento-result{
+      background:#f8fafc;
+      color:#0f172a;
+      border-color: rgba(15,23,42,.14);
+    }
+    body.theme-corporate .comprometimento-result.is-ok{background:#ecfdf5;border-color:#bbf7d0}
+    body.theme-corporate .comprometimento-result.is-warn{background:#fffbeb;border-color:#fde68a}
+    body.theme-corporate .comprometimento-result.is-critical{background:#fef2f2;border-color:#fecaca}
+    body.theme-corporate .comprometimento-result.is-complementar{background:#fee2e2;border-color:#fca5a5}
+    body.theme-corporate .renda-complementar-fields{
+      background:#fff7ed;
+      border-color:#fdba74;
     }
     body.theme-corporate .vencimento-rule{
       background:#f8fafc;
@@ -1902,6 +1993,62 @@ DIVORCIADO: Certidão averbada.</td>
             <span>clique para simular</span>
           </div>
           <div id="calendarioVencimento" class="vencimento-calendar"></div>
+        </div>
+
+        <div class="comprometimento-box" aria-label="Calculo de comprometimento">
+          <div class="comprometimento-head">
+            <div>
+              <h3>Comprometimento de renda</h3>
+              <p>Prestacao Caixa + prestacao 7LM sobre a renda liquida do cliente.</p>
+            </div>
+            <span class="pill neutral" id="comprometimentoStatus">0,00%</span>
+          </div>
+
+          <div class="form-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom:0;">
+            <div class="fg">
+              <label for="renda-liquida-cliente">Renda liquida do cliente (R$)</label>
+              <input id="renda-liquida-cliente" type="number" min="0" step="0.01" value="0.00" />
+            </div>
+            <div class="fg">
+              <label for="prestacao-caixa">Prestacao Caixa (R$)</label>
+              <input id="prestacao-caixa" type="number" min="0" step="0.01" value="0.00" />
+            </div>
+            <div class="fg">
+              <label for="prestacao-7lm">Prestacao 7LM (R$)</label>
+              <input id="prestacao-7lm" type="number" min="0" step="0.01" value="0.00" />
+            </div>
+          </div>
+
+          <div id="comprometimentoResultado" class="comprometimento-result is-ok">
+            <strong>0,00% - OK</strong>
+            <span>Faixa: 0 a 30.</span>
+          </div>
+
+          <div id="rendaComplementarFields" class="renda-complementar-fields" aria-label="Renda complementar">
+            <p class="tiny">Preencha a renda complementar quando o comprometimento exigir apoio adicional.</p>
+            <div class="form-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom:0;">
+              <div class="fg">
+                <label for="renda-complementar-valor">Valor da renda complementar (R$)</label>
+                <input id="renda-complementar-valor" type="number" min="0" step="0.01" value="0.00" />
+              </div>
+              <div class="fg">
+                <label for="renda-complementar-responsavel">Quem vai ajudar</label>
+                <input id="renda-complementar-responsavel" type="text" placeholder="Nome de quem vai complementar" />
+              </div>
+              <div class="fg">
+                <label for="renda-complementar-vinculo">Vinculo</label>
+                <select id="renda-complementar-vinculo">
+                  <option value="">Selecionar</option>
+                  <option value="primeiro_grau">1 grau</option>
+                  <option value="segundo_grau">2 grau</option>
+                  <option value="terceiro_grau">3 grau</option>
+                  <option value="quarto_grau">4 grau</option>
+                  <option value="amigos">Amigos</option>
+                  <option value="namorados">Namorados</option>
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="form-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
@@ -3327,6 +3474,77 @@ DIVORCIADO: Certidão averbada.</td>
       return Math.ceil(n / 24);
     }
 
+    function readMoneyField(id) {
+      const value = Number(String(byId(id)?.value || "0").replace(",", "."));
+      return Number.isFinite(value) && value >= 0 ? Number(value.toFixed(2)) : 0;
+    }
+
+    function writeMoneyField(id, value) {
+      const field = byId(id);
+      if (!field) return;
+      const parsed = Number(value);
+      field.value = Number.isFinite(parsed) && parsed >= 0 ? parsed.toFixed(2) : "0.00";
+    }
+
+    function formatPercent(value) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return "0,00%";
+      return `${n.toFixed(2).replace(".", ",")}%`;
+    }
+
+    function classifyComprometimento(percent, rendaLiquida, totalPrestacoes) {
+      if (rendaLiquida <= 0 && totalPrestacoes > 0) {
+        return {
+          kind: "complementar",
+          pill: "bad",
+          label: "Necessita renda complementar",
+          hint: "Ha prestacao informada sem renda liquida suficiente.",
+        };
+      }
+      if (percent <= 30) {
+        return { kind: "ok", pill: "ok", label: "OK", hint: "Faixa: 0 a 30." };
+      }
+      if (percent <= 40) {
+        return { kind: "warn", pill: "warn", label: "Atencao", hint: "Faixa: acima de 30 ate 40." };
+      }
+      if (percent <= 45) {
+        return { kind: "critical", pill: "bad", label: "Critico", hint: "Faixa: acima de 40 ate 45." };
+      }
+      return {
+        kind: "complementar",
+        pill: "bad",
+        label: "Necessita renda complementar",
+        hint: "Faixa: acima de 45.",
+      };
+    }
+
+    function updateComprometimento() {
+      const rendaLiquida = readMoneyField("renda-liquida-cliente");
+      const prestacaoCaixa = readMoneyField("prestacao-caixa");
+      const prestacao7lm = readMoneyField("prestacao-7lm");
+      const totalPrestacoes = prestacaoCaixa + prestacao7lm;
+      const percent = rendaLiquida > 0 ? (totalPrestacoes / rendaLiquida) * 100 : 0;
+      const info = classifyComprometimento(percent, rendaLiquida, totalPrestacoes);
+      const percentText = formatPercent(percent);
+
+      const status = byId("comprometimentoStatus");
+      if (status) {
+        status.className = `pill ${info.pill}`;
+        status.textContent = info.label;
+      }
+
+      const result = byId("comprometimentoResultado");
+      if (result) {
+        result.className = `comprometimento-result is-${info.kind}`;
+        result.innerHTML = `<strong>${percentText} - ${info.label}</strong><span>${info.hint} Total de prestacoes: R$ ${totalPrestacoes.toFixed(2).replace(".", ",")}.</span>`;
+      }
+
+      const complementarFields = byId("rendaComplementarFields");
+      if (complementarFields) {
+        complementarFields.classList.toggle("is-visible", info.kind === "complementar");
+      }
+    }
+
     function formatDateBr(value) {
       const raw = String(value || "").trim();
       if (!raw) return "";
@@ -3432,6 +3650,13 @@ DIVORCIADO: Certidão averbada.</td>
         const valorSinal = Number(processo.valor_sinal);
         byId("valor-sinal").value = Number.isFinite(valorSinal) && valorSinal > 0 ? valorSinal.toFixed(2) : "";
       }
+      writeMoneyField("renda-liquida-cliente", processo.renda_liquida);
+      writeMoneyField("prestacao-caixa", processo.valor_parcela);
+      writeMoneyField("prestacao-7lm", processo.valor_parcela_7lm);
+      writeMoneyField("renda-complementar-valor", processo.renda_complementar_valor);
+      if (byId("renda-complementar-responsavel")) byId("renda-complementar-responsavel").value = processo.renda_complementar_responsavel || "";
+      if (byId("renda-complementar-vinculo")) byId("renda-complementar-vinculo").value = processo.renda_complementar_vinculo || "";
+      updateComprometimento();
       if (byId("status-fiador")) byId("status-fiador").value = norm(processo.status_fiador) || "nao_tem";
       if (byId("cca-responsavel")) byId("cca-responsavel").value = norm(processo.cca_responsavel);
       if (byId("nao-contar-mes")) byId("nao-contar-mes").checked = Boolean(processo.nao_contar_mes);
@@ -3482,6 +3707,12 @@ DIVORCIADO: Certidão averbada.</td>
       const ccaResponsavel = (byId("cca-responsavel")?.value || "").trim().toLowerCase() || null;
       const observacao = (byId("observacao")?.value || "").trim() || null;
       const naoContarMes = Boolean(byId("nao-contar-mes")?.checked);
+      const rendaLiquida = readMoneyField("renda-liquida-cliente");
+      const prestacaoCaixa = readMoneyField("prestacao-caixa");
+      const prestacao7lm = readMoneyField("prestacao-7lm");
+      const rendaComplementarValor = readMoneyField("renda-complementar-valor");
+      const rendaComplementarResponsavel = (byId("renda-complementar-responsavel")?.value || "").trim() || null;
+      const rendaComplementarVinculo = (byId("renda-complementar-vinculo")?.value || "").trim() || null;
 
       const temPendencia =
         ["pendente_credito", "pendente_cca", "condicionado", "reprovado", "bloqueado"].includes(statusCaixa) ||
@@ -3502,6 +3733,12 @@ DIVORCIADO: Certidão averbada.</td>
         status_fiador: backendFromUiFiador(statusFiador),
         cca_responsavel: ccaResponsavel,
         nao_contar_mes: naoContarMes,
+        renda_liquida: rendaLiquida,
+        valor_parcela: prestacaoCaixa,
+        valor_parcela_7lm: prestacao7lm,
+        renda_complementar_valor: rendaComplementarValor,
+        renda_complementar_responsavel: rendaComplementarResponsavel,
+        renda_complementar_vinculo: rendaComplementarVinculo,
         observacao,
       };
 
@@ -3584,6 +3821,7 @@ DIVORCIADO: Certidão averbada.</td>
         });
         if (typeof setRightPills === "function") setRightPills();
         if (typeof setSlaBadges === "function") setSlaBadges();
+        updateComprometimento();
         if (typeof buildPendenciasResumo === "function") buildPendenciasResumo();
         alert("Dados salvos com sucesso.");
       } catch (error) {
@@ -3603,6 +3841,17 @@ DIVORCIADO: Certidão averbada.</td>
     rebindButton("btnVoltar", () => {
       window.location.href = "/app/analista";
     });
+
+    ["renda-liquida-cliente", "prestacao-caixa", "prestacao-7lm", "renda-complementar-valor"].forEach((id) => {
+      const field = byId(id);
+      if (!field) return;
+      field.addEventListener("input", updateComprometimento);
+      field.addEventListener("blur", () => {
+        writeMoneyField(id, readMoneyField(id));
+        updateComprometimento();
+      });
+    });
+    updateComprometimento();
 
     lockSlaInputs();
 
