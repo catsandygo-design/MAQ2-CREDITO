@@ -449,6 +449,10 @@
       border-color: rgba(34,197,94,.45);
       box-shadow: 0 0 0 4px rgba(34,197,94,.08);
     }
+    input[aria-invalid="true"]{
+      border-color: rgba(239,68,68,.72);
+      box-shadow: 0 0 0 4px rgba(239,68,68,.10);
+    }
 
     input[data-info-only="1"],
     select[data-info-only="1"]{
@@ -1042,6 +1046,54 @@
       font-size:var(--fs-xs);
       line-height:1.25;
     }
+    .vencimento-controls{
+      display:grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .vencimento-field-note{
+      margin:0;
+      color:var(--muted);
+      font-size:var(--fs-xxs);
+      line-height:1.25;
+    }
+    .vencimento-actions{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      margin-bottom:10px;
+    }
+    .vencimento-actions .btn{
+      flex:1 1 auto;
+    }
+    .vencimento-rule-list{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap:6px;
+      margin-bottom:10px;
+    }
+    .vencimento-rule{
+      border:1px solid rgba(148,163,184,.14);
+      border-radius:10px;
+      padding:8px;
+      background: rgba(15,23,42,.34);
+      min-height:54px;
+    }
+    .vencimento-rule b{
+      display:block;
+      color:var(--text);
+      font-size:var(--fs-xxs);
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      margin-bottom:3px;
+    }
+    .vencimento-rule span{
+      display:block;
+      color:var(--muted);
+      font-size:var(--fs-xxs);
+      line-height:1.25;
+    }
     .vencimento-calendar{
       display:grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -1126,9 +1178,26 @@
       border-color: rgba(34,197,94,.35);
       background: rgba(34,197,94,.10);
     }
+    .vencimento-calendar-title{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      margin-top:10px;
+      color:var(--muted);
+      font-size:var(--fs-xs);
+      font-weight:800;
+    }
     body.theme-corporate .vencimento-simulator{
       background:#ffffff;
       border-color: rgba(15,23,42,.14);
+    }
+    body.theme-corporate .vencimento-rule{
+      background:#f8fafc;
+      border-color: rgba(15,23,42,.12);
+    }
+    body.theme-corporate .vencimento-rule b{
+      color:#0f172a;
     }
     body.theme-corporate .vencimento-result{
       background:#f8fafc;
@@ -1153,6 +1222,10 @@
     @media (max-width: 640px){
       .doc-actions{justify-content:flex-start}
       .status{min-width: 100%}
+      .vencimento-controls,
+      .vencimento-rule-list{
+        grid-template-columns: 1fr;
+      }
     }
   </style>
   <link rel="stylesheet" href="/assets/theme_techboard.css" />
@@ -1779,23 +1852,44 @@ DIVORCIADO: Certidão averbada.</td>
           <div class="vencimento-head">
             <div>
               <h3>Validador de vencimento</h3>
-              <p>Simule a assinatura e confira se o primeiro vencimento respeita a regra operacional.</p>
+              <p>Informe o vencimento desejado, gere o calendario e clique no dia previsto de assinatura.</p>
             </div>
             <span class="pill neutral" id="vencimentoStatus">Aguardando</span>
           </div>
 
-          <div class="form-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom:0;">
+          <div class="vencimento-controls">
             <div class="fg">
               <label for="diaClienteVencimento">Dia desejado pelo cliente</label>
               <input id="diaClienteVencimento" type="number" min="1" max="31" placeholder="Ex.: 10" />
+              <p class="vencimento-field-note">Aceita somente dias reais, de 1 a 31.</p>
             </div>
             <div class="fg">
               <label for="mesBaseVencimento">Mes base</label>
               <input id="mesBaseVencimento" type="month" />
+              <p class="vencimento-field-note">O primeiro vencimento sera calculado no mes seguinte.</p>
             </div>
           </div>
 
-          <button class="btn" id="btnGerarCalendarioVencimento" type="button" style="width:100%;margin-top:10px;">Gerar calendario</button>
+          <div class="vencimento-rule-list" aria-label="Regras de vencimento">
+            <div class="vencimento-rule">
+              <b>Dia do cliente</b>
+              <span>26 a 31 ajusta para 25. Acima de 31 bloqueia.</span>
+            </div>
+            <div class="vencimento-rule">
+              <b>Assinatura</b>
+              <span>Dias 26 em diante ficam bloqueados.</span>
+            </div>
+            <div class="vencimento-rule">
+              <b>Prazo</b>
+              <span>Menos de 15 bloqueia; 15 a 30 pede atencao.</span>
+            </div>
+          </div>
+
+          <div class="vencimento-actions">
+            <button class="btn primary" id="btnGerarCalendarioVencimento" type="button">Gerar calendario</button>
+          </div>
+
+          <div id="resultadoVencimento" class="vencimento-result">Informe o dia desejado e o mes base para gerar a simulacao.</div>
 
           <div class="vencimento-legend" aria-label="Legenda do calendario">
             <span><i style="background:#fee2e2;border:1px solid #fecaca"></i>Bloqueado</span>
@@ -1803,8 +1897,11 @@ DIVORCIADO: Certidão averbada.</td>
             <span><i style="background:#dcfce7;border:1px solid #bbf7d0"></i>Ideal</span>
           </div>
 
+          <div class="vencimento-calendar-title">
+            <span>Dias possiveis de assinatura</span>
+            <span>clique para simular</span>
+          </div>
           <div id="calendarioVencimento" class="vencimento-calendar"></div>
-          <div id="resultadoVencimento" class="vencimento-result">Informe o dia desejado e o mes base para gerar a simulacao.</div>
         </div>
 
         <div class="form-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
@@ -2744,9 +2841,25 @@ DIVORCIADO: Certidão averbada.</td>
       return String(value).padStart(2, "0");
     }
 
+    function makeUtcDate(year, monthIndex, day) {
+      return new Date(Date.UTC(year, monthIndex, day, 12, 0, 0));
+    }
+
+    function addUtcDays(date, days) {
+      return makeUtcDate(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + days);
+    }
+
+    function addUtcMonths(date, months) {
+      return makeUtcDate(date.getUTCFullYear(), date.getUTCMonth() + months, date.getUTCDate());
+    }
+
+    function diffDays(fromDate, toDate) {
+      return Math.ceil((toDate.getTime() - fromDate.getTime()) / MS_PER_DAY);
+    }
+
     function formatDateBr(date) {
       if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "-";
-      return date.toLocaleDateString("pt-BR");
+      return `${pad2(date.getUTCDate())}/${pad2(date.getUTCMonth() + 1)}/${date.getUTCFullYear()}`;
     }
 
     function monthValueFromDateLike(value) {
@@ -2772,101 +2885,142 @@ DIVORCIADO: Certidão averbada.</td>
       status.textContent = text;
     }
 
-    function getInputs() {
+    function getSimulatorState() {
       const mesBase = byId("mesBaseVencimento")?.value || "";
-      let diaCliente = Number.parseInt(byId("diaClienteVencimento")?.value || "", 10);
-      if (!Number.isFinite(diaCliente)) diaCliente = 0;
-      if (diaCliente > 25) diaCliente = 25;
-      if (diaCliente < 1) diaCliente = 0;
+      const diaClienteRaw = String(byId("diaClienteVencimento")?.value || "").trim();
+      const diaClienteOriginal = Number(diaClienteRaw);
+      const diaInvalido = Boolean(
+        diaClienteRaw &&
+        (!Number.isInteger(diaClienteOriginal) || diaClienteOriginal < 1 || diaClienteOriginal > 31)
+      );
+      const diaCliente = Number.isInteger(diaClienteOriginal) && diaClienteOriginal >= 1 && diaClienteOriginal <= 31
+        ? Math.min(25, diaClienteOriginal)
+        : 0;
       const [ano, mes] = mesBase.split("-").map(Number);
-      return { mesBase, diaCliente, ano, mes };
+      const mesValido = Boolean(mesBase && Number.isInteger(ano) && Number.isInteger(mes) && mes >= 1 && mes <= 12);
+      const valid = Boolean(mesValido && diaCliente && !diaInvalido);
+      return { mesBase, diaClienteRaw, diaClienteOriginal, diaCliente, diaInvalido, ano, mes, mesValido, valid };
     }
 
-    function classificarDia(dia, diaCliente, ano, mes) {
-      const assinatura = new Date(ano, mes - 1, dia);
-      const vencimento = new Date(ano, mes, diaCliente);
-      const prazo = Math.ceil((vencimento - assinatura) / MS_PER_DAY);
-      if (dia > 25 || prazo < 15) return { kind: "blocked", prazo, assinatura, vencimento };
-      if (prazo <= 30) return { kind: "risk", prazo, assinatura, vencimento };
-      return { kind: "good", prazo, assinatura, vencimento };
+    function evaluateSignatureDay(diaAssinatura, state) {
+      const assinatura = makeUtcDate(state.ano, state.mes - 1, diaAssinatura);
+      const vencimento = makeUtcDate(state.ano, state.mes, state.diaCliente);
+      const prazo = diffDays(assinatura, vencimento);
+      const bloqueadoPorDia = diaAssinatura > 25;
+      const bloqueadoPorPrazo = prazo < 15;
+      let kind = "good";
+      if (bloqueadoPorDia || bloqueadoPorPrazo) kind = "blocked";
+      else if (prazo <= 30) kind = "risk";
+      return { assinatura, vencimento, prazo, bloqueadoPorDia, bloqueadoPorPrazo, kind };
     }
 
-    function simularVencimento(dia, diaCliente, ano, mes) {
-      const info = classificarDia(dia, diaCliente, ano, mes);
+    function statusForKind(kind) {
+      if (kind === "blocked") return { pill: "bad", label: "Bloqueado" };
+      if (kind === "risk") return { pill: "warn", label: "Atencao" };
+      return { pill: "ok", label: "Ideal" };
+    }
+
+    function cappedDayNotice(state) {
+      return state.diaClienteOriginal > 25
+        ? `\n\nObs.: dia desejado ${state.diaClienteOriginal} foi ajustado para 25 pela regra.`
+        : "";
+    }
+
+    function applyInputValidity(state) {
+      const input = byId("diaClienteVencimento");
+      if (!input) return;
+      input.setAttribute("aria-invalid", state.diaInvalido ? "true" : "false");
+      input.title = state.diaInvalido ? "Informe um dia real entre 1 e 31." : "";
+    }
+
+    function simularVencimento(diaAssinatura) {
+      const state = getSimulatorState();
+      if (!state.valid) {
+        gerarCalendarioVencimento();
+        return;
+      }
+      const info = evaluateSignatureDay(diaAssinatura, state);
+      const status = statusForKind(info.kind);
 
       document.querySelectorAll(".vencimento-day.is-selected").forEach((node) => {
         node.classList.remove("is-selected");
       });
-      const selected = byId(`vencimentoDia-${dia}`);
+      const selected = byId(`vencimentoDia-${diaAssinatura}`);
       if (selected) selected.classList.add("is-selected");
 
-      if (dia > 25) {
-        setStatus("bad", "Bloqueado");
+      setStatus(status.pill, status.label);
+
+      if (info.bloqueadoPorDia) {
         setResult(
           "blocked",
-          `Dia ${dia} bloqueado.\n\nA assinatura deve ocorrer ate o dia 25 do mes base.`
+          `Dia ${diaAssinatura} bloqueado.\n\nA assinatura deve ocorrer ate o dia 25 do mes base.${cappedDayNotice(state)}`
         );
         return;
       }
 
-      if (info.prazo < 15) {
-        const novoVencimento = new Date(info.vencimento);
-        novoVencimento.setMonth(novoVencimento.getMonth() + 1);
-        const novaAssinatura = new Date(novoVencimento);
-        novaAssinatura.setDate(novaAssinatura.getDate() - 40);
+      if (info.bloqueadoPorPrazo) {
+        const novoVencimento = addUtcMonths(info.vencimento, 1);
+        const novaAssinatura = addUtcDays(novoVencimento, -40);
 
-        setStatus("bad", "Bloqueado");
         setResult(
           "blocked",
-          `Prazo curto: ${info.prazo} dias.\n\nNova assinatura sugerida: ${formatDateBr(novaAssinatura)}\nNovo vencimento: ${formatDateBr(novoVencimento)}`
+          `Prazo curto: ${info.prazo} dias.\n\nNova assinatura sugerida: ${formatDateBr(novaAssinatura)}\nNovo vencimento: ${formatDateBr(novoVencimento)}${cappedDayNotice(state)}`
         );
         return;
       }
 
-      if (info.prazo <= 30) {
-        setStatus("warn", "Atencao");
+      if (info.kind === "risk") {
         setResult(
           "risk",
-          `Assinatura: ${formatDateBr(info.assinatura)}\nVencimento: ${formatDateBr(info.vencimento)}\n\nCliente deve guardar o valor para o proximo mes.\nPrazo: ${info.prazo} dias.`
+          `Assinatura: ${formatDateBr(info.assinatura)}\nVencimento: ${formatDateBr(info.vencimento)}\n\nCliente deve guardar o valor para o proximo mes.\nPrazo: ${info.prazo} dias.${cappedDayNotice(state)}`
         );
         return;
       }
 
-      const quintoDia = new Date(info.vencimento.getFullYear(), info.vencimento.getMonth(), 5);
-      setStatus("ok", "Ideal");
+      const quintoDia = makeUtcDate(info.vencimento.getUTCFullYear(), info.vencimento.getUTCMonth(), 5);
       setResult(
         "good",
-        `Assinatura: ${formatDateBr(info.assinatura)}\nSugestao: ${formatDateBr(quintoDia)}\n\nSituacao ideal.\nPrazo: ${info.prazo} dias.`
+        `Assinatura: ${formatDateBr(info.assinatura)}\nSugestao: ${formatDateBr(quintoDia)}\n\nSituacao ideal.\nPrazo: ${info.prazo} dias.${cappedDayNotice(state)}`
       );
     }
 
     function gerarCalendarioVencimento() {
-      const { mesBase, diaCliente, ano, mes } = getInputs();
+      const state = getSimulatorState();
       const calendar = byId("calendarioVencimento");
       if (!calendar) return;
       calendar.innerHTML = "";
+      applyInputValidity(state);
 
-      if (!mesBase || !diaCliente || !ano || !mes) {
+      if (state.diaInvalido) {
+        setStatus("bad", "Dia invalido");
+        setResult("blocked", `Dia desejado "${state.diaClienteRaw}" nao existe.\n\nInforme um dia entre 1 e 31. Pela regra operacional, dias 26 a 31 sao ajustados para 25; valores acima de 31 ficam bloqueados.`);
+        return;
+      }
+
+      if (!state.valid) {
         setStatus("neutral", "Aguardando");
         setResult("", "Informe o dia desejado e o mes base para gerar a simulacao.");
         return;
       }
 
-      const diasNoMes = new Date(ano, mes, 0).getDate();
+      const diasNoMes = makeUtcDate(state.ano, state.mes, 0).getUTCDate();
       for (let dia = 1; dia <= diasNoMes; dia += 1) {
-        const info = classificarDia(dia, diaCliente, ano, mes);
+        const info = evaluateSignatureDay(dia, state);
         const button = document.createElement("button");
         button.type = "button";
         button.id = `vencimentoDia-${dia}`;
         button.className = `vencimento-day is-${info.kind}`;
         button.textContent = String(dia);
-        button.title = `Prazo: ${info.prazo} dias`;
-        button.addEventListener("click", () => simularVencimento(dia, diaCliente, ano, mes));
+        button.title = `Assinatura ${pad2(dia)}/${pad2(state.mes)}/${state.ano} - prazo ${info.prazo} dias`;
+        button.addEventListener("click", () => simularVencimento(dia));
         calendar.appendChild(button);
       }
 
       setStatus("neutral", "Calendario pronto");
-      setResult("", "Clique no dia de assinatura para ver a orientacao.");
+      setResult(
+        "",
+        `Vencimento calculado para ${pad2(state.diaCliente)}/${pad2(state.mes + 1 > 12 ? 1 : state.mes + 1)}/${state.mes === 12 ? state.ano + 1 : state.ano}.\nClique no dia de assinatura para ver a orientacao.${cappedDayNotice(state)}`
+      );
     }
 
     function initVencimentoSimulator() {
