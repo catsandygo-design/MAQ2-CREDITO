@@ -1627,6 +1627,7 @@ class Processo(Base):
     renda_complementar_valor: Mapped[Optional[float]] = mapped_column(Float)
     renda_complementar_responsavel: Mapped[Optional[str]] = mapped_column(Text)
     renda_complementar_vinculo: Mapped[Optional[str]] = mapped_column(String(40))
+    fgts_futuro_empresa_6m: Mapped[Optional[str]] = mapped_column(String(20))
     valor_imovel: Mapped[Optional[float]] = mapped_column(Float)
     valor_avaliacao: Mapped[Optional[float]] = mapped_column(Float)
     valor_financiamento: Mapped[Optional[float]] = mapped_column(Float)
@@ -2117,6 +2118,7 @@ class ProcessoUpdate(BaseModel):
     renda_complementar_valor: Optional[float] = None
     renda_complementar_responsavel: Optional[str] = None
     renda_complementar_vinculo: Optional[str] = None
+    fgts_futuro_empresa_6m: Optional[str] = None
     valor_imovel: Optional[float] = None
     valor_avaliacao: Optional[float] = None
     valor_financiamento: Optional[float] = None
@@ -2153,6 +2155,7 @@ class ProcessoOut(BaseModel):
     renda_complementar_valor: Optional[float] = None
     renda_complementar_responsavel: Optional[str] = None
     renda_complementar_vinculo: Optional[str] = None
+    fgts_futuro_empresa_6m: Optional[str] = None
     valor_imovel: Optional[float] = None
     valor_avaliacao: Optional[float] = None
     valor_financiamento: Optional[float] = None
@@ -2315,6 +2318,19 @@ class LayoutPreferencePayload(BaseModel):
 
 class LayoutPreferenceOut(BaseModel):
     blackhole_enabled: bool
+
+
+class FranksteinAnalistaAprendizadoPayload(BaseModel):
+    processo_id: Optional[uuid.UUID] = None
+    contexto: dict[str, Any] = Field(default_factory=dict)
+    decisao_analista: dict[str, Any] = Field(default_factory=dict)
+    regras_frankstein: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class FranksteinAnalistaAprendizadoOut(BaseModel):
+    ok: bool
+    total_interacoes: int
+    padroes: list[dict[str, Any]] = Field(default_factory=list)
     fonte: str
 
 
@@ -3329,6 +3345,149 @@ def _record_keepalive_ping(request: Request) -> dict[str, Any]:
         db.close()
 
     return event
+
+
+def _frankstein_normalize_pattern_text(value: Any) -> str:
+    text_value = unicodedata.normalize("NFD", str(value or "").strip().lower())
+    text_value = "".join(ch for ch in text_value if unicodedata.category(ch) != "Mn")
+    return " ".join(text_value.split())
+
+
+def _frankstein_comprometimento_faixa(value: Any) -> str:
+    try:
+        percent = float(value or 0)
+    except (TypeError, ValueError):
+        percent = 0.0
+    if percent <= 30:
+        return "ok"
+    if percent <= 40:
+        return "atencao"
+    if percent <= 45:
+        return "critico"
+    return "complementar"
+
+
+def _frankstein_context_signature(contexto: dict[str, Any]) -> str:
+    parts = [
+        _frankstein_normalize_pattern_text(contexto.get("perfil_renda")),
+        _frankstein_normalize_pattern_text(contexto.get("tipo_dependente")),
+        _frankstein_normalize_pattern_text(contexto.get("cotista_3_anos")),
+        _frankstein_normalize_pattern_text(contexto.get("empresa_atual_6m")),
+        _frankstein_comprometimento_faixa(contexto.get("comprometimento_percent")),
+        _frankstein_normalize_pattern_text(contexto.get("vencimento_status")),
+    ]
+    return "|".join(parts)
+
+
+def _frankstein_learning_suggestions(db: Session, contexto: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = (
+        db.query(SistemaLog)
+        .filter(SistemaLog.tela == "frankstein")
+        .filter(SistemaLog.acao == "ANALISTA_APRENDIZADO")
+        .order_by(SistemaLog.created_at.desc())
+        .limit(700)
+        .all()
+    )
+    signature = _frankstein_context_signature(contexto)
+    similar_count = 0
+    status_counter: dict[str, int] = {}
+    doc_counter: dict[str, dict[str, Any]] = {}
+    complementary_count = 0
+    total_interacoes = 0
+
+    for row in rows:
+        try:
+            payload = json.loads(row.details or "{}")
+        except json.JSONDecodeError:
+            continue
+        total_interacoes += 1
+        row_context = payload.get("contexto") if isinstance(payload.get("contexto"), dict) else {}
+        if _frankstein_context_signature(row_context) != signature:
+            continue
+        similar_count += 1
+        decisao = payload.get("decisao_analista") if isinstance(payload.get("decisao_analista"), dict) else {}
+        for field in ("status_caixa", "status_agehab", "status_sinal", "status_fiador"):
+            value = _frankstein_normalize_pattern_text(decisao.get(field))
+            if value:
+                key = f"{field}:{value}"
+                status_counter[key] = status_counter.get(key, 0) + 1
+        if decisao.get("renda_complementar_preenchida"):
+            complementary_count += 1
+        docs = decisao.get("documentos")
+        if isinstance(docs, list):
+            for doc in docs:
+                if not isinstance(doc, dict):
+                    continue
+                categoria = _frankstein_normalize_pattern_text(doc.get("categoria"))
+                nome = _frankstein_normalize_pattern_text(doc.get("nome"))
+                status = _frankstein_normalize_pattern_text(doc.get("status"))
+                motivo = _frankstein_normalize_pattern_text(doc.get("motivo"))
+                if not categoria or not nome or status in {"", "aguardando"}:
+                    continue
+                key = f"{categoria}:{nome}:{status}:{motivo[:80]}"
+                entry = doc_counter.setdefault(
+                    key,
+                    {
+                        "count": 0,
+                        "categoria": doc.get("categoria"),
+                        "nome": doc.get("nome"),
+                        "status": doc.get("status"),
+                        "motivo": doc.get("motivo"),
+                    },
+                )
+                entry["count"] += 1
+
+    suggestions: list[dict[str, Any]] = []
+    if similar_count >= 3:
+        for key, count in sorted(status_counter.items(), key=lambda item: item[1], reverse=True)[:3]:
+            field, value = key.split(":", 1)
+            if count < 3:
+                continue
+            confidence = round(count / max(similar_count, 1), 2)
+            suggestions.append(
+                {
+                    "tipo": "padrao_status",
+                    "status": "dica" if confidence < 0.8 else "atencao",
+                    "titulo": "Aprendido com analistas",
+                    "mensagem": (
+                        f"Em {count} de {similar_count} casos parecidos, o campo {field.replace('_', ' ')} "
+                        f"foi salvo como {value}. Confianca {int(confidence * 100)}%."
+                    ),
+                    "confianca": confidence,
+                }
+            )
+        if complementary_count >= 3:
+            confidence = round(complementary_count / max(similar_count, 1), 2)
+            suggestions.append(
+                {
+                    "tipo": "padrao_renda_complementar",
+                    "status": "atencao" if confidence >= 0.8 else "dica",
+                    "titulo": "Padrao de renda complementar",
+                    "mensagem": (
+                        f"Em {complementary_count} de {similar_count} casos parecidos, o analista registrou renda complementar. "
+                        f"Confianca {int(confidence * 100)}%."
+                    ),
+                    "confianca": confidence,
+                }
+            )
+        for entry in sorted(doc_counter.values(), key=lambda item: item["count"], reverse=True)[:4]:
+            if int(entry["count"]) < 3:
+                continue
+            confidence = round(int(entry["count"]) / max(similar_count, 1), 2)
+            suggestions.append(
+                {
+                    "tipo": "padrao_documento",
+                    "status": "dica" if confidence < 0.8 else "atencao",
+                    "titulo": "Padrao documental aprendido",
+                    "mensagem": (
+                        f"{entry['nome']} costuma ser marcado como {entry['status']} em casos parecidos"
+                        + (f" com motivo: {entry['motivo']}." if entry.get("motivo") else ".")
+                    ),
+                    "confianca": confidence,
+                }
+            )
+
+    return suggestions
 
 
 def _fetch_keepalive_db_logs(limit: int) -> list[dict[str, Any]]:
@@ -4478,6 +4637,7 @@ def _ensure_runtime_schema(db: Session) -> None:
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS renda_complementar_valor DOUBLE PRECISION",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS renda_complementar_responsavel TEXT",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS renda_complementar_vinculo VARCHAR(40)",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS fgts_futuro_empresa_6m VARCHAR(20)",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_imovel DOUBLE PRECISION",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_avaliacao DOUBLE PRECISION",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_financiamento DOUBLE PRECISION",
@@ -11830,6 +11990,62 @@ def atualizar_resultado_frankstein_event(
     if not updated:
         raise HTTPException(status_code=404, detail="Evento FRANKSTEIN nao encontrado")
     return {"ok": True, "event_id": event_id, "updated_fields": sorted(changes.keys())}
+
+
+@app.post("/app/api/frankstein/analista-aprendizado", response_model=FranksteinAnalistaAprendizadoOut)
+def registrar_aprendizado_analista_frankstein(
+    payload: FranksteinAnalistaAprendizadoPayload,
+    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+) -> FranksteinAnalistaAprendizadoOut:
+    actor_username = str(session.get("username") or "analista")
+    actor_role = _normalize_role(str(session.get("role") or ROLE_ANALISTA))
+    details_payload = {
+        "processo_id": str(payload.processo_id) if payload.processo_id else None,
+        "contexto": payload.contexto,
+        "decisao_analista": payload.decisao_analista,
+        "regras_frankstein": payload.regras_frankstein[:40],
+    }
+    _record_system_log(
+        db,
+        actor_username=actor_username,
+        actor_role=actor_role,
+        tela="frankstein",
+        acao="ANALISTA_APRENDIZADO",
+        entidade_tipo="processo",
+        entidade_id=str(payload.processo_id) if payload.processo_id else None,
+        details=json.dumps(details_payload, ensure_ascii=False, default=str),
+    )
+    db.commit()
+    padroes = _frankstein_learning_suggestions(db, payload.contexto)
+    total_interacoes = int(
+        db.query(func.count(SistemaLog.id))
+        .filter(SistemaLog.tela == "frankstein")
+        .filter(SistemaLog.acao == "ANALISTA_APRENDIZADO")
+        .scalar()
+        or 0
+    )
+    return FranksteinAnalistaAprendizadoOut(ok=True, total_interacoes=total_interacoes, padroes=padroes)
+
+
+@app.post("/app/api/frankstein/analista-aprendizado/sugestoes", response_model=FranksteinAnalistaAprendizadoOut)
+def sugestoes_aprendizado_analista_frankstein(
+    payload: FranksteinAnalistaAprendizadoPayload,
+    _: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+) -> FranksteinAnalistaAprendizadoOut:
+    total_interacoes = int(
+        db.query(func.count(SistemaLog.id))
+        .filter(SistemaLog.tela == "frankstein")
+        .filter(SistemaLog.acao == "ANALISTA_APRENDIZADO")
+        .scalar()
+        or 0
+    )
+    return FranksteinAnalistaAprendizadoOut(
+        ok=True,
+        total_interacoes=total_interacoes,
+        padroes=_frankstein_learning_suggestions(db, payload.contexto),
+    )
 
 
 @app.post("/app/api/analises")

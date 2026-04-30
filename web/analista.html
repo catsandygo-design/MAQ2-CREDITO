@@ -381,6 +381,29 @@
       gap:10px;
       margin-bottom: 10px;
     }
+    .process-data-grid{
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap:8px;
+      margin-bottom:8px;
+    }
+    .process-rules-grid{
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap:8px;
+      margin-bottom:10px;
+      align-items:end;
+    }
+    .process-data-grid input,
+    .process-data-grid select,
+    .process-rules-grid input,
+    .process-rules-grid select{
+      min-height:38px;
+      padding:8px 10px;
+      border-radius:12px;
+    }
+    .process-data-grid .fg,
+    .process-rules-grid .fg{
+      gap:4px;
+    }
     @media (max-width: 1400px){ .form-grid{grid-template-columns: repeat(3, 1fr)} }
     @media (max-width: 900px){ .form-grid{grid-template-columns: repeat(2, 1fr)} }
     @media (max-width: 600px){ .form-grid{grid-template-columns: 1fr} }
@@ -936,18 +959,19 @@
     }
 
     .section-nav{
-      margin-top: 12px;
+      margin-top: 8px;
+      margin-bottom: 8px;
       display:flex;
-      gap:8px;
+      gap:6px;
       flex-wrap:wrap;
     }
     .section-chip{
-      min-height: 38px;
+      min-height: 30px;
       border-radius: 999px;
       border:1px solid rgba(148,163,184,.16);
       background: rgba(255,255,255,.03);
       color: var(--text);
-      padding: 7px 11px;
+      padding: 5px 9px;
       display:inline-flex;
       align-items:center;
       gap:8px;
@@ -969,8 +993,8 @@
       opacity:.62;
     }
     .section-chip b{
-      min-width: 44px;
-      padding: 4px 8px;
+      min-width: 38px;
+      padding: 3px 7px;
       border-radius: 999px;
       background: rgba(2,6,23,.44);
       font-size: var(--fs-xxs);
@@ -1262,6 +1286,140 @@
       margin:0 0 8px;
       color:var(--muted);
     }
+    .renda-complementar-dialog{
+      display:none;
+      margin-top:10px;
+      padding:10px;
+      border-radius:12px;
+      border:1px solid rgba(239,68,68,.42);
+      background: rgba(239,68,68,.10);
+      font-size:var(--fs-sm);
+      line-height:1.35;
+    }
+    .renda-complementar-dialog.is-visible{
+      display:block;
+    }
+    .renda-complementar-dialog b{
+      display:block;
+      margin-bottom:3px;
+    }
+    .frankstein-validator{
+      margin:0 0 12px;
+      padding:12px;
+      border:1px solid rgba(34,197,94,.24);
+      border-radius:14px;
+      background: linear-gradient(180deg, rgba(34,197,94,.08), rgba(2,6,23,.42));
+    }
+    .frankstein-validator-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .frankstein-validator-brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+    .frankstein-avatar{
+      width:64px;
+      height:64px;
+      flex:0 0 64px;
+      border:1px solid rgba(24,238,210,.32);
+      border-radius:12px;
+      background:#050a14;
+      box-shadow:0 0 12px rgba(56,189,248,.18), inset 0 1px rgba(255,255,255,.08);
+      overflow:hidden;
+    }
+    .frankstein-avatar-canvas{
+      width:160px;
+      height:140px;
+      border:0;
+      background:#050a14;
+      transform:scale(.4);
+      transform-origin:top left;
+      display:block;
+    }
+    .frankstein-avatar.is-bloqueio{
+      border-color:rgba(239,68,68,.5);
+      box-shadow:0 0 14px rgba(239,68,68,.28), inset 0 1px rgba(255,255,255,.08);
+    }
+    .frankstein-avatar.is-atencao{
+      border-color:rgba(245,158,11,.5);
+      box-shadow:0 0 14px rgba(245,158,11,.22), inset 0 1px rgba(255,255,255,.08);
+    }
+    .frankstein-avatar.is-ok{
+      border-color:rgba(34,197,94,.5);
+      box-shadow:0 0 14px rgba(34,197,94,.22), inset 0 1px rgba(255,255,255,.08);
+    }
+    .frankstein-validator-head h3{
+      margin:0;
+      font-size:var(--fs-md);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    .frankstein-validator-head p{
+      margin:3px 0 0;
+      color:var(--muted);
+      font-size:var(--fs-xs);
+      line-height:1.25;
+    }
+    .frankstein-summary{
+      padding:10px;
+      border-radius:12px;
+      border:1px solid rgba(148,163,184,.14);
+      background: rgba(15,23,42,.46);
+      font-size:var(--fs-sm);
+      line-height:1.35;
+      margin-bottom:10px;
+    }
+    .frankstein-summary strong{
+      display:block;
+      font-size:16px;
+      margin-bottom:2px;
+    }
+    .frankstein-summary span{
+      color:var(--muted);
+      font-size:var(--fs-xs);
+    }
+    .frankstein-summary.is-ok{
+      border-color: rgba(34,197,94,.38);
+      background: rgba(34,197,94,.10);
+    }
+    .frankstein-summary.is-atencao{
+      border-color: rgba(245,158,11,.38);
+      background: rgba(245,158,11,.10);
+    }
+    .frankstein-summary.is-bloqueio{
+      border-color: rgba(239,68,68,.42);
+      background: rgba(239,68,68,.10);
+    }
+    .frankstein-list{
+      display:grid;
+      gap:6px;
+      margin:0;
+      padding:0;
+      list-style:none;
+    }
+    .frankstein-item{
+      border:1px solid rgba(148,163,184,.14);
+      border-radius:10px;
+      padding:8px;
+      background: rgba(15,23,42,.28);
+      font-size:var(--fs-xs);
+      line-height:1.3;
+    }
+    .frankstein-item b{
+      display:block;
+      color:var(--text);
+      margin-bottom:2px;
+    }
+    .frankstein-item.ok{border-color: rgba(34,197,94,.30)}
+    .frankstein-item.atencao{border-color: rgba(245,158,11,.36)}
+    .frankstein-item.bloqueio{border-color: rgba(239,68,68,.38)}
+    .frankstein-item.dica{border-color: rgba(14,165,233,.34)}
     body.theme-corporate .vencimento-simulator{
       background:#ffffff;
       border-color: rgba(15,23,42,.14);
@@ -1283,6 +1441,25 @@
       background:#fff7ed;
       border-color:#fdba74;
     }
+    body.theme-corporate .renda-complementar-dialog{
+      background:#fef2f2;
+      border-color:#fecaca;
+      color:#0f172a;
+    }
+    body.theme-corporate .frankstein-validator{
+      background:#ffffff;
+      border-color: rgba(22,163,74,.22);
+    }
+    body.theme-corporate .frankstein-summary,
+    body.theme-corporate .frankstein-item{
+      background:#f8fafc;
+      color:#0f172a;
+      border-color: rgba(15,23,42,.14);
+    }
+    body.theme-corporate .frankstein-summary.is-ok{background:#ecfdf5;border-color:#bbf7d0}
+    body.theme-corporate .frankstein-summary.is-atencao{background:#fffbeb;border-color:#fde68a}
+    body.theme-corporate .frankstein-summary.is-bloqueio{background:#fef2f2;border-color:#fecaca}
+    body.theme-corporate .frankstein-item b{color:#0f172a}
     body.theme-corporate .vencimento-rule{
       background:#f8fafc;
       border-color: rgba(15,23,42,.12);
@@ -1315,6 +1492,10 @@
       .status{min-width: 100%}
       .vencimento-controls,
       .vencimento-rule-list{
+        grid-template-columns: 1fr;
+      }
+      .process-data-grid,
+      .process-rules-grid{
         grid-template-columns: 1fr;
       }
     }
@@ -1387,17 +1568,6 @@
 
       <div class="panel-body" id="leftScroll">
 
-        <!-- Alert / quick rules -->
-        <div class="alertRow">
-          <div class="left">
-            <span class="pill neutral">Regra</span>
-            <span class="tiny">IRPF aparece só se <b>perfil = informal</b> e <b>IRPF para informal</b> estiver marcado • FGTS só para <b>CLT</b> • CTPS só se <b>+3 anos</b> marcado • Caixa: extras só se <b>CCA gerou</b> marcado</span>
-          </div>
-          <div class="right">
-            <span class="pill neutral">Modo: Front-end</span>
-          </div>
-        </div>
-
         <div class="workspace-ribbon" aria-label="Leitura guiada do checklist">
           <article class="ribbon-card accent">
             <span>Perfil ativo</span>
@@ -1434,7 +1604,7 @@
         </div>
 
         <!-- ====== Dados / Regras (compacto) ====== -->
-        <div class="form-grid" aria-label="Dados do processo e regras">
+        <div class="form-grid process-data-grid" aria-label="Dados do processo e regras">
           <div class="fg">
             <label for="nome-cliente">Cliente</label>
             <input id="nome-cliente" type="text" placeholder="Nome do cliente" readonly data-info-only="1">
@@ -1492,14 +1662,24 @@
             <label for="imobiliaria">Imobiliária</label>
             <input id="imobiliaria" type="text" placeholder="Nome da imobiliária" readonly data-info-only="1">
           </div>
+
         </div>
 
-        <div class="form-grid" aria-label="Regras do processo">
+        <div class="form-grid process-rules-grid" aria-label="Regras do processo">
           <div class="fg">
             <label>FGTS / CTPS</label>
             <select id="cotista-3-anos">
               <option value="nao">Cliente com +3 anos (não)</option>
               <option value="sim">Cliente com +3 anos (sim)</option>
+            </select>
+          </div>
+
+          <div class="fg">
+            <label for="tempo-empresa-atual">Empresa atual</label>
+            <select id="tempo-empresa-atual">
+              <option value="">Nao informado</option>
+              <option value="nao">Menos de 6 meses</option>
+              <option value="sim">Mais de 6 meses</option>
             </select>
           </div>
 
@@ -1526,7 +1706,12 @@
               <option value="sim">CCA gerou formulários</option>
             </select>
           </div>
+          <div class="fg">
+            <label for="renda-bruta-cliente">Renda bruta do cliente (R$)</label>
+            <input id="renda-bruta-cliente" type="number" min="0" step="0.01" value="0.00">
+          </div>
         </div>
+
 
         <div class="divider"></div>
 
@@ -1957,7 +2142,7 @@ DIVORCIADO: Certidão averbada.</td>
             <div class="fg">
               <label for="mesBaseVencimento">Mes base</label>
               <input id="mesBaseVencimento" type="month" />
-              <p class="vencimento-field-note">O primeiro vencimento sera calculado no mes seguinte.</p>
+              <p class="vencimento-field-note">Informe o mes do vencimento desejado.</p>
             </div>
           </div>
 
@@ -2024,6 +2209,11 @@ DIVORCIADO: Certidão averbada.</td>
             <span>Faixa: 0 a 30.</span>
           </div>
 
+          <div id="rendaComplementarDialog" class="renda-complementar-dialog" role="alert">
+            <b>Comprometimento acima de 45%</b>
+            Falar com o corretor para verificar se outra pessoa pode ajudar o proponente com renda complementar.
+          </div>
+
           <div id="rendaComplementarFields" class="renda-complementar-fields" aria-label="Renda complementar">
             <p class="tiny">Preencha a renda complementar quando o comprometimento exigir apoio adicional.</p>
             <div class="form-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom:0;">
@@ -2049,6 +2239,28 @@ DIVORCIADO: Certidão averbada.</td>
               </div>
             </div>
           </div>
+        </div>
+
+        <div class="frankstein-validator" aria-label="Frankstein validador operacional">
+          <div class="frankstein-validator-head">
+            <div class="frankstein-validator-brand">
+              <div class="frankstein-avatar" id="franksteinAvatar" aria-hidden="true">
+                <canvas id="franksteinAvatarCanvas" class="frankstein-avatar-canvas" width="160" height="140"></canvas>
+              </div>
+              <div>
+                <h3>Frankstein</h3>
+                <p>Valida as regras preenchidas nesta tela antes de salvar ou avancar o processo.</p>
+              </div>
+            </div>
+            <span class="pill neutral" id="franksteinStatus">Aguardando</span>
+          </div>
+
+          <div id="franksteinResumo" class="frankstein-summary">
+            <strong>Analise ainda nao executada</strong>
+            <span>Preencha os campos e rode a validacao.</span>
+          </div>
+
+          <ul id="franksteinLista" class="frankstein-list"></ul>
         </div>
 
         <div class="form-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
@@ -2992,6 +3204,11 @@ DIVORCIADO: Certidão averbada.</td>
       return new Date(Date.UTC(year, monthIndex, day, 12, 0, 0));
     }
 
+    function todayUtc() {
+      const now = new Date();
+      return makeUtcDate(now.getFullYear(), now.getMonth(), now.getDate());
+    }
+
     function addUtcDays(date, days) {
       return makeUtcDate(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + days);
     }
@@ -3009,6 +3226,10 @@ DIVORCIADO: Certidão averbada.</td>
       return `${pad2(date.getUTCDate())}/${pad2(date.getUTCMonth() + 1)}/${date.getUTCFullYear()}`;
     }
 
+    function isoDateKey(date) {
+      return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
+    }
+
     function monthValueFromDateLike(value) {
       const raw = String(value || "").trim();
       const match = raw.match(/^(\d{4})-(\d{2})/);
@@ -3016,6 +3237,10 @@ DIVORCIADO: Certidão averbada.</td>
       const parsed = new Date(raw);
       if (Number.isNaN(parsed.getTime())) return "";
       return `${parsed.getFullYear()}-${pad2(parsed.getMonth() + 1)}`;
+    }
+
+    function monthValueFromUtcDate(date) {
+      return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}`;
     }
 
     function setResult(kind, text) {
@@ -3036,6 +3261,9 @@ DIVORCIADO: Certidão averbada.</td>
       const mesBase = byId("mesBaseVencimento")?.value || "";
       const diaClienteRaw = String(byId("diaClienteVencimento")?.value || "").trim();
       const diaClienteOriginal = Number(diaClienteRaw);
+      const hoje = todayUtc();
+      const mesVigente = makeUtcDate(hoje.getUTCFullYear(), hoje.getUTCMonth(), 1);
+      const dataLimite = addUtcDays(hoje, 40);
       const diaInvalido = Boolean(
         diaClienteRaw &&
         (!Number.isInteger(diaClienteOriginal) || diaClienteOriginal < 1 || diaClienteOriginal > 31)
@@ -3045,20 +3273,44 @@ DIVORCIADO: Certidão averbada.</td>
         : 0;
       const [ano, mes] = mesBase.split("-").map(Number);
       const mesValido = Boolean(mesBase && Number.isInteger(ano) && Number.isInteger(mes) && mes >= 1 && mes <= 12);
-      const valid = Boolean(mesValido && diaCliente && !diaInvalido);
-      return { mesBase, diaClienteRaw, diaClienteOriginal, diaCliente, diaInvalido, ano, mes, mesValido, valid };
+      const inicioMesBase = mesValido ? makeUtcDate(ano, mes - 1, 1) : null;
+      const vencimento = mesValido && diaCliente ? makeUtcDate(ano, mes - 1, diaCliente) : null;
+      const mesAnteriorAoVigente = Boolean(inicioMesBase && inicioMesBase < mesVigente);
+      const mesMaiorQueJanela = false;
+      const vencimentoAntesDeHoje = Boolean(vencimento && vencimento < hoje);
+      const mesForaDaRegra = mesAnteriorAoVigente || mesMaiorQueJanela;
+      const valid = Boolean(mesValido && diaCliente && !diaInvalido && !mesForaDaRegra && !vencimentoAntesDeHoje);
+      return {
+        mesBase,
+        diaClienteRaw,
+        diaClienteOriginal,
+        diaCliente,
+        diaInvalido,
+        ano,
+        mes,
+        mesValido,
+        mesAnteriorAoVigente,
+        mesMaiorQueJanela,
+        vencimentoAntesDeHoje,
+        mesForaDaRegra,
+        hoje,
+        mesVigente,
+        dataLimite,
+        vencimento,
+        valid,
+      };
     }
 
-    function evaluateSignatureDay(diaAssinatura, state) {
-      const assinatura = makeUtcDate(state.ano, state.mes - 1, diaAssinatura);
-      const vencimento = makeUtcDate(state.ano, state.mes, state.diaCliente);
+    function evaluateSignatureDate(assinatura, state) {
+      const vencimento = state.vencimento;
       const prazo = diffDays(assinatura, vencimento);
-      const bloqueadoPorDia = diaAssinatura > 25;
+      const bloqueadoPorDia = false;
       const bloqueadoPorPrazo = prazo < 15;
+      const bloqueadoPorJanela = assinatura > state.dataLimite || assinatura < state.hoje;
       let kind = "good";
-      if (bloqueadoPorDia || bloqueadoPorPrazo) kind = "blocked";
+      if (bloqueadoPorDia || bloqueadoPorPrazo || bloqueadoPorJanela) kind = "blocked";
       else if (prazo <= 30) kind = "risk";
-      return { assinatura, vencimento, prazo, bloqueadoPorDia, bloqueadoPorPrazo, kind };
+      return { assinatura, vencimento, prazo, bloqueadoPorDia, bloqueadoPorPrazo, bloqueadoPorJanela, kind };
     }
 
     function statusForKind(kind) {
@@ -3075,24 +3327,35 @@ DIVORCIADO: Certidão averbada.</td>
 
     function applyInputValidity(state) {
       const input = byId("diaClienteVencimento");
-      if (!input) return;
-      input.setAttribute("aria-invalid", state.diaInvalido ? "true" : "false");
-      input.title = state.diaInvalido ? "Informe um dia real entre 1 e 31." : "";
+      if (input) {
+        input.setAttribute("aria-invalid", state.diaInvalido ? "true" : "false");
+        input.title = state.diaInvalido ? "Informe um dia real entre 1 e 31." : "";
+      }
+      const mesInput = byId("mesBaseVencimento");
+      if (mesInput) {
+        mesInput.min = monthValueFromUtcDate(state.mesVigente);
+        mesInput.max = monthValueFromUtcDate(state.dataLimite);
+        mesInput.setAttribute("aria-invalid", state.mesForaDaRegra ? "true" : "false");
+        mesInput.title = state.mesForaDaRegra ? "Use o mes vigente ou uma data dentro dos proximos 40 dias." : "";
+      }
     }
 
-    function simularVencimento(diaAssinatura) {
+    function simularVencimento(dateKey) {
       const state = getSimulatorState();
       if (!state.valid) {
         gerarCalendarioVencimento();
         return;
       }
-      const info = evaluateSignatureDay(diaAssinatura, state);
+      const parts = String(dateKey || "").split("-").map(Number);
+      const assinaturaSelecionada = parts.length === 3 ? makeUtcDate(parts[0], parts[1] - 1, parts[2]) : null;
+      if (!assinaturaSelecionada || Number.isNaN(assinaturaSelecionada.getTime())) return;
+      const info = evaluateSignatureDate(assinaturaSelecionada, state);
       const status = statusForKind(info.kind);
 
       document.querySelectorAll(".vencimento-day.is-selected").forEach((node) => {
         node.classList.remove("is-selected");
       });
-      const selected = byId(`vencimentoDia-${diaAssinatura}`);
+      const selected = document.querySelector(`.vencimento-day[data-date="${dateKey}"]`);
       if (selected) selected.classList.add("is-selected");
 
       setStatus(status.pill, status.label);
@@ -3100,7 +3363,7 @@ DIVORCIADO: Certidão averbada.</td>
       if (info.bloqueadoPorDia) {
         setResult(
           "blocked",
-          `Dia ${diaAssinatura} bloqueado.\n\nA assinatura deve ocorrer ate o dia 25 do mes base.${cappedDayNotice(state)}`
+          `Data ${formatDateBr(info.assinatura)} bloqueada.${cappedDayNotice(state)}`
         );
         return;
       }
@@ -3116,6 +3379,14 @@ DIVORCIADO: Certidão averbada.</td>
         return;
       }
 
+      if (info.bloqueadoPorJanela) {
+        setResult(
+          "blocked",
+          `Data fora da janela permitida.\n\nA assinatura ${formatDateBr(info.assinatura)} passa do limite de 40 dias (${formatDateBr(state.dataLimite)}).`
+        );
+        return;
+      }
+
       if (info.kind === "risk") {
         setResult(
           "risk",
@@ -3127,7 +3398,7 @@ DIVORCIADO: Certidão averbada.</td>
       const quintoDia = makeUtcDate(info.vencimento.getUTCFullYear(), info.vencimento.getUTCMonth(), 5);
       setResult(
         "good",
-        `Assinatura: ${formatDateBr(info.assinatura)}\nSugestao: ${formatDateBr(quintoDia)}\n\nSituacao ideal.\nPrazo: ${info.prazo} dias.${cappedDayNotice(state)}`
+        `Assinatura: ${formatDateBr(info.assinatura)}\nVencimento: ${formatDateBr(info.vencimento)}\n\nSituacao ideal.\nPrazo: ${info.prazo} dias.${cappedDayNotice(state)}`
       );
     }
 
@@ -3144,29 +3415,51 @@ DIVORCIADO: Certidão averbada.</td>
         return;
       }
 
+      if (state.mesAnteriorAoVigente) {
+        setStatus("bad", "Mes bloqueado");
+        setResult("blocked", `Mes base anterior ao mes vigente.\n\nUse ${monthValueFromUtcDate(state.mesVigente)} ou um mes dentro da janela de 40 dias.`);
+        return;
+      }
+
+      if (state.mesMaiorQueJanela) {
+        setStatus("bad", "Mes bloqueado");
+        setResult("blocked", `Mes base fora da janela de 40 dias.\n\nLimite atual: ${formatDateBr(state.dataLimite)}.`);
+        return;
+      }
+
+      if (state.vencimentoAntesDeHoje) {
+        setStatus("bad", "Data bloqueada");
+        setResult("blocked", `Vencimento anterior a data atual.\n\nInforme um vencimento a partir de ${formatDateBr(state.hoje)}.`);
+        return;
+      }
+
       if (!state.valid) {
         setStatus("neutral", "Aguardando");
         setResult("", "Informe o dia desejado e o mes base para gerar a simulacao.");
         return;
       }
 
-      const diasNoMes = makeUtcDate(state.ano, state.mes, 0).getUTCDate();
-      for (let dia = 1; dia <= diasNoMes; dia += 1) {
-        const info = evaluateSignatureDay(dia, state);
+      const inicioDisponivel = addUtcDays(state.vencimento, -40);
+      const fimDisponivel = addUtcDays(state.vencimento, -1);
+      for (let data = inicioDisponivel; data <= fimDisponivel; data = addUtcDays(data, 1)) {
+        const info = evaluateSignatureDate(data, state);
+        const dateKey = isoDateKey(data);
         const button = document.createElement("button");
         button.type = "button";
-        button.id = `vencimentoDia-${dia}`;
+        button.dataset.date = dateKey;
         button.className = `vencimento-day is-${info.kind}`;
-        button.textContent = String(dia);
-        button.title = `Assinatura ${pad2(dia)}/${pad2(state.mes)}/${state.ano} - prazo ${info.prazo} dias`;
-        button.addEventListener("click", () => simularVencimento(dia));
+        button.textContent = formatDateBr(data).slice(0, 5);
+        button.title = info.bloqueadoPorJanela
+          ? `Assinatura ${formatDateBr(data)} fora da janela permitida`
+          : `Assinatura ${formatDateBr(data)} - prazo ${info.prazo} dias`;
+        button.addEventListener("click", () => simularVencimento(dateKey));
         calendar.appendChild(button);
       }
 
       setStatus("neutral", "Calendario pronto");
       setResult(
         "",
-        `Vencimento calculado para ${pad2(state.diaCliente)}/${pad2(state.mes + 1 > 12 ? 1 : state.mes + 1)}/${state.mes === 12 ? state.ano + 1 : state.ano}.\nClique no dia de assinatura para ver a orientacao.${cappedDayNotice(state)}`
+        `Vencimento: ${formatDateBr(state.vencimento)}.\nAssinaturas disponiveis a partir de ${formatDateBr(inicioDisponivel)}.\nClique no dia de assinatura para ver a orientacao.${cappedDayNotice(state)}`
       );
     }
 
@@ -3174,6 +3467,8 @@ DIVORCIADO: Certidão averbada.</td>
       const now = new Date();
       const mesBase = byId("mesBaseVencimento");
       if (mesBase && !mesBase.value) mesBase.value = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}`;
+      const state = getSimulatorState();
+      applyInputValidity(state);
 
       byId("btnGerarCalendarioVencimento")?.addEventListener("click", gerarCalendarioVencimento);
       byId("diaClienteVencimento")?.addEventListener("input", gerarCalendarioVencimento);
@@ -3183,7 +3478,87 @@ DIVORCIADO: Certidão averbada.</td>
     window.__setSimuladorVencimentoMesBase = function (value) {
       const month = monthValueFromDateLike(value);
       const input = byId("mesBaseVencimento");
-      if (month && input) input.value = month;
+      if (month && input) {
+        input.value = month;
+        gerarCalendarioVencimento();
+      }
+    };
+
+    window.__validarVencimentoAnalista = function () {
+      const state = getSimulatorState();
+      const selected = document.querySelector(".vencimento-day.is-selected");
+      const selectedKey = selected?.dataset?.date || "";
+      if (state.diaInvalido) {
+        return {
+          status: "bloqueio",
+          titulo: "Dia de vencimento invalido",
+          mensagem: `Dia "${state.diaClienteRaw}" nao existe. Use um dia entre 1 e 31.`,
+        };
+      }
+      if (state.mesAnteriorAoVigente) {
+        return {
+          status: "bloqueio",
+          titulo: "Mes base anterior ao vigente",
+          mensagem: "O mes base nao pode ser anterior ao mes vigente.",
+        };
+      }
+      if (state.mesMaiorQueJanela) {
+        return {
+          status: "bloqueio",
+          titulo: "Mes base fora da janela",
+          mensagem: `O mes base ultrapassa a janela de 40 dias. Limite atual: ${formatDateBr(state.dataLimite)}.`,
+        };
+      }
+      if (!state.valid) {
+        return {
+          status: "pendente",
+          titulo: "Vencimento nao simulado",
+          mensagem: "Informe o dia desejado e o mes base para o Frankstein validar a regra.",
+        };
+      }
+      if (!selectedKey) {
+        return {
+          status: "pendente",
+          titulo: "Dia de assinatura nao escolhido",
+          mensagem: "Clique no calendario para escolher o dia previsto de assinatura.",
+        };
+      }
+      const parts = selectedKey.split("-").map(Number);
+      const selectedDate = parts.length === 3 ? makeUtcDate(parts[0], parts[1] - 1, parts[2]) : null;
+      const info = evaluateSignatureDate(selectedDate, state);
+      if (info.bloqueadoPorDia) {
+        return {
+          status: "bloqueio",
+          titulo: "Assinatura bloqueada pelo dia",
+          mensagem: "A assinatura deve ocorrer ate o dia 25 do mes base.",
+        };
+      }
+      if (info.bloqueadoPorPrazo) {
+        return {
+          status: "bloqueio",
+          titulo: "Prazo curto para vencimento",
+          mensagem: `Prazo de ${info.prazo} dias. A regra exige pelo menos 15 dias.`,
+        };
+      }
+      if (info.bloqueadoPorJanela) {
+        return {
+          status: "bloqueio",
+          titulo: "Assinatura fora da janela de 40 dias",
+          mensagem: `A assinatura ${formatDateBr(info.assinatura)} passa do limite ${formatDateBr(state.dataLimite)}.`,
+        };
+      }
+      if (info.kind === "risk") {
+        return {
+          status: "atencao",
+          titulo: "Vencimento em faixa de atencao",
+          mensagem: `Prazo de ${info.prazo} dias. Oriente o cliente a guardar o valor para o proximo mes.`,
+        };
+      }
+      return {
+        status: "ok",
+        titulo: "Vencimento validado",
+        mensagem: `Prazo de ${info.prazo} dias. Situacao ideal.`,
+      };
     };
 
     initVencimentoSimulator();
@@ -3543,6 +3918,505 @@ DIVORCIADO: Certidão averbada.</td>
       if (complementarFields) {
         complementarFields.classList.toggle("is-visible", info.kind === "complementar");
       }
+      const complementarDialog = byId("rendaComplementarDialog");
+      if (complementarDialog) {
+        complementarDialog.classList.toggle("is-visible", percent > 45);
+      }
+    }
+
+    function getComprometimentoSnapshot() {
+      const rendaLiquida = readMoneyField("renda-liquida-cliente");
+      const prestacaoCaixa = readMoneyField("prestacao-caixa");
+      const prestacao7lm = readMoneyField("prestacao-7lm");
+      const totalPrestacoes = prestacaoCaixa + prestacao7lm;
+      const percent = rendaLiquida > 0 ? (totalPrestacoes / rendaLiquida) * 100 : 0;
+      const info = classifyComprometimento(percent, rendaLiquida, totalPrestacoes);
+      return { rendaLiquida, prestacaoCaixa, prestacao7lm, totalPrestacoes, percent, info };
+    }
+
+    let franksteinLearnedPatterns = [];
+
+    function franksteinStatusRank(status) {
+      if (status === "bloqueio") return 3;
+      if (status === "atencao") return 2;
+      if (status === "pendente") return 1;
+      return 0;
+    }
+
+    function addFranksteinRule(items, status, titulo, mensagem) {
+      items.push({ status, titulo, mensagem });
+    }
+
+    function initFranksteinAvatar() {
+      const canvas = byId("franksteinAvatarCanvas");
+      if (!canvas || canvas.dataset.live === "1") return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      canvas.dataset.live = "1";
+
+      const state = {
+        frame: 0,
+        mood: "normal",
+        moodExpireAt: 0,
+        gaze: { x: 0, y: 0, tx: 0, ty: 0 },
+        alertLevel: 0,
+        lastMove: 0,
+        energy: 0.4,
+        alertCount: 0,
+      };
+
+      window.__franksteinAvatarSetMood = (nextMood, energy = 0.4) => {
+        state.energy = Math.max(state.energy, Math.max(0, Math.min(1, energy)));
+        state.mood = nextMood || "normal";
+        state.moodExpireAt = performance.now() + 4200;
+        if (nextMood === "alerta") state.alertCount += 1;
+        if (state.alertCount > 3) {
+          state.mood = "irritado";
+          state.moodExpireAt = performance.now() + 5000;
+          state.alertCount = 0;
+        }
+      };
+
+      function eyeShape(cx, cy, w, h) {
+        ctx.beginPath();
+        ctx.moveTo(cx - w, cy);
+        ctx.bezierCurveTo(cx - w * 0.5, cy - h, cx + w * 0.5, cy - h, cx + w, cy);
+        ctx.bezierCurveTo(cx + w * 0.5, cy + h, cx - w * 0.5, cy + h, cx - w, cy);
+      }
+
+      function renderAvatar() {
+        state.frame += 1;
+        const frame = state.frame;
+        const width = canvas.width;
+        const height = canvas.height;
+        const cx = width / 2;
+        const cy = height / 2 + 2;
+
+        if (state.moodExpireAt && performance.now() > state.moodExpireAt) {
+          state.mood = "normal";
+          state.moodExpireAt = 0;
+        }
+        if (frame - state.lastMove > 90 && frame % 70 === 0) {
+          state.gaze.tx = (Math.random() - 0.5) * 12;
+          state.gaze.ty = (Math.random() - 0.5) * 6;
+        }
+        state.gaze.x += (state.gaze.tx - state.gaze.x) * 0.12;
+        state.gaze.y += (state.gaze.ty - state.gaze.y) * 0.12;
+
+        let moodColor = [255, 160, 50];
+        let speedBoost = 0;
+        let squint = 0;
+        let auraAlpha = 0.08;
+        let matrixBreak = 0;
+        if (state.mood === "irritado") { moodColor = [255, 40, 40]; speedBoost = 0.03; squint = 0.12; auraAlpha = 0.15; }
+        if (state.mood === "alerta") { moodColor = [255, 70, 40]; speedBoost = 0.026; squint = 0.08; auraAlpha = 0.13; }
+        if (state.mood === "aprendendo") { moodColor = [120, 255, 180]; speedBoost = 0.012; matrixBreak = (Math.sin(frame * 0.08) + 1) * 0.5; auraAlpha = 0.12; }
+
+        const bg = ctx.createLinearGradient(0, 0, width, height);
+        bg.addColorStop(0, "#7a0000");
+        bg.addColorStop(0.5, "#2b0000");
+        bg.addColorStop(1, "#050000");
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.save();
+        eyeShape(cx, cy, 66, 36);
+        ctx.clip();
+
+        ctx.save();
+        ctx.translate(cx + state.gaze.x * 0.35, cy + state.gaze.y * 0.2);
+        ctx.rotate(frame * (0.004 + state.alertLevel * 0.004));
+        for (let x = -140; x < 140; x += 18) {
+          for (let y = -90; y < 90; y += 18) {
+            const alpha = 0.012 + (Math.sin(frame * 0.03 + x * 0.02 + y * 0.02) + 1) * 0.006;
+            ctx.fillStyle = `rgba(255,160,120,${alpha})`;
+            ctx.fillRect(x, y, 16, 16);
+          }
+        }
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(state.gaze.x, state.gaze.y);
+        for (let i = 0; i < 7; i += 1) {
+          const hotline = state.mood === "alerta" ? ((frame * 0.35 + i * 0.8) % 9) / 9 : 0;
+          ctx.fillStyle = `rgba(255,60,0,${0.45 + hotline * 0.35})`;
+          ctx.fillRect(cx - 48 + i * 16, cy + 38, 9, 9);
+        }
+
+        for (let a = 0; a < 3; a += 1) {
+          ctx.beginPath();
+          ctx.arc(cx, cy, 34 + a * 7 + Math.sin(frame * 0.03 + a) * 2, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(${moodColor[0]},${moodColor[1]},${moodColor[2]},${auraAlpha - a * 0.02})`;
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        }
+
+        const baseSpeed = 0.012 + speedBoost;
+        for (let i = 0; i < 3; i += 1) {
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(frame * baseSpeed * (i % 2 === 0 ? 1 : -1));
+          ctx.beginPath();
+          ctx.arc(0, 0, 28 - i * 7 + Math.sin(frame * 0.05) * 1.2, 0, Math.PI * 2);
+          ctx.lineWidth = 4 - i;
+          ctx.strokeStyle = `rgba(${moodColor[0]},${Math.max(0, moodColor[1] - i * 20)},${moodColor[2]},${0.9 - i * 0.2})`;
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        ctx.shadowBlur = 18;
+        ctx.shadowColor = "rgba(255,180,60,.9)";
+        ctx.fillStyle = `rgba(${moodColor[0]},${moodColor[1]},${moodColor[2]},.92)`;
+        if (state.mood === "aprendendo") {
+          for (let yy = -24; yy < 24; yy += 7) {
+            const offset = Math.sin(frame * 0.12 + yy) * matrixBreak * 10;
+            ctx.fillRect(cx - 8 + offset, cy + yy, 16, 5);
+          }
+        } else {
+          ctx.fillRect(cx - 8, cy - 28, 16, 56);
+        }
+
+        const shine = ctx.createLinearGradient(cx - 26, cy - 42, cx + 26, cy + 42);
+        shine.addColorStop(0, "rgba(255,255,255,.22)");
+        shine.addColorStop(0.55, "rgba(255,255,255,.04)");
+        shine.addColorStop(1, "rgba(255,255,255,.18)");
+        ctx.fillStyle = shine;
+        ctx.fillRect(cx - 26, cy - 42, 14, 84);
+        ctx.restore();
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(0, state.alertLevel * 2);
+        ctx.scale(state.mood === "irritado" ? 0.94 : 1, 1 - squint);
+        eyeShape(cx, cy, 66, 36);
+        ctx.strokeStyle = "rgba(255,120,40,.95)";
+        ctx.lineWidth = 4;
+        ctx.shadowBlur = 16;
+        ctx.shadowColor = "rgba(255,80,0,.9)";
+        ctx.stroke();
+        ctx.restore();
+
+        for (let i = 0; i < 3; i += 1) {
+          ctx.beginPath();
+          const r = 3 + Math.sin(frame * 0.06 + i) * 0.5;
+          ctx.arc(cx - 18 + i * 18, cy - 48, r, 0, Math.PI * 2);
+          ctx.fillStyle = i === 1 ? "rgba(255,200,90,.9)" : "rgba(255,140,60,.85)";
+          ctx.fill();
+        }
+
+        requestAnimationFrame(renderAvatar);
+      }
+
+      canvas.addEventListener("mousemove", (event) => {
+        const rect = canvas.getBoundingClientRect();
+        state.gaze.tx = (event.clientX - rect.left - rect.width / 2) * 0.4;
+        state.gaze.ty = (event.clientY - rect.top - rect.height / 2) * 0.25;
+        state.alertLevel = Math.min(1, Math.hypot(state.gaze.tx, state.gaze.ty) / 28);
+        state.lastMove = state.frame;
+      });
+      renderAvatar();
+    }
+
+    function sendFranksteinMood(mood, energy) {
+      if (typeof window.__franksteinAvatarSetMood === "function") {
+        window.__franksteinAvatarSetMood(mood, energy);
+      }
+    }
+
+    function getDocStatus(doc, id) {
+      const select = document.querySelector(`select.status.status-pill[data-doc="${doc}"][data-id="${id}"]`);
+      return norm(select?.value || "");
+    }
+
+    function buildFranksteinLearningPayload(documentos = null, regras = []) {
+      const comp = getComprometimentoSnapshot();
+      const vencimento = typeof window.__validarVencimentoAnalista === "function"
+        ? window.__validarVencimentoAnalista()
+        : null;
+      const docs = documentos || getDocRows().map((row) => ({
+        categoria: row.categoria,
+        nome: row.nome,
+        status: norm(row.select.value) || "aguardando",
+        motivo: normalizeDocReasonText(row.reasonInput?.value || ""),
+      }));
+      return {
+        processo_id: processoId,
+        contexto: {
+          perfil_renda: byId("perfil-renda")?.value || "",
+          tipo_dependente: byId("tipo-dependente")?.value || "",
+          cotista_3_anos: byId("cotista-3-anos")?.value || "",
+          empresa_atual_6m: byId("tempo-empresa-atual")?.value || "",
+          comprometimento_percent: Number(comp.percent.toFixed(2)),
+          comprometimento_faixa: comp.info.kind,
+          vencimento_status: vencimento?.status || "",
+          status_caixa: byId("status-caixa")?.value || "",
+          status_agehab: byId("status-agehab")?.value || "",
+        },
+        decisao_analista: {
+          status_caixa: byId("status-caixa")?.value || "",
+          status_agehab: byId("status-agehab")?.value || "",
+          status_sinal: byId("status-sinal")?.value || "",
+          status_fiador: byId("status-fiador")?.value || "",
+          observacao_preenchida: Boolean(String(byId("observacao")?.value || "").trim()),
+          renda_complementar_preenchida: Boolean(
+            readMoneyField("renda-complementar-valor") > 0 &&
+            String(byId("renda-complementar-responsavel")?.value || "").trim() &&
+            String(byId("renda-complementar-vinculo")?.value || "").trim()
+          ),
+          documentos: docs,
+        },
+        regras_frankstein: regras.map((item) => ({
+          status: item.status,
+          titulo: item.titulo,
+          mensagem: item.mensagem,
+        })),
+      };
+    }
+
+    function applyFranksteinLearningPatterns(patterns) {
+      franksteinLearnedPatterns = Array.isArray(patterns) ? patterns.slice(0, 8) : [];
+      runFranksteinValidation();
+    }
+
+    async function loadFranksteinLearningPatterns() {
+      if (!processoId) return;
+      try {
+        const payload = buildFranksteinLearningPayload();
+        const result = await api("/frankstein/analista-aprendizado/sugestoes", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        applyFranksteinLearningPatterns(result.padroes || []);
+      } catch (error) {
+        console.warn("Frankstein aprendizado indisponivel:", error.message);
+      }
+    }
+
+    async function recordFranksteinLearning(documentos, regras) {
+      if (!processoId) return;
+      try {
+        const payload = buildFranksteinLearningPayload(documentos, regras);
+        const result = await api("/frankstein/analista-aprendizado", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        applyFranksteinLearningPatterns(result.padroes || []);
+      } catch (error) {
+        console.warn("Nao foi possivel registrar aprendizado do Frankstein:", error.message);
+      }
+    }
+
+    function validateFranksteinRules() {
+      const items = [];
+      const vencimento = typeof window.__validarVencimentoAnalista === "function"
+        ? window.__validarVencimentoAnalista()
+        : { status: "pendente", titulo: "Validador de vencimento indisponivel", mensagem: "Recarregue a tela e tente novamente." };
+      addFranksteinRule(items, vencimento.status, vencimento.titulo, vencimento.mensagem);
+
+      const comp = getComprometimentoSnapshot();
+      if (comp.info.kind === "ok") {
+        addFranksteinRule(items, "ok", "Comprometimento OK", `${formatPercent(comp.percent)} dentro da faixa de 0 a 30.`);
+      } else if (comp.info.kind === "warn") {
+        addFranksteinRule(items, "atencao", "Comprometimento em atencao", `${formatPercent(comp.percent)} na faixa acima de 30 ate 40.`);
+      } else if (comp.info.kind === "critical") {
+        addFranksteinRule(items, "atencao", "Comprometimento critico", `${formatPercent(comp.percent)} na faixa acima de 40 ate 45. Frankstein alerta, mas a decisao continua com o analista.`);
+      } else {
+        addFranksteinRule(items, "atencao", "Necessita renda complementar", `${formatPercent(comp.percent)} acima da regra ou sem renda liquida suficiente. Frankstein exige conferencia dos dados de apoio antes de avancar.`);
+      }
+
+      const rendaBruta = readMoneyField("renda-bruta-cliente");
+      const percentualParcelaBruta = rendaBruta > 0 ? (comp.prestacaoCaixa / rendaBruta) * 100 : 0;
+      const cotistaMaisTresAnos = byId("cotista-3-anos")?.value === "sim";
+      const tempoEmpresaAtual = byId("tempo-empresa-atual")?.value || "";
+      if (cotistaMaisTresAnos && percentualParcelaBruta >= 20 && percentualParcelaBruta <= 28) {
+        if (tempoEmpresaAtual === "sim") {
+          addFranksteinRule(
+            items,
+            "dica",
+            "Sugerir FGTS futuro",
+            `Parcela Caixa representa ${formatPercent(percentualParcelaBruta)} da renda bruta e o cliente tem mais de 6 meses na empresa atual. Utilizar FGTS futuro.`
+          );
+        } else if (tempoEmpresaAtual === "nao") {
+          addFranksteinRule(
+            items,
+            "atencao",
+            "FGTS futuro nao indicado agora",
+            `Parcela Caixa representa ${formatPercent(percentualParcelaBruta)} da renda bruta, mas o cliente tem menos de 6 meses na empresa atual.`
+          );
+        } else {
+          addFranksteinRule(
+            items,
+            "dica",
+            "Perguntar sobre FGTS futuro",
+            `Parcela Caixa representa ${formatPercent(percentualParcelaBruta)} da renda bruta. Perguntar se o cliente tem mais de 6 meses na empresa atual; se sim, utilizar FGTS futuro.`
+          );
+        }
+      }
+
+      if (comp.percent > 45) {
+        addFranksteinRule(
+          items,
+          "dica",
+          "Acionar corretor sobre renda complementar",
+          "Falar com o corretor para verificar se outra pessoa pode ajudar o proponente antes de seguir."
+        );
+      }
+
+      if (comp.info.kind === "complementar") {
+        const valorComplementar = readMoneyField("renda-complementar-valor");
+        const responsavel = String(byId("renda-complementar-responsavel")?.value || "").trim();
+        const vinculo = String(byId("renda-complementar-vinculo")?.value || "").trim();
+        if (valorComplementar <= 0) {
+          addFranksteinRule(items, "bloqueio", "Renda complementar sem valor", "Informe o valor da renda complementar.");
+        }
+        if (!responsavel) {
+          addFranksteinRule(items, "bloqueio", "Ajudante nao informado", "Informe quem vai ajudar com a renda complementar.");
+        }
+        if (!vinculo) {
+          addFranksteinRule(items, "bloqueio", "Vinculo nao informado", "Selecione o vinculo de quem vai ajudar.");
+        }
+        if (valorComplementar > 0 && responsavel && vinculo) {
+          addFranksteinRule(items, "atencao", "Renda complementar registrada", "Conferir documento de renda e vinculo antes de avancar.");
+        }
+      }
+
+      const statusCaixa = byId("status-caixa")?.value || "analise_credito";
+      const statusAgehab = byId("status-agehab")?.value || "analise_credito";
+      const statusSinal = byId("status-sinal")?.value || "nao_tem";
+      const statusFiador = byId("status-fiador")?.value || "nao_tem";
+      const obs = String(byId("observacao")?.value || "").trim();
+
+      if (["assinatura_caixa", "finalizado"].includes(statusCaixa)) {
+        if (statusAgehab !== "validado_agehab") {
+          addFranksteinRule(items, "bloqueio", "Assinatura sem Agehab validada", "Para assinatura, Agehab precisa estar validada.");
+        }
+        if (statusSinal === "pendente") {
+          addFranksteinRule(items, "bloqueio", "Assinatura com sinal pendente", "Regularize o sinal antes de assinatura.");
+        }
+        if (statusFiador === "pendente") {
+          addFranksteinRule(items, "bloqueio", "Assinatura com fiador pendente", "Regularize o fiador antes de assinatura.");
+        }
+      } else {
+        addFranksteinRule(items, "ok", "Status Caixa conferido", "Sem tentativa de assinatura bloqueada pela regra.");
+      }
+
+      const temPendenciaStatus =
+        ["pendente_credito", "pendente_cca", "condicionado", "reprovado", "bloqueado"].includes(statusCaixa) ||
+        ["pendente_credito", "pendente_agehab"].includes(statusAgehab) ||
+        statusSinal === "pendente" ||
+        statusFiador === "pendente";
+      if (temPendenciaStatus && !obs) {
+        addFranksteinRule(items, "bloqueio", "Pendencia sem observacao", "Preencha a observacao do analista para registrar pendencia.");
+      }
+
+      if (statusCaixa === "bloqueado" || statusCaixa === "reprovado") {
+        addFranksteinRule(items, "bloqueio", "Credito bloqueado/reprovado", "Frankstein bloqueia o avanço porque o status Caixa impede continuidade.");
+      }
+      if (statusAgehab === "pendente_agehab") {
+        addFranksteinRule(items, "atencao", "Agehab pendente", "Frankstein sinaliza pendencia da Agehab; avance somente com orientação registrada.");
+      }
+
+      const docRows = getDocRows();
+      const tipoDependente = byId("tipo-dependente")?.value || "";
+      const dependentesComCertidaoEmRg = new Set(["filho-maior", "pai-mae", "irmao-irma"]);
+      const certidaoNascimentoStatus = getDocStatus("depmaior", "estadocivil-dep");
+      if (
+        dependentesComCertidaoEmRg.has(tipoDependente) &&
+        certidaoNascimentoStatus &&
+        certidaoNascimentoStatus !== "aprovado"
+      ) {
+        addFranksteinRule(
+          items,
+          "dica",
+          "Dica para certidao do dependente",
+          "Dependente maior com certidao/estado civil pendente: analise se o RG foi emitido com a descricao da certidao de nascimento. Se constar, solicitar envio para conformidade e orientar que a Agehab tambem vai precisar deste documento."
+        );
+      }
+
+      const bloqueados = docRows.filter((row) => ["bloqueado", "reprovado"].includes(norm(row.select.value))).length;
+      const pendentes = docRows.filter((row) => norm(row.select.value) === "pendente").length;
+      const aguardando = docRows.filter((row) => norm(row.select.value) === "aguardando").length;
+      if (bloqueados > 0) {
+        addFranksteinRule(items, "bloqueio", "Documentos bloqueados/reprovados", `${bloqueados} documento(s) exigem correcao antes de avancar.`);
+      }
+      if (pendentes > 0) {
+        addFranksteinRule(items, "atencao", "Documentos pendentes", `${pendentes} documento(s) pendente(s) no checklist.`);
+      }
+      if (aguardando > 0) {
+        addFranksteinRule(items, "atencao", "Documentos aguardando envio", `${aguardando} documento(s) ainda aguardando envio ou analise.`);
+      }
+      if (docRows.length > 0 && bloqueados === 0 && pendentes === 0 && aguardando === 0) {
+        addFranksteinRule(items, "ok", "Checklist sem pendencias", "Documentos visiveis estao aprovados para a regra atual.");
+      }
+
+      franksteinLearnedPatterns.forEach((pattern) => {
+        if (!pattern || !pattern.mensagem) return;
+        addFranksteinRule(
+          items,
+          pattern.status || "dica",
+          pattern.titulo || "Aprendizado do Frankstein",
+          pattern.mensagem
+        );
+      });
+
+      return items;
+    }
+
+    function renderFranksteinValidation(items) {
+      const worst = items.reduce((current, item) => (
+        franksteinStatusRank(item.status) > franksteinStatusRank(current.status) ? item : current
+      ), { status: "ok", titulo: "Tudo validado", mensagem: "Regras conferidas." });
+      const statusLabel = worst.status === "bloqueio" ? "Bloqueio" : (worst.status === "atencao" ? "Atencao" : (worst.status === "pendente" ? "Pendente" : "OK"));
+      const statusPill = worst.status === "bloqueio" ? "bad" : (worst.status === "atencao" ? "warn" : (worst.status === "pendente" ? "neutral" : "ok"));
+      const status = byId("franksteinStatus");
+      if (status) {
+        status.className = `pill ${statusPill}`;
+        status.textContent = statusLabel;
+      }
+      const avatar = byId("franksteinAvatar");
+      if (avatar) {
+        const avatarStatus = worst.status === "pendente" ? "atencao" : worst.status;
+        avatar.className = `frankstein-avatar is-${avatarStatus}`;
+        const mood = worst.status === "bloqueio"
+          ? "alerta"
+          : (worst.status === "atencao" || worst.status === "pendente" ? "aprendendo" : "normal");
+        const energy = worst.status === "bloqueio" ? 0.85 : (worst.status === "atencao" ? 0.55 : 0.25);
+        sendFranksteinMood(mood, energy);
+      }
+
+      const resumo = byId("franksteinResumo");
+      if (resumo) {
+        resumo.className = `frankstein-summary is-${worst.status === "pendente" ? "atencao" : worst.status}`;
+        resumo.innerHTML = "";
+        const strong = document.createElement("strong");
+        strong.textContent = worst.titulo;
+        const span = document.createElement("span");
+        span.textContent = worst.mensagem;
+        resumo.appendChild(strong);
+        resumo.appendChild(span);
+      }
+
+      const list = byId("franksteinLista");
+      if (list) {
+        list.innerHTML = "";
+        items.forEach((item) => {
+          const li = document.createElement("li");
+          li.className = `frankstein-item ${item.status === "pendente" ? "atencao" : item.status}`;
+          const title = document.createElement("b");
+          title.textContent = item.titulo;
+          const msg = document.createElement("span");
+          msg.textContent = item.mensagem;
+          li.appendChild(title);
+          li.appendChild(msg);
+          list.appendChild(li);
+        });
+      }
+    }
+
+    function runFranksteinValidation() {
+      const items = validateFranksteinRules();
+      renderFranksteinValidation(items);
+      return items;
     }
 
     function formatDateBr(value) {
@@ -3650,12 +4524,14 @@ DIVORCIADO: Certidão averbada.</td>
         const valorSinal = Number(processo.valor_sinal);
         byId("valor-sinal").value = Number.isFinite(valorSinal) && valorSinal > 0 ? valorSinal.toFixed(2) : "";
       }
+      writeMoneyField("renda-bruta-cliente", processo.renda_bruta);
       writeMoneyField("renda-liquida-cliente", processo.renda_liquida);
       writeMoneyField("prestacao-caixa", processo.valor_parcela);
       writeMoneyField("prestacao-7lm", processo.valor_parcela_7lm);
       writeMoneyField("renda-complementar-valor", processo.renda_complementar_valor);
       if (byId("renda-complementar-responsavel")) byId("renda-complementar-responsavel").value = processo.renda_complementar_responsavel || "";
       if (byId("renda-complementar-vinculo")) byId("renda-complementar-vinculo").value = processo.renda_complementar_vinculo || "";
+      if (byId("tempo-empresa-atual")) byId("tempo-empresa-atual").value = processo.fgts_futuro_empresa_6m || "";
       updateComprometimento();
       if (byId("status-fiador")) byId("status-fiador").value = norm(processo.status_fiador) || "nao_tem";
       if (byId("cca-responsavel")) byId("cca-responsavel").value = norm(processo.cca_responsavel);
@@ -3689,6 +4565,7 @@ DIVORCIADO: Certidão averbada.</td>
       if (typeof setSlaBadges === "function") setSlaBadges();
       if (typeof updateSectionCounters === "function") updateSectionCounters();
       if (typeof buildPendenciasResumo === "function") buildPendenciasResumo();
+      runFranksteinValidation();
     }
 
     async function saveAll() {
@@ -3708,11 +4585,13 @@ DIVORCIADO: Certidão averbada.</td>
       const observacao = (byId("observacao")?.value || "").trim() || null;
       const naoContarMes = Boolean(byId("nao-contar-mes")?.checked);
       const rendaLiquida = readMoneyField("renda-liquida-cliente");
+      const rendaBruta = readMoneyField("renda-bruta-cliente");
       const prestacaoCaixa = readMoneyField("prestacao-caixa");
       const prestacao7lm = readMoneyField("prestacao-7lm");
       const rendaComplementarValor = readMoneyField("renda-complementar-valor");
       const rendaComplementarResponsavel = (byId("renda-complementar-responsavel")?.value || "").trim() || null;
       const rendaComplementarVinculo = (byId("renda-complementar-vinculo")?.value || "").trim() || null;
+      const tempoEmpresaAtual = (byId("tempo-empresa-atual")?.value || "").trim() || null;
 
       const temPendencia =
         ["pendente_credito", "pendente_cca", "condicionado", "reprovado", "bloqueado"].includes(statusCaixa) ||
@@ -3733,16 +4612,19 @@ DIVORCIADO: Certidão averbada.</td>
         status_fiador: backendFromUiFiador(statusFiador),
         cca_responsavel: ccaResponsavel,
         nao_contar_mes: naoContarMes,
+        renda_bruta: rendaBruta,
         renda_liquida: rendaLiquida,
         valor_parcela: prestacaoCaixa,
         valor_parcela_7lm: prestacao7lm,
         renda_complementar_valor: rendaComplementarValor,
         renda_complementar_responsavel: rendaComplementarResponsavel,
         renda_complementar_vinculo: rendaComplementarVinculo,
+        fgts_futuro_empresa_6m: tempoEmpresaAtual,
         observacao,
       };
 
       const documentos = [];
+      const documentosAprendizado = [];
       for (const row of getDocRows()) {
         const statusDocUi = norm(row.select.value);
         const motivo = normalizeDocReasonText(row.reasonInput?.value || "");
@@ -3792,6 +4674,12 @@ DIVORCIADO: Certidão averbada.</td>
           status_credito: statusCreditoDoc,
           pendencia_info: pendenciaInfo,
         });
+        documentosAprendizado.push({
+          categoria: row.categoria,
+          nome: row.nome,
+          status: statusDocUi || "aguardando",
+          motivo,
+        });
       }
 
       try {
@@ -3822,6 +4710,8 @@ DIVORCIADO: Certidão averbada.</td>
         if (typeof setRightPills === "function") setRightPills();
         if (typeof setSlaBadges === "function") setSlaBadges();
         updateComprometimento();
+        const regrasFrankstein = runFranksteinValidation();
+        await recordFranksteinLearning(documentosAprendizado, regrasFrankstein);
         if (typeof buildPendenciasResumo === "function") buildPendenciasResumo();
         alert("Dados salvos com sucesso.");
       } catch (error) {
@@ -3841,17 +4731,41 @@ DIVORCIADO: Certidão averbada.</td>
     rebindButton("btnVoltar", () => {
       window.location.href = "/app/analista";
     });
-
-    ["renda-liquida-cliente", "prestacao-caixa", "prestacao-7lm", "renda-complementar-valor"].forEach((id) => {
+    ["renda-bruta-cliente", "renda-liquida-cliente", "prestacao-caixa", "prestacao-7lm", "renda-complementar-valor"].forEach((id) => {
       const field = byId(id);
       if (!field) return;
-      field.addEventListener("input", updateComprometimento);
+      field.addEventListener("input", () => {
+        updateComprometimento();
+        runFranksteinValidation();
+      });
       field.addEventListener("blur", () => {
         writeMoneyField(id, readMoneyField(id));
         updateComprometimento();
+        runFranksteinValidation();
       });
     });
+    ["renda-complementar-responsavel", "renda-complementar-vinculo", "status-caixa", "status-agehab", "status-sinal", "status-fiador", "observacao", "tipo-dependente", "cotista-3-anos", "tempo-empresa-atual"].forEach((id) => {
+      const field = byId(id);
+      if (!field) return;
+      field.addEventListener("input", runFranksteinValidation);
+      field.addEventListener("change", runFranksteinValidation);
+    });
+    document.querySelectorAll("select.status.status-pill[data-doc][data-id]").forEach((field) => {
+      field.addEventListener("change", runFranksteinValidation);
+    });
+    ["diaClienteVencimento", "mesBaseVencimento"].forEach((id) => {
+      const field = byId(id);
+      if (!field) return;
+      field.addEventListener("input", runFranksteinValidation);
+      field.addEventListener("change", runFranksteinValidation);
+    });
+    byId("calendarioVencimento")?.addEventListener("click", () => {
+      window.setTimeout(runFranksteinValidation, 0);
+    });
+    initFranksteinAvatar();
     updateComprometimento();
+    runFranksteinValidation();
+    window.setTimeout(loadFranksteinLearningPatterns, 700);
 
     lockSlaInputs();
 
@@ -3863,5 +4777,6 @@ DIVORCIADO: Certidão averbada.</td>
 </script>
 </body>
 </html>
+
 
 
