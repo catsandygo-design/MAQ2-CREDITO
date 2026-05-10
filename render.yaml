@@ -54,5 +54,21 @@ services:
         value: "false"
       - key: PII_ENCRYPTION_KEY
         sync: false
-      - key: SIOCRED_WHATSAPP_REMINDER_NUMBER
+      - key: EMAIL_SMTP_HOST
         sync: false
+      - key: EMAIL_SMTP_PORT
+        value: "587"
+      - key: EMAIL_SMTP_USER
+        sync: false
+      - key: EMAIL_SMTP_PASSWORD
+        sync: false
+      - key: EMAIL_SMTP_FROM
+        sync: false
+      - key: EMAIL_SMTP_STARTTLS
+        value: "true"
+      - key: SIOCRED_ALERT_EMAIL_TO
+        sync: false
+      - key: SIOCRED_EMAIL_ALERT_TOKEN
+        sync: false
+      - key: SIOCRED_EMAIL_ALERT_WINDOW_MINUTES
+        value: "6"

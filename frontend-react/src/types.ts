@@ -135,9 +135,6 @@ export interface CreditoPlanejamentoItem {
   meta_responsavel?: string | null
   meta_status_oper?: string | null
   meta_status_oper_label?: string | null
-  frankstein_lembrete_status?: string | null
-  whatsapp_lembrete_texto?: string | null
-  whatsapp_lembrete_url?: string | null
 }
 
 export interface CreditoPlanejamentoEvolucao {

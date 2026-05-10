@@ -17,7 +17,7 @@ from email.message import EmailMessage
 from pathlib import Path
 from threading import RLock
 from typing import Any, Optional
-from urllib.parse import quote, urlparse
+from urllib.parse import urlparse
 
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
@@ -450,7 +450,12 @@ PROCESS_LIST_CACHE_LOCK = RLock()
 SEED_USERS_READY = False
 CREDITO_PLANEJAMENTO_TIPOS = {"tarefa", "subtarefa", "agendamento", "entrega", "urgente", "anotacao"}
 CREDITO_PLANEJAMENTO_STATUS = {"pendente", "em_andamento", "concluido", "atrasado"}
-SIOCRED_WHATSAPP_REMINDER_NUMBER = "".join(ch for ch in os.getenv("SIOCRED_WHATSAPP_REMINDER_NUMBER", "") if ch.isdigit())
+SIOCRED_ALERT_EMAIL_TO = (os.getenv("SIOCRED_ALERT_EMAIL_TO", "") or "").strip()
+SIOCRED_EMAIL_ALERT_TOKEN = (os.getenv("SIOCRED_EMAIL_ALERT_TOKEN", "") or "").strip()
+try:
+    SIOCRED_EMAIL_ALERT_WINDOW_MINUTES = max(1, int(os.getenv("SIOCRED_EMAIL_ALERT_WINDOW_MINUTES", "6")))
+except ValueError:
+    SIOCRED_EMAIL_ALERT_WINDOW_MINUTES = 6
 ANALISTA_REUNIAO_FOLLOWUP_STATUS = {"seguir", "finalizar_hoje", "assinado"}
 ANALISTA_REUNIAO_COMPROMISSO_STATUS = {"pendente", "nao_entregue", "entregue"}
 ANALISTA_REUNIAO_ESTAGIOS = {"EM_PROCESSO", "CREDITO", "SECRETARIA_VENDAS"}
@@ -2798,9 +2803,6 @@ class CreditoPlanejamentoItemOut(BaseModel):
     meta_responsavel: Optional[str] = None
     meta_status_oper: Optional[str] = None
     meta_status_oper_label: Optional[str] = None
-    frankstein_lembrete_status: Optional[str] = None
-    whatsapp_lembrete_texto: Optional[str] = None
-    whatsapp_lembrete_url: Optional[str] = None
 
 
 class CreditoPlanejamentoEvolucaoOut(BaseModel):
@@ -3100,61 +3102,166 @@ def _credito_planejamento_item_view(item: CreditoPlanejamentoItem) -> dict[str, 
     }
 
 
-def _credito_planejamento_lembrete_whatsapp(item: CreditoPlanejamentoItem, view: dict[str, Optional[str]]) -> dict[str, Optional[str]]:
-    status = _credito_planejamento_status(item.status, fallback="pendente")
-    if status == "concluido" or _credito_planejamento_tipo(item.tipo, fallback="tarefa") == "anotacao":
-        return {
-            "frankstein_lembrete_status": "sem_alerta",
-            "whatsapp_lembrete_texto": None,
-            "whatsapp_lembrete_url": None,
-        }
+def _credito_planejamento_item_occurs_on(item: CreditoPlanejamentoItem, target_date: date) -> bool:
+    tipo = _credito_planejamento_tipo(item.tipo, fallback="tarefa")
+    if tipo == "anotacao":
+        return False
+    if _credito_planejamento_status(item.status, fallback="pendente") == "concluido":
+        return False
+    if not item.hora_inicio:
+        return False
+    if tipo == "subtarefa":
+        return item.data_referencia is None or item.data_referencia <= target_date
+    return item.data_referencia == target_date
 
-    hoje_brt = datetime.now(KEEPALIVE_BRT_TZ).date()
-    data_ref = item.data_referencia
-    hora_inicio = str(item.hora_inicio or "").strip()[:5] or None
 
-    if data_ref and data_ref < hoje_brt:
-        alerta = "atrasada"
-    elif data_ref == hoje_brt:
-        alerta = "hoje"
-    elif item.urgente:
-        alerta = "urgente"
-    else:
-        alerta = "programada"
+def _credito_planejamento_reminder_at_brt(item: CreditoPlanejamentoItem) -> Optional[datetime]:
+    if not item.hora_inicio:
+        return None
+    try:
+        hour_raw, minute_raw = str(item.hora_inicio).strip()[:5].split(":", 1)
+        task_time = time(int(hour_raw), int(minute_raw))
+    except (TypeError, ValueError):
+        return None
+    target_date = item.data_referencia or datetime.now(KEEPALIVE_BRT_TZ).date()
+    return datetime.combine(target_date, task_time, tzinfo=KEEPALIVE_BRT_TZ) - timedelta(minutes=5)
 
+
+def _credito_planejamento_alert_key(item: CreditoPlanejamentoItem, reminder_at: datetime) -> str:
+    return f"alert_key=planejamento:{item.id}:{reminder_at.date().isoformat()}:{str(item.hora_inicio or '').strip()[:5]}"
+
+
+def _credito_planejamento_email_body(item: CreditoPlanejamentoItem, view: dict[str, Optional[str]], reminder_at: datetime) -> str:
     titulo = str(view.get("display_titulo") or item.titulo or "Tarefa sem titulo").strip()
     descricao = str(view.get("display_descricao") or "").strip()
     responsavel = str(item.responsavel or view.get("meta_responsavel") or "").strip()
-    data_label = _credito_planejamento_date_label(data_ref)
-    horario = _credito_planejamento_time_window(item.hora_inicio, item.hora_fim) or (hora_inicio or "sem horario")
-    status_label = _credito_planejamento_status_label(status)
+    horario = _credito_planejamento_time_window(item.hora_inicio, item.hora_fim) or str(item.hora_inicio or "").strip()
+    data_label = _credito_planejamento_date_label(item.data_referencia or reminder_at.date())
+    status_label = _credito_planejamento_status_label(item.status)
 
     linhas = [
         "Frankstein alerta supervisionado do SioCred",
+        "",
+        "Faltam 5 minutos para uma tarefa ou compromisso.",
+        "",
         f"Tarefa: {titulo}",
-        f"Quando: {data_label} {horario}".strip(),
-        f"Status: {status_label}",
+        f"Data: {data_label}",
+        f"Horario: {horario or '-'}",
+        f"Status atual: {status_label}",
     ]
     if responsavel:
         linhas.append(f"Responsavel: {responsavel}")
     if descricao:
-        linhas.append(f"Detalhe: {descricao}")
-    linhas.append("Acao sugerida: revisar a agenda no SioCred e marcar check-in/conclusao.")
+        linhas.extend(["", f"Detalhe: {descricao}"])
+    linhas.extend(
+        [
+            "",
+            "Acao sugerida:",
+            "Abra a agenda operacional do SioCred, execute a tarefa e marque o check-in/conclusao.",
+            "",
+            "Este e um alerta automatico do Frankstein. Ele apenas avisa; a decisao continua supervisionada por voce.",
+        ]
+    )
+    return "\n".join(linhas)
 
-    texto = "\n".join(linhas)
-    target = f"/{SIOCRED_WHATSAPP_REMINDER_NUMBER}" if SIOCRED_WHATSAPP_REMINDER_NUMBER else ""
-    url = f"https://wa.me{target}?text={quote(texto)}"
 
-    return {
-        "frankstein_lembrete_status": alerta,
-        "whatsapp_lembrete_texto": texto,
-        "whatsapp_lembrete_url": url,
+def _processar_alertas_email_planejamento(db: Session, *, now: Optional[datetime] = None) -> dict[str, Any]:
+    now_brt = (now or datetime.now(KEEPALIVE_BRT_TZ)).astimezone(KEEPALIVE_BRT_TZ)
+    recipients = _split_alert_recipients()
+    result: dict[str, Any] = {
+        "ok": True,
+        "email_configured": _is_email_delivery_configured(),
+        "recipients_configured": bool(recipients),
+        "now_brt": now_brt.isoformat(),
+        "window_minutes": SIOCRED_EMAIL_ALERT_WINDOW_MINUTES,
+        "checked": 0,
+        "sent": 0,
+        "skipped": 0,
+        "errors": [],
     }
+    if not _is_email_delivery_configured() or not recipients:
+        result["ok"] = False
+        result["reason"] = "email_not_configured" if not _is_email_delivery_configured() else "recipients_not_configured"
+        return result
+
+    today = now_brt.date()
+    candidate_rows = (
+        db.query(CreditoPlanejamentoItem)
+        .filter(func.lower(func.coalesce(CreditoPlanejamentoItem.status, "")) != "concluido")
+        .filter(func.lower(func.coalesce(CreditoPlanejamentoItem.tipo, "")) != "anotacao")
+        .filter(CreditoPlanejamentoItem.hora_inicio.isnot(None))
+        .filter(
+            or_(
+                CreditoPlanejamentoItem.data_referencia == today,
+                and_(
+                    func.lower(func.coalesce(CreditoPlanejamentoItem.tipo, "")) == "subtarefa",
+                    or_(
+                        CreditoPlanejamentoItem.data_referencia.is_(None),
+                        CreditoPlanejamentoItem.data_referencia <= today,
+                    ),
+                ),
+            )
+        )
+        .order_by(CreditoPlanejamentoItem.hora_inicio.asc(), CreditoPlanejamentoItem.updated_at.desc())
+        .limit(200)
+        .all()
+    )
+
+    for item in candidate_rows:
+        if not _credito_planejamento_item_occurs_on(item, today):
+            continue
+        reminder_at = _credito_planejamento_reminder_at_brt(item)
+        if not reminder_at:
+            continue
+        elapsed = now_brt - reminder_at
+        if elapsed < timedelta(0) or elapsed > timedelta(minutes=SIOCRED_EMAIL_ALERT_WINDOW_MINUTES):
+            continue
+
+        result["checked"] += 1
+        alert_key = _credito_planejamento_alert_key(item, reminder_at)
+        already_sent = (
+            db.query(func.count(SistemaLog.id))
+            .filter(SistemaLog.tela == "frankstein_agenda")
+            .filter(SistemaLog.acao == "EMAIL_ALERTA_5MIN")
+            .filter(SistemaLog.entidade_id == str(item.id))
+            .filter(SistemaLog.details == alert_key)
+            .scalar()
+            or 0
+        )
+        if already_sent:
+            result["skipped"] += 1
+            continue
+
+        view = _credito_planejamento_item_view(item)
+        subject = f"Frankstein: alerta em 5 min - {view.get('display_titulo') or item.titulo}"
+        body = _credito_planejamento_email_body(item, view, reminder_at)
+        try:
+            for to_email in recipients:
+                _send_email_message(to_email=to_email, subject=subject, text_body=body)
+            _record_system_log(
+                db,
+                actor_username="frankstein",
+                actor_role="system",
+                tela="frankstein_agenda",
+                acao="EMAIL_ALERTA_5MIN",
+                entidade_tipo="planejamento",
+                entidade_id=str(item.id),
+                details=alert_key,
+            )
+            db.commit()
+            result["sent"] += 1
+        except Exception as exc:  # pragma: no cover - depends on SMTP provider
+            db.rollback()
+            logger.exception("Falha ao enviar alerta de agenda Frankstein por e-mail.")
+            result["errors"].append({"item_id": str(item.id), "error": exc.__class__.__name__})
+
+    if result["errors"]:
+        result["ok"] = False
+    return result
 
 
 def _credito_planejamento_item_out(item: CreditoPlanejamentoItem) -> CreditoPlanejamentoItemOut:
     view = _credito_planejamento_item_view(item)
-    lembrete = _credito_planejamento_lembrete_whatsapp(item, view)
     return CreditoPlanejamentoItemOut(
         id=item.id,
         tipo=_credito_planejamento_tipo(item.tipo, fallback="tarefa"),
@@ -3183,9 +3290,6 @@ def _credito_planejamento_item_out(item: CreditoPlanejamentoItem) -> CreditoPlan
         meta_responsavel=view["meta_responsavel"],
         meta_status_oper=view["meta_status_oper"],
         meta_status_oper_label=view["meta_status_oper_label"],
-        frankstein_lembrete_status=lembrete["frankstein_lembrete_status"],
-        whatsapp_lembrete_texto=lembrete["whatsapp_lembrete_texto"],
-        whatsapp_lembrete_url=lembrete["whatsapp_lembrete_url"],
     )
 
 
@@ -3858,6 +3962,23 @@ def _send_email_message(*, to_email: str, subject: str, text_body: str) -> None:
         if EMAIL_SMTP_USER:
             smtp.login(EMAIL_SMTP_USER, EMAIL_SMTP_PASSWORD)
         smtp.send_message(msg)
+
+
+def _split_alert_recipients(raw: Optional[str] = None) -> list[str]:
+    source = str(raw if raw is not None else SIOCRED_ALERT_EMAIL_TO or "").strip()
+    if not source:
+        return []
+    for separator in (";", "\n", "\t"):
+        source = source.replace(separator, ",")
+    recipients = []
+    seen = set()
+    for part in source.split(","):
+        email = part.strip()
+        if not email or email.lower() in seen:
+            continue
+        seen.add(email.lower())
+        recipients.append(email)
+    return recipients
 
 
 def _build_email_confirmation_link(request: Request, token: str) -> str:
@@ -9159,6 +9280,18 @@ def app_get_credito_planejamento_dashboard(
         anotacoes=anotacoes_out,
         itens=itens_out,
     )
+
+
+@app.post("/app/api/frankstein/agenda/email-alertas/processar")
+def app_process_frankstein_agenda_email_alerts(
+    request: Request,
+    token: Optional[str] = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    supplied_token = (token or request.headers.get("x-siocred-alert-token") or "").strip()
+    if SIOCRED_EMAIL_ALERT_TOKEN and supplied_token != SIOCRED_EMAIL_ALERT_TOKEN:
+        raise HTTPException(status_code=403, detail="Token de alerta invalido.")
+    return _processar_alertas_email_planejamento(db)
 
 
 @app.post("/app/api/analista/planejamento/itens", response_model=CreditoPlanejamentoItemOut)
