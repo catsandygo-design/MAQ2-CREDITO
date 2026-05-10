@@ -308,6 +308,18 @@ function plannerMeta(item: CreditoPlanejamentoItem): string {
   return parts.join(' • ')
 }
 
+function plannerWhatsappHref(item: CreditoPlanejamentoItem): string {
+  return String(item.whatsapp_lembrete_url || '').trim()
+}
+
+function plannerReminderTone(item: CreditoPlanejamentoItem): 'ok' | 'warn' | 'danger' | 'neutral' {
+  const status = statusFromBackend(item.frankstein_lembrete_status)
+  if (status === 'atrasada') return 'danger'
+  if (status === 'hoje' || status === 'urgente') return 'warn'
+  if (status === 'programada') return 'ok'
+  return 'neutral'
+}
+
 function formatElapsedHours(hours: number): string {
   const safeHours = Number.isFinite(hours) ? Math.max(0, Math.round(hours)) : 0
   if (safeHours < 1) return '0 min'
@@ -877,18 +889,27 @@ export function AnalistaPainelPage() {
 
                   {group.items.length > 0 ? (
                     <div className="ops-summary-list">
-                      {group.items.slice(0, 2).map((item) => (
-                        <div key={item.id} className="ops-summary-item">
-                          <div className="ops-summary-title-row">
-                            <strong>{plannerCardTitle(item)}</strong>
-                            <span className={`ops-state ${plannerStatusTone(item.status)}`}>
-                              {plannerStatusLabel(item.status)}
-                            </span>
+                      {group.items.slice(0, 2).map((item) => {
+                        const whatsappHref = plannerWhatsappHref(item)
+
+                        return (
+                          <div key={item.id} className="ops-summary-item">
+                            <div className="ops-summary-title-row">
+                              <strong>{plannerCardTitle(item)}</strong>
+                              <span className={`ops-state ${plannerStatusTone(item.status)}`}>
+                                {plannerStatusLabel(item.status)}
+                              </span>
+                            </div>
+                            {plannerCardDescription(item) ? <p>{plannerCardDescription(item)}</p> : null}
+                            <span className="ops-summary-meta">{plannerMeta(item)}</span>
+                            {whatsappHref ? (
+                              <a className={`ops-whatsapp-link tone-${plannerReminderTone(item)}`} href={whatsappHref} target="_blank" rel="noreferrer">
+                                WhatsApp Frankstein
+                              </a>
+                            ) : null}
                           </div>
-                          {plannerCardDescription(item) ? <p>{plannerCardDescription(item)}</p> : null}
-                          <span className="ops-summary-meta">{plannerMeta(item)}</span>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   ) : (
                     <div className="ops-empty">{group.empty}</div>

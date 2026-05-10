@@ -54,3 +54,5 @@ services:
         value: "false"
       - key: PII_ENCRYPTION_KEY
         sync: false
+      - key: SIOCRED_WHATSAPP_REMINDER_NUMBER
+        sync: false

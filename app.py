@@ -17,7 +17,7 @@ from email.message import EmailMessage
 from pathlib import Path
 from threading import RLock
 from typing import Any, Optional
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
@@ -450,6 +450,7 @@ PROCESS_LIST_CACHE_LOCK = RLock()
 SEED_USERS_READY = False
 CREDITO_PLANEJAMENTO_TIPOS = {"tarefa", "subtarefa", "agendamento", "entrega", "urgente", "anotacao"}
 CREDITO_PLANEJAMENTO_STATUS = {"pendente", "em_andamento", "concluido", "atrasado"}
+SIOCRED_WHATSAPP_REMINDER_NUMBER = "".join(ch for ch in os.getenv("SIOCRED_WHATSAPP_REMINDER_NUMBER", "") if ch.isdigit())
 ANALISTA_REUNIAO_FOLLOWUP_STATUS = {"seguir", "finalizar_hoje", "assinado"}
 ANALISTA_REUNIAO_COMPROMISSO_STATUS = {"pendente", "nao_entregue", "entregue"}
 ANALISTA_REUNIAO_ESTAGIOS = {"EM_PROCESSO", "CREDITO", "SECRETARIA_VENDAS"}
@@ -2797,6 +2798,9 @@ class CreditoPlanejamentoItemOut(BaseModel):
     meta_responsavel: Optional[str] = None
     meta_status_oper: Optional[str] = None
     meta_status_oper_label: Optional[str] = None
+    frankstein_lembrete_status: Optional[str] = None
+    whatsapp_lembrete_texto: Optional[str] = None
+    whatsapp_lembrete_url: Optional[str] = None
 
 
 class CreditoPlanejamentoEvolucaoOut(BaseModel):
@@ -3096,8 +3100,61 @@ def _credito_planejamento_item_view(item: CreditoPlanejamentoItem) -> dict[str, 
     }
 
 
+def _credito_planejamento_lembrete_whatsapp(item: CreditoPlanejamentoItem, view: dict[str, Optional[str]]) -> dict[str, Optional[str]]:
+    status = _credito_planejamento_status(item.status, fallback="pendente")
+    if status == "concluido" or _credito_planejamento_tipo(item.tipo, fallback="tarefa") == "anotacao":
+        return {
+            "frankstein_lembrete_status": "sem_alerta",
+            "whatsapp_lembrete_texto": None,
+            "whatsapp_lembrete_url": None,
+        }
+
+    hoje_brt = datetime.now(KEEPALIVE_BRT_TZ).date()
+    data_ref = item.data_referencia
+    hora_inicio = str(item.hora_inicio or "").strip()[:5] or None
+
+    if data_ref and data_ref < hoje_brt:
+        alerta = "atrasada"
+    elif data_ref == hoje_brt:
+        alerta = "hoje"
+    elif item.urgente:
+        alerta = "urgente"
+    else:
+        alerta = "programada"
+
+    titulo = str(view.get("display_titulo") or item.titulo or "Tarefa sem titulo").strip()
+    descricao = str(view.get("display_descricao") or "").strip()
+    responsavel = str(item.responsavel or view.get("meta_responsavel") or "").strip()
+    data_label = _credito_planejamento_date_label(data_ref)
+    horario = _credito_planejamento_time_window(item.hora_inicio, item.hora_fim) or (hora_inicio or "sem horario")
+    status_label = _credito_planejamento_status_label(status)
+
+    linhas = [
+        "Frankstein alerta supervisionado do SioCred",
+        f"Tarefa: {titulo}",
+        f"Quando: {data_label} {horario}".strip(),
+        f"Status: {status_label}",
+    ]
+    if responsavel:
+        linhas.append(f"Responsavel: {responsavel}")
+    if descricao:
+        linhas.append(f"Detalhe: {descricao}")
+    linhas.append("Acao sugerida: revisar a agenda no SioCred e marcar check-in/conclusao.")
+
+    texto = "\n".join(linhas)
+    target = f"/{SIOCRED_WHATSAPP_REMINDER_NUMBER}" if SIOCRED_WHATSAPP_REMINDER_NUMBER else ""
+    url = f"https://wa.me{target}?text={quote(texto)}"
+
+    return {
+        "frankstein_lembrete_status": alerta,
+        "whatsapp_lembrete_texto": texto,
+        "whatsapp_lembrete_url": url,
+    }
+
+
 def _credito_planejamento_item_out(item: CreditoPlanejamentoItem) -> CreditoPlanejamentoItemOut:
     view = _credito_planejamento_item_view(item)
+    lembrete = _credito_planejamento_lembrete_whatsapp(item, view)
     return CreditoPlanejamentoItemOut(
         id=item.id,
         tipo=_credito_planejamento_tipo(item.tipo, fallback="tarefa"),
@@ -3126,6 +3183,9 @@ def _credito_planejamento_item_out(item: CreditoPlanejamentoItem) -> CreditoPlan
         meta_responsavel=view["meta_responsavel"],
         meta_status_oper=view["meta_status_oper"],
         meta_status_oper_label=view["meta_status_oper_label"],
+        frankstein_lembrete_status=lembrete["frankstein_lembrete_status"],
+        whatsapp_lembrete_texto=lembrete["whatsapp_lembrete_texto"],
+        whatsapp_lembrete_url=lembrete["whatsapp_lembrete_url"],
     )
 
 

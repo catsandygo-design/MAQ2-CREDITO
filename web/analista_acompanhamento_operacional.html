@@ -753,6 +753,38 @@
       color:#64748b;
       line-height:1.35;
     }
+    .whatsapp-reminder{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:24px;
+      padding:0 8px;
+      border-radius:999px;
+      border:1px solid rgba(34,197,94,.28);
+      background:linear-gradient(180deg,#ecfdf5,#f0fdf4);
+      color:#166534;
+      text-decoration:none;
+      font-size:.66rem;
+      font-weight:900;
+      box-shadow:0 0 16px rgba(34,197,94,.16);
+    }
+    .whatsapp-reminder:hover{
+      border-color:rgba(34,197,94,.44);
+      box-shadow:0 8px 18px rgba(15,23,42,.08),0 0 22px rgba(34,197,94,.24);
+      transform:translateY(-1px);
+    }
+    .whatsapp-reminder.tone-warn{
+      border-color:rgba(245,158,11,.3);
+      background:linear-gradient(180deg,#fffbeb,#fef3c7);
+      color:#92400e;
+      box-shadow:0 0 16px rgba(245,158,11,.16);
+    }
+    .whatsapp-reminder.tone-danger{
+      border-color:rgba(239,68,68,.3);
+      background:linear-gradient(180deg,#fff1f2,#fee2e2);
+      color:#991b1b;
+      box-shadow:0 0 16px rgba(239,68,68,.16);
+    }
     .agenda-check{
       display:flex;
       align-items:center;
@@ -1622,6 +1654,9 @@
         labelClass:norm(item?.status).replace(/\s+/g, "_") === "concluido" ? "ok" : (Boolean(item?.urgente) ? "warn" : ""),
         plannerStatus:String(item?.status || ""),
         plannerStatusLabel:String(item?.status_label || statusLabel(item?.status)).trim(),
+        frankstein_lembrete_status:String(item?.frankstein_lembrete_status || ""),
+        whatsapp_lembrete_url:String(item?.whatsapp_lembrete_url || ""),
+        whatsapp_lembrete_texto:String(item?.whatsapp_lembrete_texto || ""),
         checkKey:`planner:${item?.id || ""}`,
       }));
   }
@@ -1892,6 +1927,19 @@
     return true;
   }
 
+  function whatsappReminderTone(item){
+    const status = norm(item?.frankstein_lembrete_status).replace(/\s+/g, "_");
+    if (status === "atrasada") return "tone-danger";
+    if (status === "hoje" || status === "urgente") return "tone-warn";
+    return "";
+  }
+
+  function whatsappReminderHtml(item){
+    const href = String(item?.whatsapp_lembrete_url || "").trim();
+    if (!href) return "";
+    return `<a class="whatsapp-reminder ${esc(whatsappReminderTone(item))}" href="${esc(href)}" target="_blank" rel="noreferrer">WhatsApp Frankstein</a>`;
+  }
+
   function applySidebarFilterButtons(){
     document.querySelectorAll("[data-side-filter]").forEach((button) => {
       button.classList.toggle("active", button.dataset.sideFilter === sidebarQuickFilter);
@@ -1965,6 +2013,7 @@
           ${!entregaMeta && displayDesc ? `<div class="desc">${esc(displayDesc)}</div>` : ""}
           <div class="meta">${parts.map((entry) => esc(entry)).join(" | ")}</div>
           <div class="actions-mini">
+            ${whatsappReminderHtml(item)}
             <button class="mini" data-op-action="set-status" data-op-status="${done ? "pendente" : "concluido"}" data-op-item-id="${esc(item?.id || "")}" type="button">${done ? "Reabrir" : "Concluir"}</button>
             <button class="mini danger" data-op-action="delete-item" data-op-item-id="${esc(item?.id || "")}" type="button">Excluir</button>
           </div>
@@ -2054,6 +2103,7 @@
           <td>${esc(meta.observacao || "-")}</td>
           <td>
             <div class="actions-mini">
+              ${whatsappReminderHtml(item)}
               <button class="mini" data-op-action="set-entrega-status" data-op-status-oper="pendenciado" data-op-item-id="${esc(item?.id || "")}" type="button">Pendenciar</button>
               <button class="mini" data-op-action="set-entrega-status" data-op-status-oper="caixa" data-op-item-id="${esc(item?.id || "")}" type="button">Caixa</button>
               <button class="mini" data-op-action="set-entrega-status" data-op-status-oper="agehab" data-op-item-id="${esc(item?.id || "")}" type="button">Agehab</button>
@@ -2097,6 +2147,7 @@
           ${meta.observacao ? `<div class="desc"><strong>Observacao:</strong> ${esc(meta.observacao)}</div>` : ""}
           <div class="meta">${item?.responsavel ? `Resp: ${esc(item.responsavel)} | ` : ""}${dateLabel(item?.data_referencia)} | 09:00-18:00</div>
           <div class="actions-mini">
+            ${whatsappReminderHtml(item)}
             <button class="mini" data-op-action="set-status" data-op-status="${done ? "pendente" : "concluido"}" data-op-item-id="${esc(item?.id || "")}" type="button">${done ? "Reabrir" : "Concluir"}</button>
             <button class="mini danger" data-op-action="delete-item" data-op-item-id="${esc(item?.id || "")}" type="button">Excluir</button>
           </div>
@@ -2128,7 +2179,7 @@
             ${isPlanner ? `<small>check-in</small>` : ""}
           </div>
           <div class="agenda-task">
-            ${isPlanner ? `<div class="agenda-task-top"><span class="agenda-kind ${esc(slot.labelClass || "")}">${esc(slot.label || "Subtarefa")}</span></div>` : ""}
+            ${isPlanner ? `<div class="agenda-task-top"><span class="agenda-kind ${esc(slot.labelClass || "")}">${esc(slot.label || "Subtarefa")}</span>${whatsappReminderHtml(slot)}</div>` : ""}
             <div class="agenda-task-main">${isPlanner ? `<strong>${esc(slot.tarefa)}</strong>` : esc(slot.tarefa)}</div>
             ${slot.detalhe ? `<div class="agenda-task-meta">${esc(slot.detalhe)}</div>` : ""}
             ${metaParts.length ? `<div class="agenda-task-meta">${metaParts.map((entry) => esc(entry)).join(" | ")}</div>` : ""}
