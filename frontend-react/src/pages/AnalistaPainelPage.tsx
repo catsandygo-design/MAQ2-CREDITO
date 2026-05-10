@@ -1005,7 +1005,7 @@ export function AnalistaPainelPage() {
                   }}
                   id={`cliente-${row.processoId}`}
                   aria-label={`${row.cliente}. ${nextActionSummary(row)}`}
-                  className={`client-card ${rowClass} ${expanded ? 'is-open' : ''} ${isFocused ? 'is-focused' : ''}`.trim()}
+                  className={`client-card state-${animState} ${rowClass} ${expanded ? 'is-open' : ''} ${isFocused ? 'is-focused' : ''}`.trim()}
                 >
                   <div className="client-card-header">
                     <div className="client-card-copy">
