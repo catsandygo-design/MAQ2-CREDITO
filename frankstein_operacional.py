@@ -58,6 +58,18 @@ class CampoProblemaOutput(BaseModel):
     erro: str
 
 
+class RegraDisparadaOutput(BaseModel):
+    codigo: str
+    nome: str
+    categoria: str
+    severidade: Literal["ok", "dica", "atencao", "bloqueio"]
+    campo: Optional[str] = None
+    motivo: str
+    acao_sugerida: str
+    autonomia: int = Field(ge=0, le=4)
+    bloqueia: bool = False
+
+
 class MetricasOperacionaisOutput(BaseModel):
     risco_pendencia: float
     risco_atraso_sla: float
@@ -77,6 +89,7 @@ class FranksteinOutput(BaseModel):
     decisao_recomendada: DecisaoRecomendadaOutput
     baloes: list[BalaoOutput]
     campos_com_problema: list[CampoProblemaOutput]
+    regras_disparadas: list[RegraDisparadaOutput]
     metricas_operacionais: MetricasOperacionaisOutput
     auditoria: AuditoriaOutput
 
@@ -299,6 +312,132 @@ def montar_baloes(
     return sorted(baloes, key=lambda balao: balao.prioridade)
 
 
+def montar_regras_disparadas(
+    payload: AnaliseInput,
+    analise_valor: dict[str, float | str],
+    campos_problema: list[CampoProblemaOutput],
+    score: ScoreOutput,
+) -> list[RegraDisparadaOutput]:
+    regras: list[RegraDisparadaOutput] = []
+    faltante = float(analise_valor["faltante"])
+
+    if faltante > 0:
+        regras.append(
+            RegraDisparadaOutput(
+                codigo="FRK-VALOR-001",
+                nome="Composicao financeira insuficiente",
+                categoria="financeiro",
+                severidade="atencao",
+                campo="valor_venda",
+                motivo=f"Faltam {_formatar_brl(faltante)} para sustentar o valor da venda.",
+                acao_sugerida="Revisar valor da venda, garantido ou composicao antes de avancar.",
+                autonomia=1,
+                bloqueia=False,
+            )
+        )
+
+    problema_por_campo = {problema.campo: problema for problema in campos_problema}
+    doc_rules = [
+        (
+            "rg_cpf",
+            "FRK-DOC-001",
+            "RG/CPF nao enviado",
+            "documental",
+            "atencao",
+            "Solicitar documento de identificacao do proponente.",
+            False,
+        ),
+        (
+            "comprovante_residencia",
+            "FRK-DOC-002",
+            "Comprovante de residencia nao enviado",
+            "documental",
+            "atencao",
+            "Solicitar comprovante de residencia antes do envio final.",
+            False,
+        ),
+        (
+            "comprovante_renda",
+            "FRK-RENDA-001",
+            "Renda nao comprovada",
+            "renda",
+            "bloqueio",
+            "Solicitar comprovante de renda antes de enviar para validacao.",
+            True,
+        ),
+        (
+            "fgts_validado",
+            "FRK-FGTS-001",
+            "FGTS nao validado",
+            "fgts",
+            "atencao",
+            "Validar FGTS ou complementar evidencias do vinculo.",
+            False,
+        ),
+        (
+            "renda_informada",
+            "FRK-RENDA-002",
+            "Renda nao preenchida",
+            "renda",
+            "bloqueio",
+            "Preencher renda informada para o Frankstein avaliar a operacao.",
+            True,
+        ),
+    ]
+
+    for campo, codigo, nome, categoria, severidade, acao, bloqueia in doc_rules:
+        problema = problema_por_campo.get(campo)
+        if not problema:
+            continue
+        if campo == "fgts_validado" and payload.perfil != "CLT":
+            continue
+        regras.append(
+            RegraDisparadaOutput(
+                codigo=codigo,
+                nome=nome,
+                categoria=categoria,
+                severidade=severidade,
+                campo=campo,
+                motivo=problema.erro,
+                acao_sugerida=acao,
+                autonomia=4 if bloqueia else 1,
+                bloqueia=bloqueia,
+            )
+        )
+
+    if score.classificacao == "alto_risco":
+        regras.append(
+            RegraDisparadaOutput(
+                codigo="FRK-RISCO-001",
+                nome="Alto risco operacional",
+                categoria="risco",
+                severidade="atencao",
+                campo=None,
+                motivo="Score operacional classificado como alto risco.",
+                acao_sugerida="Corrigir pendencias e rodar nova analise antes do reenvio.",
+                autonomia=1,
+                bloqueia=False,
+            )
+        )
+
+    if not regras:
+        regras.append(
+            RegraDisparadaOutput(
+                codigo="FRK-OK-001",
+                nome="Processo sem pendencia critica",
+                categoria="decisao",
+                severidade="ok",
+                campo=None,
+                motivo="Composicao financeira e documentacao basica atendem a regra atual.",
+                acao_sugerida="Prosseguir com o fluxo e manter conferencia final.",
+                autonomia=0,
+                bloqueia=False,
+            )
+        )
+
+    return regras
+
+
 def definir_status_geral(
     analise_valor: dict[str, float | str],
     campos_problema: list[CampoProblemaOutput],
@@ -386,6 +525,7 @@ def analisar_operacao_frankstein(payload: AnaliseInput) -> RespostaFrankstein:
     resumo = montar_resumo(status_geral, analise_valor, campos_problema)
     decisao = montar_decisao_recomendada(status_geral, analise_valor, campos_problema)
     baloes = montar_baloes(analise_valor, campos_problema, score)
+    regras_disparadas = montar_regras_disparadas(payload, analise_valor, campos_problema, score)
 
     return RespostaFrankstein(
         frankstein=FranksteinOutput(
@@ -395,6 +535,7 @@ def analisar_operacao_frankstein(payload: AnaliseInput) -> RespostaFrankstein:
             decisao_recomendada=decisao,
             baloes=baloes,
             campos_com_problema=campos_problema,
+            regras_disparadas=regras_disparadas,
             metricas_operacionais=MetricasOperacionaisOutput(
                 risco_pendencia=limitar_entre_0_e_1(score.valor + 0.05),
                 risco_atraso_sla=limitar_entre_0_e_1(score.valor - 0.10),
