@@ -1710,6 +1710,14 @@
             <label for="renda-bruta-cliente">Renda bruta do cliente (R$)</label>
             <input id="renda-bruta-cliente" type="number" min="0" step="0.01" value="0.00">
           </div>
+          <div class="fg" id="unidade-retomada-group" style="display:none">
+            <label for="unidade-retomada-agehab">Unidade retomada?</label>
+            <select id="unidade-retomada-agehab">
+              <option value="">Perguntar ao analista</option>
+              <option value="sim">Sim, unidade retomada</option>
+              <option value="nao">Nao, unidade normal</option>
+            </select>
+          </div>
         </div>
 
 
@@ -3922,6 +3930,7 @@ DIVORCIADO: Certidão averbada.</td>
       if (complementarDialog) {
         complementarDialog.classList.toggle("is-visible", percent > 45);
       }
+      updateAgehabRetomadaPrompt();
     }
 
     function getComprometimentoSnapshot() {
@@ -3935,6 +3944,18 @@ DIVORCIADO: Certidão averbada.</td>
     }
 
     let franksteinLearnedPatterns = [];
+    const SALARIO_MINIMO_2026 = 1621;
+    const TETO_CHEQUE_MORADIA_3_SM = SALARIO_MINIMO_2026 * 3;
+
+    function updateAgehabRetomadaPrompt() {
+      const group = byId("unidade-retomada-group");
+      if (!group) return;
+      const rendaBruta = readMoneyField("renda-bruta-cliente");
+      group.style.display = rendaBruta > TETO_CHEQUE_MORADIA_3_SM ? "" : "none";
+      if (rendaBruta <= TETO_CHEQUE_MORADIA_3_SM && byId("unidade-retomada-agehab")) {
+        byId("unidade-retomada-agehab").value = "";
+      }
+    }
 
     function franksteinStatusRank(status) {
       if (status === "bloqueio") return 3;
@@ -4146,6 +4167,7 @@ DIVORCIADO: Certidão averbada.</td>
           tipo_dependente: byId("tipo-dependente")?.value || "",
           cotista_3_anos: byId("cotista-3-anos")?.value || "",
           empresa_atual_6m: byId("tempo-empresa-atual")?.value || "",
+          unidade_retomada_agehab: byId("unidade-retomada-agehab")?.value || "",
           comprometimento_percent: Number(comp.percent.toFixed(2)),
           comprometimento_faixa: comp.info.kind,
           vencimento_status: vencimento?.status || "",
@@ -4228,6 +4250,31 @@ DIVORCIADO: Certidão averbada.</td>
       const percentualParcelaBruta = rendaBruta > 0 ? (comp.prestacaoCaixa / rendaBruta) * 100 : 0;
       const cotistaMaisTresAnos = byId("cotista-3-anos")?.value === "sim";
       const tempoEmpresaAtual = byId("tempo-empresa-atual")?.value || "";
+      const unidadeRetomada = byId("unidade-retomada-agehab")?.value || "";
+      if (rendaBruta > TETO_CHEQUE_MORADIA_3_SM) {
+        if (unidadeRetomada === "sim") {
+          addFranksteinRule(
+            items,
+            "ok",
+            "Escuta ativa Agehab",
+            `Renda bruta acima de 3 salarios minimos (R$ ${TETO_CHEQUE_MORADIA_3_SM.toLocaleString("pt-BR")}), mas a unidade foi marcada como retomada. Nao exigir Agehab/Cheque Moradia por esta regra.`
+          );
+        } else if (unidadeRetomada === "nao") {
+          addFranksteinRule(
+            items,
+            "bloqueio",
+            "Teto Cheque Moradia excedido",
+            `Renda bruta acima de 3 salarios minimos (R$ ${TETO_CHEQUE_MORADIA_3_SM.toLocaleString("pt-BR")}). Se a unidade nao for retomada, alertar que o teto para Cheque Moradia/Agehab e de ate 3 salarios minimos.`
+          );
+        } else {
+          addFranksteinRule(
+            items,
+            "atencao",
+            "Perguntar se a unidade e retomada",
+            `Renda bruta acima de 3 salarios minimos (R$ ${TETO_CHEQUE_MORADIA_3_SM.toLocaleString("pt-BR")}). Frankstein precisa saber se a unidade e retomada: se for retomada, ok sem Agehab; se nao for, alertar teto do Cheque Moradia.`
+          );
+        }
+      }
       if (cotistaMaisTresAnos && percentualParcelaBruta >= 20 && percentualParcelaBruta <= 28) {
         if (tempoEmpresaAtual === "sim") {
           addFranksteinRule(
@@ -4532,6 +4579,7 @@ DIVORCIADO: Certidão averbada.</td>
       if (byId("renda-complementar-responsavel")) byId("renda-complementar-responsavel").value = processo.renda_complementar_responsavel || "";
       if (byId("renda-complementar-vinculo")) byId("renda-complementar-vinculo").value = processo.renda_complementar_vinculo || "";
       if (byId("tempo-empresa-atual")) byId("tempo-empresa-atual").value = processo.fgts_futuro_empresa_6m || "";
+      if (byId("unidade-retomada-agehab")) byId("unidade-retomada-agehab").value = processo.unidade_retomada_agehab || "";
       updateComprometimento();
       if (byId("status-fiador")) byId("status-fiador").value = norm(processo.status_fiador) || "nao_tem";
       if (byId("cca-responsavel")) byId("cca-responsavel").value = norm(processo.cca_responsavel);
@@ -4592,6 +4640,7 @@ DIVORCIADO: Certidão averbada.</td>
       const rendaComplementarResponsavel = (byId("renda-complementar-responsavel")?.value || "").trim() || null;
       const rendaComplementarVinculo = (byId("renda-complementar-vinculo")?.value || "").trim() || null;
       const tempoEmpresaAtual = (byId("tempo-empresa-atual")?.value || "").trim() || null;
+      const unidadeRetomadaAgehab = (byId("unidade-retomada-agehab")?.value || "").trim() || null;
 
       const temPendencia =
         ["pendente_credito", "pendente_cca", "condicionado", "reprovado", "bloqueado"].includes(statusCaixa) ||
@@ -4620,6 +4669,7 @@ DIVORCIADO: Certidão averbada.</td>
         renda_complementar_responsavel: rendaComplementarResponsavel,
         renda_complementar_vinculo: rendaComplementarVinculo,
         fgts_futuro_empresa_6m: tempoEmpresaAtual,
+        unidade_retomada_agehab: unidadeRetomadaAgehab,
         observacao,
       };
 
@@ -4744,7 +4794,7 @@ DIVORCIADO: Certidão averbada.</td>
         runFranksteinValidation();
       });
     });
-    ["renda-complementar-responsavel", "renda-complementar-vinculo", "status-caixa", "status-agehab", "status-sinal", "status-fiador", "observacao", "tipo-dependente", "cotista-3-anos", "tempo-empresa-atual"].forEach((id) => {
+    ["renda-complementar-responsavel", "renda-complementar-vinculo", "status-caixa", "status-agehab", "status-sinal", "status-fiador", "observacao", "tipo-dependente", "cotista-3-anos", "tempo-empresa-atual", "unidade-retomada-agehab"].forEach((id) => {
       const field = byId(id);
       if (!field) return;
       field.addEventListener("input", runFranksteinValidation);

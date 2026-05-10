@@ -1628,6 +1628,7 @@ class Processo(Base):
     renda_complementar_responsavel: Mapped[Optional[str]] = mapped_column(Text)
     renda_complementar_vinculo: Mapped[Optional[str]] = mapped_column(String(40))
     fgts_futuro_empresa_6m: Mapped[Optional[str]] = mapped_column(String(20))
+    unidade_retomada_agehab: Mapped[Optional[str]] = mapped_column(String(20))
     valor_imovel: Mapped[Optional[float]] = mapped_column(Float)
     valor_avaliacao: Mapped[Optional[float]] = mapped_column(Float)
     valor_financiamento: Mapped[Optional[float]] = mapped_column(Float)
@@ -2119,6 +2120,7 @@ class ProcessoUpdate(BaseModel):
     renda_complementar_responsavel: Optional[str] = None
     renda_complementar_vinculo: Optional[str] = None
     fgts_futuro_empresa_6m: Optional[str] = None
+    unidade_retomada_agehab: Optional[str] = None
     valor_imovel: Optional[float] = None
     valor_avaliacao: Optional[float] = None
     valor_financiamento: Optional[float] = None
@@ -2156,6 +2158,7 @@ class ProcessoOut(BaseModel):
     renda_complementar_responsavel: Optional[str] = None
     renda_complementar_vinculo: Optional[str] = None
     fgts_futuro_empresa_6m: Optional[str] = None
+    unidade_retomada_agehab: Optional[str] = None
     valor_imovel: Optional[float] = None
     valor_avaliacao: Optional[float] = None
     valor_financiamento: Optional[float] = None
@@ -4638,6 +4641,7 @@ def _ensure_runtime_schema(db: Session) -> None:
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS renda_complementar_responsavel TEXT",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS renda_complementar_vinculo VARCHAR(40)",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS fgts_futuro_empresa_6m VARCHAR(20)",
+        "ALTER TABLE processos ADD COLUMN IF NOT EXISTS unidade_retomada_agehab VARCHAR(20)",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_imovel DOUBLE PRECISION",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_avaliacao DOUBLE PRECISION",
         "ALTER TABLE processos ADD COLUMN IF NOT EXISTS valor_financiamento DOUBLE PRECISION",

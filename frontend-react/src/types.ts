@@ -213,6 +213,7 @@ export interface ProcessoApiItem {
   status_fiador_key?: string | null
   status_fiador_label?: string | null
   docs_pendentes?: number | null
+  docs_pendentes_tooltip?: string | null
   documentos_resumo?: string | null
   observacao_resumo?: string | null
   status_pendencias?: string[] | null

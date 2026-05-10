@@ -50,6 +50,8 @@ interface DashboardRow {
   sinalKey: string
   fiadorKey: string
   docsPendentes: number
+  documentosResumo: string
+  statusPendencias: string[]
   foraContagemMes: boolean
   signed: boolean
   prontoRepasse: boolean
@@ -162,6 +164,34 @@ interface AttentionRow {
   status: string
   note: string
   urgency: number
+}
+
+interface GapInsight {
+  label: string
+  count: number
+  note: string
+  tone: Tone
+}
+
+interface DocumentGap {
+  label: string
+  count: number
+  share: number
+}
+
+interface ReworkRow {
+  label: string
+  total: number
+  rework: number
+  rate: number
+}
+
+interface ManagerCommandCenter {
+  phaseCards: Array<{ key: string; label: string; count: number; note: string; tone: Tone }>
+  gaps: GapInsight[]
+  topDocuments: DocumentGap[]
+  reworkRanking: ReworkRow[]
+  phaseClients: Record<string, DashboardRow[]>
 }
 
 const numberFormatter = new Intl.NumberFormat('pt-BR')
@@ -370,6 +400,8 @@ function buildDashboardRow(item: ProcessoApiItem, now: Date): DashboardRow {
     sinalKey,
     fiadorKey,
     docsPendentes,
+    documentosResumo: String(item.documentos_resumo || item.docs_pendentes_tooltip || '').trim(),
+    statusPendencias: Array.isArray(item.status_pendencias) ? item.status_pendencias.map((value) => String(value)) : [],
     foraContagemMes: Boolean(item.nao_contar_mes),
     signed: SIGNED_STATUS_KEYS.has(statusCaixaKey),
     prontoRepasse,
@@ -380,6 +412,130 @@ function buildDashboardRow(item: ProcessoApiItem, now: Date): DashboardRow {
     openDays,
     referenceDate,
   }
+}
+
+function cleanDocumentLabel(value: string): string {
+  return String(value || '')
+    .replace(/\([^)]*\)/g, '')
+    .replace(/^(pendente|reprovado|bloqueado|aguardando|documento|docs?)\s*[-:]\s*/i, '')
+    .replace(/\s*-\s*motivo:.*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function extractPendingDocumentLabels(row: DashboardRow): string[] {
+  const raw = [row.documentosResumo, ...row.statusPendencias].filter(Boolean).join('; ')
+  if (!raw) return row.docsPendentes > 0 ? ['Documentos sem detalhamento'] : []
+  return raw
+    .split(/[;|]/)
+    .map(cleanDocumentLabel)
+    .filter((value) => value && !/status ok|sem pend/i.test(value))
+    .slice(0, Math.max(1, row.docsPendentes || 1))
+}
+
+function isReworkRow(row: DashboardRow): boolean {
+  return (
+    row.docsPendentes > 0 ||
+    row.statusCaixaKey.includes('pendente') ||
+    row.statusCaixaKey === 'condicionado' ||
+    row.statusAgehabKey.includes('pendente') ||
+    REJECTED_STATUS_KEYS.has(row.statusCaixaKey)
+  )
+}
+
+function buildManagerCommandCenter(rows: DashboardRow[]): ManagerCommandCenter {
+  const activeRows = rows.filter((row) => !row.foraContagemMes)
+  const phaseCards = [
+    {
+      key: 'comercial',
+      label: 'Comercial',
+      count: activeRows.filter((row) => row.emComercial).length,
+      note: 'Cliente ainda na origem comercial.',
+      tone: 'warn' as Tone,
+    },
+    {
+      key: 'credito',
+      label: 'Credito',
+      count: activeRows.filter((row) => row.emCredito).length,
+      note: 'Analise documental, Caixa e CCA.',
+      tone: 'neutral' as Tone,
+    },
+    {
+      key: 'repasse',
+      label: 'Repasse',
+      count: activeRows.filter((row) => row.emRepasse).length,
+      note: 'Contrato, assinatura e formalizacao.',
+      tone: 'ok' as Tone,
+    },
+    {
+      key: 'risco',
+      label: 'Gaps criticos',
+      count: activeRows.filter((row) => row.emRisco || isReworkRow(row)).length,
+      note: 'Atrasos, pendencias ou retrabalho.',
+      tone: activeRows.some((row) => row.emRisco || isReworkRow(row)) ? 'danger' as Tone : 'ok' as Tone,
+    },
+  ]
+
+  const gapDefinitions: GapInsight[] = [
+    {
+      label: 'Documentos pendentes',
+      count: activeRows.filter((row) => row.docsPendentes > 0).length,
+      note: 'Clientes travados por envio, analise ou correção documental.',
+      tone: 'warn' as Tone,
+    },
+    {
+      label: 'CCA / Caixa',
+      count: activeRows.filter((row) => row.statusCaixaKey.includes('pendente') || row.statusCaixaKey === 'condicionado').length,
+      note: 'Pendência técnica, condicionamento ou retorno da CCA.',
+      tone: 'danger' as Tone,
+    },
+    {
+      label: 'Agehab',
+      count: activeRows.filter((row) => row.statusAgehabKey.includes('pendente')).length,
+      note: 'Cheque moradia, contrato ou documentação Agehab.',
+      tone: 'warn' as Tone,
+    },
+    {
+      label: 'Sinal / Fiador',
+      count: activeRows.filter((row) => !SIGNAL_READY_KEYS.has(row.sinalKey) || !FIADOR_READY_KEYS.has(row.fiadorKey)).length,
+      note: 'Pendência comercial que impede assinatura.',
+      tone: 'warn' as Tone,
+    },
+  ].sort((left, right) => right.count - left.count)
+
+  const documentCounts = new Map<string, number>()
+  for (const row of activeRows) {
+    for (const label of extractPendingDocumentLabels(row)) {
+      documentCounts.set(label, (documentCounts.get(label) || 0) + 1)
+    }
+  }
+  const maxDocumentCount = Math.max(1, ...documentCounts.values())
+  const topDocuments = Array.from(documentCounts.entries())
+    .map(([label, count]) => ({ label, count, share: (count / maxDocumentCount) * 100 }))
+    .sort((left, right) => right.count - left.count)
+    .slice(0, 6)
+
+  const reworkByCorretor = new Map<string, ReworkRow>()
+  for (const row of activeRows) {
+    const current = reworkByCorretor.get(row.corretor) || { label: row.corretor, total: 0, rework: 0, rate: 0 }
+    current.total += 1
+    if (isReworkRow(row)) current.rework += 1
+    current.rate = current.total > 0 ? (current.rework / current.total) * 100 : 0
+    reworkByCorretor.set(row.corretor, current)
+  }
+  const reworkRanking = Array.from(reworkByCorretor.values())
+    .filter((row) => row.total >= 2 || row.rework > 0)
+    .sort((left, right) => right.rate - left.rate || right.rework - left.rework || right.total - left.total)
+    .slice(0, 6)
+
+  const phaseClients = {
+    comercial: activeRows.filter((row) => row.emComercial).sort((a, b) => urgencyForRow(b) - urgencyForRow(a)).slice(0, 5),
+    credito: activeRows.filter((row) => row.emCredito).sort((a, b) => urgencyForRow(b) - urgencyForRow(a)).slice(0, 5),
+    repasse: activeRows.filter((row) => row.emRepasse).sort((a, b) => urgencyForRow(b) - urgencyForRow(a)).slice(0, 5),
+    risco: activeRows.filter((row) => row.emRisco || isReworkRow(row)).sort((a, b) => urgencyForRow(b) - urgencyForRow(a)).slice(0, 5),
+  }
+
+  return { phaseCards, gaps: gapDefinitions, topDocuments, reworkRanking, phaseClients }
 }
 
 function buildItemSeries(items: ClienteFaseItem[], days: number, now: Date): number[] {
@@ -932,6 +1088,8 @@ export function GestorDashboardPage() {
     [currentRows, dashboard, periodInfo, previousRows],
   )
 
+  const commandCenter = useMemo(() => buildManagerCommandCenter(currentRows), [currentRows])
+
   const generalView = useMemo(() => {
     const stageMap = new Map<string, number>()
     const blockerMap = new Map<string, number>([
@@ -1163,21 +1321,27 @@ export function GestorDashboardPage() {
       </section>
 
       <section className="panel gestorx-filters">
-        <div className="gestorx-focus-tabs" role="tablist" aria-label="Modos do dashboard">
-          {[
-            ['geral', 'Geral'],
-            ['propostas', 'Propostas'],
-            ['ipc', 'IPC Corretor'],
-          ].map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              className={filters.focus === value ? 'active' : ''}
-              onClick={() => onFilterChange('focus', value)}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="gestorx-filter-head">
+          <div>
+            <span className="gestorx-kicker">Recorte</span>
+            <h2>Filtros do dashboard</h2>
+          </div>
+          <div className="gestorx-focus-tabs" role="tablist" aria-label="Modos do dashboard">
+            {[
+              ['geral', 'Geral'],
+              ['propostas', 'Propostas'],
+              ['ipc', 'IPC Corretor'],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={filters.focus === value ? 'active' : ''}
+                onClick={() => onFilterChange('focus', value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="gestorx-filter-grid">
@@ -1244,6 +1408,103 @@ export function GestorDashboardPage() {
             </select>
           </label>
         </div>
+      </section>
+
+      <section className="gestorx-command-grid" aria-label="Acompanhamento executivo da base">
+        <article className="panel gestorx-command-card gestorx-phase-card">
+          <header className="gestorx-section-head compact">
+            <div>
+              <span className="gestorx-kicker">Base</span>
+              <h3>Fase dos clientes</h3>
+              <p>Onde cada cliente está parado agora.</p>
+            </div>
+          </header>
+          <div className="gestorx-phase-board">
+            {commandCenter.phaseCards.map((phase) => (
+              <div key={phase.key} className={`gestorx-phase-column tone-${phase.tone}`}>
+                <div className="gestorx-phase-top">
+                  <span>{phase.label}</span>
+                  <strong>{formatNumber(phase.count)}</strong>
+                </div>
+                <p>{phase.note}</p>
+                <div className="gestorx-client-mini-list">
+                  {(commandCenter.phaseClients[phase.key] || []).map((row) => (
+                    <a key={`${phase.key}-${row.processoId}`} href={`/app/analise?processo_id=${encodeURIComponent(row.processoId)}`}>
+                      <b>{row.cliente}</b>
+                      <span>{row.obra} | {row.corretor}</span>
+                    </a>
+                  ))}
+                  {(commandCenter.phaseClients[phase.key] || []).length === 0 ? <em>Sem clientes neste recorte.</em> : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="panel gestorx-command-card">
+          <header className="gestorx-section-head compact">
+            <div>
+              <span className="gestorx-kicker">Gaps</span>
+              <h3>Travamentos da carteira</h3>
+              <p>Prioridade por impacto operacional.</p>
+            </div>
+          </header>
+          <div className="gestorx-gap-stack">
+            {commandCenter.gaps.map((gap) => (
+              <div key={gap.label} className={`gestorx-gap-item tone-${gap.tone}`}>
+                <strong>{formatNumber(gap.count)}</strong>
+                <div>
+                  <b>{gap.label}</b>
+                  <span>{gap.note}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="panel gestorx-command-card">
+          <header className="gestorx-section-head compact">
+            <div>
+              <span className="gestorx-kicker">Retrabalho</span>
+              <h3>Maior índice por corretor</h3>
+              <p>Pendência, condicionamento ou reprovação.</p>
+            </div>
+          </header>
+          <div className="gestorx-rework-list">
+            {commandCenter.reworkRanking.map((row) => (
+              <div key={row.label} className="gestorx-rework-row">
+                <div>
+                  <b>{row.label}</b>
+                  <span>{formatNumber(row.rework)} retrabalho(s) em {formatNumber(row.total)} processo(s)</span>
+                </div>
+                <strong>{formatPercent(row.rate)}</strong>
+              </div>
+            ))}
+            {commandCenter.reworkRanking.length === 0 ? <div className="gestorx-empty">Sem retrabalho relevante no recorte.</div> : null}
+          </div>
+        </article>
+
+        <article className="panel gestorx-command-card">
+          <header className="gestorx-section-head compact">
+            <div>
+              <span className="gestorx-kicker">Documentos</span>
+              <h3>Mais pendentes</h3>
+              <p>Itens que mais travam a análise.</p>
+            </div>
+          </header>
+          <div className="gestorx-doc-gap-list">
+            {commandCenter.topDocuments.map((doc) => (
+              <div key={doc.label} className="gestorx-doc-gap-row">
+                <div>
+                  <b>{doc.label}</b>
+                  <span>{formatNumber(doc.count)} ocorrência(s)</span>
+                </div>
+                <i style={{ width: `${Math.max(12, doc.share)}%` }} />
+              </div>
+            ))}
+            {commandCenter.topDocuments.length === 0 ? <div className="gestorx-empty">Sem documento pendente no recorte.</div> : null}
+          </div>
+        </article>
       </section>
 
       <section className="gestorx-metrics-grid">
