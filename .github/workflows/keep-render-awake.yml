@@ -4,7 +4,7 @@ on:
   schedule:
     # GitHub Actions usa UTC. Esta janela cobre 08:40-18:30 em America/Sao_Paulo.
     # O passo "Business window" abaixo faz o corte exato para evitar ping fora do expediente.
-    - cron: "*/10 11-21 * * 1-5"
+    - cron: "*/10 11-21 * * *"
   workflow_dispatch:
 
 permissions:
@@ -30,8 +30,7 @@ jobs:
           now = datetime.now(ZoneInfo("America/Sao_Paulo"))
           starts_at = time(8, 40)
           ends_at = time(18, 30)
-          is_weekday = now.weekday() < 5
-          is_open = is_weekday and starts_at <= now.time() <= ends_at
+          is_open = starts_at <= now.time() <= ends_at
 
           print(f"within={'true' if is_open else 'false'}")
           print(f"now_brt={now:%Y-%m-%d %H:%M:%S %Z}")
