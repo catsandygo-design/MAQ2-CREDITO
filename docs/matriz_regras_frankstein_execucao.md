@@ -1,8 +1,8 @@
-# Matriz de Regras FRANKSTEIN - Execucao
+# Matriz de Regras FOGUETINHO - Execucao
 
 ## Objetivo
 
-Mapear as regras que devem formar o primeiro nucleo explicavel do FRANKSTEIN, separando o que ja executa hoje, o que esta documentado e o que ainda precisa ser conectado.
+Mapear as regras que devem formar o primeiro nucleo explicavel do FOGUETINHO, separando o que ja executa hoje, o que esta documentado e o que ainda precisa ser conectado.
 
 Esta matriz evita retrabalho antes de criar um motor de regras mais completo.
 

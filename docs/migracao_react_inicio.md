@@ -1,4 +1,4 @@
-﻿# Migracao para React (inicio)
+# Migracao para React (inicio)
 
 ## Objetivo
 Iniciar a migracao incremental do frontend atual (HTML+JS) para React, mantendo API, banco e regras atuais.

@@ -288,7 +288,7 @@ def montar_baloes(
                 mensagem="Corrigir pendencias antes do reenvio.",
                 impacto="Reduz retrabalho e melhora o SLA.",
                 decisao="Preparar o caso para nova validacao.",
-                acao="Apos anexar os documentos e ajustar a composicao, rodar nova analise FRANKSTEIN.",
+                acao="Apos anexar os documentos e ajustar a composicao, rodar nova analise Foguetinho.",
                 campo_relacionado=None,
                 visivel=True,
             )
@@ -380,7 +380,7 @@ def montar_regras_disparadas(
             "Renda nao preenchida",
             "renda",
             "bloqueio",
-            "Preencher renda informada para o Frankstein avaliar a operacao.",
+            "Preencher renda informada para o Foguetinho avaliar a operacao.",
             True,
         ),
     ]

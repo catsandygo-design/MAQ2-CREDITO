@@ -30,7 +30,7 @@ Direcao corrigida:
 
 Aplicavel ao SioCred:
 
-- Melhorar processo, documentos, status, eventos e Frankstein.
+- Melhorar processo, documentos, status, eventos e Foguetinho.
 
 Nao aplicavel agora:
 
@@ -71,14 +71,14 @@ Manter.
 Motivo:
 
 - E a tela onde a decisao acontece.
-- Deve concentrar dados do cliente, documentos, financeiro, status e Frankstein.
+- Deve concentrar dados do cliente, documentos, financeiro, status e Foguetinho.
 
 Forma cautelar:
 
 - Melhorar a tela atual aos poucos.
 - Evitar refazer tudo antes de mapear todos os campos importantes.
 
-### 3.3 Frankstein como copiloto supervisionado
+### 3.3 Foguetinho como copiloto supervisionado
 
 Manter.
 
@@ -174,7 +174,7 @@ Risco:
 Direcao corrigida:
 
 - Fazer depois da matriz de regras e do plano de telas.
-- Manter como melhoria de ambiente, nao como requisito para o Frankstein.
+- Manter como melhoria de ambiente, nao como requisito para o Foguetinho.
 
 ### 4.4 Model registry completo
 
@@ -216,9 +216,9 @@ Alternativa:
 
 Evitar agora:
 
-- Frankstein alterando status sensivel sozinho.
-- Frankstein aprovando processo.
-- Frankstein mudando regra sem aprovacao.
+- Foguetinho alterando status sensivel sozinho.
+- Foguetinho aprovando processo.
+- Foguetinho mudando regra sem aprovacao.
 
 Alternativa:
 
@@ -292,11 +292,11 @@ Definir quais telas ficam:
 - Repasse/Fila Tecnica;
 - Dashboard Executivo;
 - Admin;
-- Motor do Frankstein.
+- Motor do Foguetinho.
 
 E quais viram abas ou deixam de aparecer na navegacao.
 
-### Passo 3 - Frankstein Explicavel
+### Passo 3 - Foguetinho Explicavel
 
 Antes de dar autonomia, fazer ele explicar:
 
@@ -354,7 +354,7 @@ Correcao:
 
 Pode unificar visualmente, mas CCA, analista, gestor e admin continuam com acessos diferentes.
 
-### Erro 5 - Dar autonomia demais ao Frankstein cedo
+### Erro 5 - Dar autonomia demais ao Foguetinho cedo
 
 Correcao:
 
@@ -370,7 +370,7 @@ Prioridade real:
 
 1. Mapear regras.
 2. Consolidar telas sem quebrar fluxo.
-3. Fazer o Frankstein explicar melhor.
+3. Fazer o Foguetinho explicar melhor.
 4. Registrar feedback humano.
 5. Automatizar apenas o que for seguro.
 6. Migrar tecnologia aos poucos.

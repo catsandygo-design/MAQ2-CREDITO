@@ -1,4 +1,4 @@
-# Relatorio tecnico e funcional - SioCred / Frankstein
+# Relatorio tecnico e funcional - SioCred / Foguetinho
 
 Data: 11/05/2026
 
@@ -17,7 +17,7 @@ O SioCred e uma aplicacao web personalizada construida principalmente com:
 | UI legado | HTML/CSS/JS estatico | Telas em `web/`, ainda ativas. |
 | Hospedagem | Render Web Service | Plano `free`, com `gunicorn -k uvicorn.workers.UvicornWorker app:app`. |
 | E-mail | Brevo API HTTPS preferencial, SMTP fallback | Criado porque Render Free bloqueia portas SMTP. |
-| IA/Frankstein | Motor operacional interno + regras + feedback | Arquivos `frankstein_operacional.py`, docs de regras, eventos e testes. |
+| IA/Foguetinho | Motor operacional interno + regras + feedback | Arquivos `frankstein_operacional.py`, docs de regras, eventos e testes. |
 | Testes | Pytest | `17 passed` na ultima validacao local. |
 
 Observacao importante: o app de producao deve seguir o Python do `runtime.txt` (`3.11.11`). A diferenca com o Python local (`3.14.2`) pode esconder incompatibilidades se algo for testado apenas no PC.
@@ -32,7 +32,7 @@ A proposta central e reduzir erro operacional e retrabalho, deixando a complexid
 2. O que esta travando.
 3. O que deve ser feito agora.
 
-O Frankstein e o operador logico supervisionado: ele alerta, sugere, compara, bloqueia regras objetivas e registra eventos, mas decisoes sensiveis continuam sob supervisao humana.
+O Foguetinho e o operador logico supervisionado: ele alerta, sugere, compara, bloqueia regras objetivas e registra eventos, mas decisoes sensiveis continuam sob supervisao humana.
 
 ## 3. Estimativa de funcionalidade atual
 
@@ -78,7 +78,7 @@ Serve para:
 - Registrar historico e auditoria.
 - Organizar tarefas/agenda.
 - Enviar alertas de compromisso por e-mail.
-- Apoiar decisao com o Frankstein.
+- Apoiar decisao com o Foguetinho.
 - Dar visao gerencial sobre produtividade, retrabalho e riscos.
 
 ## 6. Problemas que resolve
@@ -93,13 +93,13 @@ Serve para:
    - Agenda, tarefas e alertas ajudam a nao perder compromissos.
 
 4. **Falta de padrao**
-   - Regras e frases do Frankstein padronizam leitura operacional.
+   - Regras e frases do Foguetinho padronizam leitura operacional.
 
 5. **Gestao sem visao clara**
    - Dashboards e filas mostram gargalos e etapas criticas.
 
 6. **Dependencia de memoria humana**
-   - O Frankstein funciona como lembrete inteligente e supervisor de regra.
+   - O Foguetinho funciona como lembrete inteligente e supervisor de regra.
 
 7. **Risco de avancar processo errado**
    - Regras objetivas podem bloquear ou destacar riscos.
@@ -141,7 +141,7 @@ Serve para:
 | Senhas/chaves expostas | Alto | Usar variaveis de ambiente, rotacionar chaves expostas, nunca salvar segredo em print/documento. |
 | Acesso indevido por perfil | Alto | Reforcar RBAC por rota, testes de permissao e sessoes com expiracao. |
 | Perda de banco | Alto | Backup automatico, banco pago/estavel, rotina de restore testada. |
-| Frankstein decidir demais | Alto | Manter autonomia supervisionada, logs, aprovacao humana e niveis de acao. |
+| Foguetinho decidir demais | Alto | Manter autonomia supervisionada, logs, aprovacao humana e niveis de acao. |
 | Regra errada bloqueando processo | Medio/alto | Versionar regras, simular em dados antigos e permitir revisao humana. |
 | Tela React diferente da tela HTML | Medio | Migrar com paridade, testes comparativos e rollback. |
 | Render Free dormir/limitar | Medio | Upgrade para plano pago ou health/worker adequado. |
@@ -153,7 +153,7 @@ Prioridades de seguranca:
 2. Ativar backup real do banco.
 3. Revisar permissoes por perfil em todas as rotas.
 4. Aumentar testes de fluxos criticos.
-5. Separar regras do Frankstein em modulo versionado.
+5. Separar regras do Foguetinho em modulo versionado.
 6. Criar trilha de auditoria clara para acoes automaticas.
 
 ## 9. Possibilidade de colocar o banco de dados no SharePoint
@@ -202,7 +202,7 @@ Estimativa para estabilizacao tecnica/produto:
 
 | Frente | Tempo estimado |
 | --- | --- |
-| Padronizar regras principais do Frankstein | 1 a 2 semanas |
+| Padronizar regras principais do Foguetinho | 1 a 2 semanas |
 | Consolidar telas principais/UX | 2 a 4 semanas |
 | Ampliar testes de fluxos criticos | 1 a 3 semanas |
 | Fortalecer seguranca e backup | 1 a 2 semanas |
@@ -218,7 +218,7 @@ O caminho recomendado e:
 2. Usar SharePoint apenas para documentos/relatorios, nao como banco central.
 3. Fortalecer seguranca, backup e permissoes.
 4. Consolidar telas para o usuario ver menos complexidade.
-5. Versionar regras do Frankstein.
+5. Versionar regras do Foguetinho.
 6. Aumentar testes antes de dar mais autonomia.
 7. Migrar React aos poucos, sem apagar regra ja existente.
 

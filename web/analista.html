@@ -2249,14 +2249,14 @@ DIVORCIADO: Certidão averbada.</td>
           </div>
         </div>
 
-        <div class="frankstein-validator" aria-label="Frankstein validador operacional">
+        <div class="frankstein-validator" aria-label="Foguetinho validador operacional">
           <div class="frankstein-validator-head">
             <div class="frankstein-validator-brand">
               <div class="frankstein-avatar" id="franksteinAvatar" aria-hidden="true">
                 <canvas id="franksteinAvatarCanvas" class="frankstein-avatar-canvas" width="160" height="140"></canvas>
               </div>
               <div>
-                <h3>Frankstein</h3>
+                <h3>Foguetinho</h3>
                 <p>Valida as regras preenchidas nesta tela antes de salvar ou avancar o processo.</p>
               </div>
             </div>
@@ -3521,7 +3521,7 @@ DIVORCIADO: Certidão averbada.</td>
         return {
           status: "pendente",
           titulo: "Vencimento nao simulado",
-          mensagem: "Informe o dia desejado e o mes base para o Frankstein validar a regra.",
+          mensagem: "Informe o dia desejado e o mes base para o Foguetinho validar a regra.",
         };
       }
       if (!selectedKey) {
@@ -4210,7 +4210,7 @@ DIVORCIADO: Certidão averbada.</td>
         });
         applyFranksteinLearningPatterns(result.padroes || []);
       } catch (error) {
-        console.warn("Frankstein aprendizado indisponivel:", error.message);
+        console.warn("Foguetinho aprendizado indisponivel:", error.message);
       }
     }
 
@@ -4224,7 +4224,7 @@ DIVORCIADO: Certidão averbada.</td>
         });
         applyFranksteinLearningPatterns(result.padroes || []);
       } catch (error) {
-        console.warn("Nao foi possivel registrar aprendizado do Frankstein:", error.message);
+        console.warn("Nao foi possivel registrar aprendizado do Foguetinho:", error.message);
       }
     }
 
@@ -4241,9 +4241,9 @@ DIVORCIADO: Certidão averbada.</td>
       } else if (comp.info.kind === "warn") {
         addFranksteinRule(items, "atencao", "Comprometimento em atencao", `${formatPercent(comp.percent)} na faixa acima de 30 ate 40.`);
       } else if (comp.info.kind === "critical") {
-        addFranksteinRule(items, "atencao", "Comprometimento critico", `${formatPercent(comp.percent)} na faixa acima de 40 ate 45. Frankstein alerta, mas a decisao continua com o analista.`);
+        addFranksteinRule(items, "atencao", "Comprometimento critico", `${formatPercent(comp.percent)} na faixa acima de 40 ate 45. Foguetinho alerta, mas a decisao continua com o analista.`);
       } else {
-        addFranksteinRule(items, "atencao", "Necessita renda complementar", `${formatPercent(comp.percent)} acima da regra ou sem renda liquida suficiente. Frankstein exige conferencia dos dados de apoio antes de avancar.`);
+        addFranksteinRule(items, "atencao", "Necessita renda complementar", `${formatPercent(comp.percent)} acima da regra ou sem renda liquida suficiente. Foguetinho exige conferencia dos dados de apoio antes de avancar.`);
       }
 
       const rendaBruta = readMoneyField("renda-bruta-cliente");
@@ -4271,7 +4271,7 @@ DIVORCIADO: Certidão averbada.</td>
             items,
             "atencao",
             "Perguntar se a unidade e retomada",
-            `Renda bruta acima de 3 salarios minimos (R$ ${TETO_CHEQUE_MORADIA_3_SM.toLocaleString("pt-BR")}). Frankstein precisa saber se a unidade e retomada: se for retomada, ok sem Agehab; se nao for, alertar teto do Cheque Moradia.`
+            `Renda bruta acima de 3 salarios minimos (R$ ${TETO_CHEQUE_MORADIA_3_SM.toLocaleString("pt-BR")}). Foguetinho precisa saber se a unidade e retomada: se for retomada, ok sem Agehab; se nao for, alertar teto do Cheque Moradia.`
           );
         }
       }
@@ -4357,10 +4357,10 @@ DIVORCIADO: Certidão averbada.</td>
       }
 
       if (statusCaixa === "bloqueado" || statusCaixa === "reprovado") {
-        addFranksteinRule(items, "bloqueio", "Credito bloqueado/reprovado", "Frankstein bloqueia o avanço porque o status Caixa impede continuidade.");
+        addFranksteinRule(items, "bloqueio", "Credito bloqueado/reprovado", "Foguetinho bloqueia o avanço porque o status Caixa impede continuidade.");
       }
       if (statusAgehab === "pendente_agehab") {
-        addFranksteinRule(items, "atencao", "Agehab pendente", "Frankstein sinaliza pendencia da Agehab; avance somente com orientação registrada.");
+        addFranksteinRule(items, "atencao", "Agehab pendente", "Foguetinho sinaliza pendencia da Agehab; avance somente com orientação registrada.");
       }
 
       const docRows = getDocRows();
@@ -4401,7 +4401,7 @@ DIVORCIADO: Certidão averbada.</td>
         addFranksteinRule(
           items,
           pattern.status || "dica",
-          pattern.titulo || "Aprendizado do Frankstein",
+          pattern.titulo || "Aprendizado do Foguetinho",
           pattern.mensagem
         );
       });

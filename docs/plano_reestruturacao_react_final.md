@@ -105,7 +105,7 @@ Tela futura de entrada por perfil.
 Deve mostrar:
 
 - tarefas de hoje;
-- alertas do Frankstein;
+- alertas do Foguetinho;
 - processos em risco;
 - proximas acoes;
 - atalhos por perfil.
@@ -136,7 +136,7 @@ Antes de migrar, precisa de contrato unico `ProcessoFull`, contendo:
 - sinal;
 - fiador;
 - historico;
-- regras disparadas do Frankstein.
+- regras disparadas do Foguetinho.
 
 ### Importacao
 
@@ -162,7 +162,7 @@ Migracao deve preservar:
 - sinal;
 - fiador;
 - assinatura autorizada;
-- bloqueios objetivos do Frankstein.
+- bloqueios objetivos do Foguetinho.
 
 ### Gestor
 
@@ -170,12 +170,12 @@ Ja possui dashboard React com dados reais.
 
 Evolucoes futuras:
 
-- acuracia do Frankstein;
+- acuracia do Foguetinho;
 - retrabalho evitado;
 - pendencias por corretor;
 - risco por etapa.
 
-### Frankstein
+### Foguetinho
 
 Modulo estrutural novo.
 
@@ -203,7 +203,7 @@ Migracao deve ser por blocos:
 
 1. Criar contrato `ProcessoFull`.
 2. Migrar Analise do Cliente para React.
-3. Criar painel lateral do Frankstein.
+3. Criar painel lateral do Foguetinho.
 4. Migrar Importacao.
 5. Migrar Repasse.
 6. Migrar Admin por blocos.

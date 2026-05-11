@@ -1,10 +1,10 @@
-# Projeto da Aplicacao Final - SioCred com Frankstein Autonomo Supervisionado
+# Projeto da Aplicacao Final - SioCred com Foguetinho Autonomo Supervisionado
 
 ## 1. Visao
 
-Transformar o sistema atual em uma aplicacao final de credito, comercial e repasse com um motor inteligente central: o FRANKSTEIN.
+Transformar o sistema atual em uma aplicacao final de credito, comercial e repasse com um motor inteligente central: o FOGUETINHO.
 
-O FRANKSTEIN nao deve ser apenas um validador de tela. Ele deve funcionar como uma camada de decisao supervisionada, capaz de:
+O FOGUETINHO nao deve ser apenas um validador de tela. Ele deve funcionar como uma camada de decisao supervisionada, capaz de:
 
 - ler o contexto completo do cliente;
 - aplicar regras de negocio oficiais;
@@ -14,7 +14,7 @@ O FRANKSTEIN nao deve ser apenas um validador de tela. Ele deve funcionar como u
 - pedir confirmacao humana quando a decisao depender de criterio operacional;
 - aprender com o retorno real do analista, CCA, gestor e resultado do processo.
 
-Autonomia supervisionada significa que o FRANKSTEIN pode agir, priorizar, alertar e recomendar, mas toda decisao sensivel deve ter rastreabilidade e possibilidade de revisao humana.
+Autonomia supervisionada significa que o FOGUETINHO pode agir, priorizar, alertar e recomendar, mas toda decisao sensivel deve ter rastreabilidade e possibilidade de revisao humana.
 
 ## 2. Principio do Produto Final
 
@@ -30,7 +30,7 @@ Cada cliente/processo deve ter:
 - sinal e fiador;
 - historico de eventos;
 - SLA;
-- recomendacoes do FRANKSTEIN;
+- recomendacoes do FOGUETINHO;
 - decisao humana;
 - resultado final.
 
@@ -50,13 +50,13 @@ O objetivo e reduzir retrabalho, acelerar analise, padronizar decisao e dar clar
 
 3. **Banco**
    - Processos, clientes, documentos, historico, eventos e regras.
-   - Eventos do FRANKSTEIN salvos de forma auditavel.
+   - Eventos do FOGUETINHO salvos de forma auditavel.
 
 4. **Motor de Regras**
    - Regras deterministicas versionadas.
    - Toda regra deve ter identificador, descricao, severidade, efeito e origem.
 
-5. **FRANKSTEIN Supervisionado**
+5. **FOGUETINHO Supervisionado**
    - Usa regras deterministicas como base obrigatoria.
    - Usa historico e padroes para recomendacao.
    - Gera explicacao da decisao.
@@ -68,9 +68,9 @@ O objetivo e reduzir retrabalho, acelerar analise, padronizar decisao e dar clar
    - Ajuda a transformar dados espalhados em leitura operacional.
    - Deve respeitar privacidade, permissoes, logs de auditoria e nunca executar regra por texto livre sem validacao deterministica.
 
-## 4. Como o FRANKSTEIN Deve Pensar
+## 4. Como o FOGUETINHO Deve Pensar
 
-O FRANKSTEIN deve seguir uma ordem fixa de raciocinio:
+O FOGUETINHO deve seguir uma ordem fixa de raciocinio:
 
 1. **Coletar contexto**
    - Cliente, empreendimento, corretor, renda, valor, documentos, status, historico e SLA.
@@ -113,7 +113,7 @@ O FRANKSTEIN deve seguir uma ordem fixa de raciocinio:
 
 ### Nivel 0 - Observador
 
-O FRANKSTEIN apenas mostra alertas e explicacoes.
+O FOGUETINHO apenas mostra alertas e explicacoes.
 
 Uso:
 - inicio da implantacao;
@@ -122,7 +122,7 @@ Uso:
 
 ### Nivel 1 - Recomendador
 
-O FRANKSTEIN sugere uma acao, mas o usuario decide.
+O FOGUETINHO sugere uma acao, mas o usuario decide.
 
 Exemplos:
 - sugerir FGTS futuro;
@@ -131,7 +131,7 @@ Exemplos:
 
 ### Nivel 2 - Executor com Confirmacao
 
-O FRANKSTEIN prepara a acao e pede confirmacao.
+O FOGUETINHO prepara a acao e pede confirmacao.
 
 Exemplos:
 - gerar texto de pendencia;
@@ -141,7 +141,7 @@ Exemplos:
 
 ### Nivel 3 - Executor Automatico Seguro
 
-O FRANKSTEIN executa sozinho apenas acoes reversiveis e de baixo risco.
+O FOGUETINHO executa sozinho apenas acoes reversiveis e de baixo risco.
 
 Exemplos:
 - atualizar prioridade da fila;
@@ -152,7 +152,7 @@ Exemplos:
 
 ### Nivel 4 - Bloqueador
 
-O FRANKSTEIN impede avanco quando a regra for objetiva.
+O FOGUETINHO impede avanco quando a regra for objetiva.
 
 Exemplos:
 - pendencia sem observacao;
@@ -208,9 +208,9 @@ Tipos de neuronios:
 - Aprendizado;
 - Auditoria.
 
-## 7. Memoria do FRANKSTEIN
+## 7. Memoria do FOGUETINHO
 
-O FRANKSTEIN precisa de memoria operacional, nao apenas regra fixa.
+O FOGUETINHO precisa de memoria operacional, nao apenas regra fixa.
 
 ### 7.1 Memoria curta
 
@@ -297,7 +297,7 @@ Deve conter:
 - fiador;
 - observacao;
 - historico;
-- painel FRANKSTEIN.
+- painel FOGUETINHO.
 
 ### 8.5 Dossie Documental
 
@@ -349,7 +349,7 @@ Indicadores:
 - pendencias Agehab;
 - tempo medio por etapa;
 - processos em risco;
-- acuracia do FRANKSTEIN.
+- acuracia do FOGUETINHO.
 
 ### 8.9 Motor de Regras
 
@@ -364,7 +364,7 @@ Permite:
 - simular regra em um processo;
 - aprovar regra nova.
 
-### 8.10 Treinamento do FRANKSTEIN
+### 8.10 Treinamento do FOGUETINHO
 
 Tela nova.
 
@@ -438,7 +438,7 @@ O equivalente no SioCred deve ser:
 - confirmacao do analista;
 - historico de aprendizagem.
 
-O FRANKSTEIN nao deve "inventar regra". Ele deve:
+O FOGUETINHO nao deve "inventar regra". Ele deve:
 
 - recuperar a regra certa;
 - aplicar ao caso certo;
@@ -449,7 +449,7 @@ O FRANKSTEIN nao deve "inventar regra". Ele deve:
 
 ## 11. Guardrails Obrigatorios
 
-O FRANKSTEIN nunca deve:
+O FOGUETINHO nunca deve:
 
 - aprovar processo final sozinho;
 - apagar dados;
@@ -459,7 +459,7 @@ O FRANKSTEIN nunca deve:
 - tomar decisao sensivel sem historico;
 - substituir responsabilidade humana em casos cinzentos.
 
-O FRANKSTEIN pode:
+O FOGUETINHO pode:
 
 - priorizar fila;
 - sugerir acao;
@@ -485,7 +485,7 @@ O FRANKSTEIN pode:
 - Criar endpoint unico para avaliar processo.
 - Retornar regras disparadas, severidade e recomendacao.
 
-### Fase 3 - FRANKSTEIN Supervisionado
+### Fase 3 - FOGUETINHO Supervisionado
 
 - Criar painel de decisao no processo.
 - Registrar feedback do usuario.
@@ -524,6 +524,6 @@ Antes de programar novas telas, o proximo passo deve ser criar a matriz:
 | Regra | Origem | Executa hoje | Deve executar | Autonomia | Tela afetada |
 | --- | --- | --- | --- | --- | --- |
 
-Essa matriz vira o mapa neural do FRANKSTEIN.
+Essa matriz vira o mapa neural do FOGUETINHO.
 
 Depois disso, a implementacao deve comecar pelo motor unico de avaliacao do processo.

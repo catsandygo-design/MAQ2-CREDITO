@@ -27,7 +27,7 @@ O usuario precisa saber:
 - o que esta bloqueando;
 - quem e o responsavel;
 - qual e a proxima acao;
-- se o FRANKSTEIN esta alertando, sugerindo ou bloqueando;
+- se o FOGUETINHO esta alertando, sugerindo ou bloqueando;
 - onde clicar para resolver.
 
 O que fica por tras:
@@ -49,7 +49,7 @@ O que fica por tras:
 | Tema | Versao Estrutural/Ambiciosa | Versao Cautelar/Personalizada | Melhor para o usuario |
 | --- | --- | --- | --- |
 | Telas | Propoe aplicacao final com varios modulos claros | Propoe consolidar aos poucos sem quebrar uso atual | Usar a cautelar como caminho, com destino visual da estrutural |
-| Frankstein | Motor central com regras, memoria, autonomia e treinamento | Copiloto supervisionado, primeiro explicando e depois agindo | Comecar cautelar; manter a visao estrutural como futuro |
+| Foguetinho | Motor central com regras, memoria, autonomia e treinamento | Copiloto supervisionado, primeiro explicando e depois agindo | Comecar cautelar; manter a visao estrutural como futuro |
 | Regras | Motor versionado, DSL/JSON, backtesting | Matriz de regras antes de implementar | Primeiro matriz; depois motor |
 | React | Migracao para aplicacao final | Migracao incremental e com paridade | Incremental |
 | Workflow | Servicos, tabelas de transicao, timeline | Workflow simples primeiro, sem orquestrador pesado | Workflow simples e visivel |
@@ -83,7 +83,7 @@ O usuario deve ver:
 - pendencias novas;
 - clientes parados;
 - proximas acoes;
-- alertas do FRANKSTEIN.
+- alertas do FOGUETINHO.
 
 Nao deve ver:
 
@@ -124,7 +124,7 @@ O usuario deve ver:
 - sinal;
 - fiador;
 - observacao;
-- decisao do FRANKSTEIN;
+- decisao do FOGUETINHO;
 - botao para salvar/avancar.
 
 Por tras, o sistema calcula:
@@ -137,7 +137,7 @@ Por tras, o sistema calcula:
 - historico;
 - evento de auditoria.
 
-### 5.4 FRANKSTEIN
+### 5.4 FOGUETINHO
 
 O usuario deve ver frases como:
 
@@ -165,7 +165,7 @@ O gestor deve ver:
 - documentos mais pendentes;
 - processos prontos;
 - processos bloqueados;
-- acerto do FRANKSTEIN.
+- acerto do FOGUETINHO.
 
 Por tras, o sistema usa:
 
@@ -189,13 +189,13 @@ Para o usuario, o menu deve ser simples:
 - Gestor
 - Admin
 
-O Motor de Regras e o Treinamento do FRANKSTEIN podem existir, mas devem aparecer apenas para perfil autorizado.
+O Motor de Regras e o Treinamento do FOGUETINHO podem existir, mas devem aparecer apenas para perfil autorizado.
 
 ### 6.2 Nomes Mais Claros para o Usuario
 
 Evitar nomes tecnicos:
 
-- "Motor de Regras" pode aparecer para admin, mas para analista deve aparecer como "Regras do Frankstein" ou nem aparecer.
+- "Motor de Regras" pode aparecer para admin, mas para analista deve aparecer como "Regras do Foguetinho" ou nem aparecer.
 - "Model Registry" nao deve aparecer.
 - "Backtesting" pode aparecer como "Testar regra em processos antigos".
 - "Workflow Service" nunca deve aparecer.
@@ -226,14 +226,14 @@ Mas o usuario deve interagir com:
 
 ### Manter da Versao Estrutural
 
-- FRANKSTEIN como nucleo inteligente.
+- FOGUETINHO como nucleo inteligente.
 - Regras versionadas.
 - Memoria historica.
 - Feedback humano.
 - Dashboard de gargalos.
 - Backtesting simples.
 - React como destino.
-- Painel lateral do FRANKSTEIN.
+- Painel lateral do FOGUETINHO.
 
 ### Manter da Versao Cautelar
 
@@ -265,7 +265,7 @@ Nao:
 
 "Preciso entender onde esta a regra, qual tela usar, qual status escolher e por que isso bloqueou."
 
-O FRANKSTEIN deve agir como assistente operacional:
+O FOGUETINHO deve agir como assistente operacional:
 
 - aponta o erro;
 - explica a regra;
@@ -289,7 +289,7 @@ Por dentro:
 - eventos;
 - historico;
 - auditoria;
-- Frankstein supervisionado;
+- Foguetinho supervisionado;
 - backtesting;
 - modelo futuro.
 
@@ -308,7 +308,7 @@ Por fora:
 1. Criar matriz real de regras.
 2. Definir mapa final de telas e nomes para usuario.
 3. Escolher quais complexidades ficam escondidas.
-4. Melhorar FRANKSTEIN explicavel na tela de analise.
+4. Melhorar FOGUETINHO explicavel na tela de analise.
 5. Consolidar Central Operacional.
 6. Criar feedback humano.
 7. So depois criar motor de regras mais completo.

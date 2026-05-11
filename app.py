@@ -407,7 +407,8 @@ EMAIL_SMTP_PASSWORD = os.getenv("EMAIL_SMTP_PASSWORD", "")
 EMAIL_SMTP_FROM = (os.getenv("EMAIL_SMTP_FROM", "") or "").strip()
 EMAIL_SMTP_STARTTLS = os.getenv("EMAIL_SMTP_STARTTLS", "true").lower() in {"1", "true", "yes"}
 EMAIL_FROM = (os.getenv("EMAIL_FROM", "") or EMAIL_SMTP_FROM).strip()
-EMAIL_FROM_NAME = (os.getenv("EMAIL_FROM_NAME", "") or "Frankstein SioCred").strip()
+AI_ASSISTANT_DISPLAY_NAME = (os.getenv("AI_ASSISTANT_DISPLAY_NAME", "") or "Foguetinho").strip()
+EMAIL_FROM_NAME = (os.getenv("EMAIL_FROM_NAME", "") or f"{AI_ASSISTANT_DISPLAY_NAME} SioCred").strip()
 EMAIL_DELIVERY_PROVIDER = (os.getenv("EMAIL_DELIVERY_PROVIDER", "") or os.getenv("EMAIL_PROVIDER", "")).strip().lower()
 EMAIL_BREVO_API_KEY = (os.getenv("EMAIL_BREVO_API_KEY", "") or os.getenv("BREVO_API_KEY", "")).strip()
 EMAIL_BREVO_API_URL = (os.getenv("EMAIL_BREVO_API_URL", "") or "https://api.brevo.com/v3/smtp/email").strip()
@@ -3172,7 +3173,7 @@ def _credito_planejamento_email_body(item: CreditoPlanejamentoItem, view: dict[s
     status_label = _credito_planejamento_status_label(item.status)
 
     linhas = [
-        "Frankstein alerta supervisionado do SioCred",
+        f"{AI_ASSISTANT_DISPLAY_NAME} alerta supervisionado do SioCred",
         "",
         "Faltam 5 minutos para uma tarefa ou compromisso.",
         "",
@@ -3191,7 +3192,7 @@ def _credito_planejamento_email_body(item: CreditoPlanejamentoItem, view: dict[s
             "Acao sugerida:",
             "Abra a agenda operacional do SioCred, execute a tarefa e marque o check-in/conclusao.",
             "",
-            "Este e um alerta automatico do Frankstein. Ele apenas avisa; a decisao continua supervisionada por voce.",
+            f"Este e um alerta automatico do {AI_ASSISTANT_DISPLAY_NAME}. Ele apenas avisa; a decisao continua supervisionada por voce.",
         ]
     )
     return "\n".join(linhas)
@@ -3267,7 +3268,7 @@ def _processar_alertas_email_planejamento(db: Session, *, now: Optional[datetime
             continue
 
         view = _credito_planejamento_item_view(item)
-        subject = f"Frankstein: alerta em 5 min - {view.get('display_titulo') or item.titulo}"
+        subject = f"{AI_ASSISTANT_DISPLAY_NAME}: alerta em 5 min - {view.get('display_titulo') or item.titulo}"
         body = _credito_planejamento_email_body(item, view, reminder_at)
         try:
             for to_email in recipients:
@@ -3286,7 +3287,7 @@ def _processar_alertas_email_planejamento(db: Session, *, now: Optional[datetime
             result["sent"] += 1
         except Exception as exc:  # pragma: no cover - depends on SMTP provider
             db.rollback()
-            logger.exception("Falha ao enviar alerta de agenda Frankstein por e-mail.")
+            logger.exception("Falha ao enviar alerta de agenda %s por e-mail.", AI_ASSISTANT_DISPLAY_NAME)
             result["errors"].append({"item_id": str(item.id), "error": exc.__class__.__name__})
 
     if result["errors"]:
@@ -4049,7 +4050,7 @@ def _send_email_message(*, to_email: str, subject: str, text_body: str) -> dict[
     msg["Date"] = formatdate(localtime=True)
     msg["Message-ID"] = message_id
     msg["Reply-To"] = EMAIL_FROM
-    msg["X-SioCred-Source"] = "Frankstein"
+    msg["X-SioCred-Source"] = AI_ASSISTANT_DISPLAY_NAME
     msg.set_content(text_body)
 
     with smtplib.SMTP(EMAIL_SMTP_HOST, EMAIL_SMTP_PORT, timeout=20) as smtp:
@@ -7612,13 +7613,13 @@ def admin_test_frankstein_email_alerts(
         raise HTTPException(status_code=422, detail="Informe ao menos um e-mail destinatario.")
 
     now_brt = datetime.now(KEEPALIVE_BRT_TZ)
-    subject = f"Frankstein: teste de alerta por e-mail - {now_brt:%d/%m/%Y %H:%M}"
+    subject = f"{AI_ASSISTANT_DISPLAY_NAME}: teste de alerta por e-mail - {now_brt:%d/%m/%Y %H:%M}"
     body = "\n".join(
         [
-            "Frankstein alerta supervisionado do SioCred",
+            f"{AI_ASSISTANT_DISPLAY_NAME} alerta supervisionado do SioCred",
             "",
             "Este e um teste de envio do painel admin.",
-            "Quando houver tarefa ou compromisso com horario, o Frankstein avisara 5 minutos antes.",
+            f"Quando houver tarefa ou compromisso com horario, o {AI_ASSISTANT_DISPLAY_NAME} avisara 5 minutos antes.",
             f"Data/hora do teste: {now_brt:%d/%m/%Y %H:%M:%S} BRT",
             f"Canal configurado: {_email_delivery_provider()}",
             f"Remetente configurado: {EMAIL_FROM}",
@@ -11414,7 +11415,7 @@ def _load_sklearn_frankstein_model_bundle() -> Optional[dict[str, Any]]:
     try:
         import joblib
     except Exception:
-        logger.exception("Joblib indisponivel para carregar modelo FRANKSTEIN atual.")
+        logger.exception("Joblib indisponivel para carregar modelo %s atual.", AI_ASSISTANT_DISPLAY_NAME)
         return None
 
     try:
@@ -11431,7 +11432,7 @@ def _load_sklearn_frankstein_model_bundle() -> Optional[dict[str, Any]]:
         bundle["model_info"] = _load_json_file(FRANKSTEIN_CURRENT_MODEL_INFO_PATH) or {}
         return bundle
     except Exception:
-        logger.exception("Falha ao carregar bundle sklearn atual do FRANKSTEIN.")
+        logger.exception("Falha ao carregar bundle sklearn atual do %s.", AI_ASSISTANT_DISPLAY_NAME)
         return None
 
 
@@ -11755,7 +11756,7 @@ def _link_frankstein_events_to_processo(
                         (lead_id_text, processo_id_text),
                     )
         except Exception:
-            logger.exception("Falha ao vincular eventos FRANKSTEIN ao processo %s no banco; fallback arquivo.", processo_id_text)
+            logger.exception("Falha ao vincular eventos %s ao processo %s no banco; fallback arquivo.", AI_ASSISTANT_DISPLAY_NAME, processo_id_text)
         finally:
             conn.close()
 
@@ -11974,7 +11975,7 @@ def _sync_frankstein_events_for_processo(
                 if updated > 0:
                     return updated
             except Exception:
-                logger.exception("Falha ao sincronizar eventos FRANKSTEIN do processo %s no banco; fallback arquivo.", processo_id_text)
+                logger.exception("Falha ao sincronizar eventos %s do processo %s no banco; fallback arquivo.", AI_ASSISTANT_DISPLAY_NAME, processo_id_text)
             finally:
                 conn.close()
 
@@ -11996,7 +11997,7 @@ def _sync_frankstein_events_for_processo(
             _persist_json_list(FRANKSTEIN_EVENTS_PATH, events)
         return updated
     except Exception:
-        logger.exception("Falha ao sincronizar resultados FRANKSTEIN para o processo %s.", getattr(processo, "id", None))
+        logger.exception("Falha ao sincronizar resultados %s para o processo %s.", AI_ASSISTANT_DISPLAY_NAME, getattr(processo, "id", None))
         return 0
 
 
@@ -12006,7 +12007,7 @@ def _frankstein_predict_prob(model: dict[str, Any], feats: list[float], feature_
         try:
             import pandas as pd
         except Exception:
-            logger.exception("Pandas indisponivel para inferencia do modelo sklearn do FRANKSTEIN.")
+            logger.exception("Pandas indisponivel para inferencia do modelo sklearn do %s.", AI_ASSISTANT_DISPLAY_NAME)
             return 0.62
 
         predictor = model.get("model")
@@ -12018,7 +12019,7 @@ def _frankstein_predict_prob(model: dict[str, Any], feats: list[float], feature_
         try:
             return max(0.0, min(1.0, float(predictor.predict_proba(df)[0][1])))
         except Exception:
-            logger.exception("Falha na inferencia do modelo sklearn do FRANKSTEIN.")
+            logger.exception("Falha na inferencia do modelo sklearn do %s.", AI_ASSISTANT_DISPLAY_NAME)
             return 0.62
 
     means = model.get("means", [])
@@ -12458,7 +12459,7 @@ async def recomendar_proposta_frankstein(
             db.commit()
         except SQLAlchemyError:
             db.rollback()
-            logger.exception("Falha ao persistir rastreio do ultimo evento FRANKSTEIN para processo %s.", processo.id)
+            logger.exception("Falha ao persistir rastreio do ultimo evento %s para processo %s.", AI_ASSISTANT_DISPLAY_NAME, processo.id)
         else:
             _sync_frankstein_events_for_processo(db, processo, lead=lead)
 
@@ -12495,7 +12496,7 @@ def frankstein_analisar_operacional(
             db.commit()
         except SQLAlchemyError:
             db.rollback()
-            logger.exception("Falha ao persistir rastreio do ultimo evento FRANKSTEIN para processo %s.", processo.id)
+            logger.exception("Falha ao persistir rastreio do ultimo evento %s para processo %s.", AI_ASSISTANT_DISPLAY_NAME, processo.id)
         else:
             _sync_frankstein_events_for_processo(db, processo, lead=lead)
     resposta.event_id = event["event_id"]
@@ -12512,7 +12513,7 @@ def atualizar_resultado_frankstein_event(
     changes = payload.model_dump(exclude_none=True)
     updated = _update_frankstein_event_store(event_id, changes)
     if not updated:
-        raise HTTPException(status_code=404, detail="Evento FRANKSTEIN nao encontrado")
+        raise HTTPException(status_code=404, detail=f"Evento {AI_ASSISTANT_DISPLAY_NAME} nao encontrado")
     return {"ok": True, "event_id": event_id, "updated_fields": sorted(changes.keys())}
 
 

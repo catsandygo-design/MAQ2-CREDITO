@@ -36,7 +36,7 @@ def test_credito_planejamento_email_reminder_is_five_minutes_before_task():
     assert reminder_at == datetime.combine(date(2026, 5, 10), time(14, 25), tzinfo=KEEPALIVE_BRT_TZ)
 
 
-def test_credito_planejamento_email_body_is_supervised_frankstein_alert():
+def test_credito_planejamento_email_body_is_supervised_foguetinho_alert():
     item = make_item()
     view = _credito_planejamento_item_view(item)
     reminder_at = _credito_planejamento_reminder_at_brt(item)
@@ -44,7 +44,7 @@ def test_credito_planejamento_email_body_is_supervised_frankstein_alert():
 
     body = _credito_planejamento_email_body(item, view, reminder_at)
 
-    assert "Frankstein alerta supervisionado" in body
+    assert "Foguetinho alerta supervisionado" in body
     assert "Faltam 5 minutos" in body
     assert "Revisar compromisso Caixa" in body
     assert "decisao continua supervisionada" in body

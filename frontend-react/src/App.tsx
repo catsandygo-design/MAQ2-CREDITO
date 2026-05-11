@@ -28,7 +28,8 @@ export default function App() {
       <Route path="/analise" element={<FinalModuleRoute moduleKey="analise" />} />
       <Route path="/importacao" element={<FinalModuleRoute moduleKey="importacao" />} />
       <Route path="/repasse" element={<FinalModuleRoute moduleKey="repasse" />} />
-      <Route path="/frankstein" element={<FinalModuleRoute moduleKey="frankstein" />} />
+      <Route path="/foguetinho" element={<FinalModuleRoute moduleKey="foguetinho" />} />
+      <Route path="/frankstein" element={<Navigate to="/foguetinho" replace />} />
       <Route path="/admin" element={<FinalModuleRoute moduleKey="admin" />} />
 
       {/* Pontes com nomes antigos para facilitar a migracao incremental. */}

@@ -758,7 +758,7 @@
         <div class="copy">
           <span class="pill-top">CRM do credito</span>
           <h1>Quadro comercial e operacional</h1>
-          <p>Visual inspirado em CRM, mas alimentado pelo processo real do sistema: grupos por etapa, filtros de pendencia e leitura de FRANKSTEIN sem perder a leveza grafica da referencia.</p>
+          <p>Visual inspirado em CRM, mas alimentado pelo processo real do sistema: grupos por etapa, filtros de pendencia e leitura de FOGUETINHO sem perder a leveza grafica da referencia.</p>
         </div>
         <div class="head-actions">
           <a class="ghost" href="/app/analista/reuniao-comercial">Reuniao comercial</a>
@@ -770,7 +770,7 @@
         <button class="tab active" type="button" data-view="main">Quadro principal</button>
         <button class="tab" type="button" data-view="pendencias">Pendencias</button>
         <button class="tab" type="button" data-view="assinatura">Assinatura</button>
-        <button class="tab" type="button" data-view="frankstein">FRANKSTEIN</button>
+        <button class="tab" type="button" data-view="frankstein">FOGUETINHO</button>
       </section>
 
       <section class="dockbar" aria-label="Resumo ativo do recorte">
@@ -781,7 +781,7 @@
         </article>
         <article class="dock"><span>Visao</span><strong id="dockView">Quadro principal</strong><p>Modo atual dessa leitura.</p></article>
         <article class="dock"><span>Exibidos</span><strong id="dockVisible">0</strong><p>Processos dentro do filtro atual.</p></article>
-        <article class="dock"><span>Com FRANKSTEIN</span><strong id="dockFrankstein">0</strong><p>Eventos do motor presentes no recorte.</p></article>
+        <article class="dock"><span>Com FOGUETINHO</span><strong id="dockFrankstein">0</strong><p>Eventos do motor presentes no recorte.</p></article>
       </section>
 
       <section class="tools">
@@ -797,7 +797,7 @@
         <article class="stat"><span>Total vivo</span><strong id="metaTotal">0</strong><p>Processos ativos no recorte atual.</p></article>
         <article class="stat"><span>Pendencias</span><strong id="metaPendencias">0</strong><p>CCA, Agehab, sinal ou fiador ainda segurando o fluxo.</p></article>
         <article class="stat"><span>Reta final</span><strong id="metaRetaFinal">0</strong><p>Casos ja na diretoria ou no repasse.</p></article>
-        <article class="stat"><span>FRANKSTEIN</span><strong id="metaFrankstein">0</strong><p>Processos com evento do motor registrado.</p></article>
+        <article class="stat"><span>FOGUETINHO</span><strong id="metaFrankstein">0</strong><p>Processos com evento do motor registrado.</p></article>
         <article class="stat"><span>Atualizacao</span><strong id="metaAtualizacao">-</strong><p>Hora da ultima leitura desse quadro.</p></article>
       </section>
 
@@ -815,7 +815,7 @@
         <article class="focus-card"><span>Etapa</span><strong id="focusStage">-</strong><p id="focusStageHint">Sem etapa em foco.</p></article>
         <article class="focus-card"><span>Pendencias</span><strong id="focusPendencias">-</strong><p id="focusPendenciasHint">Sem pendencias ativas no foco.</p></article>
         <article class="focus-card"><span>Documentos</span><strong id="focusDocs">-</strong><p id="focusDocsHint">Sem leitura documental em foco.</p></article>
-        <article class="focus-card"><span>FRANKSTEIN</span><strong id="focusMotor">-</strong><p id="focusMotorHint">Sem evento do motor registrado.</p></article>
+        <article class="focus-card"><span>FOGUETINHO</span><strong id="focusMotor">-</strong><p id="focusMotorHint">Sem evento do motor registrado.</p></article>
       </section>
 
       <section class="board">
@@ -879,7 +879,7 @@
         main: "Quadro principal",
         pendencias: "Pendencias",
         assinatura: "Assinatura",
-        frankstein: "FRANKSTEIN",
+        frankstein: "FOGUETINHO",
       })[value] || "Quadro principal";
     }
 
@@ -1026,7 +1026,7 @@
       $("focusPendenciasHint").textContent = row.pendenciasResumo;
       $("focusDocs").textContent = row.docsResumo;
       $("focusDocsHint").textContent = row.docsPendentes > 0 ? `${row.docsPendentes} documento(s) ainda dependem de retorno.` : "Dossie sem pendencia documental visivel.";
-      $("focusMotor").textContent = row.franksteinAt ? "FRANKSTEIN ativo" : "Sem evento";
+      $("focusMotor").textContent = row.franksteinAt ? "FOGUETINHO ativo" : "Sem evento";
       $("focusMotorHint").textContent = row.franksteinAt ? `Ultimo evento em ${fmtDate(row.franksteinAt)}` : "Este processo ainda nao registrou evento do motor.";
       $("focusLink").href = row.link;
     }
@@ -1068,7 +1068,7 @@
             <span class="sub">${esc(observacao)}</span>
           </div>
           <div class="stack">
-            <strong>${esc(frank ? "FRANKSTEIN ativo" : "Motor ausente")}</strong>
+            <strong>${esc(frank ? "FOGUETINHO ativo" : "Motor ausente")}</strong>
             <span class="sub">${esc(motorLabel)}</span>
           </div>
           <div><a class="action" href="${esc(row.link)}">Abrir</a></div>
@@ -1098,7 +1098,7 @@
             <div class="group-stats">
               <span class="gchip">${rows.length} processos</span>
               <span class="gchip">${pendencias} com pendencia</span>
-              <span class="gchip">${frankstein} com FRANKSTEIN</span>
+              <span class="gchip">${frankstein} com FOGUETINHO</span>
             </div>
           </div>
           <div class="table">
@@ -1164,7 +1164,7 @@
       let hint = "Use a lateral e as abas para mudar o encaixe da carteira sem sair do quadro.";
       if (activeView === "pendencias") hint = "Recorte de tensao operacional: priorize quem travou Caixa, Agehab, sinal ou fiador.";
       if (activeView === "assinatura") hint = "Visao de reta final para separar quem ja esta em assinatura ou muito perto dela.";
-      if (activeView === "frankstein") hint = "Leitura dedicada aos processos que ja passaram pelo motor FRANKSTEIN.";
+      if (activeView === "frankstein") hint = "Leitura dedicada aos processos que ja passaram pelo motor FOGUETINHO.";
       if (activeSideFilter === "pendencias") hint = "A lateral esta focada em pendencias. Combine com busca para achar gargalos especificos.";
       $("dockHint").textContent = hint;
       renderFocus(filtered.find((row) => row.id === selectedId) || filtered[0] || null);

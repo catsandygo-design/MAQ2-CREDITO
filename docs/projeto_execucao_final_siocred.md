@@ -4,7 +4,7 @@
 
 **SioCred Operacional Inteligente**
 
-Sistema personalizado para a rotina diaria do setor de credito, com FRANKSTEIN como copiloto operacional supervisionado.
+Sistema personalizado para a rotina diaria do setor de credito, com FOGUETINHO como copiloto operacional supervisionado.
 
 ## 2. Objetivo Final
 
@@ -23,7 +23,7 @@ O sistema deve continuar profundo:
 - SLA;
 - eventos;
 - workflow;
-- Frankstein;
+- Foguetinho;
 - feedback humano.
 
 Mas a tela deve mostrar apenas o que ajuda o usuario a decidir e agir.
@@ -34,7 +34,7 @@ Mas a tela deve mostrar apenas o que ajuda o usuario a decidir e agir.
 2. Nao expor complexidade tecnica para o usuario.
 3. Nao refazer tudo de uma vez.
 4. Nao quebrar rotas legadas antes de paridade.
-5. Nao dar autonomia forte ao Frankstein sem auditoria.
+5. Nao dar autonomia forte ao Foguetinho sem auditoria.
 6. Nao migrar regra escondida sem mapear origem.
 7. Implementar em pacotes pequenos, testaveis e reversiveis.
 
@@ -49,7 +49,7 @@ flowchart LR
     D --> F["Status Caixa / CCA"]
     D --> G["Agehab"]
     D --> H["Sinal / Fiador"]
-    D --> I["FRANKSTEIN"]
+    D --> I["FOGUETINHO"]
     I --> J["Regras Disparadas"]
     I --> K["Sugestao / Bloqueio"]
     I --> L["Feedback Humano"]
@@ -67,9 +67,9 @@ flowchart TB
     API --> PROC["Processo Service"]
     API --> DOC["Documento Service"]
     API --> WF["Workflow/SLA Service"]
-    API --> FRK["Frankstein Service"]
+    API --> FRK["Foguetinho Service"]
     FRK --> RULES["Regras Versionadas"]
-    FRK --> EVENTS["Frankstein Events"]
+    FRK --> EVENTS["Foguetinho Events"]
     FRK --> FEED["Feedback Humano"]
     PROC --> DB["Banco de Dados"]
     DOC --> DB
@@ -102,10 +102,10 @@ Observacao:
 
 | Perfil | Telas principais | O que precisa ver |
 | --- | --- | --- |
-| Analista | Inicio, Central Operacional, Analise, Importacao, Repasse | O que fazer agora, documentos, pendencias, bloqueios, Frankstein |
+| Analista | Inicio, Central Operacional, Analise, Importacao, Repasse | O que fazer agora, documentos, pendencias, bloqueios, Foguetinho |
 | CCA/Repasse | Repasse, Analise, Fila Tecnica | Status CCA, Agehab, assinatura, sinal, fiador |
 | Gestor | Inicio, Gestor, Central Operacional | Gargalos, retrabalho, SLA, prontos, bloqueados |
-| Admin | Admin, Regras do Frankstein, Auditoria | Usuarios, regras, logs, configuracoes |
+| Admin | Admin, Regras do Foguetinho, Auditoria | Usuarios, regras, logs, configuracoes |
 
 ## 7. Desenho das Telas
 
@@ -122,7 +122,7 @@ Mostrar o que precisa de atencao no dia.
 | Hoje                                                 |
 | [Pendencias novas] [Em risco] [Prontos] [SLA]        |
 +------------------------------------------------------+
-| Prioridade do Frankstein                             |
+| Prioridade do Foguetinho                             |
 | - Cliente A: bloqueado por Agehab                    |
 | - Cliente B: falta motivo da pendencia               |
 | - Cliente C: pronto para repasse                     |
@@ -178,7 +178,7 @@ Concentrar decisao operacional.
 +----------------------------------------------------------------+
 | Cliente: Maria Silva                  Status: Atencao           |
 +-------------------------+----------------------+---------------+
-| Dados do Processo       | Documentos           | FRANKSTEIN    |
+| Dados do Processo       | Documentos           | FOGUETINHO    |
 | Obra                    | Pendente/Aprovado    | Bloqueio      |
 | Corretor                | Motivo pendencia     | Motivo        |
 | Estagio                 | Secoes do dossie     | Proxima acao  |
@@ -190,7 +190,7 @@ Concentrar decisao operacional.
 +----------------------------------------------------------------+
 ```
 
-FRANKSTEIN deve mostrar:
+FOGUETINHO deve mostrar:
 
 - status geral;
 - regra disparada;
@@ -255,7 +255,7 @@ Mostrar gargalos e produtividade sem entrar em detalhe tecnico.
 +------------------------------------------------------+
 ```
 
-### 7.7 Admin / Regras do Frankstein
+### 7.7 Admin / Regras do Foguetinho
 
 Objetivo:
 
@@ -263,7 +263,7 @@ Uso restrito. Nao e tela diaria do analista.
 
 ```text
 +------------------------------------------------------+
-| Regras do Frankstein                                 |
+| Regras do Foguetinho                                 |
 +------------------------------------------------------+
 | Codigo | Categoria | Severidade | Ativa | Testar     |
 +------------------------------------------------------+
@@ -272,9 +272,9 @@ Uso restrito. Nao e tela diaria do analista.
 +------------------------------------------------------+
 ```
 
-## 8. Frases de UX do Frankstein
+## 8. Frases de UX do Foguetinho
 
-O Frankstein deve falar linguagem operacional:
+O Foguetinho deve falar linguagem operacional:
 
 - "Bloqueado: falta motivo da pendencia."
 - "Atencao: Agehab ainda nao validada."
@@ -314,11 +314,11 @@ Criterio de aceite:
 - Nenhuma regra importante fica sem classificacao.
 - Nenhuma tela e removida sem destino definido.
 
-### Fase 1 - Frankstein Explicavel
+### Fase 1 - Foguetinho Explicavel
 
 Entregavel:
 
-- Melhorar resposta do Frankstein para trazer:
+- Melhorar resposta do Foguetinho para trazer:
   - status;
   - regra;
   - motivo;
@@ -392,7 +392,7 @@ Entregavel:
   - dados;
   - documentos;
   - status;
-  - Frankstein lateral;
+  - Foguetinho lateral;
   - historico.
 
 Arquivos provaveis:
@@ -447,7 +447,7 @@ Criterio de aceite:
 
 O primeiro pacote implementavel deve ser pequeno e seguro:
 
-**Pacote 1 - Matriz de Regras + Frankstein Explicavel**
+**Pacote 1 - Matriz de Regras + Foguetinho Explicavel**
 
 Escopo:
 
@@ -459,7 +459,7 @@ Escopo:
    - falta conectar;
    - tela afetada;
    - autonomia.
-4. Ajustar o contrato do Frankstein para expor melhor:
+4. Ajustar o contrato do Foguetinho para expor melhor:
    - regra;
    - motivo;
    - campo;
@@ -471,7 +471,7 @@ Por que comecar aqui:
 - Evita retrabalho.
 - Nao quebra tela.
 - Nao exige migracao React.
-- Prepara o cerebro do Frankstein.
+- Prepara o cerebro do Foguetinho.
 - Melhora imediatamente a confianca do usuario.
 
 ## 11. Checklist Antes de Codar
@@ -491,7 +491,7 @@ Antes de implementar, confirmar:
 | --- | --- |
 | Quebrar regra existente | matriz antes de codar |
 | Tela nova perder detalhe operacional | paridade antes de substituir |
-| Frankstein decidir demais | autonomia por niveis |
+| Foguetinho decidir demais | autonomia por niveis |
 | Usuario ver complexidade tecnica | linguagem operacional |
 | Refatoracao grande travar projeto | pacotes pequenos |
 | React apagar regra em HTML legado | migracao incremental |
@@ -515,6 +515,6 @@ Construir o SioCred como uma ferramenta operacional inteligente:
 - forte por dentro;
 - simples por fora;
 - fiel ao setor de credito;
-- guiada pelo Frankstein;
+- guiada pelo Foguetinho;
 - supervisionada pelo usuario;
 - evolutiva sem retrabalho.

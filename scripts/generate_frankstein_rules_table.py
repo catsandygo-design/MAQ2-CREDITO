@@ -132,7 +132,7 @@ def escape_markdown(value: str) -> str:
 def render_markdown(rows: list[dict[str, str]], row_counts: Counter[str]) -> str:
     generated_at = datetime.now().astimezone().isoformat()
     lines = [
-        "# Tabela de Regras do FRANKSTEIN",
+        "# Tabela de Regras do FOGUETINHO",
         "",
         f"Gerado automaticamente a partir de `{SOURCE_FILE.as_posix()}` em `{generated_at}`.",
         "",

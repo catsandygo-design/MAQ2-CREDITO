@@ -5,35 +5,35 @@ Este arquivo guarda o resumo da conversa para retomarmos depois sem depender do 
 ## Estado do Git
 
 - Branch: `main`
-- Ultimo commit local e remoto: `b987678 Expose Frankstein email settings shortcut`
+- Ultimo commit local e remoto: `b987678 Expose Foguetinho email settings shortcut`
 - `HEAD`, `origin/main` e `origin/HEAD` estavam alinhados neste commit.
 - Testes executados apos as mudancas principais: `python -m pytest -q` com `13 passed`.
 
 ## O que foi implementado
 
-1. Frankstein com alerta por e-mail para agenda operacional.
+1. Foguetinho com alerta por e-mail para agenda operacional.
    - Endpoint automatico: `POST /app/api/frankstein/agenda/email-alertas/processar`
    - Workflow GitHub: `.github/workflows/frankstein-email-alerts.yml`
    - Envia alerta 5 minutos antes de tarefas/compromissos com horario.
    - Deduplicacao por `SistemaLog` para nao enviar varias vezes o mesmo alerta.
 
-2. Painel Admin para configurar e testar e-mail do Frankstein.
+2. Painel Admin para configurar e testar e-mail do Foguetinho.
    - Arquivo: `web/admin.html`
-   - Secao: `Frankstein - Alertas por e-mail`
+   - Secao: `Foguetinho - Alertas por e-mail`
    - Campo de destinatarios.
    - Botao `Salvar e-mail`.
    - Botao `Testar envio`.
    - Status de SMTP, destinatario e janela.
-   - Atalho no topo: `Configurar e-mail Frankstein`.
+   - Atalho no topo: `Configurar e-mail Foguetinho`.
 
 3. Atalho no dashboard do gestor para usuario admin.
    - Arquivo: `frontend-react/src/pages/GestorDashboardPage.tsx`
    - Botao: `Admin / E-mail`
    - Direciona para `/app/admin#franksteinEmailAlerts`.
 
-4. Remocao da comunicacao por WhatsApp no fluxo do Frankstein.
-   - A comunicacao oficial do Frankstein deve ser por e-mail.
-   - Ainda existem campos de contato `whatsapp` para leads/clientes, mas nao como canal de alerta do Frankstein.
+4. Remocao da comunicacao por WhatsApp no fluxo do Foguetinho.
+   - A comunicacao oficial do Foguetinho deve ser por e-mail.
+   - Ainda existem campos de contato `whatsapp` para leads/clientes, mas nao como canal de alerta do Foguetinho.
 
 5. Keep alive do Render gratuito.
    - Workflow: `.github/workflows/keep-render-awake.yml`

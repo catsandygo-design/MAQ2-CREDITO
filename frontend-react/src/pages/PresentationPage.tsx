@@ -832,7 +832,7 @@ export function PresentationPage() {
                         <div className="frankstein-mini">
                           <iframe
                             ref={franksteinFrameRef}
-                            title="FRANKSTEIN Core"
+                            title="Foguetinho Core"
                             src="/assets/frankstein.html"
                             className="frankstein-mini__frame"
                             loading="lazy"

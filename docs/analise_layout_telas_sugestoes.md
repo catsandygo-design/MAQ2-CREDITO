@@ -12,7 +12,7 @@ Esta analise considera:
 - consistencia visual;
 - usabilidade operacional;
 - duplicidade de fluxos;
-- evolucao para aplicacao final com FRANKSTEIN supervisionado.
+- evolucao para aplicacao final com FOGUETINHO supervisionado.
 
 ## 2. Diagnostico Geral
 
@@ -24,7 +24,7 @@ O principal problema nao e visual isolado. O problema e de arquitetura de experi
 - a navegacao muda de formato entre telas;
 - algumas telas sao operacionais, outras parecem painel gerencial, outras parecem formulario;
 - ha coexistencia de HTML legado, React em migracao e cockpit separado;
-- o FRANKSTEIN aparece como componente forte, mas ainda nao organiza a experiencia inteira.
+- o FOGUETINHO aparece como componente forte, mas ainda nao organiza a experiencia inteira.
 
 ## 3. Leitura por Perfil
 
@@ -85,7 +85,7 @@ Unificar em **Dashboard Executivo**, com seletor de visao:
 - Repasse;
 - Corretor;
 - Empreendimento;
-- FRANKSTEIN.
+- FOGUETINHO.
 
 ### 3.3 CCA / Repasse
 
@@ -137,7 +137,7 @@ Tomar uma decisao de produto:
 - KPIs, cards e pills tornam os status escaneaveis.
 - Telas do analista ja compartilham parte da mesma linguagem.
 - O painel React do gestor tem estrutura mais moderna.
-- A tela do analista com FRANKSTEIN tem potencial forte de produto.
+- A tela do analista com FOGUETINHO tem potencial forte de produto.
 
 ### 4.2 Pontos de Atencao
 
@@ -191,7 +191,7 @@ Menu principal recomendado:
 - Importacao
 - Fila Tecnica / Repasse
 - Dashboard Executivo
-- FRANKSTEIN
+- FOGUETINHO
 - Admin
 
 ### 5.2 Telas Finais
@@ -211,7 +211,7 @@ Conteudo:
 - dono atual;
 - proxima etapa;
 - bloqueios;
-- recomendacao do FRANKSTEIN.
+- recomendacao do FOGUETINHO.
 
 #### Analise do Cliente
 
@@ -221,7 +221,7 @@ Layout sugerido:
 
 - coluna esquerda: dados do cliente e processo;
 - centro: documentos e campos de analise;
-- coluna direita: FRANKSTEIN, bloqueios, historico e proximas acoes.
+- coluna direita: FOGUETINHO, bloqueios, historico e proximas acoes.
 
 #### Importacao
 
@@ -257,9 +257,9 @@ Indicadores para gestor:
 - retrabalho;
 - pendencias por documento;
 - retorno CCA;
-- acuracia do FRANKSTEIN.
+- acuracia do FOGUETINHO.
 
-#### FRANKSTEIN
+#### FOGUETINHO
 
 Centro de inteligencia:
 
@@ -289,7 +289,7 @@ Manter como base da Analise do Cliente.
 
 Melhorias:
 
-- transformar FRANKSTEIN em painel lateral fixo;
+- transformar FOGUETINHO em painel lateral fixo;
 - separar melhor dados financeiros, documentos e status;
 - reduzir rolagem longa;
 - mostrar no topo a decisao atual: OK, Atencao ou Bloqueio.
@@ -371,7 +371,7 @@ Melhorias:
 - filtros por area;
 - visao de gargalo;
 - comparativo por periodo;
-- explicacoes do FRANKSTEIN para os indicadores.
+- explicacoes do FOGUETINHO para os indicadores.
 
 ### `checklist.html`
 
@@ -405,9 +405,9 @@ Melhorias:
 - se permanecerem, devem virar portal externo simples;
 - se nao permanecerem, remover da navegacao operacional.
 
-## 7. FRANKSTEIN no Layout
+## 7. FOGUETINHO no Layout
 
-O FRANKSTEIN deve aparecer como copiloto operacional, nao como enfeite.
+O FOGUETINHO deve aparecer como copiloto operacional, nao como enfeite.
 
 Em cada processo, ele deve mostrar:
 
@@ -434,7 +434,7 @@ Layout recomendado:
 - Unificar navegacao.
 - Consolidar Central Operacional.
 - Transformar Analise do Cliente na tela principal.
-- Colocar FRANKSTEIN como painel lateral de decisao.
+- Colocar FOGUETINHO como painel lateral de decisao.
 - Simplificar checklist documental na camada de uso, preservando estados tecnicos necessarios.
 
 ### Media prioridade
@@ -455,8 +455,8 @@ Layout recomendado:
 - Excesso de telas gera erro operacional.
 - Muitos status parecidos geram interpretacao diferente entre analistas.
 - Dashboards sem acao direta viram apenas consulta.
-- FRANKSTEIN sem explicacao pode perder confianca.
-- FRANKSTEIN com autonomia demais pode gerar medo operacional.
+- FOGUETINHO sem explicacao pode perder confianca.
+- FOGUETINHO com autonomia demais pode gerar medo operacional.
 
 ## 10. Recomendacao Final
 
@@ -468,7 +468,7 @@ Direcao recomendada:
 2. Uma Central Operacional.
 3. Uma Analise do Cliente como tela principal.
 4. Um Dashboard Executivo consolidado.
-5. Um FRANKSTEIN visivel, explicavel e supervisionado.
+5. Um FOGUETINHO visivel, explicavel e supervisionado.
 6. Menos telas, mais contexto.
 
 O ganho esperado e reduzir cliques, reduzir duvida, diminuir retrabalho e transformar as regras ja documentadas em uma experiencia pratica de decisao.

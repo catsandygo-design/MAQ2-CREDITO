@@ -1,10 +1,10 @@
-# Relatorio - Como o Frankstein auxilia o credito
+# Relatorio - Como o Foguetinho auxilia o credito
 
 Data: 11/05/2026
 
-## 1. Papel do Frankstein no credito
+## 1. Papel do Foguetinho no credito
 
-O Frankstein atua como um operador logico supervisionado dentro do SioCred. Ele nao substitui o analista, o gestor ou a CCA. A funcao dele e ler o contexto do processo, aplicar regras objetivas, apontar risco, sugerir proximas acoes e registrar auditoria.
+O Foguetinho atua como um operador logico supervisionado dentro do SioCred. Ele nao substitui o analista, o gestor ou a CCA. A funcao dele e ler o contexto do processo, aplicar regras objetivas, apontar risco, sugerir proximas acoes e registrar auditoria.
 
 Na pratica, ele ajuda o credito a responder rapidamente:
 
@@ -18,7 +18,7 @@ Na pratica, ele ajuda o credito a responder rapidamente:
 
 ### 2.1 Analise financeira
 
-O Frankstein compara a composicao financeira do processo:
+O Foguetinho compara a composicao financeira do processo:
 
 - valor de venda;
 - valor garantido;
@@ -44,7 +44,7 @@ Regras relacionadas:
 
 ## 3. Renda e documentacao
 
-O Frankstein auxilia o credito conferindo se a renda e os documentos basicos sustentam o avanco do processo.
+O Foguetinho auxilia o credito conferindo se a renda e os documentos basicos sustentam o avanco do processo.
 
 Hoje ele observa:
 
@@ -72,7 +72,7 @@ Regras relacionadas:
 
 ## 4. Dossie documental
 
-O Frankstein ajuda a reduzir retrabalho documental porque aponta pendencias antes do processo seguir.
+O Foguetinho ajuda a reduzir retrabalho documental porque aponta pendencias antes do processo seguir.
 
 Ele auxilia em:
 
@@ -91,7 +91,7 @@ Problemas que ele evita:
 
 ## 5. CCA, Caixa, Agehab, sinal e fiador
 
-O Frankstein auxilia no fluxo de credito e repasse lendo status criticos:
+O Foguetinho auxilia no fluxo de credito e repasse lendo status criticos:
 
 - status CCA/Caixa;
 - status Agehab;
@@ -117,7 +117,7 @@ Regras relacionadas:
 
 ## 6. SLA e fila operacional
 
-O Frankstein tambem ajuda na organizacao da rotina:
+O Foguetinho tambem ajuda na organizacao da rotina:
 
 - calcula ou apoia leitura de SLA;
 - identifica dono atual da pendencia;
@@ -135,7 +135,7 @@ Regras relacionadas:
 
 ## 7. Alertas e agenda
 
-O Frankstein possui canal de alerta por e-mail para tarefas e compromissos.
+O Foguetinho possui canal de alerta por e-mail para tarefas e compromissos.
 
 Funcao no credito:
 
@@ -152,7 +152,7 @@ Importante:
 
 ## 8. Como ele reduz retrabalho
 
-O Frankstein reduz retrabalho porque verifica pontos que normalmente geram retorno:
+O Foguetinho reduz retrabalho porque verifica pontos que normalmente geram retorno:
 
 1. Falta de documento.
 2. Falta de comprovante de renda.
@@ -169,7 +169,7 @@ O ganho pratico e fazer o erro aparecer antes do envio, nao depois que o process
 
 ## 9. Como ele ajuda o gestor de credito
 
-Para o gestor, o Frankstein pode apoiar:
+Para o gestor, o Foguetinho pode apoiar:
 
 - leitura de gargalos;
 - processos em risco;
@@ -184,7 +184,7 @@ Isso transforma o sistema em uma ferramenta de gestao, nao apenas uma tela de ca
 
 ## 10. Nivel de autonomia recomendado
 
-O Frankstein deve continuar supervisionado:
+O Foguetinho deve continuar supervisionado:
 
 | Nivel | Funcao | Exemplo no credito |
 | --- | --- | --- |
@@ -217,7 +217,7 @@ Ele nao deve:
 
 ## 12. Limites atuais
 
-O Frankstein ja ajuda, mas ainda precisa evoluir em alguns pontos:
+O Foguetinho ja ajuda, mas ainda precisa evoluir em alguns pontos:
 
 - algumas regras ainda estao espalhadas entre backend e telas HTML;
 - o motor de regras ainda nao e uma fonte unica versionada;
@@ -229,16 +229,16 @@ O Frankstein ja ajuda, mas ainda precisa evoluir em alguns pontos:
 ## 13. Proximos passos recomendados
 
 1. Centralizar regras que ainda estao no HTML dentro do backend.
-2. Criar painel lateral do Frankstein na Analise do Cliente.
+2. Criar painel lateral do Foguetinho na Analise do Cliente.
 3. Exibir regra, motivo, campo afetado e acao sugerida.
 4. Adicionar feedback humano: concordo, discordo, faltou regra, resolvido.
 5. Fazer backtesting de regra antes de ativar.
 6. Medir acerto: pendencia evitada, retorno CCA, tempo ate assinatura.
-7. Evoluir o Frankstein para recomendacao baseada em historico real.
+7. Evoluir o Foguetinho para recomendacao baseada em historico real.
 
 ## 14. Conclusao
 
-O Frankstein auxilia o credito como um supervisor operacional inteligente. Ele olha para financeiro, renda, documentos, CCA, Agehab, sinal, fiador, SLA e agenda para reduzir erro e mostrar a proxima acao.
+O Foguetinho auxilia o credito como um supervisor operacional inteligente. Ele olha para financeiro, renda, documentos, CCA, Agehab, sinal, fiador, SLA e agenda para reduzir erro e mostrar a proxima acao.
 
 O maior valor dele nao e "fazer tudo sozinho". O maior valor e evitar que o usuario avance no escuro.
 

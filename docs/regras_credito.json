@@ -3,7 +3,7 @@
     "nome": "regras_credito",
     "versao": "2026-04-03",
     "origem": "extraido_do_codigo",
-    "descricao": "Consolidacao das regras de credito, comercial, documentos, SLA e analise FRANKSTEIN atualmente implementadas no sistema.",
+    "descricao": "Consolidacao das regras de credito, comercial, documentos, SLA e analise FOGUETINHO atualmente implementadas no sistema.",
     "arquivos_origem": [
       {
         "arquivo": "simulacao_engine.py",
@@ -1273,7 +1273,7 @@
   },
   "frankstein_event_store": {
     "tabela": "frankstein_events",
-    "regra_geral": "Cada linha representa uma simulacao ou decisao emitida pelo FRANKSTEIN, com campos flat para analytics e blocos JSON para auditoria completa.",
+    "regra_geral": "Cada linha representa uma simulacao ou decisao emitida pelo FOGUETINHO, com campos flat para analytics e blocos JSON para auditoria completa.",
     "colunas_minimas": [
       "event_id",
       "timestamp",
@@ -1408,8 +1408,8 @@
     }
   },
   "observacoes_gerais": [
-    "O endpoint operacional FRANKSTEIN modela o valor 'bloquear' no schema, mas a implementacao atual nao retorna esse status.",
-    "O modelo FRANKSTEIN atual e bootstrap sintetico; para uso comercial forte, o ideal e treinar com feedback real de aceite.",
+    "O endpoint operacional FOGUETINHO modela o valor 'bloquear' no schema, mas a implementacao atual nao retorna esse status.",
+    "O modelo FOGUETINHO atual e bootstrap sintetico; para uso comercial forte, o ideal e treinar com feedback real de aceite.",
     "Este arquivo e declarativo e serve como inventario da regra existente. Ele ainda nao e consumido automaticamente pelo backend como fonte unica de verdade."
   ]
 }

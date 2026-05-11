@@ -21,11 +21,11 @@ O SioCred ja esta acima de um prototipo simples em varios pontos:
 
 - Backend FastAPI com muitos endpoints e `response_model`.
 - SQLAlchemy com entidades de cliente, processo, documento, historico, usuarios, sessoes, empreendimentos e eventos.
-- Motor FRANKSTEIN operacional separado em `frankstein_operacional.py`.
+- Motor FOGUETINHO operacional separado em `frankstein_operacional.py`.
 - Motor de simulacao separado em `simulacao_engine.py`.
 - Tabela/event store para `frankstein_events`.
 - Pipeline de dados e treino em `pipelines/`.
-- Testes para simulacao, seguranca e FRANKSTEIN.
+- Testes para simulacao, seguranca e FOGUETINHO.
 - Frontend React iniciado em `frontend-react`.
 - Documentacao de regras em JSON, CSV e Markdown.
 - Importacao de planilha.
@@ -76,7 +76,7 @@ Upgrade sugerido:
    - status;
    - eventos;
    - bloqueios;
-   - recomendacoes do FRANKSTEIN.
+   - recomendacoes do FOGUETINHO.
 
 ## 4. Motor de Regras
 
@@ -230,7 +230,7 @@ Upgrade sugerido:
    - `FilterBar`
    - `RuleHitList`
    - `Timeline`
-   - `FranksteinPanel`
+   - `FoguetinhoPanel`
 
 2. Migrar por superficie, nao por arquivo:
    - Central Operacional;
@@ -276,7 +276,7 @@ Upgrade sugerido:
 
 3. Criar testes por dominio:
    - workflow;
-   - regras FRANKSTEIN;
+   - regras FOGUETINHO;
    - documentos;
    - importacao;
    - permissoes por perfil.
@@ -291,14 +291,14 @@ Upgrade sugerido:
 
 - Modularizar `frankstein_operacional.py` e extrair avaliacao de regras para servico.
 - Criar matriz executavel de regras.
-- Criar tela ou endpoint de explicacao do FRANKSTEIN.
+- Criar tela ou endpoint de explicacao do FOGUETINHO.
 - Melhorar testes do workflow e dos bloqueios.
 - Criar contrato `ProcessoFull` como base do React.
 
 ### Prioridade 2 - Produto final
 
 - Central Operacional em React.
-- Analise do Cliente em React com painel lateral FRANKSTEIN.
+- Analise do Cliente em React com painel lateral FOGUETINHO.
 - Motor de Regras com simulacao/backtesting.
 - Dashboard Executivo unificado.
 - Fila Tecnica CCA/Repasse com permissoes claras.
@@ -309,7 +309,7 @@ Upgrade sugerido:
 - Docker Compose local.
 - Model registry completo.
 - Modo shadow do modelo.
-- Observabilidade de eventos e metricas do FRANKSTEIN.
+- Observabilidade de eventos e metricas do FOGUETINHO.
 
 ## 10. O Que Nao Recomendo Copiar Agora
 
@@ -326,7 +326,7 @@ O melhor upgrade inspirado nos projetos abertos e transformar o SioCred em uma a
 1. **Nucleo de Processo**
    - cliente, documento, status, SLA, evento e workflow.
 
-2. **Nucleo FRANKSTEIN**
+2. **Nucleo FOGUETINHO**
    - regras versionadas, score, recomendacao, feedback, backtesting e modelo shadow.
 
 3. **Nucleo de Interface**

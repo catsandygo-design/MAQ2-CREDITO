@@ -375,7 +375,7 @@
           <p>Cadastro de funcionarios, manutencao de dados e exclusao definitiva para limpeza de banco.</p>
         </div>
         <div class="actions">
-          <a class="btn primary" href="#franksteinEmailAlerts">Configurar e-mail Frankstein</a>
+          <a class="btn primary" href="#franksteinEmailAlerts">Configurar e-mail Foguetinho</a>
           <button class="btn" id="btnRefresh">Atualizar</button>
           <button class="btn danger" id="btnPurgeHistoricos">Deletar historicos</button>
           <button class="btn danger" id="btnResetSistema">Apagar banco total</button>
@@ -399,7 +399,7 @@
     <section class="card" id="franksteinEmailAlerts">
       <div class="top">
         <div class="title">
-          <h1>Frankstein - Alertas por e-mail</h1>
+          <h1>Foguetinho - Alertas por e-mail</h1>
           <p>Canal oficial para avisar tarefas e compromissos 5 minutos antes. No Render Free, prefira API HTTPS.</p>
         </div>
         <div class="actions">
@@ -1501,7 +1501,7 @@
             body: JSON.stringify({ destinatarios: alertEmailTo?.value?.trim() || "" }),
           });
           renderEmailAlertsStatus(data);
-          setFeedbackEmailAlerts("E-mail de alerta salvo. O Frankstein usara este destinatario nos avisos automaticos.");
+          setFeedbackEmailAlerts("E-mail de alerta salvo. O Foguetinho usara este destinatario nos avisos automaticos.");
           await loadLogs();
         } catch (error) {
           setFeedbackEmailAlerts(error.message, true);
@@ -1526,7 +1526,7 @@
             ? ` ID: ${result.message_ids.join(", ")}.`
             : "";
           const canal = result.provider === "brevo" ? "API Brevo" : "SMTP";
-          setFeedbackEmailAlerts(`Teste aceito pelo ${canal}${destinos ? ` para ${destinos}` : ""}.${assunto}${ids} Verifique Caixa de entrada, Spam, Todos os e-mails e pesquise por "Frankstein: teste".`);
+          setFeedbackEmailAlerts(`Teste aceito pelo ${canal}${destinos ? ` para ${destinos}` : ""}.${assunto}${ids} Verifique Caixa de entrada, Spam, Todos os e-mails e pesquise por "Foguetinho: teste".`);
           await loadLogs();
         } catch (error) {
           setFeedbackEmailAlerts(error.message, true);
