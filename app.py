@@ -7463,19 +7463,30 @@ def admin_test_frankstein_email_alerts(
     if not recipients:
         raise HTTPException(status_code=422, detail="Informe ao menos um e-mail destinatario.")
 
-    subject = "Frankstein: teste de alerta por e-mail"
+    now_brt = datetime.now(KEEPALIVE_BRT_TZ)
+    subject = f"Frankstein: teste de alerta por e-mail - {now_brt:%d/%m/%Y %H:%M}"
     body = "\n".join(
         [
             "Frankstein alerta supervisionado do SioCred",
             "",
             "Este e um teste de envio do painel admin.",
             "Quando houver tarefa ou compromisso com horario, o Frankstein avisara 5 minutos antes.",
+            f"Data/hora do teste: {now_brt:%d/%m/%Y %H:%M:%S} BRT",
+            f"Remetente configurado: {EMAIL_SMTP_FROM}",
             "",
             "Se voce recebeu este e-mail, a comunicacao por e-mail esta funcionando.",
         ]
     )
-    for to_email in recipients:
-        _send_email_message(to_email=to_email, subject=subject, text_body=body)
+    try:
+        for to_email in recipients:
+            _send_email_message(to_email=to_email, subject=subject, text_body=body)
+    except smtplib.SMTPAuthenticationError as exc:
+        detail = exc.smtp_error.decode(errors="ignore") if isinstance(exc.smtp_error, bytes) else str(exc.smtp_error)
+        raise HTTPException(status_code=422, detail=f"SMTP recusou login. Verifique usuario e senha de app. {detail}") from exc
+    except smtplib.SMTPException as exc:
+        raise HTTPException(status_code=422, detail=f"SMTP recusou o envio: {exc}") from exc
+    except OSError as exc:
+        raise HTTPException(status_code=422, detail=f"Falha de conexao SMTP: {exc}") from exc
 
     _record_system_log(
         db,

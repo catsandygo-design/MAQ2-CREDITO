@@ -1016,10 +1016,10 @@
       const status = data || {};
       if (alertEmailTo) alertEmailTo.value = status.destinatarios || "";
       if (emailSmtpStatus) {
-        emailSmtpStatus.textContent = status.smtp_configured ? "OK" : "Pendente";
+        emailSmtpStatus.textContent = status.smtp_configured ? "Config" : "Pendente";
         emailSmtpStatus.style.color = status.smtp_configured ? "var(--ok)" : "var(--danger)";
         const missing = Array.isArray(status.smtp_missing) ? status.smtp_missing : [];
-        emailSmtpStatus.title = missing.length ? `Faltando: ${missing.join(", ")}` : "SMTP minimo encontrado no ambiente.";
+        emailSmtpStatus.title = missing.length ? `Faltando: ${missing.join(", ")}` : "Variaveis SMTP encontradas. Use Testar envio para validar login e entrega.";
       }
       if (emailRecipientStatus) {
         emailRecipientStatus.textContent = status.recipients_configured ? "OK" : "Pendente";
@@ -1032,7 +1032,7 @@
         const missing = Array.isArray(status.smtp_missing) ? status.smtp_missing : [];
         const smtpConfig = status.smtp_config || {};
         const smtpDetail = status.smtp_configured
-          ? `SMTP: host OK, from OK, porta ${smtpConfig.port || "-"}, usuario ${smtpConfig.user_present ? "OK" : "vazio"}, senha ${smtpConfig.password_present ? "OK" : "vazia"}.`
+          ? `SMTP configurado: host OK, from OK, porta ${smtpConfig.port || "-"}, usuario ${smtpConfig.user_present ? "OK" : "vazio"}, senha ${smtpConfig.password_present ? "OK" : "vazia"}. Clique em Testar envio para validar entrega.`
           : `SMTP faltando: ${missing.length ? missing.join(", ") : "variaveis nao carregadas"}.`;
         const recipientDetail = masked.length
           ? `Enviando para: ${masked.join(", ")}`
@@ -1517,7 +1517,7 @@
           const destinos = Array.isArray(result.destinatarios_mascarados)
             ? result.destinatarios_mascarados.join(", ")
             : "";
-          setFeedbackEmailAlerts(`Teste enviado com sucesso${destinos ? ` para ${destinos}` : ""}.`);
+          setFeedbackEmailAlerts(`Teste aceito pelo SMTP${destinos ? ` para ${destinos}` : ""}. Verifique Caixa de entrada, Spam, Todos os e-mails e pesquise por "Frankstein: teste".`);
           await loadLogs();
         } catch (error) {
           setFeedbackEmailAlerts(error.message, true);
