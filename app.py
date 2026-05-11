@@ -14,6 +14,7 @@ from collections import deque
 from contextlib import asynccontextmanager
 from datetime import date, datetime, time, timedelta, timezone
 from email.message import EmailMessage
+from email.utils import formatdate, make_msgid
 from pathlib import Path
 from threading import RLock
 from typing import Any, Optional
@@ -3972,14 +3973,19 @@ def _is_email_delivery_configured() -> bool:
     return bool(EMAIL_SMTP_HOST and EMAIL_SMTP_FROM)
 
 
-def _send_email_message(*, to_email: str, subject: str, text_body: str) -> None:
+def _send_email_message(*, to_email: str, subject: str, text_body: str) -> dict[str, Any]:
     if not _is_email_delivery_configured():
         raise RuntimeError("Envio de e-mail nao configurado no ambiente.")
 
+    message_id = make_msgid(domain=(EMAIL_SMTP_FROM.split("@")[-1] if "@" in EMAIL_SMTP_FROM else None))
     msg = EmailMessage()
     msg["From"] = EMAIL_SMTP_FROM
     msg["To"] = to_email
     msg["Subject"] = subject
+    msg["Date"] = formatdate(localtime=True)
+    msg["Message-ID"] = message_id
+    msg["Reply-To"] = EMAIL_SMTP_FROM
+    msg["X-SioCred-Source"] = "Frankstein"
     msg.set_content(text_body)
 
     with smtplib.SMTP(EMAIL_SMTP_HOST, EMAIL_SMTP_PORT, timeout=20) as smtp:
@@ -3987,7 +3993,12 @@ def _send_email_message(*, to_email: str, subject: str, text_body: str) -> None:
             smtp.starttls()
         if EMAIL_SMTP_USER:
             smtp.login(EMAIL_SMTP_USER, EMAIL_SMTP_PASSWORD)
-        smtp.send_message(msg)
+        refused = smtp.send_message(msg)
+
+    if refused:
+        raise smtplib.SMTPRecipientsRefused(refused)
+
+    return {"to": to_email, "message_id": message_id, "subject": subject}
 
 
 def _split_alert_recipients(raw: Optional[str] = None) -> list[str]:
@@ -7534,12 +7545,16 @@ def admin_test_frankstein_email_alerts(
             "Se voce recebeu este e-mail, a comunicacao por e-mail esta funcionando.",
         ]
     )
+    sent_messages = []
     try:
         for to_email in recipients:
-            _send_email_message(to_email=to_email, subject=subject, text_body=body)
+            sent_messages.append(_send_email_message(to_email=to_email, subject=subject, text_body=body))
     except smtplib.SMTPAuthenticationError as exc:
         detail = exc.smtp_error.decode(errors="ignore") if isinstance(exc.smtp_error, bytes) else str(exc.smtp_error)
         raise HTTPException(status_code=422, detail=f"SMTP recusou login. Verifique usuario e senha de app. {detail}") from exc
+    except smtplib.SMTPRecipientsRefused as exc:
+        refused = ", ".join(exc.recipients.keys())
+        raise HTTPException(status_code=422, detail=f"SMTP recusou destinatario(s): {refused}") from exc
     except smtplib.SMTPException as exc:
         raise HTTPException(status_code=422, detail=f"SMTP recusou o envio: {exc}") from exc
     except OSError as exc:
@@ -7553,12 +7568,19 @@ def admin_test_frankstein_email_alerts(
         acao="FRANKSTEIN_EMAIL_ALERTA_TESTE",
         entidade_tipo="configuracao",
         entidade_id=FRANKSTEIN_ALERT_EMAIL_TO_RUNTIME_KEY,
-        details=f"destinatarios={','.join(mask_email(email) or email for email in recipients)}",
+        details=(
+            f"destinatarios={','.join(mask_email(email) or email for email in recipients)}; "
+            f"assunto={subject}; "
+            f"message_ids={','.join(str(item.get('message_id', '')) for item in sent_messages)}"
+        ),
     )
     db.commit()
     return {
         "ok": True,
-        "sent": len(recipients),
+        "sent": len(sent_messages),
+        "accepted_at_brt": now_brt.isoformat(),
+        "subject": subject,
+        "message_ids": [str(item.get("message_id", "")) for item in sent_messages],
         "destinatarios_mascarados": [mask_email(email) or email for email in recipients],
     }
 

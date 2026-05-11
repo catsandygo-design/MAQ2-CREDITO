@@ -1517,7 +1517,11 @@
           const destinos = Array.isArray(result.destinatarios_mascarados)
             ? result.destinatarios_mascarados.join(", ")
             : "";
-          setFeedbackEmailAlerts(`Teste aceito pelo SMTP${destinos ? ` para ${destinos}` : ""}. Verifique Caixa de entrada, Spam, Todos os e-mails e pesquise por "Frankstein: teste".`);
+          const assunto = result.subject ? ` Assunto: ${result.subject}.` : "";
+          const ids = Array.isArray(result.message_ids) && result.message_ids.length
+            ? ` ID: ${result.message_ids.join(", ")}.`
+            : "";
+          setFeedbackEmailAlerts(`Teste aceito pelo SMTP${destinos ? ` para ${destinos}` : ""}.${assunto}${ids} Verifique Caixa de entrada, Spam, Todos os e-mails e pesquise por "Frankstein: teste".`);
           await loadLogs();
         } catch (error) {
           setFeedbackEmailAlerts(error.message, true);
