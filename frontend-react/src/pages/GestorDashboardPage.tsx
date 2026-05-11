@@ -966,6 +966,7 @@ export function GestorDashboardPage() {
   const [processos, setProcessos] = useState<ProcessoApiItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [sessionRole, setSessionRole] = useState('')
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [now, setNow] = useState(() => new Date())
   const [refreshTick, setRefreshTick] = useState(REFRESH_SECONDS)
@@ -996,6 +997,7 @@ export function GestorDashboardPage() {
         return
       }
 
+      setSessionRole(role)
       setDashboard(dashboardOut)
       setProcessos(processosOut)
       setError('')
@@ -1304,6 +1306,11 @@ export function GestorDashboardPage() {
           <button type="button" onClick={() => loadData()}>
             Atualizar base
           </button>
+          {sessionRole === 'admin' ? (
+            <button type="button" onClick={() => { window.location.href = '/app/admin#franksteinEmailAlerts' }}>
+              Admin / E-mail
+            </button>
+          ) : null}
           <button type="button" className="danger" onClick={onLogout}>
             Sair
           </button>
