@@ -2585,6 +2585,10 @@ class ProcessoOverviewOut(BaseModel):
     status_agehab: str
     status_sinal: str
     valor_sinal: Optional[float] = None
+    renda_bruta: Optional[float] = None
+    renda_bruta_duplicada: bool = False
+    renda_bruta_duplicada_clientes: list[str] = Field(default_factory=list)
+    renda_bruta_duplicada_tooltip: Optional[str] = None
     recolha_fgts: str
     status_fiador: str
     estagio_comercial: str
@@ -4083,6 +4087,59 @@ def _normalize_currency_value(value: Any) -> Optional[float]:
     if parsed < 0:
         return None
     return round(parsed, 2)
+
+
+def _renda_bruta_duplicate_key(value: Any) -> Optional[int]:
+    parsed = _normalize_currency_value(value)
+    if parsed is None or parsed <= 0:
+        return None
+    return int(round(parsed * 100))
+
+
+def _format_currency_brl_from_cents(cents: int) -> str:
+    value = abs(int(cents))
+    reais = value // 100
+    centavos = value % 100
+    reais_txt = f"{reais:,}".replace(",", ".")
+    sign = "-" if cents < 0 else ""
+    return f"R$ {sign}{reais_txt},{centavos:02d}"
+
+
+def _cliente_nome_sobrenome(value: Optional[str]) -> str:
+    partes = [part.strip() for part in str(value or "").split() if part.strip()]
+    if not partes:
+        return "-"
+    if len(partes) == 1:
+        return partes[0]
+    return f"{partes[0]} {partes[-1]}"
+
+
+def _build_renda_bruta_duplicate_lookup(rows: list[tuple[Any, Any, Any]]) -> dict[str, dict[str, Any]]:
+    grouped: dict[int, list[tuple[str, str]]] = {}
+    for processo_id, renda_bruta, cliente_nome in rows:
+        key = _renda_bruta_duplicate_key(renda_bruta)
+        if key is None:
+            continue
+        grouped.setdefault(key, []).append((str(processo_id), _cliente_nome_sobrenome(cliente_nome)))
+
+    lookup: dict[str, dict[str, Any]] = {}
+    for cents, entries in grouped.items():
+        seen: set[str] = set()
+        nomes = []
+        for _, nome in entries:
+            nome_key = nome.lower()
+            if nome_key not in seen:
+                seen.add(nome_key)
+                nomes.append(nome)
+        if len(entries) < 2:
+            continue
+        tooltip = f"RD - Renda bruta igual ({_format_currency_brl_from_cents(cents)}): {', '.join(nomes)}"
+        for processo_id, _ in entries:
+            lookup[processo_id] = {
+                "clientes": nomes,
+                "tooltip": tooltip,
+            }
+    return lookup
 
 
 def _resolve_cheque_moradia_valor(db: Session, obra_nome: Optional[str]) -> float:
@@ -8232,6 +8289,10 @@ def app_list_processos(
             return []
         query = query.filter(func.lower(func.trim(func.coalesce(Processo.cca_responsavel, ""))) == username)
 
+    renda_duplicate_lookup = _build_renda_bruta_duplicate_lookup(
+        query.with_entities(Processo.id, Processo.renda_bruta, Cliente.nome).all()
+    )
+
     query = query.order_by(Processo.created_at.desc()).offset(offset)
     if limit is not None:
         query = query.limit(limit)
@@ -8273,6 +8334,7 @@ def app_list_processos(
         repasse_fase_key = _process_repasse_display_key(etapa_repasse_norm, status_cca_key, status_agehab_key)
         status_pendencias = _process_pending_items(status_cca_key, status_agehab_key, status_sinal_key, status_fiador_key)
         status_tudo_ok = len(status_pendencias) == 0
+        renda_duplicate = renda_duplicate_lookup.get(str(processo.id), {})
         docs_pendentes = max(0, docs_total - docs_recebidos)
         documentos_resumo = _process_documentos_resumo(
             docs_total=docs_total,
@@ -8311,6 +8373,10 @@ def app_list_processos(
                 status_agehab=status_agehab_norm,
                 status_sinal=status_sinal_norm,
                 valor_sinal=float(processo.valor_sinal) if getattr(processo, "valor_sinal", None) is not None else None,
+                renda_bruta=float(processo.renda_bruta) if getattr(processo, "renda_bruta", None) is not None else None,
+                renda_bruta_duplicada=bool(renda_duplicate),
+                renda_bruta_duplicada_clientes=list(renda_duplicate.get("clientes") or []),
+                renda_bruta_duplicada_tooltip=renda_duplicate.get("tooltip"),
                 recolha_fgts=_process_recolha_fgts_status(getattr(processo, "recolha_fgts", None)),
                 status_fiador=status_fiador_norm,
                 estagio_comercial=estagio_comercial_norm,

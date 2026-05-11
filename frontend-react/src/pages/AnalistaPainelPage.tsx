@@ -209,6 +209,9 @@ function fromBackend(item: ProcessoApiItem): ProcessoLinha {
   const pendingItems = Array.isArray(item.status_pendencias)
     ? item.status_pendencias.map((entry) => String(entry || '').trim()).filter(Boolean)
     : []
+  const rendaBrutaDuplicadaClientes = Array.isArray(item.renda_bruta_duplicada_clientes)
+    ? item.renda_bruta_duplicada_clientes.map((entry) => String(entry || '').trim()).filter(Boolean)
+    : []
 
   return {
     processoId: item.processo_id,
@@ -228,6 +231,12 @@ function fromBackend(item: ProcessoApiItem): ProcessoLinha {
     sinalLabel: String(item.status_sinal_label || labelFor('sinal', sinal) || '-').trim() || '-',
     fiador,
     fiadorLabel: String(item.status_fiador_label || labelFor('fiador', fiador) || '-').trim() || '-',
+    rendaBruta: item.renda_bruta ?? null,
+    rendaBrutaDuplicada: Boolean(item.renda_bruta_duplicada),
+    rendaBrutaDuplicadaClientes,
+    rendaBrutaDuplicadaTooltip:
+      String(item.renda_bruta_duplicada_tooltip || '').trim() ||
+      (rendaBrutaDuplicadaClientes.length ? `RD - Renda bruta igual: ${rendaBrutaDuplicadaClientes.join(', ')}` : ''),
     slaCor: readSlaHours(item, 'sla_corretor_horas', 'sla_corretor_dias'),
     slaCred: readSlaHours(item, 'sla_analista_horas', 'sla_credito_dias'),
     slaCca: readSlaHours(item, 'sla_cca_horas', 'sla_cca_dias'),
@@ -1011,6 +1020,15 @@ export function AnalistaPainelPage() {
                     <div className="client-card-copy">
                       <div className="client-name-row">
                         <span className={`anim-dot ${animState}`} aria-hidden="true" />
+                        {row.rendaBrutaDuplicada ? (
+                          <span
+                            className="rd-badge"
+                            title={row.rendaBrutaDuplicadaTooltip}
+                            aria-label={row.rendaBrutaDuplicadaTooltip || 'Renda bruta duplicada'}
+                          >
+                            RD
+                          </span>
+                        ) : null}
                         <a href={`/app/analise?processo_id=${encodeURIComponent(row.processoId)}`}>{row.cliente}</a>
                         {isFocused ? <span className="client-focus-flag">Cliente em foco</span> : null}
                       </div>

@@ -182,6 +182,10 @@ export interface ProcessoApiItem {
   status_cca?: string | null
   status_agehab?: string | null
   status_sinal?: string | null
+  renda_bruta?: number | null
+  renda_bruta_duplicada?: boolean | null
+  renda_bruta_duplicada_clientes?: string[] | null
+  renda_bruta_duplicada_tooltip?: string | null
   status_fiador?: string | null
   sla_corretor_horas?: number | null
   sla_corretor_dias?: number | null
@@ -237,6 +241,10 @@ export interface ProcessoLinha {
   sinalLabel: string
   fiador: string
   fiadorLabel: string
+  rendaBruta: number | null
+  rendaBrutaDuplicada: boolean
+  rendaBrutaDuplicadaClientes: string[]
+  rendaBrutaDuplicadaTooltip: string
   slaCor: number
   slaCred: number
   slaCca: number

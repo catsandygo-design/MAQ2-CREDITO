@@ -1152,6 +1152,24 @@
     border-bottom-color: rgba(34,197,94,.55);
     color: var(--accent);
   }
+  .rendaDuplicadaBadge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:28px;
+    height:20px;
+    padding:0 7px;
+    border-radius:999px;
+    border:1px solid rgba(245,158,11,.62);
+    background:linear-gradient(180deg, rgba(254,243,199,.98), rgba(253,230,138,.9));
+    color:#92400e;
+    font-size:10px;
+    font-weight:900;
+    letter-spacing:0;
+    box-shadow:0 0 14px rgba(245,158,11,.22);
+    cursor:help;
+    flex-shrink:0;
+  }
   .rowBadges{
     display:flex;
     align-items:center;
@@ -2727,6 +2745,9 @@
     const pendingItems = Array.isArray(item?.status_pendencias)
       ? item.status_pendencias.map((entry) => String(entry || "").trim()).filter(Boolean)
       : [];
+    const rendaDupClientes = Array.isArray(item?.renda_bruta_duplicada_clientes)
+      ? item.renda_bruta_duplicada_clientes.map((entry) => String(entry || "").trim()).filter(Boolean)
+      : [];
     return {
       processo_id: item.processo_id,
       cliente: item.cliente_nome || "-",
@@ -2746,6 +2767,10 @@
       sinalLabel: String(item.status_sinal_label || labelFor("sinal", sinal) || "-").trim() || "-",
       fiador,
       fiadorLabel: String(item.status_fiador_label || labelFor("fiador", fiador) || "-").trim() || "-",
+      rendaBruta: item.renda_bruta ?? null,
+      rendaBrutaDuplicada: Boolean(item?.renda_bruta_duplicada),
+      rendaBrutaDuplicadaClientes: rendaDupClientes,
+      rendaBrutaDuplicadaTooltip: String(item?.renda_bruta_duplicada_tooltip || "").trim() || (rendaDupClientes.length ? `RD - Renda bruta igual: ${rendaDupClientes.join(", ")}` : ""),
       slaCor: readSlaHours(item, "sla_corretor_horas", "sla_corretor_dias"),
       slaCred: readSlaHours(item, "sla_analista_horas", "sla_credito_dias"),
       slaCca: readSlaHours(item, "sla_cca_horas", "sla_cca_dias"),
@@ -3624,6 +3649,10 @@
       if (r.foraContagemMes) rowClasses.push("outCountRow");
       else if (isFinalizadoRow(r)) rowClasses.push("finalizadoRow");
       const rowCls = rowClasses.join(" ");
+      const rendaDupTooltip = esc(r.rendaBrutaDuplicadaTooltip || "Renda bruta duplicada");
+      const rendaDupBadge = r.rendaBrutaDuplicada
+        ? `<span class="rendaDuplicadaBadge" title="${rendaDupTooltip}" aria-label="${rendaDupTooltip}">RD</span>`
+        : "";
 
       return `
         <tr class="${rowCls}">
@@ -3631,6 +3660,7 @@
             <div class="cliente">
               <div class="clienteHead">
                 <span class="clienteAnim ${animState} hintTip" data-tip="${processTooltip}" title="${processTooltip}" aria-hidden="true"></span>
+                ${rendaDupBadge}
                 <a href="${url}" title="Abrir atualizacao">${esc(r.cliente)}</a>
               </div>
             </div>
