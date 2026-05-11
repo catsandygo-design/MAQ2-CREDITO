@@ -400,7 +400,7 @@
       <div class="top">
         <div class="title">
           <h1>Frankstein - Alertas por e-mail</h1>
-          <p>Canal oficial para avisar tarefas e compromissos 5 minutos antes. SMTP fica protegido no Render.</p>
+          <p>Canal oficial para avisar tarefas e compromissos 5 minutos antes. No Render Free, prefira API HTTPS.</p>
         </div>
         <div class="actions">
           <button class="btn" id="btnRefreshEmailAlerts" type="button">Atualizar status</button>
@@ -413,7 +413,7 @@
             <input id="alertEmailTo" placeholder="seuemail@dominio.com; outro@dominio.com" />
           </div>
           <div class="storage-card">
-            <div class="storage-label">SMTP</div>
+            <div class="storage-label">Canal</div>
             <div class="storage-value" id="emailSmtpStatus">-</div>
           </div>
           <div class="storage-card">
@@ -1015,11 +1015,14 @@
     function renderEmailAlertsStatus(data) {
       const status = data || {};
       if (alertEmailTo) alertEmailTo.value = status.destinatarios || "";
+      const smtpConfig = status.smtp_config || {};
+      const provider = smtpConfig.provider === "brevo" ? "brevo" : "smtp";
+      const providerLabel = provider === "brevo" ? "API Brevo" : "SMTP";
       if (emailSmtpStatus) {
-        emailSmtpStatus.textContent = status.smtp_configured ? "Config" : "Pendente";
+        emailSmtpStatus.textContent = status.smtp_configured ? providerLabel : "Pendente";
         emailSmtpStatus.style.color = status.smtp_configured ? "var(--ok)" : "var(--danger)";
         const missing = Array.isArray(status.smtp_missing) ? status.smtp_missing : [];
-        emailSmtpStatus.title = missing.length ? `Faltando: ${missing.join(", ")}` : "Variaveis SMTP encontradas. Use Testar envio para validar login e entrega.";
+        emailSmtpStatus.title = missing.length ? `Faltando: ${missing.join(", ")}` : `${providerLabel} configurado. Use Testar envio para validar entrega.`;
       }
       if (emailRecipientStatus) {
         emailRecipientStatus.textContent = status.recipients_configured ? "OK" : "Pendente";
@@ -1030,10 +1033,11 @@
       if (emailMaskedStatus) {
         const masked = Array.isArray(status.destinatarios_mascarados) ? status.destinatarios_mascarados : [];
         const missing = Array.isArray(status.smtp_missing) ? status.smtp_missing : [];
-        const smtpConfig = status.smtp_config || {};
-        const smtpDetail = status.smtp_configured
-          ? `SMTP configurado: host OK, from OK, porta ${smtpConfig.port || "-"}, usuario ${smtpConfig.user_present ? "OK" : "vazio"}, senha ${smtpConfig.password_present ? "OK" : "vazia"}. Clique em Testar envio para validar entrega.`
-          : `SMTP faltando: ${missing.length ? missing.join(", ") : "variaveis nao carregadas"}.`;
+        const smtpDetail = status.smtp_configured && provider === "brevo"
+          ? `API Brevo configurada: chave OK, remetente OK. Clique em Testar envio para validar entrega.`
+          : status.smtp_configured
+            ? `SMTP configurado: host OK, remetente OK, porta ${smtpConfig.port || "-"}, usuario ${smtpConfig.user_present ? "OK" : "vazio"}, senha ${smtpConfig.password_present ? "OK" : "vazia"}. Clique em Testar envio para validar entrega.`
+            : `${providerLabel} faltando: ${missing.length ? missing.join(", ") : "variaveis nao carregadas"}.`;
         const recipientDetail = masked.length
           ? `Enviando para: ${masked.join(", ")}`
           : "Nenhum destinatario carregado.";
@@ -1521,7 +1525,8 @@
           const ids = Array.isArray(result.message_ids) && result.message_ids.length
             ? ` ID: ${result.message_ids.join(", ")}.`
             : "";
-          setFeedbackEmailAlerts(`Teste aceito pelo SMTP${destinos ? ` para ${destinos}` : ""}.${assunto}${ids} Verifique Caixa de entrada, Spam, Todos os e-mails e pesquise por "Frankstein: teste".`);
+          const canal = result.provider === "brevo" ? "API Brevo" : "SMTP";
+          setFeedbackEmailAlerts(`Teste aceito pelo ${canal}${destinos ? ` para ${destinos}` : ""}.${assunto}${ids} Verifique Caixa de entrada, Spam, Todos os e-mails e pesquise por "Frankstein: teste".`);
           await loadLogs();
         } catch (error) {
           setFeedbackEmailAlerts(error.message, true);

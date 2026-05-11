@@ -54,6 +54,14 @@ services:
         value: "false"
       - key: PII_ENCRYPTION_KEY
         sync: false
+      - key: EMAIL_DELIVERY_PROVIDER
+        value: "brevo"
+      - key: EMAIL_BREVO_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: EMAIL_FROM_NAME
+        value: "Frankstein SioCred"
       - key: EMAIL_SMTP_HOST
         sync: false
       - key: EMAIL_SMTP_PORT

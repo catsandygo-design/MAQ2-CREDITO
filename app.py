@@ -18,7 +18,9 @@ from email.utils import formatdate, make_msgid
 from pathlib import Path
 from threading import RLock
 from typing import Any, Optional
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
+from urllib.request import Request as UrlLibRequest, urlopen
 
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
@@ -404,6 +406,11 @@ EMAIL_SMTP_USER = (os.getenv("EMAIL_SMTP_USER", "") or "").strip()
 EMAIL_SMTP_PASSWORD = os.getenv("EMAIL_SMTP_PASSWORD", "")
 EMAIL_SMTP_FROM = (os.getenv("EMAIL_SMTP_FROM", "") or "").strip()
 EMAIL_SMTP_STARTTLS = os.getenv("EMAIL_SMTP_STARTTLS", "true").lower() in {"1", "true", "yes"}
+EMAIL_FROM = (os.getenv("EMAIL_FROM", "") or EMAIL_SMTP_FROM).strip()
+EMAIL_FROM_NAME = (os.getenv("EMAIL_FROM_NAME", "") or "Frankstein SioCred").strip()
+EMAIL_DELIVERY_PROVIDER = (os.getenv("EMAIL_DELIVERY_PROVIDER", "") or os.getenv("EMAIL_PROVIDER", "")).strip().lower()
+EMAIL_BREVO_API_KEY = (os.getenv("EMAIL_BREVO_API_KEY", "") or os.getenv("BREVO_API_KEY", "")).strip()
+EMAIL_BREVO_API_URL = (os.getenv("EMAIL_BREVO_API_URL", "") or "https://api.brevo.com/v3/smtp/email").strip()
 EMAIL_CONFIRM_LINK_BASE_URL = (os.getenv("EMAIL_CONFIRM_LINK_BASE_URL", "") or "").strip()
 try:
     EMAIL_CONFIRM_TOKEN_TTL_HOURS = max(1, int(os.getenv("EMAIL_CONFIRM_TOKEN_TTL_HOURS", "72")))
@@ -3969,22 +3976,79 @@ def _normalize_tipo_visita(value: Optional[str]) -> Optional[str]:
     return mapped or None
 
 
+def _email_delivery_provider() -> str:
+    if EMAIL_DELIVERY_PROVIDER in {"brevo", "smtp"}:
+        return EMAIL_DELIVERY_PROVIDER
+    if EMAIL_BREVO_API_KEY:
+        return "brevo"
+    return "smtp"
+
+
 def _is_email_delivery_configured() -> bool:
-    return bool(EMAIL_SMTP_HOST and EMAIL_SMTP_FROM)
+    if _email_delivery_provider() == "brevo":
+        return bool(EMAIL_BREVO_API_KEY and EMAIL_FROM)
+    return bool(EMAIL_SMTP_HOST and EMAIL_FROM)
+
+
+def _send_email_message_brevo(*, to_email: str, subject: str, text_body: str) -> dict[str, Any]:
+    payload = {
+        "sender": {"name": EMAIL_FROM_NAME, "email": EMAIL_FROM},
+        "to": [{"email": to_email}],
+        "replyTo": {"email": EMAIL_FROM},
+        "subject": subject,
+        "textContent": text_body,
+        "tags": ["siocred-frankstein"],
+    }
+    data = json.dumps(payload, ensure_ascii=True).encode("utf-8")
+    request = UrlLibRequest(
+        EMAIL_BREVO_API_URL,
+        data=data,
+        method="POST",
+        headers={
+            "accept": "application/json",
+            "api-key": EMAIL_BREVO_API_KEY,
+            "content-type": "application/json",
+        },
+    )
+    try:
+        with urlopen(request, timeout=20) as response:
+            response_body = response.read().decode("utf-8", errors="ignore")
+            status_code = int(getattr(response, "status", 0) or 0)
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore").strip()
+        raise RuntimeError(f"Brevo API recusou envio ({exc.code}): {detail or exc.reason}") from exc
+    except URLError as exc:
+        raise RuntimeError(f"Falha de conexao com Brevo API: {exc.reason}") from exc
+
+    try:
+        parsed = json.loads(response_body) if response_body else {}
+    except json.JSONDecodeError:
+        parsed = {}
+    message_id = str(parsed.get("messageId") or make_msgid(domain=(EMAIL_FROM.split("@")[-1] if "@" in EMAIL_FROM else None)))
+    return {
+        "to": to_email,
+        "message_id": message_id,
+        "subject": subject,
+        "provider": "brevo",
+        "status_code": status_code,
+    }
 
 
 def _send_email_message(*, to_email: str, subject: str, text_body: str) -> dict[str, Any]:
     if not _is_email_delivery_configured():
         raise RuntimeError("Envio de e-mail nao configurado no ambiente.")
 
-    message_id = make_msgid(domain=(EMAIL_SMTP_FROM.split("@")[-1] if "@" in EMAIL_SMTP_FROM else None))
+    if _email_delivery_provider() == "brevo":
+        return _send_email_message_brevo(to_email=to_email, subject=subject, text_body=text_body)
+
+    message_id = make_msgid(domain=(EMAIL_FROM.split("@")[-1] if "@" in EMAIL_FROM else None))
     msg = EmailMessage()
-    msg["From"] = EMAIL_SMTP_FROM
+    msg["From"] = EMAIL_FROM
     msg["To"] = to_email
     msg["Subject"] = subject
     msg["Date"] = formatdate(localtime=True)
     msg["Message-ID"] = message_id
-    msg["Reply-To"] = EMAIL_SMTP_FROM
+    msg["Reply-To"] = EMAIL_FROM
     msg["X-SioCred-Source"] = "Frankstein"
     msg.set_content(text_body)
 
@@ -3998,7 +4062,7 @@ def _send_email_message(*, to_email: str, subject: str, text_body: str) -> dict[
     if refused:
         raise smtplib.SMTPRecipientsRefused(refused)
 
-    return {"to": to_email, "message_id": message_id, "subject": subject}
+    return {"to": to_email, "message_id": message_id, "subject": subject, "provider": "smtp"}
 
 
 def _split_alert_recipients(raw: Optional[str] = None) -> list[str]:
@@ -4037,20 +4101,30 @@ def _get_alert_recipients_source(db: Optional[Session] = None) -> tuple[str, str
 def _build_frankstein_email_alerts_status(db: Session) -> AdminFranksteinEmailAlertsOut:
     raw, source = _get_alert_recipients_source(db)
     recipients = _split_alert_recipients(raw)
+    provider = _email_delivery_provider()
     smtp_missing = []
-    if not EMAIL_SMTP_HOST:
-        smtp_missing.append("EMAIL_SMTP_HOST")
-    if not EMAIL_SMTP_FROM:
-        smtp_missing.append("EMAIL_SMTP_FROM")
+    if provider == "brevo":
+        if not EMAIL_BREVO_API_KEY:
+            smtp_missing.append("EMAIL_BREVO_API_KEY")
+        if not EMAIL_FROM:
+            smtp_missing.append("EMAIL_FROM ou EMAIL_SMTP_FROM")
+    else:
+        if not EMAIL_SMTP_HOST:
+            smtp_missing.append("EMAIL_SMTP_HOST")
+        if not EMAIL_FROM:
+            smtp_missing.append("EMAIL_FROM ou EMAIL_SMTP_FROM")
     return AdminFranksteinEmailAlertsOut(
         smtp_configured=_is_email_delivery_configured(),
         smtp_missing=smtp_missing,
         smtp_config={
+            "provider": provider,
+            "api_key_present": bool(EMAIL_BREVO_API_KEY),
+            "api_url_present": bool(EMAIL_BREVO_API_URL),
             "host_present": bool(EMAIL_SMTP_HOST),
             "port": EMAIL_SMTP_PORT,
             "user_present": bool(EMAIL_SMTP_USER),
             "password_present": bool(EMAIL_SMTP_PASSWORD),
-            "from_present": bool(EMAIL_SMTP_FROM),
+            "from_present": bool(EMAIL_FROM),
             "starttls": EMAIL_SMTP_STARTTLS,
         },
         recipients_configured=bool(recipients),
@@ -6747,7 +6821,10 @@ def corretor_enviar_confirmacao_assinatura_email(
     if not _is_email_delivery_configured():
         raise HTTPException(
             status_code=503,
-            detail="Envio de e-mail nao configurado. Defina EMAIL_SMTP_HOST e EMAIL_SMTP_FROM no ambiente.",
+            detail=(
+                "Envio de e-mail nao configurado. No Render Free, use EMAIL_DELIVERY_PROVIDER=brevo, "
+                "EMAIL_BREVO_API_KEY e EMAIL_FROM/EMAIL_SMTP_FROM."
+            ),
         )
     if not lead.email:
         raise HTTPException(status_code=422, detail="Lead sem e-mail cadastrado para confirmacao de assinatura.")
@@ -7524,7 +7601,10 @@ def admin_test_frankstein_email_alerts(
     if not _is_email_delivery_configured():
         raise HTTPException(
             status_code=422,
-            detail="SMTP nao configurado. Defina EMAIL_SMTP_HOST e EMAIL_SMTP_FROM no Render.",
+            detail=(
+                "Envio de e-mail nao configurado. No Render Free, use EMAIL_DELIVERY_PROVIDER=brevo, "
+                "EMAIL_BREVO_API_KEY e EMAIL_FROM/EMAIL_SMTP_FROM."
+            ),
         )
     raw = payload.destinatarios if payload.destinatarios is not None else _get_alert_recipients_source(db)[0]
     recipients = _validate_alert_recipients(raw)
@@ -7540,7 +7620,8 @@ def admin_test_frankstein_email_alerts(
             "Este e um teste de envio do painel admin.",
             "Quando houver tarefa ou compromisso com horario, o Frankstein avisara 5 minutos antes.",
             f"Data/hora do teste: {now_brt:%d/%m/%Y %H:%M:%S} BRT",
-            f"Remetente configurado: {EMAIL_SMTP_FROM}",
+            f"Canal configurado: {_email_delivery_provider()}",
+            f"Remetente configurado: {EMAIL_FROM}",
             "",
             "Se voce recebeu este e-mail, a comunicacao por e-mail esta funcionando.",
         ]
@@ -7557,6 +7638,8 @@ def admin_test_frankstein_email_alerts(
         raise HTTPException(status_code=422, detail=f"SMTP recusou destinatario(s): {refused}") from exc
     except smtplib.SMTPException as exc:
         raise HTTPException(status_code=422, detail=f"SMTP recusou o envio: {exc}") from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except OSError as exc:
         raise HTTPException(status_code=422, detail=f"Falha de conexao SMTP: {exc}") from exc
 
@@ -7580,6 +7663,7 @@ def admin_test_frankstein_email_alerts(
         "sent": len(sent_messages),
         "accepted_at_brt": now_brt.isoformat(),
         "subject": subject,
+        "provider": sent_messages[0].get("provider", _email_delivery_provider()) if sent_messages else _email_delivery_provider(),
         "message_ids": [str(item.get("message_id", "")) for item in sent_messages],
         "destinatarios_mascarados": [mask_email(email) or email for email in recipients],
     }
