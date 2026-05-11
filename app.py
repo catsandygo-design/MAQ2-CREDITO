@@ -2324,6 +2324,8 @@ class AdminRegistroLookupOut(BaseModel):
 
 class AdminFranksteinEmailAlertsOut(BaseModel):
     smtp_configured: bool
+    smtp_missing: list[str] = Field(default_factory=list)
+    smtp_config: dict[str, Any] = Field(default_factory=dict)
     recipients_configured: bool
     destinatarios: str
     destinatarios_mascarados: list[str]
@@ -4020,8 +4022,22 @@ def _get_alert_recipients_source(db: Optional[Session] = None) -> tuple[str, str
 def _build_frankstein_email_alerts_status(db: Session) -> AdminFranksteinEmailAlertsOut:
     raw, source = _get_alert_recipients_source(db)
     recipients = _split_alert_recipients(raw)
+    smtp_missing = []
+    if not EMAIL_SMTP_HOST:
+        smtp_missing.append("EMAIL_SMTP_HOST")
+    if not EMAIL_SMTP_FROM:
+        smtp_missing.append("EMAIL_SMTP_FROM")
     return AdminFranksteinEmailAlertsOut(
         smtp_configured=_is_email_delivery_configured(),
+        smtp_missing=smtp_missing,
+        smtp_config={
+            "host_present": bool(EMAIL_SMTP_HOST),
+            "port": EMAIL_SMTP_PORT,
+            "user_present": bool(EMAIL_SMTP_USER),
+            "password_present": bool(EMAIL_SMTP_PASSWORD),
+            "from_present": bool(EMAIL_SMTP_FROM),
+            "starttls": EMAIL_SMTP_STARTTLS,
+        },
         recipients_configured=bool(recipients),
         destinatarios=raw,
         destinatarios_mascarados=[mask_email(email) or email for email in recipients],

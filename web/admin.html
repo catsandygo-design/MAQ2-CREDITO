@@ -1018,6 +1018,8 @@
       if (emailSmtpStatus) {
         emailSmtpStatus.textContent = status.smtp_configured ? "OK" : "Pendente";
         emailSmtpStatus.style.color = status.smtp_configured ? "var(--ok)" : "var(--danger)";
+        const missing = Array.isArray(status.smtp_missing) ? status.smtp_missing : [];
+        emailSmtpStatus.title = missing.length ? `Faltando: ${missing.join(", ")}` : "SMTP minimo encontrado no ambiente.";
       }
       if (emailRecipientStatus) {
         emailRecipientStatus.textContent = status.recipients_configured ? "OK" : "Pendente";
@@ -1027,9 +1029,17 @@
       if (emailSourceStatus) emailSourceStatus.textContent = `Fonte: ${status.fonte_destinatarios || "-"}`;
       if (emailMaskedStatus) {
         const masked = Array.isArray(status.destinatarios_mascarados) ? status.destinatarios_mascarados : [];
-        emailMaskedStatus.textContent = masked.length
+        const missing = Array.isArray(status.smtp_missing) ? status.smtp_missing : [];
+        const smtpConfig = status.smtp_config || {};
+        const smtpDetail = status.smtp_configured
+          ? `SMTP: host OK, from OK, porta ${smtpConfig.port || "-"}, usuario ${smtpConfig.user_present ? "OK" : "vazio"}, senha ${smtpConfig.password_present ? "OK" : "vazia"}.`
+          : `SMTP faltando: ${missing.length ? missing.join(", ") : "variaveis nao carregadas"}.`;
+        const recipientDetail = masked.length
           ? `Enviando para: ${masked.join(", ")}`
           : "Nenhum destinatario carregado.";
+        emailMaskedStatus.textContent = masked.length
+          ? `${recipientDetail} ${smtpDetail}`
+          : `${recipientDetail} ${smtpDetail}`;
       }
     }
 
