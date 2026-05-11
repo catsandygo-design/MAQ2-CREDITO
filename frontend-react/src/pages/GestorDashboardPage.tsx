@@ -211,6 +211,15 @@ function formatDecimal(value: number): string {
   return decimalFormatter.format(Number.isFinite(value) ? value : 0)
 }
 
+function formatMetaSource(value?: string | null): string {
+  const source = norm(value)
+  if (!source) return 'Meta do periodo'
+  if (source.includes('runtime')) return 'Meta configurada no sistema'
+  if (source.includes('admin')) return 'Meta definida pelo admin'
+  if (source.includes('gestor')) return 'Meta definida pelo gestor'
+  return 'Meta do periodo'
+}
+
 function formatPercent(value: number): string {
   return `${percentFormatter.format(Number.isFinite(value) ? value : 0)}%`
 }
@@ -1320,7 +1329,7 @@ export function GestorDashboardPage() {
       {error ? <div className="error-banner">{error}</div> : null}
 
       <section className="panel gestorx-brief-strip">
-        <SummaryBlock label="Meta mensal" value={formatNumber(Number(dashboard?.meta ?? 0))} note={dashboard?.meta_fonte || 'Meta do periodo'} tone="neutral" />
+        <SummaryBlock label="Meta mensal" value={formatNumber(Number(dashboard?.meta ?? 0))} note={formatMetaSource(dashboard?.meta_fonte)} tone="neutral" />
         <SummaryBlock label="Realizado" value={formatNumber(Number(dashboard?.real ?? 0))} note="Assinados do periodo" tone="ok" />
         <SummaryBlock label="Forecast" value={formatDecimal(Number(dashboard?.previsao ?? 0))} note="Projecao da base ativa" tone="warn" />
         <SummaryBlock label="Meta semanal" value={formatNumber(Number(dashboard?.meta_semanal ?? 0))} note="Recorte util da semana" tone="neutral" />
