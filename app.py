@@ -152,6 +152,7 @@ except ValueError:
 META_MENSAL_RUNTIME_KEY = "gestor_meta_mensal"
 META_SEMANAL_RUNTIME_KEY = "gestor_meta_semanal"
 LAYOUT_BLACKHOLE_RUNTIME_KEY = "layout_blackhole_enabled"
+FRANKSTEIN_ALERT_EMAIL_TO_RUNTIME_KEY = "frankstein_alert_email_to"
 USERS_SEED_MODE_RUNTIME_KEY = "users_seed_mode"
 USERS_SEED_MODE_FULL = "full"
 USERS_SEED_MODE_ADMIN_ONLY = "admin_only"
@@ -2321,6 +2322,23 @@ class AdminRegistroLookupOut(BaseModel):
     itens: list[AdminRegistroLookupItem]
 
 
+class AdminFranksteinEmailAlertsOut(BaseModel):
+    smtp_configured: bool
+    recipients_configured: bool
+    destinatarios: str
+    destinatarios_mascarados: list[str]
+    fonte_destinatarios: str
+    window_minutes: int
+
+
+class AdminFranksteinEmailAlertsPayload(BaseModel):
+    destinatarios: str = ""
+
+
+class AdminFranksteinEmailTestPayload(BaseModel):
+    destinatarios: Optional[str] = None
+
+
 class LayoutPreferencePayload(BaseModel):
     blackhole_enabled: bool = False
 
@@ -3167,11 +3185,13 @@ def _credito_planejamento_email_body(item: CreditoPlanejamentoItem, view: dict[s
 
 def _processar_alertas_email_planejamento(db: Session, *, now: Optional[datetime] = None) -> dict[str, Any]:
     now_brt = (now or datetime.now(KEEPALIVE_BRT_TZ)).astimezone(KEEPALIVE_BRT_TZ)
-    recipients = _split_alert_recipients()
+    recipients_raw, recipients_source = _get_alert_recipients_source(db)
+    recipients = _split_alert_recipients(recipients_raw)
     result: dict[str, Any] = {
         "ok": True,
         "email_configured": _is_email_delivery_configured(),
         "recipients_configured": bool(recipients),
+        "recipients_source": recipients_source,
         "now_brt": now_brt.isoformat(),
         "window_minutes": SIOCRED_EMAIL_ALERT_WINDOW_MINUTES,
         "checked": 0,
@@ -3979,6 +3999,35 @@ def _split_alert_recipients(raw: Optional[str] = None) -> list[str]:
         seen.add(email.lower())
         recipients.append(email)
     return recipients
+
+
+def _validate_alert_recipients(raw: Optional[str]) -> list[str]:
+    recipients = _split_alert_recipients(raw)
+    invalid = [email for email in recipients if "@" not in email or "." not in email.rsplit("@", 1)[-1]]
+    if invalid:
+        raise HTTPException(status_code=422, detail=f"E-mail invalido: {invalid[0]}")
+    return recipients
+
+
+def _get_alert_recipients_source(db: Optional[Session] = None) -> tuple[str, str]:
+    if db is not None:
+        runtime_value = _get_runtime_meta(db, FRANKSTEIN_ALERT_EMAIL_TO_RUNTIME_KEY)
+        if runtime_value is not None:
+            return runtime_value.strip(), "admin"
+    return SIOCRED_ALERT_EMAIL_TO, "ambiente"
+
+
+def _build_frankstein_email_alerts_status(db: Session) -> AdminFranksteinEmailAlertsOut:
+    raw, source = _get_alert_recipients_source(db)
+    recipients = _split_alert_recipients(raw)
+    return AdminFranksteinEmailAlertsOut(
+        smtp_configured=_is_email_delivery_configured(),
+        recipients_configured=bool(recipients),
+        destinatarios=raw,
+        destinatarios_mascarados=[mask_email(email) or email for email in recipients],
+        fonte_destinatarios=source,
+        window_minutes=SIOCRED_EMAIL_ALERT_WINDOW_MINUTES,
+    )
 
 
 def _build_email_confirmation_link(request: Request, token: str) -> str:
@@ -7349,6 +7398,85 @@ def admin_set_layout_preference(
     )
     db.commit()
     return LayoutPreferenceOut(blackhole_enabled=enabled, fonte="runtime")
+
+
+@app.get("/app/api/admin/frankstein-email-alerts", response_model=AdminFranksteinEmailAlertsOut)
+def admin_get_frankstein_email_alerts(
+    _: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    return _build_frankstein_email_alerts_status(db)
+
+
+@app.put("/app/api/admin/frankstein-email-alerts", response_model=AdminFranksteinEmailAlertsOut)
+def admin_set_frankstein_email_alerts(
+    payload: AdminFranksteinEmailAlertsPayload,
+    session: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    raw = (payload.destinatarios or "").strip()
+    recipients = _validate_alert_recipients(raw)
+    _set_runtime_meta(db, FRANKSTEIN_ALERT_EMAIL_TO_RUNTIME_KEY, raw)
+    _record_system_log(
+        db,
+        actor_username=_normalize_username(str(session.get("username", ""))),
+        actor_role=_normalize_role(str(session.get("role", ""))),
+        tela="admin",
+        acao="FRANKSTEIN_EMAIL_ALERTA_CONFIGURADO",
+        entidade_tipo="configuracao",
+        entidade_id=FRANKSTEIN_ALERT_EMAIL_TO_RUNTIME_KEY,
+        details=f"destinatarios={','.join(mask_email(email) or email for email in recipients) or '-'}",
+    )
+    db.commit()
+    return _build_frankstein_email_alerts_status(db)
+
+
+@app.post("/app/api/admin/frankstein-email-alerts/test", response_model=dict[str, Any])
+def admin_test_frankstein_email_alerts(
+    payload: AdminFranksteinEmailTestPayload,
+    session: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
+    if not _is_email_delivery_configured():
+        raise HTTPException(
+            status_code=422,
+            detail="SMTP nao configurado. Defina EMAIL_SMTP_HOST e EMAIL_SMTP_FROM no Render.",
+        )
+    raw = payload.destinatarios if payload.destinatarios is not None else _get_alert_recipients_source(db)[0]
+    recipients = _validate_alert_recipients(raw)
+    if not recipients:
+        raise HTTPException(status_code=422, detail="Informe ao menos um e-mail destinatario.")
+
+    subject = "Frankstein: teste de alerta por e-mail"
+    body = "\n".join(
+        [
+            "Frankstein alerta supervisionado do SioCred",
+            "",
+            "Este e um teste de envio do painel admin.",
+            "Quando houver tarefa ou compromisso com horario, o Frankstein avisara 5 minutos antes.",
+            "",
+            "Se voce recebeu este e-mail, a comunicacao por e-mail esta funcionando.",
+        ]
+    )
+    for to_email in recipients:
+        _send_email_message(to_email=to_email, subject=subject, text_body=body)
+
+    _record_system_log(
+        db,
+        actor_username=_normalize_username(str(session.get("username", ""))),
+        actor_role=_normalize_role(str(session.get("role", ""))),
+        tela="admin",
+        acao="FRANKSTEIN_EMAIL_ALERTA_TESTE",
+        entidade_tipo="configuracao",
+        entidade_id=FRANKSTEIN_ALERT_EMAIL_TO_RUNTIME_KEY,
+        details=f"destinatarios={','.join(mask_email(email) or email for email in recipients)}",
+    )
+    db.commit()
+    return {
+        "ok": True,
+        "sent": len(recipients),
+        "destinatarios_mascarados": [mask_email(email) or email for email in recipients],
+    }
 
 
 def _normalize_maintenance_entity(value: Optional[str]) -> str:

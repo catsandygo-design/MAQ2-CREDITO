@@ -272,6 +272,20 @@
       color:var(--muted);
       font-size:calc(11px * var(--font-scale));
     }
+    .email-alert-grid{
+      display:grid;
+      grid-template-columns:1.5fr repeat(3,minmax(140px,.5fr)) auto auto;
+      gap:8px;
+      align-items:end;
+    }
+    @media (max-width:1100px){.email-alert-grid{grid-template-columns:1fr 1fr}}
+    .status-line{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:10px;
+      align-items:center;
+    }
     .lookup-row{
       display:grid;
       grid-template-columns:1fr auto;
@@ -378,6 +392,51 @@
           <span>Blackhole</span>
         </div>
         <div id="layoutHint" class="pref-copy">Desmarcado = layout corporativo tradicional.</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="top">
+        <div class="title">
+          <h1>Frankstein - Alertas por e-mail</h1>
+          <p>Canal oficial para avisar tarefas e compromissos 5 minutos antes. SMTP fica protegido no Render.</p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btnRefreshEmailAlerts" type="button">Atualizar status</button>
+        </div>
+      </div>
+      <div class="body">
+        <form id="emailAlertsForm" class="email-alert-grid">
+          <div class="field">
+            <label for="alertEmailTo">Destinatario(s)</label>
+            <input id="alertEmailTo" placeholder="seuemail@dominio.com; outro@dominio.com" />
+          </div>
+          <div class="storage-card">
+            <div class="storage-label">SMTP</div>
+            <div class="storage-value" id="emailSmtpStatus">-</div>
+          </div>
+          <div class="storage-card">
+            <div class="storage-label">Destinatario</div>
+            <div class="storage-value" id="emailRecipientStatus">-</div>
+          </div>
+          <div class="storage-card">
+            <div class="storage-label">Janela</div>
+            <div class="storage-value" id="emailWindowStatus">-</div>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn primary" type="submit">Salvar e-mail</button>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn" id="btnTestEmailAlert" type="button">Testar envio</button>
+          </div>
+        </form>
+        <div class="status-line">
+          <span class="pill" id="emailSourceStatus">Fonte: -</span>
+          <span class="tiny" id="emailMaskedStatus">Nenhum destinatario carregado.</span>
+        </div>
+        <div id="feedbackEmailAlerts" class="feedback" aria-live="polite"></div>
       </div>
     </section>
 
@@ -848,16 +907,26 @@
     const feedbackEmp = document.getElementById("feedbackEmp");
     const feedbackPlanner = document.getElementById("feedbackPlanner");
     const feedbackDelete = document.getElementById("feedbackDelete");
+    const feedbackEmailAlerts = document.getElementById("feedbackEmailAlerts");
     const tbody = document.getElementById("tbodyUsers");
     const tbodyEmp = document.getElementById("tbodyEmp");
     const tbodyLogs = document.getElementById("tbodyLogs");
     const createForm = document.getElementById("createForm");
     const empForm = document.getElementById("empForm");
     const plannerForm = document.getElementById("plannerForm");
+    const emailAlertsForm = document.getElementById("emailAlertsForm");
     const deleteForm = document.getElementById("deleteForm");
     const layoutBlackholeInput = document.getElementById("layoutBlackhole");
     const layoutHint = document.getElementById("layoutHint");
     const btnRefreshStorage = document.getElementById("btnRefreshStorage");
+    const btnRefreshEmailAlerts = document.getElementById("btnRefreshEmailAlerts");
+    const btnTestEmailAlert = document.getElementById("btnTestEmailAlert");
+    const alertEmailTo = document.getElementById("alertEmailTo");
+    const emailSmtpStatus = document.getElementById("emailSmtpStatus");
+    const emailRecipientStatus = document.getElementById("emailRecipientStatus");
+    const emailWindowStatus = document.getElementById("emailWindowStatus");
+    const emailSourceStatus = document.getElementById("emailSourceStatus");
+    const emailMaskedStatus = document.getElementById("emailMaskedStatus");
     const delEntityInput = document.getElementById("delEntity");
     const delIdInput = document.getElementById("delId");
     const delReasonInput = document.getElementById("delReason");
@@ -934,6 +1003,33 @@
     function setFeedbackDelete(message, isError = false) {
       feedbackDelete.textContent = message || "";
       feedbackDelete.classList.toggle("error", Boolean(isError));
+    }
+
+    function setFeedbackEmailAlerts(message, isError = false) {
+      if (!feedbackEmailAlerts) return;
+      feedbackEmailAlerts.textContent = message || "";
+      feedbackEmailAlerts.classList.toggle("error", Boolean(isError));
+    }
+
+    function renderEmailAlertsStatus(data) {
+      const status = data || {};
+      if (alertEmailTo) alertEmailTo.value = status.destinatarios || "";
+      if (emailSmtpStatus) {
+        emailSmtpStatus.textContent = status.smtp_configured ? "OK" : "Pendente";
+        emailSmtpStatus.style.color = status.smtp_configured ? "var(--ok)" : "var(--danger)";
+      }
+      if (emailRecipientStatus) {
+        emailRecipientStatus.textContent = status.recipients_configured ? "OK" : "Pendente";
+        emailRecipientStatus.style.color = status.recipients_configured ? "var(--ok)" : "var(--danger)";
+      }
+      if (emailWindowStatus) emailWindowStatus.textContent = `${Number(status.window_minutes || 0)} min`;
+      if (emailSourceStatus) emailSourceStatus.textContent = `Fonte: ${status.fonte_destinatarios || "-"}`;
+      if (emailMaskedStatus) {
+        const masked = Array.isArray(status.destinatarios_mascarados) ? status.destinatarios_mascarados : [];
+        emailMaskedStatus.textContent = masked.length
+          ? `Enviando para: ${masked.join(", ")}`
+          : "Nenhum destinatario carregado.";
+      }
     }
 
     function esc(value) {
@@ -1290,6 +1386,11 @@
       renderStorageSummary(data);
     }
 
+    async function loadEmailAlertsStatus() {
+      const data = await api("/app/api/admin/frankstein-email-alerts");
+      renderEmailAlertsStatus(data);
+    }
+
     async function loadMe() {
       const me = await api("/auth/me");
       currentUser = me;
@@ -1374,6 +1475,46 @@
         setFeedbackEmp(error.message, true);
       }
     });
+
+    if (emailAlertsForm) {
+      emailAlertsForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        setFeedbackEmailAlerts("");
+        try {
+          const data = await api("/app/api/admin/frankstein-email-alerts", {
+            method: "PUT",
+            body: JSON.stringify({ destinatarios: alertEmailTo?.value?.trim() || "" }),
+          });
+          renderEmailAlertsStatus(data);
+          setFeedbackEmailAlerts("E-mail de alerta salvo. O Frankstein usara este destinatario nos avisos automaticos.");
+          await loadLogs();
+        } catch (error) {
+          setFeedbackEmailAlerts(error.message, true);
+        }
+      });
+    }
+
+    if (btnTestEmailAlert) {
+      btnTestEmailAlert.addEventListener("click", async () => {
+        setFeedbackEmailAlerts("");
+        btnTestEmailAlert.disabled = true;
+        try {
+          const result = await api("/app/api/admin/frankstein-email-alerts/test", {
+            method: "POST",
+            body: JSON.stringify({ destinatarios: alertEmailTo?.value?.trim() || null }),
+          });
+          const destinos = Array.isArray(result.destinatarios_mascarados)
+            ? result.destinatarios_mascarados.join(", ")
+            : "";
+          setFeedbackEmailAlerts(`Teste enviado com sucesso${destinos ? ` para ${destinos}` : ""}.`);
+          await loadLogs();
+        } catch (error) {
+          setFeedbackEmailAlerts(error.message, true);
+        } finally {
+          btnTestEmailAlert.disabled = false;
+        }
+      });
+    }
 
     plannerForm.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -1494,6 +1635,7 @@
         await loadEmpreendimentos();
         await loadLogs();
         await loadStorageSummary();
+        await loadEmailAlertsStatus();
       } catch (error) {
         setFeedback(error.message, true);
       }
@@ -1511,8 +1653,20 @@
       btnRefreshStorage.addEventListener("click", async () => {
         try {
           await loadStorageSummary();
+          await loadEmailAlertsStatus();
         } catch (error) {
           setFeedback(error.message, true);
+        }
+      });
+    }
+
+    if (btnRefreshEmailAlerts) {
+      btnRefreshEmailAlerts.addEventListener("click", async () => {
+        try {
+          await loadEmailAlertsStatus();
+          setFeedbackEmailAlerts("Status do e-mail atualizado.");
+        } catch (error) {
+          setFeedbackEmailAlerts(error.message, true);
         }
       });
     }
@@ -1615,6 +1769,7 @@
         await loadEmpreendimentos();
         await loadLogs();
         await loadStorageSummary();
+        await loadEmailAlertsStatus();
       } catch (error) {
         setFeedback(error.message, true);
       }
