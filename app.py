@@ -169,6 +169,10 @@ ROLE_GESTOR = "gestor"
 ROLE_GESTOR_CREDITO = "gestor_credito"
 
 VALID_ROLES = {ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_ADMIN, ROLE_GESTOR, ROLE_GESTOR_CREDITO}
+CHECKLIST_PAGE_ROLES = (ROLE_CORRETOR, ROLE_ANALISTA, ROLE_CCA, ROLE_ADMIN)
+PROCESSO_INTAKE_ROLES = (ROLE_CORRETOR, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)
+PROCESSO_FULL_ROLES = (ROLE_CORRETOR, ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)
+PROCESSO_DOCUMENTOS_UPSERT_ROLES = PROCESSO_FULL_ROLES
 
 APP_CCA_USER = os.getenv("APP_CCA_USER", os.getenv("APP_LOGIN_USER", "cca"))
 APP_CCA_PASSWORD = os.getenv("APP_CCA_PASSWORD", os.getenv("APP_LOGIN_PASSWORD", ""))
@@ -6003,7 +6007,7 @@ def app_checklist_page(request: Request):
     if bool(session.get("must_change_password")):
         return RedirectResponse(url="/app/trocar-senha", status_code=302)
     role = _normalize_role(str(session.get("role", "")))
-    if role not in {ROLE_ANALISTA, ROLE_CCA, ROLE_ADMIN}:
+    if role not in CHECKLIST_PAGE_ROLES:
         return RedirectResponse(url=_home_for_role(role), status_code=302)
     return _html_page("checklist.html")
 
@@ -10082,18 +10086,24 @@ def app_mark_analista_reuniao_compromisso_entregue(
 @app.post("/app/api/processos/intake")
 def app_create_intake(
     payload: ProcessoIntakeCreate,
-    session: dict[str, Any] = Depends(require_roles(ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(*PROCESSO_INTAKE_ROLES)),
     db: Session = Depends(get_db),
 ):
     username = _normalize_username(str(session.get("username", "")))
+    actor_role = _normalize_role(str(session.get("role", "")))
     obra_nome = _resolve_empreendimento_nome(db, payload.obra)
     if payload.obra and not obra_nome:
         raise HTTPException(status_code=422, detail="Empreendimento invalido. Selecione um empreendimento cadastrado.")
     estagio = _process_estagio_comercial(payload.estagio_comercial, fallback="RESERVA")
+    corretor_nome = (
+        _normalize_corretor_nome_curto(username)
+        if actor_role == ROLE_CORRETOR
+        else (_normalize_corretor_nome_curto(payload.corretor) if payload.corretor else None)
+    )
 
     cliente = Cliente(
         nome=payload.nome.strip(),
-        corretor=_normalize_corretor_nome_curto(payload.corretor) if payload.corretor else None,
+        corretor=corretor_nome,
         obra=obra_nome,
         imobiliaria=(payload.imobiliaria or "").strip() or None,
         data_reserva_origem=payload.data_reserva_origem,
@@ -10120,14 +10130,14 @@ def app_create_intake(
         db,
         processo_id=processo.id,
         actor_username=username,
-        actor_role=_normalize_role(str(session.get("role", ""))),
+        actor_role=actor_role,
         event_type="PROCESSO_CRIADO",
         details=f"Cliente: {cliente.nome}",
     )
     _record_system_log(
         db,
         actor_username=username,
-        actor_role=_normalize_role(str(session.get("role", ""))),
+        actor_role=actor_role,
         tela="checklist",
         acao="PROCESSO_CRIADO",
         entidade_tipo="processo",
@@ -10365,7 +10375,7 @@ async def app_importar_processos_planilha(
 @app.get("/app/api/processos/{processo_id}/full", response_model=ProcessoFullOut)
 def app_get_processo_full(
     processo_id: uuid.UUID,
-    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(*PROCESSO_FULL_ROLES)),
     db: Session = Depends(get_db),
 ):
     processo = db.get(Processo, processo_id)
@@ -10994,7 +11004,7 @@ def app_patch_processo(
 def app_bulk_upsert_documentos(
     processo_id: uuid.UUID,
     payload: DocumentoBulkUpsert,
-    session: dict[str, Any] = Depends(require_roles(ROLE_CCA, ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN)),
+    session: dict[str, Any] = Depends(require_roles(*PROCESSO_DOCUMENTOS_UPSERT_ROLES)),
     db: Session = Depends(get_db),
 ):
     processo = db.get(Processo, processo_id)

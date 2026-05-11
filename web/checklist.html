@@ -2216,12 +2216,12 @@ DIVORCIADO: Certidão de casamento averbada.`;
           saveBtn.disabled = true;
           saveBtn.style.display = "none";
         }
-        setFeedback("Modo consulta: CCA apenas visualiza os dados deste cliente.");
+        setFeedback("Modo consulta: este perfil apenas visualiza os dados deste cliente.");
       }
 
       function applyAccessMode() {
         const role = norm(currentUser && currentUser.role);
-        canEditChecklist = Boolean(currentUser && (role === "analista" || role === "admin") && !readOnlyMode);
+        canEditChecklist = Boolean(currentUser && ["corretor", "analista", "admin"].includes(role) && !readOnlyMode);
         window.CHECKLIST_CAN_EDIT_DOC = canEditChecklist;
 
         if (!canEditChecklist) {
@@ -2274,7 +2274,13 @@ DIVORCIADO: Certidão de casamento averbada.`;
           readOnlyMode = true;
         }
         const corretorEl = document.getElementById("corretor");
-        if (corretorEl && norm(data.role) !== "admin") {
+        if (corretorEl && norm(data.role) === "corretor") {
+          corretorEl.value = data.username || corretorEl.value || "";
+          corretorEl.readOnly = true;
+          corretorEl.classList.add("readonly-field");
+          corretorEl.title = "Cadastro vinculado ao corretor logado.";
+        }
+        if (corretorEl && norm(data.role) !== "admin" && norm(data.role) !== "corretor") {
           corretorEl.title = "Campo informativo do cadastro/importacao.";
         }
       }
@@ -2501,7 +2507,7 @@ DIVORCIADO: Certidão de casamento averbada.`;
         const dataCriacaoEl = document.getElementById("data-criacao");
 
         if (nomeEl && !nomeEl.value) nomeEl.value = cliente.nome || "";
-        if (corretorEl && !corretorEl.value) {
+        if (corretorEl) {
           corretorEl.value = cliente.corretor || "";
         }
         const imobEl = document.getElementById("imobiliaria");

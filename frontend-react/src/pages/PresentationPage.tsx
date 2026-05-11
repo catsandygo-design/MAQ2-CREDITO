@@ -681,6 +681,12 @@ export function PresentationPage() {
               <p className="text-sm font-semibold text-white">{empreendimento}</p>
               <p className="text-xs text-slate-300">{unitType}</p>
             </div>
+            <a
+              href="/app/checklist?auto_back=1&return_to=%2Fapp-react%2Fapresentacao"
+              className="rounded-2xl border border-emerald-300/50 bg-emerald-500/20 px-4 py-3 text-sm font-semibold text-emerald-50 transition hover:border-emerald-200 hover:bg-emerald-500/30"
+            >
+              Checklist
+            </a>
             <button
               type="button"
               onClick={handleLogout}
