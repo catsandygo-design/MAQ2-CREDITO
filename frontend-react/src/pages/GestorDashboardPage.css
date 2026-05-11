@@ -5,7 +5,7 @@
 
 .gestorx-top {
   background:
-    radial-gradient(circle at top right, rgba(15, 159, 152, 0.16), transparent 42%),
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.16), transparent 42%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.96));
 }
 
@@ -375,7 +375,7 @@
   inset: auto auto 0 0;
   height: 3px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #4f8cff, #14b8a6);
+  background: linear-gradient(90deg, #2563eb, #0ea5e9);
 }
 
 .gestorx-metrics-grid {
@@ -403,11 +403,11 @@
   width: 100%;
   height: 4px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #0ea5e9, #14b8a6);
+  background: linear-gradient(90deg, #2563eb, #0ea5e9);
 }
 
 .gestorx-metric-card.tone-ok::before {
-  background: linear-gradient(90deg, #22c55e, #14b8a6);
+  background: linear-gradient(90deg, #22c55e, #0ea5e9);
 }
 
 .gestorx-metric-card.tone-warn::before {
@@ -500,7 +500,7 @@
 }
 
 .gestorx-mini-bars-ok .gestorx-mini-bar {
-  background: linear-gradient(180deg, rgba(34, 197, 94, 0.78), rgba(20, 184, 166, 0.22));
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.78), rgba(14, 165, 233, 0.22));
 }
 
 .gestorx-mini-bars-warn .gestorx-mini-bar {
@@ -739,7 +739,7 @@
 }
 
 .gestorx-bar-item i {
-  background: linear-gradient(90deg, #4f8cff, #14b8a6);
+  background: linear-gradient(90deg, #2563eb, #0ea5e9);
 }
 
 .gestorx-bar-item.alt i {

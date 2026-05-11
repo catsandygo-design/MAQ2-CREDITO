@@ -390,9 +390,9 @@
         <div class="pref-row">
           <label for="layoutBlackhole"><b>Preferencia visual (global)</b></label>
           <input id="layoutBlackhole" type="checkbox" />
-          <span>Blackhole</span>
+          <span id="layoutBlackholeLabel">Blackhole bloqueado</span>
         </div>
-        <div id="layoutHint" class="pref-copy">Desmarcado = layout corporativo tradicional.</div>
+        <div id="layoutHint" class="pref-copy">Ativo: layout corporativo azul e branco.</div>
       </div>
     </section>
 
@@ -918,6 +918,7 @@
     const emailAlertsForm = document.getElementById("emailAlertsForm");
     const deleteForm = document.getElementById("deleteForm");
     const layoutBlackholeInput = document.getElementById("layoutBlackhole");
+    const layoutBlackholeLabel = document.getElementById("layoutBlackholeLabel");
     const layoutHint = document.getElementById("layoutHint");
     const btnRefreshStorage = document.getElementById("btnRefreshStorage");
     const btnRefreshEmailAlerts = document.getElementById("btnRefreshEmailAlerts");
@@ -949,6 +950,7 @@
     let users = [];
     let empreendimentos = [];
     let logs = [];
+    let layoutBlackholeAllowed = false;
 
     function applyAdaptiveTypography() {
       const width = window.innerWidth || 0;
@@ -972,11 +974,17 @@
       feedback.classList.toggle("error", Boolean(isError));
     }
 
-    function renderLayoutHint(enabled) {
+    function renderLayoutHint(enabled, allowed = false) {
       if (!layoutHint) return;
-      layoutHint.textContent = enabled
-        ? "Ativo: layout Blackhole (visual atual)."
-        : "Ativo: layout corporativo tradicional.";
+      if (layoutBlackholeInput) layoutBlackholeInput.disabled = !allowed;
+      if (layoutBlackholeLabel) {
+        layoutBlackholeLabel.textContent = allowed ? "Blackhole opcional" : "Blackhole bloqueado";
+      }
+      layoutHint.textContent = !allowed
+        ? "Ativo: layout corporativo azul e branco. Blackhole bloqueado pelo padrao do sistema."
+        : enabled
+          ? "Ativo: layout Blackhole (visual atual)."
+          : "Ativo: layout corporativo azul e branco.";
     }
 
     function fmtDate(value) {
@@ -1417,10 +1425,12 @@
     async function loadLayoutPreference() {
       const data = await api("/app/api/admin/layout-preference");
       const enabled = Boolean(data?.blackhole_enabled);
+      const allowed = Boolean(data?.blackhole_allowed);
+      layoutBlackholeAllowed = allowed;
       if (layoutBlackholeInput) {
         layoutBlackholeInput.checked = enabled;
       }
-      renderLayoutHint(enabled);
+      renderLayoutHint(enabled, allowed);
     }
 
     async function saveLayoutPreference(enabled) {
@@ -1429,10 +1439,12 @@
         body: JSON.stringify({ blackhole_enabled: Boolean(enabled) }),
       });
       const persisted = Boolean(data?.blackhole_enabled);
+      const allowed = Boolean(data?.blackhole_allowed);
+      layoutBlackholeAllowed = allowed;
       if (layoutBlackholeInput) {
         layoutBlackholeInput.checked = persisted;
       }
-      renderLayoutHint(persisted);
+      renderLayoutHint(persisted, allowed);
       setFeedback(`Preferencia visual atualizada: ${persisted ? "Blackhole" : "Corporativo"}.`);
       await loadLogs();
     }
@@ -1767,10 +1779,10 @@
           await saveLayoutPreference(enabled);
         } catch (error) {
           layoutBlackholeInput.checked = !enabled;
-          renderLayoutHint(Boolean(layoutBlackholeInput.checked));
+          renderLayoutHint(Boolean(layoutBlackholeInput.checked), layoutBlackholeAllowed);
           setFeedback(error.message, true);
         } finally {
-          layoutBlackholeInput.disabled = false;
+          layoutBlackholeInput.disabled = !layoutBlackholeAllowed;
         }
       });
     }

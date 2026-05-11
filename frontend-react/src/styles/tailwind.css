@@ -22,7 +22,7 @@
   }
 
   .cp-btn-secondary {
-    @apply border-cockpit-accent bg-emerald-50 text-cockpit-accent hover:bg-emerald-100;
+    @apply border-sky-300 bg-sky-50 text-sky-800 hover:bg-sky-100;
   }
 
   .cp-btn-ghost {

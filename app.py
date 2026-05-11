@@ -155,6 +155,7 @@ except ValueError:
 META_MENSAL_RUNTIME_KEY = "gestor_meta_mensal"
 META_SEMANAL_RUNTIME_KEY = "gestor_meta_semanal"
 LAYOUT_BLACKHOLE_RUNTIME_KEY = "layout_blackhole_enabled"
+BLACKHOLE_LAYOUT_ALLOWED = os.getenv("BLACKHOLE_LAYOUT_ALLOWED", "false").lower() in {"1", "true", "yes", "on"}
 FRANKSTEIN_ALERT_EMAIL_TO_RUNTIME_KEY = "frankstein_alert_email_to"
 USERS_SEED_MODE_RUNTIME_KEY = "users_seed_mode"
 USERS_SEED_MODE_FULL = "full"
@@ -2360,6 +2361,8 @@ class LayoutPreferencePayload(BaseModel):
 
 class LayoutPreferenceOut(BaseModel):
     blackhole_enabled: bool
+    blackhole_allowed: bool = False
+    fonte: str = "runtime"
 
 
 class FranksteinAnalistaAprendizadoPayload(BaseModel):
@@ -4539,6 +4542,8 @@ def _runtime_meta_bool(raw_value: Optional[str], default: bool = False) -> bool:
 
 
 def _is_blackhole_layout_enabled(db: Session) -> bool:
+    if not BLACKHOLE_LAYOUT_ALLOWED:
+        return False
     return _runtime_meta_bool(_get_runtime_meta(db, LAYOUT_BLACKHOLE_RUNTIME_KEY), default=False)
 
 
@@ -7529,6 +7534,7 @@ def app_get_layout_preference(
 ):
     return LayoutPreferenceOut(
         blackhole_enabled=_is_blackhole_layout_enabled(db),
+        blackhole_allowed=BLACKHOLE_LAYOUT_ALLOWED,
         fonte="runtime",
     )
 
@@ -7540,6 +7546,7 @@ def admin_get_layout_preference(
 ):
     return LayoutPreferenceOut(
         blackhole_enabled=_is_blackhole_layout_enabled(db),
+        blackhole_allowed=BLACKHOLE_LAYOUT_ALLOWED,
         fonte="runtime",
     )
 
@@ -7550,7 +7557,7 @@ def admin_set_layout_preference(
     session: dict[str, Any] = Depends(require_roles(ROLE_ADMIN)),
     db: Session = Depends(get_db),
 ):
-    enabled = bool(payload.blackhole_enabled)
+    enabled = bool(payload.blackhole_enabled) and BLACKHOLE_LAYOUT_ALLOWED
     _set_runtime_meta(db, LAYOUT_BLACKHOLE_RUNTIME_KEY, "1" if enabled else "0")
     _record_system_log(
         db,
@@ -7563,7 +7570,7 @@ def admin_set_layout_preference(
         details=f"blackhole_enabled={enabled}",
     )
     db.commit()
-    return LayoutPreferenceOut(blackhole_enabled=enabled, fonte="runtime")
+    return LayoutPreferenceOut(blackhole_enabled=enabled, blackhole_allowed=BLACKHOLE_LAYOUT_ALLOWED, fonte="runtime")
 
 
 @app.get("/app/api/admin/frankstein-email-alerts", response_model=AdminFranksteinEmailAlertsOut)

@@ -1,4 +1,4 @@
-﻿@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap");
 
 :where(body.theme-corporate, body.tech-commercial) {
   --tech-bg-1: #f7fbff;
@@ -7,17 +7,17 @@
   --tech-surface: #ffffff;
   --tech-surface-soft: #f6fbff;
   --tech-border: rgba(15, 23, 42, 0.16);
-  --tech-border-strong: rgba(14, 116, 144, 0.34);
+  --tech-border-strong: rgba(37, 99, 235, 0.34);
   --tech-text: #0f172a;
   --tech-muted: #42546f;
-  --tech-primary: #0f9f98;
-  --tech-primary-strong: #0b7e78;
-  --tech-secondary: #0ea5e9;
+  --tech-primary: #0ea5e9;
+  --tech-primary-strong: #0369a1;
+  --tech-secondary: #2563eb;
   --tech-ok: #15803d;
   --tech-warn: #b45309;
   --tech-danger: #b91c1c;
   --tech-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-  background: radial-gradient(1200px 480px at 4% -16%, rgba(15, 159, 152, 0.14), transparent 60%), radial-gradient(1000px 420px at 96% 0%, rgba(14, 165, 233, 0.1), transparent 60%), linear-gradient(180deg, var(--tech-bg-1), var(--tech-bg-2) 58%, var(--tech-bg-3)) !important;
+  background: radial-gradient(1200px 480px at 4% -16%, rgba(14, 165, 233, 0.16), transparent 60%), radial-gradient(1000px 420px at 96% 0%, rgba(37, 99, 235, 0.1), transparent 60%), linear-gradient(180deg, var(--tech-bg-1), var(--tech-bg-2) 58%, var(--tech-bg-3)) !important;
   color: var(--tech-text) !important;
   font-family: "Sora", "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif !important;
 }
@@ -115,9 +115,9 @@
 :where(body.theme-corporate, body.tech-commercial) .mini .b.pri,
 :where(body.theme-corporate, body.tech-commercial) #btnFiltrar,
 :where(body.theme-corporate, body.tech-commercial) #btn-refresh {
-  border-color: rgba(15, 159, 152, 0.45) !important;
-  background: linear-gradient(180deg, #d8f6f2, #c8efe9) !important;
-  color: #0b5f5a !important;
+  border-color: rgba(37, 99, 235, 0.45) !important;
+  background: linear-gradient(180deg, #dbeafe, #bfdbfe) !important;
+  color: #075985 !important;
 }
 
 :where(body.theme-corporate, body.tech-commercial) .btn.success,
@@ -197,7 +197,7 @@
   top: 0;
   height: 4px;
   border-radius: 0 0 10px 10px;
-  background: linear-gradient(90deg, rgba(15, 159, 152, 0.9), rgba(14, 165, 233, 0.85));
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.9), rgba(14, 165, 233, 0.85));
   opacity: 0.95;
 }
 
@@ -211,13 +211,13 @@
 }
 
 :where(body.theme-corporate, body.tech-commercial) .kpi-card.kpi-ok::before {
-  background: linear-gradient(90deg, rgba(34, 197, 94, 0.92), rgba(15, 159, 152, 0.88));
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.92), rgba(14, 165, 233, 0.88));
 }
 
 :where(body.theme-corporate, body.tech-commercial) .kpi-card .kpi-icon {
-  background: #e8f7f5 !important;
-  color: #0d6b64 !important;
-  border: 1px solid rgba(15, 159, 152, 0.22) !important;
+  background: #e0f2fe !important;
+  color: #075985 !important;
+  border: 1px solid rgba(14, 165, 233, 0.24) !important;
   box-shadow: none !important;
 }
 
@@ -239,7 +239,7 @@
 }
 
 :where(body.theme-corporate, body.tech-commercial) .column:nth-child(1) .col-head {
-  box-shadow: inset 0 3px 0 #2dd4bf;
+  box-shadow: inset 0 3px 0 #0ea5e9;
 }
 :where(body.theme-corporate, body.tech-commercial) .column:nth-child(2) .col-head {
   box-shadow: inset 0 3px 0 #60a5fa;
@@ -343,11 +343,11 @@
 
 :where(body.theme-corporate, body.tech-commercial) .imob-bar-fill,
 :where(body.theme-corporate, body.tech-commercial) .progress > span {
-  background: linear-gradient(90deg, #14b8a6, #0ea5e9) !important;
+  background: linear-gradient(90deg, #2563eb, #0ea5e9) !important;
 }
 
 :where(body.theme-corporate, body.tech-commercial) .hero {
-  background: linear-gradient(135deg, #0f9f98, #0ea5e9) !important;
+  background: linear-gradient(135deg, #2563eb, #0ea5e9) !important;
 }
 
 :where(body.theme-corporate, body.tech-commercial) ::-webkit-scrollbar {
@@ -418,7 +418,7 @@
   top: 0;
   height: 4px;
   border-radius: 0 0 10px 10px;
-  background: linear-gradient(90deg, rgba(15, 159, 152, 0.92), rgba(14, 165, 233, 0.88));
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.92), rgba(14, 165, 233, 0.88));
   opacity: 0.95;
   pointer-events: none;
 }

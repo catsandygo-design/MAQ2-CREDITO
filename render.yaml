@@ -56,6 +56,8 @@ services:
         sync: false
       - key: AI_ASSISTANT_DISPLAY_NAME
         value: "Foguetinho"
+      - key: BLACKHOLE_LAYOUT_ALLOWED
+        value: "false"
       - key: EMAIL_DELIVERY_PROVIDER
         value: "brevo"
       - key: EMAIL_BREVO_API_KEY

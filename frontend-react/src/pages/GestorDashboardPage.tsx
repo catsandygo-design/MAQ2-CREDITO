@@ -1657,7 +1657,7 @@ export function GestorDashboardPage() {
                       { label: 'Aprovadas', color: '#4f8cff' },
                       { label: 'Condicionadas', color: '#f59e0b' },
                       { label: 'Reprovadas', color: '#ef4444' },
-                      { label: 'Total', color: '#14b8a6' },
+                      { label: 'Total', color: '#0ea5e9' },
                       { label: 'Meta', color: '#64748b', dashed: true },
                       { label: 'Forecast', color: '#22c55e', dashed: true },
                     ]}
@@ -1670,7 +1670,7 @@ export function GestorDashboardPage() {
                     { label: 'Aprovadas', color: '#4f8cff', data: proposalAnalytics.cumulativeApproved },
                     { label: 'Condicionadas', color: '#f59e0b', data: proposalAnalytics.cumulativeConditioned },
                     { label: 'Reprovadas', color: '#ef4444', data: proposalAnalytics.cumulativeRejected },
-                    { label: 'Total', color: '#14b8a6', data: proposalAnalytics.cumulativeTotal },
+                    { label: 'Total', color: '#0ea5e9', data: proposalAnalytics.cumulativeTotal },
                     { label: 'Meta', color: '#64748b', data: proposalAnalytics.cumulativeMeta, dashed: true },
                     { label: 'Forecast', color: '#22c55e', data: proposalAnalytics.cumulativeForecast, dashed: true },
                   ]}
@@ -1688,7 +1688,7 @@ export function GestorDashboardPage() {
                       { label: 'Aprovadas', color: '#4f8cff' },
                       { label: 'Condicionadas', color: '#f59e0b' },
                       { label: 'Reprovadas', color: '#ef4444' },
-                      { label: 'Total', color: '#14b8a6' },
+                      { label: 'Total', color: '#0ea5e9' },
                       { label: 'Meta dia', color: '#94a3b8', dashed: true },
                     ]}
                   />
@@ -1702,7 +1702,7 @@ export function GestorDashboardPage() {
                     { label: 'Reprovadas', color: '#ef4444', data: proposalAnalytics.dailyRejected },
                   ]}
                   lineSeries={[
-                    { label: 'Total', color: '#14b8a6', data: proposalAnalytics.dailyTotal },
+                    { label: 'Total', color: '#0ea5e9', data: proposalAnalytics.dailyTotal },
                     { label: 'Meta dia', color: '#94a3b8', data: proposalAnalytics.metaDay, dashed: true },
                   ]}
                 />
@@ -1730,7 +1730,7 @@ export function GestorDashboardPage() {
                   <Legend
                     items={[
                       { label: 'IPC Corretor', color: '#4f8cff' },
-                      { label: 'IPC Imobiliaria', color: '#14b8a6' },
+                      { label: 'IPC Imobiliaria', color: '#0ea5e9' },
                       { label: 'IPC Corretor anterior', color: '#64748b', dashed: true },
                       { label: 'IPC Imobiliaria anterior', color: '#94a3b8', dashed: true },
                       { label: 'Volume acumulado', color: '#cbd5e1' },
@@ -1743,7 +1743,7 @@ export function GestorDashboardPage() {
                   barSeries={[{ label: 'Volume acumulado', color: '#cbd5e1', data: ipcAnalytics.cumulativeSigned }]}
                   lineSeries={[
                     { label: 'IPC Corretor', color: '#4f8cff', data: ipcAnalytics.cumulativeIpcCorretor },
-                    { label: 'IPC Imobiliaria', color: '#14b8a6', data: ipcAnalytics.cumulativeIpcImobiliaria },
+                    { label: 'IPC Imobiliaria', color: '#0ea5e9', data: ipcAnalytics.cumulativeIpcImobiliaria },
                     { label: 'IPC Corretor anterior', color: '#64748b', data: ipcAnalytics.previousIpcCorretor, dashed: true },
                     { label: 'IPC Imobiliaria anterior', color: '#94a3b8', data: ipcAnalytics.previousIpcImobiliaria, dashed: true },
                   ]}
@@ -1761,7 +1761,7 @@ export function GestorDashboardPage() {
                       { label: 'Volume do dia', color: '#cbd5e1' },
                       { label: 'Repasses do dia', color: '#4f8cff' },
                       { label: 'IPC do dia', color: '#4f8cff' },
-                      { label: 'Meta IPC', color: '#14b8a6', dashed: true },
+                      { label: 'Meta IPC', color: '#0ea5e9', dashed: true },
                     ]}
                   />
                 </header>
@@ -1774,7 +1774,7 @@ export function GestorDashboardPage() {
                   ]}
                   lineSeries={[
                     { label: 'IPC do dia', color: '#4f8cff', data: ipcAnalytics.dailyIpc },
-                    { label: 'Meta IPC', color: '#14b8a6', data: ipcAnalytics.metaIpc, dashed: true },
+                    { label: 'Meta IPC', color: '#0ea5e9', data: ipcAnalytics.metaIpc, dashed: true },
                   ]}
                 />
               </section>
