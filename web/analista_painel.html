@@ -1152,6 +1152,25 @@
     border-bottom-color: rgba(34,197,94,.55);
     color: var(--accent);
   }
+  .clienteOpenBtn{
+    flex:0 0 auto;
+    min-height:24px;
+    padding:4px 9px;
+    border-radius:999px;
+    border:1px solid rgba(14,165,233,.34) !important;
+    background:rgba(14,165,233,.10);
+    color:var(--text) !important;
+    font-size:10px;
+    font-weight:900;
+    line-height:1;
+    text-decoration:none !important;
+    white-space:nowrap;
+  }
+  .clienteOpenBtn:hover{
+    background:rgba(14,165,233,.18);
+    color:var(--accent) !important;
+    transform:translateY(-1px);
+  }
   .rendaDuplicadaBadge{
     display:inline-flex;
     align-items:center;
@@ -3662,6 +3681,7 @@
                 <span class="clienteAnim ${animState} hintTip" data-tip="${processTooltip}" title="${processTooltip}" aria-hidden="true"></span>
                 ${rendaDupBadge}
                 <a href="${url}" title="Abrir atualizacao">${esc(r.cliente)}</a>
+                <a class="clienteOpenBtn" href="${url}" data-open-process="1" title="Abrir analise do cliente">Abrir</a>
               </div>
             </div>
             <div class="empreendimento">${esc(r.emp)}</div>
@@ -3779,6 +3799,10 @@
       if (targetUrl.origin !== window.location.origin) return;
       if (targetUrl.href === window.location.href) return;
       event.preventDefault();
+      if (anchor.dataset.openProcess === "1" || targetUrl.pathname === "/app/analise") {
+        window.location.assign(targetUrl.href);
+        return;
+      }
       document.body.classList.remove("page-ready");
       document.body.classList.add("page-leaving");
       window.setTimeout(() => {

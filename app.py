@@ -97,6 +97,7 @@ logger = logging.getLogger("sistema_credito")
 
 WEB_DIR = Path(__file__).resolve().parent / "web"
 REACT_DIST_DIR = Path(__file__).resolve().parent / "frontend-react" / "dist"
+USE_REACT_ANALISTA = os.getenv("USE_REACT_ANALISTA", "false").lower() in {"1", "true", "yes"}
 DATA_DIR = Path(__file__).resolve().parent / "data"
 DATA_DIR.mkdir(exist_ok=True, parents=True)
 FRANKSTEIN_RAW_DIR = DATA_DIR / "raw"
@@ -2172,6 +2173,9 @@ class ProcessoOut(BaseModel):
     status_sinal: str
     valor_sinal: Optional[float] = None
     renda_bruta: Optional[float] = None
+    renda_bruta_duplicada: bool = False
+    renda_bruta_duplicada_clientes: list[str] = Field(default_factory=list)
+    renda_bruta_duplicada_tooltip: Optional[str] = None
     renda_liquida: Optional[float] = None
     valor_parcela: Optional[float] = None
     valor_parcela_7lm: Optional[float] = None
@@ -4235,6 +4239,32 @@ def _build_renda_bruta_duplicate_lookup(rows: list[tuple[Any, Any, Any]]) -> dic
     return lookup
 
 
+def _apply_renda_bruta_duplicate_metadata(
+    db: Session,
+    processo_out: ProcessoOut,
+    processo_id: uuid.UUID,
+    role: Optional[str],
+) -> ProcessoOut:
+    allowed_roles = {ROLE_ANALISTA, ROLE_GESTOR, ROLE_GESTOR_CREDITO, ROLE_ADMIN}
+    if _normalize_role(str(role or "")) not in allowed_roles:
+        processo_out.renda_bruta_duplicada = False
+        processo_out.renda_bruta_duplicada_clientes = []
+        processo_out.renda_bruta_duplicada_tooltip = None
+        return processo_out
+
+    rows = (
+        db.query(Processo.id, Processo.renda_bruta, Cliente.nome)
+        .join(Cliente, Processo.cliente_id == Cliente.id)
+        .filter(_processos_ativos_clause())
+        .all()
+    )
+    duplicate = _build_renda_bruta_duplicate_lookup(rows).get(str(processo_id), {})
+    processo_out.renda_bruta_duplicada = bool(duplicate)
+    processo_out.renda_bruta_duplicada_clientes = list(duplicate.get("clientes") or [])
+    processo_out.renda_bruta_duplicada_tooltip = duplicate.get("tooltip")
+    return processo_out
+
+
 def _resolve_cheque_moradia_valor(db: Session, obra_nome: Optional[str]) -> float:
     obra = _normalize_empreendimento_nome(obra_nome)
     if not obra:
@@ -6078,7 +6108,7 @@ def app_analista_page(request: Request):
         target = f"/app/analise?processo_id={processo_id}"
         return RedirectResponse(url=target, status_code=302)
 
-    if REACT_DIST_DIR.exists():
+    if USE_REACT_ANALISTA and REACT_DIST_DIR.exists():
         return RedirectResponse(url="/app-react/analista", status_code=302)
 
     return _html_page("analista_painel.html")
@@ -10428,6 +10458,7 @@ def app_get_processo_full(
     processo_out.etapa_repasse = _process_etapa_repasse(processo.etapa_repasse)
     processo_out.fila_atual = _fila_atual_from_processo(processo)
     processo_out.nao_contar_mes = _is_nao_contar_mes_active(processo, now)
+    _apply_renda_bruta_duplicate_metadata(db, processo_out, processo.id, role)
 
     return ProcessoFullOut(
         processo=processo_out,
@@ -11004,6 +11035,7 @@ def app_patch_processo(
     processo_out.etapa_repasse = _process_etapa_repasse(processo.etapa_repasse)
     processo_out.fila_atual = _fila_atual_from_processo(processo)
     processo_out.nao_contar_mes = _is_nao_contar_mes_active(processo, now)
+    _apply_renda_bruta_duplicate_metadata(db, processo_out, processo.id, actor_role)
     return processo_out
 
 
