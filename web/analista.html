@@ -2318,8 +2318,8 @@ DIVORCIADO: Certidão averbada.</td>
           </div>
 
           <div class="vencimento-calendar-title">
-            <span>Dias possiveis de assinatura</span>
-            <span>clique para simular</span>
+            <span>Simulacao de datas de assinatura</span>
+            <span id="vencimentoCalendarHint">clique para ver a regra</span>
           </div>
           <div id="calendarioVencimento" class="vencimento-calendar"></div>
         </div>
@@ -3430,6 +3430,11 @@ DIVORCIADO: Certidão averbada.</td>
       status.textContent = text;
     }
 
+    function setCalendarHint(text) {
+      const hint = byId("vencimentoCalendarHint");
+      if (hint) hint.textContent = text;
+    }
+
     function getSimulatorState() {
       const mesBase = byId("mesBaseVencimento")?.value || "";
       const diaClienteRaw = String(byId("diaClienteVencimento")?.value || "").trim();
@@ -3551,7 +3556,7 @@ DIVORCIADO: Certidão averbada.</td>
 
         setResult(
           "blocked",
-          `Prazo curto: ${info.prazo} dias.\n\nNova assinatura sugerida: ${formatDateBr(novaAssinatura)}\nNovo vencimento: ${formatDateBr(novoVencimento)}${cappedDayNotice(state)}`
+          `Prazo curto: ${info.prazo} dias.\n\nA data clicada deixa apenas ${info.prazo} dia(s) entre assinatura e vencimento. A regra exige pelo menos 15 dias.\n\nNova assinatura sugerida: ${formatDateBr(novaAssinatura)}\nNovo vencimento: ${formatDateBr(novoVencimento)}${cappedDayNotice(state)}`
         );
         return;
       }
@@ -3598,34 +3603,40 @@ DIVORCIADO: Certidão averbada.</td>
       const calendar = byId("calendarioVencimento");
       if (!calendar) return;
       calendar.innerHTML = "";
+      setCalendarHint("clique para ver a regra");
       applyInputValidity(state);
 
       if (state.diaInvalido) {
         setStatus("bad", "Dia invalido");
+        setCalendarHint("corrija o dia informado");
         setResult("blocked", `Dia desejado "${state.diaClienteRaw}" nao existe.\n\nInforme um dia entre 1 e 31. Pela regra operacional, dias 26 a 31 sao ajustados para 25; valores acima de 31 ficam bloqueados.`);
         return;
       }
 
       if (state.mesAnteriorAoVigente) {
         setStatus("bad", "Mes bloqueado");
+        setCalendarHint("mes anterior bloqueado");
         setResult("blocked", `Mes base anterior ao mes vigente.\n\nUse ${monthValueFromUtcDate(state.mesVigente)} ou um mes dentro da janela de 40 dias.`);
         return;
       }
 
       if (state.mesMaiorQueJanela) {
         setStatus("bad", "Mes bloqueado");
+        setCalendarHint("fora da janela");
         setResult("blocked", `Mes base fora da janela de 40 dias.\n\nLimite atual: ${formatDateBr(state.dataLimite)}.`);
         return;
       }
 
       if (state.vencimentoAntesDeHoje) {
         setStatus("bad", "Data bloqueada");
+        setCalendarHint("vencimento no passado");
         setResult("blocked", `Vencimento anterior a data atual.\n\nInforme um vencimento a partir de ${formatDateBr(state.hoje)}.`);
         return;
       }
 
       if (!state.valid) {
         setStatus("neutral", "Aguardando");
+        setCalendarHint("preencha dia e mes");
         setResult("", "Informe o dia desejado e o mes base para gerar a simulacao.");
         return;
       }
@@ -3636,6 +3647,7 @@ DIVORCIADO: Certidão averbada.</td>
       const fimDisponivel = addUtcDays(state.vencimento, -1);
       if (inicioDisponivel > fimDisponivel) {
         setStatus("bad", "Sem data valida");
+        setCalendarHint("nenhuma data liberada");
         setResult(
           "blocked",
           `Nao ha dia de assinatura disponivel para este vencimento considerando a carencia de ${DIAS_MINIMOS_VALIDACAO_ASSINATURA} dias.\n\nHoje: ${formatDateBr(state.hoje)}.\nPrimeiro dia permitido: ${formatDateBr(state.dataMinimaAssinatura)}.\nEscolha um vencimento futuro.`
@@ -3680,6 +3692,7 @@ DIVORCIADO: Certidão averbada.</td>
 
       if (diasValidos <= 0) {
         setStatus("bad", "Sem data valida");
+        setCalendarHint("nenhuma data liberada");
         setResult(
           "blocked",
           `Vencimento: ${formatDateBr(state.vencimento)}.\nNao ha assinatura valida a partir de ${formatDateBr(state.dataMinimaAssinatura)} para esse vencimento.\n\nO processo pode levar ate ${DIAS_MINIMOS_VALIDACAO_ASSINATURA} dias entre validacao, relacionamento, envio a conformidade e validacao final. As datas exibidas ficam bloqueadas por essa carencia.${cappedDayNotice(state)}`
@@ -3688,6 +3701,7 @@ DIVORCIADO: Certidão averbada.</td>
       }
 
       setStatus("neutral", "Calendario pronto");
+      setCalendarHint(`${diasValidos} data(s) liberada(s)`);
       setResult(
         "",
         `Vencimento: ${formatDateBr(state.vencimento)}.\nAssinaturas possiveis a partir de ${formatDateBr(primeiraAssinaturaPossivel)}. Datas de hoje ate ${DIAS_MINIMOS_VALIDACAO_ASSINATURA} dias ficam bloqueadas pela carencia operacional.\nClique no dia de assinatura para ver a orientacao.${cappedDayNotice(state)}`
@@ -4183,6 +4197,7 @@ DIVORCIADO: Certidão averbada.</td>
       const totalPrestacoes = prestacaoCaixa + prestacao7lm;
       const percent = rendaLiquida > 0 ? (totalPrestacoes / rendaLiquida) * 100 : 0;
       const allIncomeFieldsEmpty = rendaLiquida <= 0 && prestacaoCaixa <= 0 && prestacao7lm <= 0;
+      const missingCaixa = rendaLiquida > 0 && prestacaoCaixa <= 0;
       const missing7lm = rendaLiquida > 0 && prestacaoCaixa > 0 && prestacao7lm <= 0;
       const info = allIncomeFieldsEmpty
         ? {
@@ -4191,6 +4206,13 @@ DIVORCIADO: Certidão averbada.</td>
             label: "Dados pendentes",
             hint: "Dados nao preenchidos. Informe renda liquida, prestacao Caixa e prestacao 7LM.",
           }
+        : missingCaixa
+          ? {
+              kind: "missing",
+              pill: "bad",
+              label: "Prestacao Caixa pendente",
+              hint: "Financiamento sem parcela do banco nao fecha a validacao. Informe a prestacao Caixa antes de seguir.",
+            }
         : classifyComprometimento(percent, rendaLiquida, totalPrestacoes);
       const percentText = formatPercent(percent);
 
@@ -4232,6 +4254,7 @@ DIVORCIADO: Certidão averbada.</td>
       const prestacaoCaixa = readMoneyField("prestacao-caixa");
       const prestacao7lm = readMoneyField("prestacao-7lm");
       const allIncomeFieldsEmpty = rendaLiquida <= 0 && prestacaoCaixa <= 0 && prestacao7lm <= 0;
+      const missingCaixa = rendaLiquida > 0 && prestacaoCaixa <= 0;
       const missing7lm = rendaLiquida > 0 && prestacaoCaixa > 0 && prestacao7lm <= 0;
       const totalPrestacoes = prestacaoCaixa + prestacao7lm;
       const percent = rendaLiquida > 0 ? (totalPrestacoes / rendaLiquida) * 100 : 0;
@@ -4242,8 +4265,15 @@ DIVORCIADO: Certidão averbada.</td>
             label: "Dados pendentes",
             hint: "Dados nao preenchidos.",
           }
+        : missingCaixa
+          ? {
+              kind: "missing",
+              pill: "bad",
+              label: "Prestacao Caixa pendente",
+              hint: "Financiamento sem parcela do banco nao fecha a validacao.",
+            }
         : classifyComprometimento(percent, rendaLiquida, totalPrestacoes);
-      return { rendaLiquida, prestacaoCaixa, prestacao7lm, totalPrestacoes, percent, info, allIncomeFieldsEmpty, missing7lm, entrada7lmSemEntradaConfirmada };
+      return { rendaLiquida, prestacaoCaixa, prestacao7lm, totalPrestacoes, percent, info, allIncomeFieldsEmpty, missingCaixa, missing7lm, entrada7lmSemEntradaConfirmada };
     }
 
     let franksteinLearnedPatterns = [];
@@ -4541,6 +4571,8 @@ DIVORCIADO: Certidão averbada.</td>
       const comp = getComprometimentoSnapshot();
       if (comp.allIncomeFieldsEmpty) {
         addFranksteinRule(items, "bloqueio", "Dados de renda nao preenchidos", "Informe renda liquida, prestacao Caixa e prestacao 7LM. O 0,00% nao deve ser tratado como OK quando os campos estao vazios.");
+      } else if (comp.missingCaixa) {
+        addFranksteinRule(items, "bloqueio", "Prestacao Caixa nao preenchida", "Informe a prestacao Caixa. Nao ha financiamento imobiliario sem parcela do banco.");
       } else if (comp.missing7lm && !comp.entrada7lmSemEntradaConfirmada) {
         addFranksteinRule(items, "atencao", "Prestacao 7LM pendente", "Confirme se no fluxo do cliente nao houve entrada ou informe a parcela 7LM.");
       } else if (comp.missing7lm && comp.entrada7lmSemEntradaConfirmada) {
@@ -4565,7 +4597,7 @@ DIVORCIADO: Certidão averbada.</td>
       if (rendaBruta <= 0) {
         addFranksteinRule(items, "bloqueio", "Renda bruta nao preenchida", "Informe a renda bruta do cliente para o Foguetinho validar FGTS futuro, Agehab e renda duplicada.");
       }
-      if (comp.prestacaoCaixa <= 0) {
+      if (comp.prestacaoCaixa <= 0 && !comp.missingCaixa) {
         addFranksteinRule(items, "bloqueio", "Prestacao Caixa nao preenchida", "Informe a prestacao Caixa para calcular parcela sobre renda bruta e comprometimento.");
       }
       updateRendaBrutaDuplicateIndicator();
@@ -4967,6 +4999,13 @@ DIVORCIADO: Certidão averbada.</td>
       if (rendaLiquida <= 0 && (prestacaoCaixa > 0 || prestacao7lm > 0)) {
         alert("Nao e possivel salvar: existe prestacao informada, mas a renda liquida esta zerada. Preencha a renda liquida do cliente antes de salvar.");
         byId("renda-liquida-cliente")?.focus();
+        updateComprometimento();
+        runFranksteinValidation();
+        return;
+      }
+      if (rendaLiquida > 0 && prestacaoCaixa <= 0) {
+        alert("Nao e possivel salvar: a prestacao Caixa esta zerada. Informe a parcela do banco antes de salvar.");
+        byId("prestacao-caixa")?.focus();
         updateComprometimento();
         runFranksteinValidation();
         return;
