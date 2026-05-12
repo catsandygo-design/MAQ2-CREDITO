@@ -2172,6 +2172,9 @@ class ProcessoOut(BaseModel):
     status_sinal: str
     valor_sinal: Optional[float] = None
     renda_bruta: Optional[float] = None
+    renda_bruta_duplicada: bool = False
+    renda_bruta_duplicada_clientes: list[str] = Field(default_factory=list)
+    renda_bruta_duplicada_tooltip: Optional[str] = None
     renda_liquida: Optional[float] = None
     valor_parcela: Optional[float] = None
     valor_parcela_7lm: Optional[float] = None
@@ -4233,6 +4236,31 @@ def _build_renda_bruta_duplicate_lookup(rows: list[tuple[Any, Any, Any]]) -> dic
                 "tooltip": tooltip,
             }
     return lookup
+
+
+def _apply_renda_bruta_duplicate_metadata(
+    db: Session,
+    processo_out: ProcessoOut,
+    processo_id: uuid.UUID,
+    role: str,
+    username: str,
+) -> ProcessoOut:
+    query = (
+        db.query(Processo.id, Processo.renda_bruta, Cliente.nome)
+        .join(Cliente, Processo.cliente_id == Cliente.id)
+        .filter(_processos_ativos_clause())
+    )
+    if role == ROLE_CORRETOR and username:
+        query = query.filter(func.lower(func.trim(func.coalesce(Cliente.corretor, ""))) == username)
+    elif role == ROLE_CCA and username:
+        query = query.filter(func.lower(func.trim(func.coalesce(Processo.cca_responsavel, ""))) == username)
+
+    duplicate_lookup = _build_renda_bruta_duplicate_lookup(query.all())
+    duplicate = duplicate_lookup.get(str(processo_id), {})
+    processo_out.renda_bruta_duplicada = bool(duplicate)
+    processo_out.renda_bruta_duplicada_clientes = list(duplicate.get("clientes") or [])
+    processo_out.renda_bruta_duplicada_tooltip = duplicate.get("tooltip")
+    return processo_out
 
 
 def _resolve_cheque_moradia_valor(db: Session, obra_nome: Optional[str]) -> float:
@@ -10428,6 +10456,7 @@ def app_get_processo_full(
     processo_out.etapa_repasse = _process_etapa_repasse(processo.etapa_repasse)
     processo_out.fila_atual = _fila_atual_from_processo(processo)
     processo_out.nao_contar_mes = _is_nao_contar_mes_active(processo, now)
+    _apply_renda_bruta_duplicate_metadata(db, processo_out, processo.id, role, username)
 
     return ProcessoFullOut(
         processo=processo_out,
@@ -11004,6 +11033,7 @@ def app_patch_processo(
     processo_out.etapa_repasse = _process_etapa_repasse(processo.etapa_repasse)
     processo_out.fila_atual = _fila_atual_from_processo(processo)
     processo_out.nao_contar_mes = _is_nao_contar_mes_active(processo, now)
+    _apply_renda_bruta_duplicate_metadata(db, processo_out, processo.id, actor_role, actor_username)
     return processo_out
 
 

@@ -419,6 +419,36 @@
       color: var(--muted);
       font-weight:600;
     }
+    .money-alert-wrap{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      min-width:0;
+    }
+    .money-alert-wrap input{
+      flex:1 1 auto;
+      min-width:0;
+    }
+    .rd-badge{
+      flex:0 0 auto;
+      min-width:34px;
+      min-height:30px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:999px;
+      border:1px solid rgba(239,68,68,.72);
+      background:rgba(239,68,68,.12);
+      color:#fecaca;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.3px;
+      cursor:help;
+    }
+    .fg.has-renda-duplicada input{
+      border-color:rgba(239,68,68,.9) !important;
+      box-shadow:0 0 0 2px rgba(239,68,68,.18);
+    }
     .dep-sem-def-wrap{
       margin-top: 6px;
       padding: 8px 10px;
@@ -1121,42 +1151,85 @@
     .vencimento-calendar{
       display:grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
-      gap:5px;
+      gap:7px;
       margin-top:10px;
+      padding:10px;
+      border:1px solid rgba(148,163,184,.14);
+      border-radius:14px;
+      background:rgba(15,23,42,.22);
+    }
+    .vencimento-weekday{
+      min-height:24px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:var(--muted);
+      font-size:var(--fs-xxs);
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+    }
+    .vencimento-empty{
+      min-height:44px;
+      border-radius:10px;
+      background:rgba(148,163,184,.06);
+      border:1px dashed rgba(148,163,184,.12);
     }
     .vencimento-day{
-      min-height:34px;
+      min-height:48px;
       border:1px solid rgba(148,163,184,.16);
-      border-radius:8px;
+      border-radius:10px;
       background: rgba(15,23,42,.50);
       color:var(--text);
       cursor:pointer;
       font-size:var(--fs-xs);
       font-weight:900;
       transition:.12s ease;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:1px;
+      box-shadow:0 8px 18px rgba(2,6,23,.10);
     }
     .vencimento-day:hover{
       transform:translateY(-1px);
       border-color: rgba(15,23,42,.28);
     }
+    .vencimento-day-main{
+      display:block;
+      font-size:15px;
+      line-height:1;
+    }
+    .vencimento-day-sub{
+      display:block;
+      font-size:10px;
+      line-height:1;
+      opacity:.76;
+      text-transform:uppercase;
+      letter-spacing:.03em;
+    }
     .vencimento-day.is-blocked{
-      background:#fee2e2;
-      color:#991b1b;
-      border-color:#fecaca;
+      background:#fff1f2;
+      color:#9f1239;
+      border-color:#fecdd3;
+      cursor:not-allowed;
+      box-shadow:none;
     }
     .vencimento-day.is-risk{
-      background:#fef3c7;
+      background:#fffbeb;
       color:#92400e;
       border-color:#fde68a;
     }
     .vencimento-day.is-good{
-      background:#dcfce7;
-      color:#166534;
-      border-color:#bbf7d0;
+      background:#eff6ff;
+      color:#075985;
+      border-color:#93c5fd;
     }
     .vencimento-day.is-selected{
-      outline:2px solid rgba(15,23,42,.82);
-      outline-offset:1px;
+      outline:2px solid rgba(14,165,233,.90);
+      outline-offset:2px;
+      box-shadow:0 0 0 4px rgba(14,165,233,.14), 0 12px 24px rgba(2,6,23,.14);
     }
     .vencimento-legend{
       display:flex;
@@ -1271,6 +1344,10 @@
       border-color: rgba(127,29,29,.48);
       background: rgba(127,29,29,.16);
     }
+    .comprometimento-result.is-missing{
+      border-color: rgba(239,68,68,.52);
+      background: rgba(239,68,68,.12);
+    }
     .renda-complementar-fields{
       margin-top:10px;
       padding:10px;
@@ -1302,6 +1379,29 @@
     .renda-complementar-dialog b{
       display:block;
       margin-bottom:3px;
+    }
+    .entrada-7lm-dialog{
+      display:none;
+      margin-top:10px;
+      padding:10px;
+      border-radius:12px;
+      border:1px solid rgba(245,158,11,.42);
+      background:rgba(245,158,11,.10);
+      font-size:var(--fs-sm);
+      line-height:1.35;
+    }
+    .entrada-7lm-dialog.is-visible{
+      display:block;
+    }
+    .entrada-7lm-dialog b{
+      display:block;
+      margin-bottom:3px;
+    }
+    .entrada-7lm-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:8px;
     }
     .frankstein-validator{
       margin:0 0 12px;
@@ -1437,6 +1537,8 @@
     body.theme-corporate .comprometimento-result.is-warn{background:#fffbeb;border-color:#fde68a}
     body.theme-corporate .comprometimento-result.is-critical{background:#fef2f2;border-color:#fecaca}
     body.theme-corporate .comprometimento-result.is-complementar{background:#fee2e2;border-color:#fca5a5}
+    body.theme-corporate .comprometimento-result.is-missing{background:#fef2f2;border-color:#fca5a5}
+    body.theme-corporate .rd-badge{background:#fee2e2;border-color:#ef4444;color:#991b1b}
     body.theme-corporate .renda-complementar-fields{
       background:#fff7ed;
       border-color:#fdba74;
@@ -1444,6 +1546,11 @@
     body.theme-corporate .renda-complementar-dialog{
       background:#fef2f2;
       border-color:#fecaca;
+      color:#0f172a;
+    }
+    body.theme-corporate .entrada-7lm-dialog{
+      background:#fffbeb;
+      border-color:#fde68a;
       color:#0f172a;
     }
     body.theme-corporate .frankstein-validator{
@@ -1466,6 +1573,43 @@
     }
     body.theme-corporate .vencimento-rule b{
       color:#0f172a;
+    }
+    body.theme-corporate .vencimento-calendar{
+      background:#f8fafc;
+      border-color:rgba(15,23,42,.10);
+    }
+    body.theme-corporate .vencimento-weekday{
+      color:#64748b;
+    }
+    body.theme-corporate .vencimento-empty{
+      background:#f1f5f9;
+      border-color:rgba(100,116,139,.16);
+    }
+    body.theme-corporate .vencimento-day{
+      background:#ffffff;
+      color:#0f172a;
+      border-color:rgba(15,23,42,.12);
+      box-shadow:0 8px 16px rgba(15,23,42,.06);
+    }
+    body.theme-corporate .vencimento-day:hover{
+      border-color:#38bdf8;
+      box-shadow:0 10px 20px rgba(14,165,233,.12);
+    }
+    body.theme-corporate .vencimento-day.is-blocked{
+      background:#fff1f2;
+      color:#9f1239;
+      border-color:#fecdd3;
+      box-shadow:none;
+    }
+    body.theme-corporate .vencimento-day.is-risk{
+      background:#fffbeb;
+      color:#92400e;
+      border-color:#fde68a;
+    }
+    body.theme-corporate .vencimento-day.is-good{
+      background:#eff6ff;
+      color:#075985;
+      border-color:#93c5fd;
     }
     body.theme-corporate .vencimento-result{
       background:#f8fafc;
@@ -1591,18 +1735,6 @@
           </article>
         </div>
 
-        <div class="section-nav" aria-label="Navegacao rapida por secoes">
-          <button class="section-chip active" type="button" data-section-nav="sec-proponente" data-docs="proponente"><span>Proponente</span><b>0/0</b></button>
-          <button class="section-chip" type="button" data-section-nav="sec-dep-menor" data-docs="depmenor"><span>Dep. menor</span><b>0/0</b></button>
-          <button class="section-chip" type="button" data-section-nav="sec-dep-maior" data-docs="depmaior"><span>Dep. maior</span><b>0/0</b></button>
-          <button class="section-chip" type="button" data-section-nav="sec-renda-clt" data-docs="rendaclt"><span>Renda CLT</span><b>0/0</b></button>
-          <button class="section-chip" type="button" data-section-nav="sec-renda-informal" data-docs="rendainf"><span>Renda informal</span><b>0/0</b></button>
-          <button class="section-chip" type="button" data-section-nav="sec-aposentado" data-docs="apos"><span>Aposentado</span><b>0/0</b></button>
-          <button class="section-chip" type="button" data-section-nav="sec-domestico" data-docs="dom"><span>Domestico</span><b>0/0</b></button>
-          <button class="section-chip" type="button" data-section-nav="sec-caixa" data-docs="caixa"><span>Caixa</span><b>0/0</b></button>
-          <button class="section-chip" type="button" data-section-nav="sec-agehab" data-docs="agehab"><span>Agehab</span><b>0/0</b></button>
-        </div>
-
         <!-- ====== Dados / Regras (compacto) ====== -->
         <div class="form-grid process-data-grid" aria-label="Dados do processo e regras">
           <div class="fg">
@@ -1647,6 +1779,7 @@
             <label for="tipo-dependente">Tipo de dependente</label>
             <select id="tipo-dependente">
               <option value="nao-definido">Nao definido</option>
+              <option value="conjuge">Conjuge</option>
               <option value="filho-menor">Filho menor</option>
               <option value="filho-maior">Filho maior</option>
               <option value="tio-tia">Tio/Tia</option>
@@ -1706,9 +1839,12 @@
               <option value="sim">CCA gerou formulários</option>
             </select>
           </div>
-          <div class="fg">
+          <div class="fg" id="renda-bruta-group">
             <label for="renda-bruta-cliente">Renda bruta do cliente (R$)</label>
-            <input id="renda-bruta-cliente" type="number" min="0" step="0.01" value="0.00">
+            <div class="money-alert-wrap">
+              <input id="renda-bruta-cliente" type="number" min="0" step="0.01" value="0.00">
+              <span id="rendaBrutaDuplicadaBadge" class="rd-badge" hidden title="">RD</span>
+            </div>
           </div>
           <div class="fg" id="unidade-retomada-group" style="display:none">
             <label for="unidade-retomada-agehab">Unidade retomada?</label>
@@ -2161,11 +2297,11 @@ DIVORCIADO: Certidão averbada.</td>
             </div>
             <div class="vencimento-rule">
               <b>Assinatura</b>
-              <span>Dias 26 em diante ficam bloqueados.</span>
+              <span>Antes de hoje bloqueia; ate 15 dias entra na carencia operacional.</span>
             </div>
             <div class="vencimento-rule">
               <b>Prazo</b>
-              <span>Menos de 15 bloqueia; 15 a 30 pede atencao.</span>
+              <span>Validacao, relacionamento e conformidade podem levar ate 15 dias.</span>
             </div>
           </div>
 
@@ -2215,6 +2351,15 @@ DIVORCIADO: Certidão averbada.</td>
           <div id="comprometimentoResultado" class="comprometimento-result is-ok">
             <strong>0,00% - OK</strong>
             <span>Faixa: 0 a 30.</span>
+          </div>
+
+          <div id="entrada7lmDialog" class="entrada-7lm-dialog" role="alert">
+            <b>Prestacao 7LM nao preenchida</b>
+            <span>No fluxo do cliente nao houve entrada?</span>
+            <div class="entrada-7lm-actions">
+              <button class="btn" type="button" id="btnEntrada7lmSemEntrada">Sim, sem entrada</button>
+              <button class="btn" type="button" id="btnEntrada7lmInformar">Nao, informar 7LM</button>
+            </div>
           </div>
 
           <div id="rendaComplementarDialog" class="renda-complementar-dialog" role="alert">
@@ -2909,6 +3054,16 @@ DIVORCIADO: Certidão averbada.</td>
     const ec = $("estado-civil-proponente").value;
     const show = (ec==="casado" || ec==="uniao-estavel");
     setDisplay($("conjuge-renda-group"), show, "block");
+    const tipoDependente = $("tipo-dependente");
+    if (tipoDependente) {
+      if (show && tipoDependente.value !== "conjuge") {
+        tipoDependente.value = "conjuge";
+        atualizarDependente();
+      } else if (!show && tipoDependente.value === "conjuge") {
+        tipoDependente.value = "nao-definido";
+        atualizarDependente();
+      }
+    }
   }
 
   function atualizarCca(){
@@ -3199,6 +3354,7 @@ DIVORCIADO: Certidão averbada.</td>
 <script>
   (function () {
     const MS_PER_DAY = 1000 * 60 * 60 * 24;
+    const DIAS_MINIMOS_VALIDACAO_ASSINATURA = 15;
 
     function byId(id) {
       return document.getElementById(id);
@@ -3229,6 +3385,10 @@ DIVORCIADO: Certidão averbada.</td>
       return Math.ceil((toDate.getTime() - fromDate.getTime()) / MS_PER_DAY);
     }
 
+    function maxUtcDate(first, second) {
+      return first > second ? first : second;
+    }
+
     function formatDateBr(date) {
       if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "-";
       return `${pad2(date.getUTCDate())}/${pad2(date.getUTCMonth() + 1)}/${date.getUTCFullYear()}`;
@@ -3236,6 +3396,11 @@ DIVORCIADO: Certidão averbada.</td>
 
     function isoDateKey(date) {
       return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
+    }
+
+    function monthShortBr(date) {
+      const months = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+      return months[date.getUTCMonth()] || "";
     }
 
     function monthValueFromDateLike(value) {
@@ -3272,6 +3437,7 @@ DIVORCIADO: Certidão averbada.</td>
       const hoje = todayUtc();
       const mesVigente = makeUtcDate(hoje.getUTCFullYear(), hoje.getUTCMonth(), 1);
       const dataLimite = addUtcDays(hoje, 40);
+      const dataMinimaAssinatura = addUtcDays(hoje, DIAS_MINIMOS_VALIDACAO_ASSINATURA + 1);
       const diaInvalido = Boolean(
         diaClienteRaw &&
         (!Number.isInteger(diaClienteOriginal) || diaClienteOriginal < 1 || diaClienteOriginal > 31)
@@ -3304,6 +3470,7 @@ DIVORCIADO: Certidão averbada.</td>
         hoje,
         mesVigente,
         dataLimite,
+        dataMinimaAssinatura,
         vencimento,
         valid,
       };
@@ -3314,11 +3481,13 @@ DIVORCIADO: Certidão averbada.</td>
       const prazo = diffDays(assinatura, vencimento);
       const bloqueadoPorDia = false;
       const bloqueadoPorPrazo = prazo < 15;
-      const bloqueadoPorJanela = assinatura > state.dataLimite || assinatura < state.hoje;
+      const bloqueadoPorPassado = assinatura < state.hoje;
+      const bloqueadoPorValidacao = !bloqueadoPorPassado && assinatura < state.dataMinimaAssinatura;
+      const bloqueadoPorJanela = assinatura > state.dataLimite || bloqueadoPorPassado || bloqueadoPorValidacao;
       let kind = "good";
       if (bloqueadoPorDia || bloqueadoPorPrazo || bloqueadoPorJanela) kind = "blocked";
       else if (prazo <= 30) kind = "risk";
-      return { assinatura, vencimento, prazo, bloqueadoPorDia, bloqueadoPorPrazo, bloqueadoPorJanela, kind };
+      return { assinatura, vencimento, prazo, bloqueadoPorDia, bloqueadoPorPrazo, bloqueadoPorPassado, bloqueadoPorValidacao, bloqueadoPorJanela, kind };
     }
 
     function statusForKind(kind) {
@@ -3388,6 +3557,20 @@ DIVORCIADO: Certidão averbada.</td>
       }
 
       if (info.bloqueadoPorJanela) {
+        if (info.bloqueadoPorPassado) {
+          setResult(
+            "blocked",
+            `Data no passado.\n\nA assinatura ${formatDateBr(info.assinatura)} nao pode ser usada porque hoje e ${formatDateBr(state.hoje)}.`
+          );
+          return;
+        }
+        if (info.bloqueadoPorValidacao) {
+          setResult(
+            "blocked",
+            `Data muito proxima.\n\nEntre hoje (${formatDateBr(state.hoje)}) e os proximos ${DIAS_MINIMOS_VALIDACAO_ASSINATURA} dias, o processo ainda pode estar em validacao, relacionamento, envio a conformidade e validacao final.\n\nEscolha uma data maior que ${formatDateBr(addUtcDays(state.hoje, DIAS_MINIMOS_VALIDACAO_ASSINATURA))}. Primeiro dia permitido: ${formatDateBr(state.dataMinimaAssinatura)}.`
+          );
+          return;
+        }
         setResult(
           "blocked",
           `Data fora da janela permitida.\n\nA assinatura ${formatDateBr(info.assinatura)} passa do limite de 40 dias (${formatDateBr(state.dataLimite)}).`
@@ -3447,27 +3630,67 @@ DIVORCIADO: Certidão averbada.</td>
         return;
       }
 
-      const inicioDisponivel = addUtcDays(state.vencimento, -40);
+      const inicioRegra = addUtcDays(state.vencimento, -40);
+      const inicioDisponivel = maxUtcDate(inicioRegra, state.hoje);
+      const primeiraAssinaturaPossivel = maxUtcDate(inicioRegra, state.dataMinimaAssinatura);
       const fimDisponivel = addUtcDays(state.vencimento, -1);
+      if (inicioDisponivel > fimDisponivel) {
+        setStatus("bad", "Sem data valida");
+        setResult(
+          "blocked",
+          `Nao ha dia de assinatura disponivel para este vencimento considerando a carencia de ${DIAS_MINIMOS_VALIDACAO_ASSINATURA} dias.\n\nHoje: ${formatDateBr(state.hoje)}.\nPrimeiro dia permitido: ${formatDateBr(state.dataMinimaAssinatura)}.\nEscolha um vencimento futuro.`
+        );
+        return;
+      }
+      const weekdays = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"];
+      weekdays.forEach((label) => {
+        const node = document.createElement("div");
+        node.className = "vencimento-weekday";
+        node.textContent = label;
+        calendar.appendChild(node);
+      });
+      const firstWeekday = inicioDisponivel.getUTCDay() || 7;
+      for (let index = 1; index < firstWeekday; index += 1) {
+        const empty = document.createElement("div");
+        empty.className = "vencimento-empty";
+        empty.setAttribute("aria-hidden", "true");
+        calendar.appendChild(empty);
+      }
+      let diasValidos = 0;
       for (let data = inicioDisponivel; data <= fimDisponivel; data = addUtcDays(data, 1)) {
         const info = evaluateSignatureDate(data, state);
+        if (info.kind !== "blocked") diasValidos += 1;
         const dateKey = isoDateKey(data);
         const button = document.createElement("button");
         button.type = "button";
         button.dataset.date = dateKey;
         button.className = `vencimento-day is-${info.kind}`;
-        button.textContent = formatDateBr(data).slice(0, 5);
-        button.title = info.bloqueadoPorJanela
+        button.innerHTML = `<span class="vencimento-day-main">${pad2(data.getUTCDate())}</span><span class="vencimento-day-sub">${monthShortBr(data)}</span>`;
+        button.setAttribute("aria-label", `Assinatura ${formatDateBr(data)}`);
+        button.title = info.bloqueadoPorPassado
+          ? `Assinatura ${formatDateBr(data)} no passado`
+          : info.bloqueadoPorValidacao
+            ? `Assinatura ${formatDateBr(data)} dentro da carencia operacional de ${DIAS_MINIMOS_VALIDACAO_ASSINATURA} dias`
+            : info.bloqueadoPorJanela
           ? `Assinatura ${formatDateBr(data)} fora da janela permitida`
           : `Assinatura ${formatDateBr(data)} - prazo ${info.prazo} dias`;
         button.addEventListener("click", () => simularVencimento(dateKey));
         calendar.appendChild(button);
       }
 
+      if (diasValidos <= 0) {
+        setStatus("bad", "Sem data valida");
+        setResult(
+          "blocked",
+          `Vencimento: ${formatDateBr(state.vencimento)}.\nNao ha assinatura valida a partir de ${formatDateBr(state.dataMinimaAssinatura)} para esse vencimento.\n\nO processo pode levar ate ${DIAS_MINIMOS_VALIDACAO_ASSINATURA} dias entre validacao, relacionamento, envio a conformidade e validacao final. As datas exibidas ficam bloqueadas por essa carencia.${cappedDayNotice(state)}`
+        );
+        return;
+      }
+
       setStatus("neutral", "Calendario pronto");
       setResult(
         "",
-        `Vencimento: ${formatDateBr(state.vencimento)}.\nAssinaturas disponiveis a partir de ${formatDateBr(inicioDisponivel)}.\nClique no dia de assinatura para ver a orientacao.${cappedDayNotice(state)}`
+        `Vencimento: ${formatDateBr(state.vencimento)}.\nAssinaturas possiveis a partir de ${formatDateBr(primeiraAssinaturaPossivel)}. Datas de hoje ate ${DIAS_MINIMOS_VALIDACAO_ASSINATURA} dias ficam bloqueadas pela carencia operacional.\nClique no dia de assinatura para ver a orientacao.${cappedDayNotice(state)}`
       );
     }
 
@@ -3549,6 +3772,20 @@ DIVORCIADO: Certidão averbada.</td>
         };
       }
       if (info.bloqueadoPorJanela) {
+        if (info.bloqueadoPorPassado) {
+          return {
+            status: "bloqueio",
+            titulo: "Assinatura no passado",
+            mensagem: `A assinatura ${formatDateBr(info.assinatura)} nao pode ser usada porque hoje e ${formatDateBr(state.hoje)}.`,
+          };
+        }
+        if (info.bloqueadoPorValidacao) {
+          return {
+            status: "bloqueio",
+            titulo: "Assinatura dentro da carencia operacional",
+            mensagem: `A assinatura deve ser maior que ${DIAS_MINIMOS_VALIDACAO_ASSINATURA} dias a partir de hoje. Validação, relacionamento, envio a conformidade e validação final podem levar ate ${DIAS_MINIMOS_VALIDACAO_ASSINATURA} dias. Primeiro dia permitido: ${formatDateBr(state.dataMinimaAssinatura)}.`,
+          };
+        }
         return {
           status: "bloqueio",
           titulo: "Assinatura fora da janela de 40 dias",
@@ -3869,6 +4106,41 @@ DIVORCIADO: Certidão averbada.</td>
       field.value = Number.isFinite(parsed) && parsed >= 0 ? parsed.toFixed(2) : "0.00";
     }
 
+    const rendaBrutaDuplicadaState = {
+      active: false,
+      key: null,
+      tooltip: "",
+    };
+    let entrada7lmSemEntradaConfirmada = false;
+
+    function rendaBrutaDuplicateKey(value) {
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed) || parsed <= 0) return null;
+      return Math.round(parsed * 100);
+    }
+
+    function updateRendaBrutaDuplicateIndicator() {
+      const group = byId("renda-bruta-group");
+      const badge = byId("rendaBrutaDuplicadaBadge");
+      const currentKey = rendaBrutaDuplicateKey(readMoneyField("renda-bruta-cliente"));
+      const show = Boolean(rendaBrutaDuplicadaState.active && rendaBrutaDuplicadaState.key === currentKey);
+      group?.classList.toggle("has-renda-duplicada", show);
+      if (badge) {
+        badge.hidden = !show;
+        badge.title = show ? rendaBrutaDuplicadaState.tooltip : "";
+      }
+    }
+
+    function applyRendaBrutaDuplicada(processo) {
+      rendaBrutaDuplicadaState.active = Boolean(processo?.renda_bruta_duplicada);
+      rendaBrutaDuplicadaState.key = rendaBrutaDuplicateKey(processo?.renda_bruta);
+      const nomes = Array.isArray(processo?.renda_bruta_duplicada_clientes)
+        ? processo.renda_bruta_duplicada_clientes.join(", ")
+        : "";
+      rendaBrutaDuplicadaState.tooltip = processo?.renda_bruta_duplicada_tooltip || (nomes ? `RD - renda bruta igual: ${nomes}` : "RD - renda bruta duplicada");
+      updateRendaBrutaDuplicateIndicator();
+    }
+
     function formatPercent(value) {
       const n = Number(value);
       if (!Number.isFinite(n)) return "0,00%";
@@ -3878,10 +4150,10 @@ DIVORCIADO: Certidão averbada.</td>
     function classifyComprometimento(percent, rendaLiquida, totalPrestacoes) {
       if (rendaLiquida <= 0 && totalPrestacoes > 0) {
         return {
-          kind: "complementar",
+          kind: "missing",
           pill: "bad",
-          label: "Necessita renda complementar",
-          hint: "Ha prestacao informada sem renda liquida suficiente.",
+          label: "Renda liquida pendente",
+          hint: "Ha prestacao informada, mas a renda liquida esta zerada. Preencha a renda liquida antes de seguir.",
         };
       }
       if (percent <= 30) {
@@ -3905,9 +4177,21 @@ DIVORCIADO: Certidão averbada.</td>
       const rendaLiquida = readMoneyField("renda-liquida-cliente");
       const prestacaoCaixa = readMoneyField("prestacao-caixa");
       const prestacao7lm = readMoneyField("prestacao-7lm");
+      if (prestacao7lm > 0) {
+        entrada7lmSemEntradaConfirmada = false;
+      }
       const totalPrestacoes = prestacaoCaixa + prestacao7lm;
       const percent = rendaLiquida > 0 ? (totalPrestacoes / rendaLiquida) * 100 : 0;
-      const info = classifyComprometimento(percent, rendaLiquida, totalPrestacoes);
+      const allIncomeFieldsEmpty = rendaLiquida <= 0 && prestacaoCaixa <= 0 && prestacao7lm <= 0;
+      const missing7lm = rendaLiquida > 0 && prestacaoCaixa > 0 && prestacao7lm <= 0;
+      const info = allIncomeFieldsEmpty
+        ? {
+            kind: "missing",
+            pill: "bad",
+            label: "Dados pendentes",
+            hint: "Dados nao preenchidos. Informe renda liquida, prestacao Caixa e prestacao 7LM.",
+          }
+        : classifyComprometimento(percent, rendaLiquida, totalPrestacoes);
       const percentText = formatPercent(percent);
 
       const status = byId("comprometimentoStatus");
@@ -3919,9 +4203,19 @@ DIVORCIADO: Certidão averbada.</td>
       const result = byId("comprometimentoResultado");
       if (result) {
         result.className = `comprometimento-result is-${info.kind}`;
-        result.innerHTML = `<strong>${percentText} - ${info.label}</strong><span>${info.hint} Total de prestacoes: R$ ${totalPrestacoes.toFixed(2).replace(".", ",")}.</span>`;
+        let hint = info.hint;
+        if (missing7lm && entrada7lmSemEntradaConfirmada) {
+          hint = "Sem entrada 7LM confirmada. Calculo usando renda liquida e prestacao Caixa.";
+        } else if (missing7lm) {
+          hint = "Prestacao 7LM nao preenchida. Confirme se nao houve entrada ou informe a parcela 7LM.";
+        }
+        result.innerHTML = `<strong>${percentText} - ${info.label}</strong><span>${hint} Total de prestacoes: R$ ${totalPrestacoes.toFixed(2).replace(".", ",")}.</span>`;
       }
 
+      const entradaDialog = byId("entrada7lmDialog");
+      if (entradaDialog) {
+        entradaDialog.classList.toggle("is-visible", missing7lm && !entrada7lmSemEntradaConfirmada);
+      }
       const complementarFields = byId("rendaComplementarFields");
       if (complementarFields) {
         complementarFields.classList.toggle("is-visible", info.kind === "complementar");
@@ -3937,10 +4231,19 @@ DIVORCIADO: Certidão averbada.</td>
       const rendaLiquida = readMoneyField("renda-liquida-cliente");
       const prestacaoCaixa = readMoneyField("prestacao-caixa");
       const prestacao7lm = readMoneyField("prestacao-7lm");
+      const allIncomeFieldsEmpty = rendaLiquida <= 0 && prestacaoCaixa <= 0 && prestacao7lm <= 0;
+      const missing7lm = rendaLiquida > 0 && prestacaoCaixa > 0 && prestacao7lm <= 0;
       const totalPrestacoes = prestacaoCaixa + prestacao7lm;
       const percent = rendaLiquida > 0 ? (totalPrestacoes / rendaLiquida) * 100 : 0;
-      const info = classifyComprometimento(percent, rendaLiquida, totalPrestacoes);
-      return { rendaLiquida, prestacaoCaixa, prestacao7lm, totalPrestacoes, percent, info };
+      const info = allIncomeFieldsEmpty
+        ? {
+            kind: "missing",
+            pill: "bad",
+            label: "Dados pendentes",
+            hint: "Dados nao preenchidos.",
+          }
+        : classifyComprometimento(percent, rendaLiquida, totalPrestacoes);
+      return { rendaLiquida, prestacaoCaixa, prestacao7lm, totalPrestacoes, percent, info, allIncomeFieldsEmpty, missing7lm, entrada7lmSemEntradaConfirmada };
     }
 
     let franksteinLearnedPatterns = [];
@@ -4236,12 +4539,20 @@ DIVORCIADO: Certidão averbada.</td>
       addFranksteinRule(items, vencimento.status, vencimento.titulo, vencimento.mensagem);
 
       const comp = getComprometimentoSnapshot();
-      if (comp.info.kind === "ok") {
+      if (comp.allIncomeFieldsEmpty) {
+        addFranksteinRule(items, "bloqueio", "Dados de renda nao preenchidos", "Informe renda liquida, prestacao Caixa e prestacao 7LM. O 0,00% nao deve ser tratado como OK quando os campos estao vazios.");
+      } else if (comp.missing7lm && !comp.entrada7lmSemEntradaConfirmada) {
+        addFranksteinRule(items, "atencao", "Prestacao 7LM pendente", "Confirme se no fluxo do cliente nao houve entrada ou informe a parcela 7LM.");
+      } else if (comp.missing7lm && comp.entrada7lmSemEntradaConfirmada) {
+        addFranksteinRule(items, "ok", "Sem entrada 7LM confirmada", `${formatPercent(comp.percent)} calculado com renda liquida e prestacao Caixa.`);
+      } else if (comp.info.kind === "ok") {
         addFranksteinRule(items, "ok", "Comprometimento OK", `${formatPercent(comp.percent)} dentro da faixa de 0 a 30.`);
       } else if (comp.info.kind === "warn") {
         addFranksteinRule(items, "atencao", "Comprometimento em atencao", `${formatPercent(comp.percent)} na faixa acima de 30 ate 40.`);
       } else if (comp.info.kind === "critical") {
         addFranksteinRule(items, "atencao", "Comprometimento critico", `${formatPercent(comp.percent)} na faixa acima de 40 ate 45. Foguetinho alerta, mas a decisao continua com o analista.`);
+      } else if (comp.info.kind === "missing") {
+        addFranksteinRule(items, "bloqueio", "Renda liquida nao preenchida", "Ha prestacao informada, mas a renda liquida esta zerada. Preencha a renda liquida antes de salvar.");
       } else {
         addFranksteinRule(items, "atencao", "Necessita renda complementar", `${formatPercent(comp.percent)} acima da regra ou sem renda liquida suficiente. Foguetinho exige conferencia dos dados de apoio antes de avancar.`);
       }
@@ -4251,6 +4562,17 @@ DIVORCIADO: Certidão averbada.</td>
       const cotistaMaisTresAnos = byId("cotista-3-anos")?.value === "sim";
       const tempoEmpresaAtual = byId("tempo-empresa-atual")?.value || "";
       const unidadeRetomada = byId("unidade-retomada-agehab")?.value || "";
+      if (rendaBruta <= 0) {
+        addFranksteinRule(items, "bloqueio", "Renda bruta nao preenchida", "Informe a renda bruta do cliente para o Foguetinho validar FGTS futuro, Agehab e renda duplicada.");
+      }
+      if (comp.prestacaoCaixa <= 0) {
+        addFranksteinRule(items, "bloqueio", "Prestacao Caixa nao preenchida", "Informe a prestacao Caixa para calcular parcela sobre renda bruta e comprometimento.");
+      }
+      updateRendaBrutaDuplicateIndicator();
+      const rendaAtualDuplicada = rendaBrutaDuplicadaState.active && rendaBrutaDuplicadaState.key === rendaBrutaDuplicateKey(rendaBruta);
+      if (rendaAtualDuplicada) {
+        addFranksteinRule(items, "atencao", "Renda bruta duplicada", rendaBrutaDuplicadaState.tooltip || "Existe outro cliente com a mesma renda bruta.");
+      }
       if (rendaBruta > TETO_CHEQUE_MORADIA_3_SM) {
         if (unidadeRetomada === "sim") {
           addFranksteinRule(
@@ -4275,13 +4597,13 @@ DIVORCIADO: Certidão averbada.</td>
           );
         }
       }
-      if (cotistaMaisTresAnos && percentualParcelaBruta >= 20 && percentualParcelaBruta <= 28) {
+      if (cotistaMaisTresAnos && percentualParcelaBruta >= 20 && percentualParcelaBruta <= 29) {
         if (tempoEmpresaAtual === "sim") {
           addFranksteinRule(
             items,
             "dica",
             "Sugerir FGTS futuro",
-            `Parcela Caixa representa ${formatPercent(percentualParcelaBruta)} da renda bruta e o cliente tem mais de 6 meses na empresa atual. Utilizar FGTS futuro.`
+            `Parcela Caixa representa ${formatPercent(percentualParcelaBruta)} da renda bruta, cliente e cotista ha mais de 3 anos e tem mais de 6 meses na empresa atual. Sugerir FGTS futuro para melhorar o garantido do cliente.`
           );
         } else if (tempoEmpresaAtual === "nao") {
           addFranksteinRule(
@@ -4575,6 +4897,7 @@ DIVORCIADO: Certidão averbada.</td>
       writeMoneyField("renda-liquida-cliente", processo.renda_liquida);
       writeMoneyField("prestacao-caixa", processo.valor_parcela);
       writeMoneyField("prestacao-7lm", processo.valor_parcela_7lm);
+      applyRendaBrutaDuplicada(processo);
       writeMoneyField("renda-complementar-valor", processo.renda_complementar_valor);
       if (byId("renda-complementar-responsavel")) byId("renda-complementar-responsavel").value = processo.renda_complementar_responsavel || "";
       if (byId("renda-complementar-vinculo")) byId("renda-complementar-vinculo").value = processo.renda_complementar_vinculo || "";
@@ -4641,6 +4964,13 @@ DIVORCIADO: Certidão averbada.</td>
       const rendaComplementarVinculo = (byId("renda-complementar-vinculo")?.value || "").trim() || null;
       const tempoEmpresaAtual = (byId("tempo-empresa-atual")?.value || "").trim() || null;
       const unidadeRetomadaAgehab = (byId("unidade-retomada-agehab")?.value || "").trim() || null;
+      if (rendaLiquida <= 0 && (prestacaoCaixa > 0 || prestacao7lm > 0)) {
+        alert("Nao e possivel salvar: existe prestacao informada, mas a renda liquida esta zerada. Preencha a renda liquida do cliente antes de salvar.");
+        byId("renda-liquida-cliente")?.focus();
+        updateComprometimento();
+        runFranksteinValidation();
+        return;
+      }
 
       const temPendencia =
         ["pendente_credito", "pendente_cca", "condicionado", "reprovado", "bloqueado"].includes(statusCaixa) ||
@@ -4733,10 +5063,11 @@ DIVORCIADO: Certidão averbada.</td>
       }
 
       try {
-        await api(`/processos/${processoId}`, {
+        const savedProcesso = await api(`/processos/${processoId}`, {
           method: "PATCH",
           body: JSON.stringify(payloadProcesso),
         });
+        applyRendaBrutaDuplicada(savedProcesso);
 
         const savedDocs = await api(`/processos/${processoId}/documentos`, {
           method: "PUT",
@@ -4781,15 +5112,28 @@ DIVORCIADO: Certidão averbada.</td>
     rebindButton("btnVoltar", () => {
       window.location.href = "/app/analista";
     });
+    rebindButton("btnEntrada7lmSemEntrada", () => {
+      entrada7lmSemEntradaConfirmada = true;
+      updateComprometimento();
+      runFranksteinValidation();
+    });
+    rebindButton("btnEntrada7lmInformar", () => {
+      entrada7lmSemEntradaConfirmada = false;
+      byId("prestacao-7lm")?.focus();
+      updateComprometimento();
+      runFranksteinValidation();
+    });
     ["renda-bruta-cliente", "renda-liquida-cliente", "prestacao-caixa", "prestacao-7lm", "renda-complementar-valor"].forEach((id) => {
       const field = byId(id);
       if (!field) return;
       field.addEventListener("input", () => {
+        if (id === "renda-bruta-cliente") updateRendaBrutaDuplicateIndicator();
         updateComprometimento();
         runFranksteinValidation();
       });
       field.addEventListener("blur", () => {
         writeMoneyField(id, readMoneyField(id));
+        if (id === "renda-bruta-cliente") updateRendaBrutaDuplicateIndicator();
         updateComprometimento();
         runFranksteinValidation();
       });
