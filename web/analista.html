@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -1702,7 +1702,7 @@
       <div class="panel-header">
         <div class="panel-title">
           <h2>Checklist (Conferência de Documentos)</h2>
-          <p>Marque o status de cada item (Aguardando/Pendente/Aprovado/Reprovado/Bloqueado). Esta tela é a base do retorno do analista.</p>
+          <p>Marque o status de cada item (Aguardando/Pendente/Aprovado/Não se Aplica/Bloqueado). Esta tela é a base do retorno do analista.</p>
         </div>
         <div class="inline">
           <button class="btn" id="btnMarcarTudoAprovado">Marcar tudo como Aprovado</button>
@@ -1730,7 +1730,7 @@
           </article>
           <article class="ribbon-card">
             <span>Ritmo do dossie</span>
-            <strong id="summaryProgresso">0/0 aprovados</strong>
+            <strong id="summaryProgresso">0/0 concluídos</strong>
             <p id="summaryProgressoHint">Nenhuma pendencia visivel neste momento.</p>
           </article>
         </div>
@@ -1869,7 +1869,7 @@
               <div class="s">Base do dossiê do proponente (identidade, estado civil, residência, etc.).</div>
             </div>
             <div class="right">
-              <span class="pill neutral" id="pill-proponente">0/0 aprovados</span>
+              <span class="pill neutral" id="pill-proponente">0/0 concluídos</span>
             </div>
           </div>
           <table class="doc-table">
@@ -1887,7 +1887,7 @@
 CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fé pública (dentro da validade) do proponente.</td>
                 <td>
                   <select class="status status-pill" data-doc="proponente" data-id="idcpf">
-                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
@@ -1896,7 +1896,7 @@ CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fé
                 <td class="doc-desc" id="desc-estado-civil">Certidão de nascimento.</td>
                 <td>
                   <select class="status status-pill" data-doc="proponente" data-id="estadocivil">
-                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
@@ -1907,7 +1907,7 @@ Comprovante aberto; não precisa estar no nome do cliente.
 Água, luz, telefone, internet, celular, cartão de crédito.</td>
                 <td>
                   <select class="status status-pill" data-doc="proponente" data-id="residencia">
-                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
@@ -1919,7 +1919,7 @@ Declaração completa do ano atual + recibo de entrega + DARF pago (se houver).
 ⚠️ Somente se perfil = INFORMAL e IRPF para informal = SIM.</td>
                 <td>
                   <select class="status status-pill" data-doc="proponente" data-id="irpf">
-                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
@@ -1931,7 +1931,7 @@ App FGTS / site Caixa / agência.
 Militar/soldado: anexar também 3 últimos extratos bancários da conta salário.</td>
                 <td>
                   <select class="status status-pill" data-doc="proponente" data-id="fgts">
-                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
@@ -1942,7 +1942,7 @@ Militar/soldado: anexar também 3 últimos extratos bancários da conta salário
 Carteira Digital (todas infos) ou CTPS física: qualificação, contratos e anotações.</td>
                 <td>
                   <select class="status status-pill" data-doc="proponente" data-id="ctps">
-                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
@@ -1978,7 +1978,7 @@ Carteira Digital (todas infos) ou CTPS física: qualificação, contratos e anot
               <div class="s">Aparece quando o tipo de dependente for "Filho menor".</div>
             </div>
             <div class="right">
-              <span class="pill neutral" id="pill-dep-menor">0/0 aprovados</span>
+              <span class="pill neutral" id="pill-dep-menor">0/0 concluídos</span>
             </div>
           </div>
           <table class="doc-table">
@@ -1989,7 +1989,7 @@ Carteira Digital (todas infos) ou CTPS física: qualificação, contratos e anot
                 <td class="doc-desc">Guarda/adoção: anexar termos respectivos.</td>
                 <td>
                   <select class="status status-pill" data-doc="depmenor" data-id="certidao-menor">
-                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
@@ -2001,28 +2001,28 @@ Carteira Digital (todas infos) ou CTPS física: qualificação, contratos e anot
         <div class="section" id="sec-dep-maior">
           <div class="section-head">
             <div class="left">
-              <div class="t">Dependente — Filhos maiores / parentes até 3º grau</div>
-              <div class="s">Aparece quando o dependente não for "Filho menor".</div>
+              <div class="t" id="depMaiorTitle">Dependente — Filhos maiores / parentes até 3º grau</div>
+              <div class="s" id="depMaiorSubtitle">Aparece quando o dependente não for "Filho menor".</div>
             </div>
             <div class="right">
-              <span class="pill neutral" id="pill-dep-maior">0/0 aprovados</span>
+              <span class="pill neutral" id="pill-dep-maior">0/0 concluídos</span>
             </div>
           </div>
           <table class="doc-table">
             <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
             <tbody>
               <tr>
-                <td class="doc-name">Identidade e CPF</td>
+                <td class="doc-name" id="docNameDepIdentidade">Identidade e CPF</td>
                 <td class="doc-desc" id="desc-identidade-dep">
 CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fé pública (dentro da validade) do dependente.</td>
                 <td>
                   <select class="status status-pill" data-doc="depmaior" data-id="idcpf-dep">
-                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
               <tr>
-                <td class="doc-name">Comp. de estado civil</td>
+                <td class="doc-name" id="docNameDepEstadoCivil">Comp. de estado civil</td>
                 <td class="doc-desc" id="desc-estado-civil-dep">
 SOLTEIRO: Certidão de nascimento
 CASADO: Certidão de casamento – RG/CPF do cônjuge se houver renda
@@ -2030,16 +2030,16 @@ VIÚVO: Certidão de casamento e óbito
 DIVORCIADO: Certidão averbada.</td>
                 <td>
                   <select class="status status-pill" data-doc="depmaior" data-id="estadocivil-dep">
-                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
               <tr>
-                <td class="doc-name">Declaração de parentesco</td>
-                <td class="doc-desc">Declaração conforme regras Caixa, vinculando dependente ao proponente.</td>
+                <td class="doc-name" id="docNameDepParentesco">Declaração de parentesco</td>
+                <td class="doc-desc" id="desc-parentesco-dep">Declaração conforme regras Caixa, vinculando dependente ao proponente.</td>
                 <td>
                   <select class="status status-pill" data-doc="depmaior" data-id="parentesco">
-                    <option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option>
+                    <option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option>
                   </select>
                 </td>
               </tr>
@@ -2054,7 +2054,7 @@ DIVORCIADO: Certidão averbada.</td>
               <div class="t">Renda formal (CLT / vínculo)</div>
               <div class="s">Aparece quando perfil de renda = CLT.</div>
             </div>
-            <div class="right"><span class="pill neutral" id="pill-renda-clt">0/0 aprovados</span></div>
+            <div class="right"><span class="pill neutral" id="pill-renda-clt">0/0 concluídos</span></div>
           </div>
           <table class="doc-table">
             <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
@@ -2062,12 +2062,12 @@ DIVORCIADO: Certidão averbada.</td>
               <tr>
                 <td class="doc-name">Holerites</td>
                 <td class="doc-desc">3 últimos holerites/contracheques (nome/CNPJ/cargo/admissão/bruto).</td>
-                <td><select class="status status-pill" data-doc="rendaclt" data-id="holerite"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
+                <td><select class="status status-pill" data-doc="rendaclt" data-id="holerite"><option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Renda variável</td>
                 <td class="doc-desc">Comissões/HE/adicional: holerites suficientes para média conforme Caixa.</td>
-                <td><select class="status status-pill" data-doc="rendaclt" data-id="variavel"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
+                <td><select class="status status-pill" data-doc="rendaclt" data-id="variavel"><option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option></select></td>
               </tr>
             </tbody>
           </table>
@@ -2080,7 +2080,7 @@ DIVORCIADO: Certidão averbada.</td>
               <div class="t">Renda informal (autônomo / liberal)</div>
               <div class="s">Aparece quando perfil de renda = INFORMAL.</div>
             </div>
-            <div class="right"><span class="pill neutral" id="pill-renda-informal">0/0 aprovados</span></div>
+            <div class="right"><span class="pill neutral" id="pill-renda-informal">0/0 concluídos</span></div>
           </div>
           <table class="doc-table">
             <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
@@ -2088,7 +2088,7 @@ DIVORCIADO: Certidão averbada.</td>
               <tr>
                 <td class="doc-name">Extrato bancário</td>
                 <td class="doc-desc">3 últimos meses (preferir mês fechado). Aceita PDF/impresso e bancos digitais.</td>
-                <td><select class="status status-pill" data-doc="rendainf" data-id="extrato"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
+                <td><select class="status status-pill" data-doc="rendainf" data-id="extrato"><option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option></select></td>
               </tr>
             </tbody>
           </table>
@@ -2101,7 +2101,7 @@ DIVORCIADO: Certidão averbada.</td>
               <div class="t">Aposentados / Pensionistas</div>
               <div class="s">Aparece quando perfil de renda = APOSENTADO.</div>
             </div>
-            <div class="right"><span class="pill neutral" id="pill-aposentado">0/0 aprovados</span></div>
+            <div class="right"><span class="pill neutral" id="pill-aposentado">0/0 concluídos</span></div>
           </div>
           <table class="doc-table">
             <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
@@ -2109,7 +2109,7 @@ DIVORCIADO: Certidão averbada.</td>
               <tr>
                 <td class="doc-name">Extrato do benefício</td>
                 <td class="doc-desc">Último extrato (Meu INSS / Dataprev).</td>
-                <td><select class="status status-pill" data-doc="apos" data-id="beneficio"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
+                <td><select class="status status-pill" data-doc="apos" data-id="beneficio"><option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option></select></td>
               </tr>
             </tbody>
           </table>
@@ -2122,7 +2122,7 @@ DIVORCIADO: Certidão averbada.</td>
               <div class="t">Domésticos / contratação por CPF</div>
               <div class="s">Aparece quando perfil de renda = DOMÉSTICO.</div>
             </div>
-            <div class="right"><span class="pill neutral" id="pill-domestico">0/0 aprovados</span></div>
+            <div class="right"><span class="pill neutral" id="pill-domestico">0/0 concluídos</span></div>
           </div>
           <table class="doc-table">
             <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
@@ -2130,7 +2130,7 @@ DIVORCIADO: Certidão averbada.</td>
               <tr>
                 <td class="doc-name">eSocial</td>
                 <td class="doc-desc">3 últimos comprovantes do eSocial.</td>
-                <td><select class="status status-pill" data-doc="dom" data-id="esocial"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
+                <td><select class="status status-pill" data-doc="dom" data-id="esocial"><option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option></select></td>
               </tr>
             </tbody>
           </table>
@@ -2143,7 +2143,7 @@ DIVORCIADO: Certidão averbada.</td>
               <div class="t">Documentos Caixa</div>
               <div class="s">Extras (Cheque Azul/Cartão) aparecem se "CCA gerou formulários" = SIM.</div>
             </div>
-            <div class="right"><span class="pill neutral" id="pill-caixa">0/0 aprovados</span></div>
+            <div class="right"><span class="pill neutral" id="pill-caixa">0/0 concluídos</span></div>
           </div>
           <table class="doc-table">
             <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
@@ -2151,38 +2151,38 @@ DIVORCIADO: Certidão averbada.</td>
               <tr>
                 <td class="doc-name">DAMP</td>
                 <td class="doc-desc">Preenchida e assinada digitalmente. Físico só com aprovação do crédito.</td>
-                <td><select class="status status-pill" data-doc="caixa" data-id="damp"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
+                <td><select class="status status-pill" data-doc="caixa" data-id="damp"><option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Ficha de cadastro Caixa</td>
                 <td class="doc-desc">Preenchida (endereço igual ao cadastro). Assinada digitalmente; físico com aprovação.</td>
-                <td><select class="status status-pill" data-doc="caixa" data-id="ficha"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
+                <td><select class="status status-pill" data-doc="caixa" data-id="ficha"><option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Abertura de conta</td>
                 <td class="doc-desc">Assinada digitalmente; físico precisa aprovação do crédito.</td>
-                <td><select class="status status-pill" data-doc="caixa" data-id="abertura"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
+                <td><select class="status status-pill" data-doc="caixa" data-id="abertura"><option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">MO</td>
                 <td class="doc-desc">Assinatura correta (2ª página). Casal: assinatura de ambos.</td>
-                <td><select class="status status-pill" data-doc="caixa" data-id="mo"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
+                <td><select class="status status-pill" data-doc="caixa" data-id="mo"><option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option></select></td>
               </tr>
 
               <tr id="row-cheque-azul" style="display:none;">
                 <td class="doc-name">Formulário Cheque Azul</td>
                 <td class="doc-desc">Formulário de contratação (assinatura digital). Físico somente com aprovação.</td>
-                <td><select class="status status-pill" data-doc="caixa" data-id="chequeazul"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
+                <td><select class="status status-pill" data-doc="caixa" data-id="chequeazul"><option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option></select></td>
               </tr>
               <tr id="row-form-cartao" style="display:none;">
                 <td class="doc-name">Formulário Cartão</td>
                 <td class="doc-desc">Formulário do cartão Caixa com campos obrigatórios e assinatura digital.</td>
-                <td><select class="status status-pill" data-doc="caixa" data-id="formcartao"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
+                <td><select class="status status-pill" data-doc="caixa" data-id="formcartao"><option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option></select></td>
               </tr>
               <tr id="row-prop-cartao" style="display:none;">
                 <td class="doc-name">Proposta Cartão</td>
                 <td class="doc-desc">Proposta comercial vinculada ao cliente e assinada digitalmente.</td>
-                <td><select class="status status-pill" data-doc="caixa" data-id="propcartao"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
+                <td><select class="status status-pill" data-doc="caixa" data-id="propcartao"><option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option></select></td>
               </tr>
             </tbody>
           </table>
@@ -2195,7 +2195,7 @@ DIVORCIADO: Certidão averbada.</td>
               <div class="t">Documentos Agehab</div>
               <div class="s">Padrões Agehab: assinaturas via GOV.BR ou Clicksign (quando aplicável).</div>
             </div>
-            <div class="right"><span class="pill neutral" id="pill-agehab">0/0 aprovados</span></div>
+            <div class="right"><span class="pill neutral" id="pill-agehab">0/0 concluídos</span></div>
           </div>
           <table class="doc-table">
             <thead><tr><th style="width:26%">Documento</th><th style="width:54%">O que é aceito</th><th style="width:20%">Status</th></tr></thead>
@@ -2203,32 +2203,88 @@ DIVORCIADO: Certidão averbada.</td>
               <tr>
                 <td class="doc-name">Declaração de endereço</td>
                 <td class="doc-desc">Quando necessário. Assinada via GOV.BR ou Clicksign.</td>
-                <td><select class="status status-pill" data-doc="agehab" data-id="decl-end"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
+                <td><select class="status status-pill" data-doc="agehab" data-id="decl-end"><option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Declaração renda informal</td>
                 <td class="doc-desc">Assinada pelo dependente via GOV.BR/Clicksign (modelo Agehab).</td>
-                <td><select class="status status-pill" data-doc="agehab" data-id="decl-renda"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
+                <td><select class="status status-pill" data-doc="agehab" data-id="decl-renda"><option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Declaração de não renda</td>
                 <td class="doc-desc">Para dependentes sem renda. Assinada via GOV.BR/Clicksign.</td>
-                <td><select class="status status-pill" data-doc="agehab" data-id="decl-naorenda"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
+                <td><select class="status status-pill" data-doc="agehab" data-id="decl-naorenda"><option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Vínculo ≥ 3 anos</td>
                 <td class="doc-desc">Docs com fé pública comprovando vínculo mínimo na cidade do Cheque Moradia.</td>
-                <td><select class="status status-pill" data-doc="agehab" data-id="vinculo"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
+                <td><select class="status status-pill" data-doc="agehab" data-id="vinculo"><option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Checklist Agehab</td>
                 <td class="doc-desc">Preenchido e assinado GOV.BR (ou próprio punho conforme orientação).</td>
-                <td><select class="status status-pill" data-doc="agehab" data-id="check"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
+                <td><select class="status status-pill" data-doc="agehab" data-id="check"><option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Ficha Agehab</td>
                 <td class="doc-desc">Preenchida pelo Assistente de Crédito; assinada GOV.BR (ou próprio punho).</td>
-                <td><select class="status status-pill" data-doc="agehab" data-id="ficha"><option>Pendente</option><option>Aprovado</option><option>Reprovado</option><option>Bloqueado</option></select></td>
+                <td><select class="status status-pill" data-doc="agehab" data-id="ficha"><option>Pendente</option><option>Aprovado</option><option>Não se Aplica</option><option>Bloqueado</option></select></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Relacionamento com banco e produto -->
+        <div class="section" id="sec-relacionamento">
+          <div class="section-head">
+            <div class="left">
+              <div class="t">Relacionamento com o banco e produto</div>
+              <div class="s">Confirmações operacionais registradas com Sim, Não ou N/A.</div>
+            </div>
+            <div class="right"><span class="pill neutral" id="pill-relacionamento">0/0 concluídos</span></div>
+          </div>
+          <table class="doc-table">
+            <thead><tr><th style="width:68%">Pergunta</th><th style="width:12%">Resposta</th><th style="width:20%">Status</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="doc-name">Cliente ciente da portabilidade para a agencia Caixa que vai assinar o contrato?</td>
+                <td class="doc-desc">Relacionamento Caixa</td>
+                <td><select class="status status-pill" data-doc="relacionamento" data-id="portabilidade-caixa"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
+              </tr>
+              <tr>
+                <td class="doc-name">Cliente ciente que sera preciso fazer Open Finance com a agencia Caixa?</td>
+                <td class="doc-desc">Relacionamento Caixa</td>
+                <td><select class="status status-pill" data-doc="relacionamento" data-id="open-finance-caixa"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
+              </tr>
+              <tr>
+                <td class="doc-name">Cliente ciente que sera necessario cadastrar o CPF como Pix na agencia Caixa?</td>
+                <td class="doc-desc">Relacionamento Caixa</td>
+                <td><select class="status status-pill" data-doc="relacionamento" data-id="cpf-pix-caixa"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
+              </tr>
+              <tr id="row-rel-fgts-propos" style="display:none;">
+                <td class="doc-name">Propos e orientou o cliente sobre o FGTS Futuro?</td>
+                <td class="doc-desc">Obrigatorio quando o cliente entrar na regra de FGTS Futuro.</td>
+                <td><select class="status status-pill" data-doc="relacionamento" data-id="fgts-futuro-orientado"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
+              </tr>
+              <tr id="row-rel-fgts-app" style="display:none;">
+                <td class="doc-name">Cliente autorizou no app FGTS a consulta para utilizar o FGTS Futuro?</td>
+                <td class="doc-desc">Obrigatorio quando o cliente entrar na regra de FGTS Futuro.</td>
+                <td><select class="status status-pill" data-doc="relacionamento" data-id="fgts-futuro-app-autorizado"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
+              </tr>
+              <tr>
+                <td class="doc-name">Cliente foi orientado sobre o produto?</td>
+                <td class="doc-desc">Produto</td>
+                <td><select class="status status-pill" data-doc="relacionamento" data-id="produto-orientado"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
+              </tr>
+              <tr id="row-rel-produto-pago" style="display:none;">
+                <td class="doc-name">O cliente ja pagou o produto no fechamento?</td>
+                <td class="doc-desc">Produto</td>
+                <td><select class="status status-pill" data-doc="relacionamento" data-id="produto-pago-fechamento"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
+              </tr>
+              <tr id="row-rel-produto-300" style="display:none;">
+                <td class="doc-name">Cliente saiu ciente que na assinatura tera que ter R$ 300,00 para o produto?</td>
+                <td class="doc-desc">Produto</td>
+                <td><select class="status status-pill" data-doc="relacionamento" data-id="produto-ciente-300-assinatura"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
               </tr>
             </tbody>
           </table>
@@ -2862,7 +2918,7 @@ DIVORCIADO: Certidão averbada.</td>
   // Status pills coloring (left tables)
   // =========================
   function applySelectColor(sel){
-    const val = toLower(sel.value);
+    const val = normalizeDocUiStatus(sel.value);
     sel.classList.remove("status-aguardando","status-pendente","status-aprovado","status-reprovado","status-bloqueado");
     sel.style.borderColor = "";
     sel.style.boxShadow = "";
@@ -2875,8 +2931,12 @@ DIVORCIADO: Certidão averbada.</td>
       sel.classList.add("status-pendente");
     }else if(val==="aprovado"){
       sel.classList.add("status-aprovado");
-    }else if(val==="reprovado"){
-      sel.classList.add("status-reprovado");
+    }else if(val==="nao_aplica"){
+      sel.classList.add("status-aprovado");
+    }else if(val==="sim"){
+      sel.classList.add("status-aprovado");
+    }else if(val==="nao"){
+      sel.classList.add("status-pendente");
     }else if(val==="bloqueado"){
       sel.classList.add("status-bloqueado");
     }
@@ -2884,6 +2944,14 @@ DIVORCIADO: Certidão averbada.</td>
 
   function ensureDocStatusOptions(){
     document.querySelectorAll("select.status.status-pill[data-doc][data-id]").forEach((sel)=>{
+      if ((sel.dataset.doc || "") === "relacionamento") return;
+      Array.from(sel.options).forEach((opt) => {
+        const value = normalizeDocUiStatus(opt.value || opt.textContent);
+        if (value === "reprovado") {
+          opt.value = "Não se Aplica";
+          opt.textContent = "Não se Aplica";
+        }
+      });
       const hasAguardando = Array.from(sel.options).some((opt)=> toLower(opt.value || opt.textContent) === "aguardando");
       if(hasAguardando) return;
       const opt = document.createElement("option");
@@ -2898,6 +2966,26 @@ DIVORCIADO: Certidão averbada.</td>
 
   function normalizeDocReasonText(value){
     return (value || "").toString().replace(/\s+/g, " ").trim();
+  }
+
+  function normalizeDocUiStatus(value){
+    const raw = toLower(value);
+    const clean = raw
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[\s-]+/g, "_");
+    if (clean === "nao_se_aplica" || clean === "nao_aplica" || clean === "n/a") return "nao_aplica";
+    return clean;
+  }
+
+  function isDocCompleteUiStatus(value){
+    const status = normalizeDocUiStatus(value);
+    return status === "aprovado" || status === "nao_aplica" || status === "sim";
+  }
+
+  function isDocPendingUiStatus(value){
+    const status = normalizeDocUiStatus(value);
+    return status === "aguardando" || status === "pendente" || status === "bloqueado" || status === "nao";
   }
 
   function reasonFromPendenciaInfo(raw){
@@ -2916,8 +3004,8 @@ DIVORCIADO: Certidão averbada.</td>
     const wrap = td.querySelector(".doc-reason-wrap");
     const input = td.querySelector(".doc-reason-input");
     if(!wrap || !input) return;
-    const status = toLower(sel.value);
-    const needReason = status === "pendente" || status === "bloqueado" || status === "reprovado";
+    const status = normalizeDocUiStatus(sel.value);
+    const needReason = status === "pendente" || status === "bloqueado";
     wrap.style.display = needReason ? "flex" : "none";
     input.required = needReason;
     if(!needReason){
@@ -2927,6 +3015,7 @@ DIVORCIADO: Certidão averbada.</td>
 
   function ensureDocReasonFields(){
     document.querySelectorAll("select.status.status-pill[data-doc][data-id]").forEach((sel)=>{
+      if ((sel.dataset.doc || "") === "relacionamento") return;
       const td = sel.closest("td");
       if(!td) return;
       td.classList.add("doc-status-cell");
@@ -2935,8 +3024,8 @@ DIVORCIADO: Certidão averbada.</td>
         wrap = document.createElement("div");
         wrap.className = "doc-reason-wrap";
         wrap.innerHTML = `
-          <div class="doc-reason-label">Motivo (obrigatório para Pendente/Reprovado/Bloqueado)</div>
-          <textarea class="doc-reason-input" maxlength="500" placeholder="Descreva o motivo da pendência, reprovação ou bloqueio."></textarea>
+          <div class="doc-reason-label">Motivo (obrigatório para Pendente/Bloqueado)</div>
+          <textarea class="doc-reason-input" maxlength="500" placeholder="Descreva o motivo da pendência ou bloqueio."></textarea>
         `;
         td.appendChild(wrap);
       }
@@ -2996,10 +3085,51 @@ DIVORCIADO: Certidão averbada.</td>
       : "DEPENDENTE NAO DEFINIDO, VAI AVANCAR SEM DEPENDENTE?";
   }
 
+  function atualizarTextosDependenteMaior(tipo){
+    const isConjuge = tipo === "conjuge";
+    const title = $("depMaiorTitle");
+    const subtitle = $("depMaiorSubtitle");
+    const identidadeNome = $("docNameDepIdentidade");
+    const identidadeDesc = $("desc-identidade-dep");
+    const estadoCivilNome = $("docNameDepEstadoCivil");
+    const estadoCivilDesc = $("desc-estado-civil-dep");
+    const parentescoNome = $("docNameDepParentesco");
+    const parentescoDesc = $("desc-parentesco-dep");
+
+    if (isConjuge) {
+      if (title) title.textContent = "Dependente — Conjuge";
+      if (subtitle) subtitle.textContent = "Aparece quando o proponente for casado ou tiver uniao estavel.";
+      if (identidadeNome) identidadeNome.textContent = "RG/CPF";
+      if (identidadeDesc) identidadeDesc.textContent = "RG e CPF do conjuge, dentro da validade.";
+      if (estadoCivilNome) estadoCivilNome.textContent = "Certidao de casamento ou termo de uniao estavel";
+      if (estadoCivilDesc) estadoCivilDesc.textContent = "Certidao de casamento ou termo de uniao estavel do casal.";
+      if (parentescoNome) parentescoNome.textContent = "Renda do conjuge se houver";
+      if (parentescoDesc) parentescoDesc.textContent = "Comprovante de renda do conjuge quando houver renda a considerar no processo.";
+      return;
+    }
+
+    if (title) title.textContent = "Dependente — Filhos maiores / parentes ate 3 grau";
+    if (subtitle) subtitle.textContent = 'Aparece quando o dependente nao for "Filho menor".';
+    if (identidadeNome) identidadeNome.textContent = "Identidade e CPF";
+    if (identidadeDesc) identidadeDesc.textContent = "CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fe publica (dentro da validade) do dependente.";
+    if (estadoCivilNome) estadoCivilNome.textContent = "Comp. de estado civil";
+    if (estadoCivilDesc) {
+      estadoCivilDesc.textContent = [
+        "SOLTEIRO: Certidao de nascimento",
+        "CASADO: Certidao de casamento - RG/CPF do conjuge se houver renda",
+        "VIUVO: Certidao de casamento e obito",
+        "DIVORCIADO: Certidao averbada.",
+      ].join("\n");
+    }
+    if (parentescoNome) parentescoNome.textContent = "Declaracao de parentesco";
+    if (parentescoDesc) parentescoDesc.textContent = "Declaracao conforme regras Caixa, vinculando dependente ao proponente.";
+  }
+
   function atualizarDependente(){
     const tipo = $("tipo-dependente").value;
     const naoDefinido = (tipo === "nao-definido");
     const isMenor = (tipo === "filho-menor");
+    atualizarTextosDependenteMaior(tipo);
 
     if(naoDefinido){
       setDisplay(secDepNaoDef, true, "block");
@@ -3077,9 +3207,9 @@ DIVORCIADO: Certidão averbada.</td>
 
   // ====== Counters per section ======
   function countSection(docKey){
-    const rows = document.querySelectorAll(`[data-doc="${docKey}"]`);
+    const rows = getVisibleChecklistSelects([docKey]);
     const total = rows.length;
-    const approved = Array.from(rows).filter(s=> toLower(s.value)==="aprovado").length;
+    const approved = rows.filter(s=> isDocCompleteUiStatus(s.value)).length;
     return {total, approved};
   }
 
@@ -3087,7 +3217,7 @@ DIVORCIADO: Certidão averbada.</td>
     const pill = $(pillId);
     if(!pill) return;
     const {total, approved} = countSection(docKey);
-    pill.textContent = `${approved}/${total} aprovados`;
+    pill.textContent = `${approved}/${total} concluídos`;
     pill.className = `pill ${approved===total && total>0 ? "ok" : total===0 ? "neutral" : "warn"}`;
   }
 
@@ -3101,6 +3231,7 @@ DIVORCIADO: Certidão averbada.</td>
     setPillCount("pill-domestico", "dom");
     setPillCount("pill-caixa", "caixa");
     setPillCount("pill-agehab", "agehab");
+    setPillCount("pill-relacionamento", "relacionamento");
   }
 
   function getVisibleChecklistSelects(docKeys = null){
@@ -3130,7 +3261,7 @@ DIVORCIADO: Certidão averbada.</td>
         .filter(Boolean);
       const target = $(targetId);
       const visible = getVisibleChecklistSelects(docs);
-      const approved = visible.filter((sel)=> toLower(sel.value) === "aprovado").length;
+      const approved = visible.filter((sel)=> isDocCompleteUiStatus(sel.value)).length;
       const badge = btn.querySelector("b");
       if (badge) badge.textContent = `${approved}/${visible.length}`;
       btn.classList.toggle("is-muted", !target || target.offsetParent === null || visible.length === 0);
@@ -3145,8 +3276,8 @@ DIVORCIADO: Certidão averbada.</td>
     const statusAgehab = getSelectedLabel("status-agehab");
     const statusSinal = getSelectedLabel("status-sinal");
     const visible = getVisibleChecklistSelects();
-    const approved = visible.filter((sel)=> toLower(sel.value) === "aprovado").length;
-    const pendentes = visible.filter((sel)=> ["aguardando","pendente","reprovado","bloqueado"].includes(toLower(sel.value))).length;
+    const approved = visible.filter((sel)=> isDocCompleteUiStatus(sel.value)).length;
+    const pendentes = visible.filter((sel)=> isDocPendingUiStatus(sel.value)).length;
 
     $("summaryPerfil").textContent = perfil;
     $("summaryPerfilHint").textContent = [
@@ -3163,7 +3294,7 @@ DIVORCIADO: Certidão averbada.</td>
     $("summaryCaixa").textContent = ccaLabel;
     $("summaryCaixaHint").textContent = `Caixa em ${statusCaixa} • Agehab em ${statusAgehab} • Sinal em ${statusSinal}`;
 
-    $("summaryProgresso").textContent = `${approved}/${visible.length} aprovados`;
+    $("summaryProgresso").textContent = `${approved}/${visible.length} concluídos`;
     $("summaryProgressoHint").textContent = pendentes
       ? `${pendentes} itens ainda exigem retorno do analista ou ajuste documental.`
       : "Nenhuma pendencia visivel neste momento.";
@@ -3181,6 +3312,7 @@ DIVORCIADO: Certidão averbada.</td>
       {title:"Doméstico", key:"dom"},
       {title:"Caixa", key:"caixa"},
       {title:"Agehab", key:"agehab"},
+      {title:"Relacionamento", key:"relacionamento"},
     ];
 
     const lines = [];
@@ -3196,18 +3328,18 @@ DIVORCIADO: Certidão averbada.</td>
         .filter(sel=> sel.offsetParent !== null); // ignora se seção inteira escondida
 
       const pend = selects
-        .filter(sel=> ["aguardando","pendente","reprovado","bloqueado"].includes(toLower(sel.value)))
+        .filter(sel=> isDocPendingUiStatus(sel.value))
         .map(sel=>{
           const tr = sel.closest("tr");
           const name = tr ? (tr.querySelector(".doc-name")?.textContent || "Documento") : "Documento";
-          const status = toLower(sel.value);
+          const status = normalizeDocUiStatus(sel.value);
           const statusLabel =
-            status === "reprovado"
-              ? "Reprovado"
-              : status === "bloqueado"
+            status === "bloqueado"
                 ? "Bloqueado"
                 : status === "pendente"
                   ? "Pendente"
+                  : status === "nao"
+                    ? "Não"
                   : "Aguardando";
           const reasonInput = getDocReasonInputFromSelect(sel);
           const reasonText = normalizeDocReasonText(reasonInput?.value || "");
@@ -3225,7 +3357,7 @@ DIVORCIADO: Certidão averbada.</td>
 
     $("resumoPendencias").value = lines.length
       ? lines.join("\n").trim()
-      : "Nenhuma pendência marcada. (Tudo Aprovado nas seções visíveis.)";
+      : "Nenhuma pendência marcada. (Tudo concluído nas seções visíveis.)";
     updateSectionNavigator();
     updateChecklistWorkspace();
   }
@@ -3833,6 +3965,15 @@ DIVORCIADO: Certidão averbada.</td>
       return String(value || "").trim().toLowerCase();
     }
 
+    function normalizeDocUiStatusLocal(value) {
+      const clean = norm(value)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[\s-]+/g, "_");
+      if (clean === "nao_se_aplica" || clean === "nao_aplica" || clean === "n/a") return "nao_aplica";
+      return clean;
+    }
+
     function byId(id) {
       return document.getElementById(id);
     }
@@ -3894,6 +4035,14 @@ DIVORCIADO: Certidão averbada.</td>
       "agehab:vinculo": "Vínculo ≥ 3 anos (cheque moradia)",
       "agehab:check": "Checklist Agehab",
       "agehab:ficha": "Ficha Agehab",
+      "relacionamento:portabilidade-caixa": "Cliente ciente da portabilidade para a agencia Caixa que vai assinar o contrato?",
+      "relacionamento:open-finance-caixa": "Cliente ciente que sera preciso fazer Open Finance com a agencia Caixa?",
+      "relacionamento:cpf-pix-caixa": "Cliente ciente que sera necessario cadastrar o CPF como Pix na agencia Caixa?",
+      "relacionamento:fgts-futuro-orientado": "Propos e orientou o cliente sobre o FGTS Futuro?",
+      "relacionamento:fgts-futuro-app-autorizado": "Cliente autorizou no app FGTS a consulta para utilizar o FGTS Futuro?",
+      "relacionamento:produto-orientado": "Cliente foi orientado sobre o produto?",
+      "relacionamento:produto-pago-fechamento": "O cliente ja pagou o produto no fechamento?",
+      "relacionamento:produto-ciente-300-assinatura": "Cliente saiu ciente que na assinatura tera que ter R$ 300,00 para o produto?",
     };
 
     function inferDocId(categoria, nome) {
@@ -3911,8 +4060,9 @@ DIVORCIADO: Certidão averbada.</td>
       if (cat === "depmenor") return "certidao-menor";
       if (cat === "depmaior") {
         if (n.includes("identidade")) return "idcpf-dep";
-        if (n.includes("estado civil")) return "estadocivil-dep";
-        if (n.includes("parentesco")) return "parentesco";
+        if (n.includes("rg/cpf")) return "idcpf-dep";
+        if (n.includes("estado civil") || n.includes("casamento") || n.includes("uniao estavel")) return "estadocivil-dep";
+        if (n.includes("parentesco") || n.includes("renda do conjuge")) return "parentesco";
       }
       if (cat === "rendaclt") {
         if (n.includes("holerite") || n.includes("contracheque")) return "holerite";
@@ -3939,6 +4089,16 @@ DIVORCIADO: Certidão averbada.</td>
         if (n.includes("checklist")) return "check";
         if (n.includes("ficha")) return "ficha";
       }
+      if (cat === "relacionamento") {
+        if (n.includes("portabilidade")) return "portabilidade-caixa";
+        if (n.includes("open finance")) return "open-finance-caixa";
+        if (n.includes("cpf como pix") || n.includes("pix")) return "cpf-pix-caixa";
+        if (n.includes("propos") || n.includes("orientou") && n.includes("fgts futuro")) return "fgts-futuro-orientado";
+        if (n.includes("app fgts") || n.includes("autorizou")) return "fgts-futuro-app-autorizado";
+        if (n.includes("orientado sobre o produto")) return "produto-orientado";
+        if (n.includes("pagou o produto")) return "produto-pago-fechamento";
+        if (n.includes("300")) return "produto-ciente-300-assinatura";
+      }
       return null;
     }
 
@@ -3946,6 +4106,11 @@ DIVORCIADO: Certidão averbada.</td>
       const cat = norm(categoria);
       const id = docId || inferDocId(cat, nome);
       if (!id) return String(nome || "").replace(/\s+/g, " ").trim();
+      if (cat === "depmaior" && (byId("tipo-dependente")?.value || "") === "conjuge") {
+        if (id === "idcpf-dep") return "RG/CPF";
+        if (id === "estadocivil-dep") return "Certidao de casamento ou termo de uniao estavel";
+        if (id === "parentesco") return "Renda do conjuge se houver";
+      }
       return CANONICAL_DOC_NAMES[`${cat}:${id}`] || String(nome || "").replace(/\s+/g, " ").trim();
     }
 
@@ -4078,11 +4243,19 @@ DIVORCIADO: Certidão averbada.</td>
     }
 
     function uiDocStatusFromBackend(doc) {
+      const categoria = norm(doc?.categoria);
       const credito = String(doc?.status_credito || "").toUpperCase();
       const statusDoc = String(doc?.status_doc || "").toUpperCase();
       const pendenciaInfo = String(doc?.pendencia_info || "");
+      if (categoria === "relacionamento") {
+        if (credito === "APROVADO" || statusDoc === "ENVIADO" || statusDoc === "APROVADO") return "sim";
+        if (credito === "NAO_APLICA" || statusDoc === "NAO_APLICA") return "Não se Aplica";
+        if (credito === "PENDENCIADO" || statusDoc === "PENDENTE") return "nao";
+        return "Não se Aplica";
+      }
       if (credito === "APROVADO") return "Aprovado";
-      if (credito === "REPROVADO") return "Reprovado";
+      if (credito === "NAO_APLICA" || statusDoc === "NAO_APLICA") return "Não se Aplica";
+      if (credito === "REPROVADO") return "Não se Aplica";
       if (credito === "PENDENCIADO") {
         return /^BLOQUEADO\s*[-:]/i.test(pendenciaInfo) ? "Bloqueado" : "Pendente";
       }
@@ -4153,6 +4326,54 @@ DIVORCIADO: Certidão averbada.</td>
         : "";
       rendaBrutaDuplicadaState.tooltip = processo?.renda_bruta_duplicada_tooltip || (nomes ? `RD - renda bruta igual: ${nomes}` : "RD - renda bruta duplicada");
       updateRendaBrutaDuplicateIndicator();
+    }
+
+    function relValue(id) {
+      return normalizeDocUiStatusLocal(byId(id)?.value || "");
+    }
+
+    function setRelationshipRowVisible(rowId, show) {
+      const row = byId(rowId);
+      if (!row) return;
+      row.style.display = show ? "" : "none";
+      if (!show) {
+        const select = row.querySelector("select");
+        if (select) {
+          select.value = "Não se Aplica";
+          applySelectColor(select);
+        }
+      }
+    }
+
+    function clienteEntraRegraFgtsFuturo() {
+      const rendaBruta = readMoneyField("renda-bruta-cliente");
+      const prestacaoCaixa = readMoneyField("prestacao-caixa");
+      const percentual = rendaBruta > 0 ? (prestacaoCaixa / rendaBruta) * 100 : 0;
+      return (
+        byId("cotista-3-anos")?.value === "sim" &&
+        byId("tempo-empresa-atual")?.value === "sim" &&
+        percentual >= 20 &&
+        percentual <= 29
+      );
+    }
+
+    function atualizarRelacionamentoBancoProduto() {
+      const aplicaFgtsFuturo = clienteEntraRegraFgtsFuturo();
+      setRelationshipRowVisible("row-rel-fgts-propos", aplicaFgtsFuturo);
+      setRelationshipRowVisible("row-rel-fgts-app", aplicaFgtsFuturo);
+
+      const produtoOrientado = relValue("produto-orientado");
+      const mostrarProdutoPago = produtoOrientado === "sim";
+      setRelationshipRowVisible("row-rel-produto-pago", mostrarProdutoPago);
+
+      const produtoPago = relValue("produto-pago-fechamento");
+      setRelationshipRowVisible("row-rel-produto-300", mostrarProdutoPago && produtoPago === "nao");
+
+      document.querySelectorAll('select.status.status-pill[data-doc="relacionamento"]').forEach((select) => {
+        applySelectColor(select);
+      });
+      if (typeof updateSectionCounters === "function") updateSectionCounters();
+      if (typeof buildPendenciasResumo === "function") buildPendenciasResumo();
     }
 
     function formatPercent(value) {
@@ -4247,6 +4468,7 @@ DIVORCIADO: Certidão averbada.</td>
         complementarDialog.classList.toggle("is-visible", percent > 45);
       }
       updateAgehabRetomadaPrompt();
+      atualizarRelacionamentoBancoProduto();
     }
 
     function getComprometimentoSnapshot() {
@@ -4654,6 +4876,33 @@ DIVORCIADO: Certidão averbada.</td>
         }
       }
 
+      const relacionamentoObrigatorio = [
+        ["portabilidade-caixa", "Portabilidade Caixa", "Confirme se o cliente esta ciente que vai precisar fazer portabilidade para a agencia Caixa que vai assinar o contrato."],
+        ["open-finance-caixa", "Open Finance Caixa", "Confirme se o cliente esta ciente que sera preciso fazer Open Finance com a agencia Caixa."],
+        ["cpf-pix-caixa", "CPF como Pix Caixa", "Confirme se o cliente esta ciente que sera necessario cadastrar o CPF como Pix na agencia Caixa."],
+      ];
+      relacionamentoObrigatorio.forEach(([id, titulo, mensagem]) => {
+        if (relValue(id) === "nao") {
+          addFranksteinRule(items, "atencao", titulo, mensagem);
+        }
+      });
+
+      if (clienteEntraRegraFgtsFuturo()) {
+        if (relValue("fgts-futuro-orientado") !== "sim") {
+          addFranksteinRule(items, "bloqueio", "FGTS Futuro sem orientacao registrada", "Cliente entrou na regra do FGTS Futuro. Registre se propos e orientou o cliente sobre o FGTS Futuro.");
+        }
+        if (relValue("fgts-futuro-app-autorizado") !== "sim") {
+          addFranksteinRule(items, "bloqueio", "FGTS Futuro sem autorizacao no app", "Cliente entrou na regra do FGTS Futuro. Registre se autorizou no app FGTS a consulta para utilizar o FGTS Futuro.");
+        }
+      }
+
+      if (relValue("produto-orientado") === "nao") {
+        addFranksteinRule(items, "atencao", "Produto sem orientacao registrada", "Registre a orientacao ao cliente sobre o produto.");
+      }
+      if (relValue("produto-orientado") === "sim" && relValue("produto-pago-fechamento") === "nao" && relValue("produto-ciente-300-assinatura") !== "sim") {
+        addFranksteinRule(items, "bloqueio", "Produto pendente para assinatura", "Se o cliente nao pagou o produto no fechamento, registre que ele saiu ciente dos R$ 300,00 na assinatura.");
+      }
+
       if (comp.percent > 45) {
         addFranksteinRule(
           items,
@@ -4734,11 +4983,11 @@ DIVORCIADO: Certidão averbada.</td>
         );
       }
 
-      const bloqueados = docRows.filter((row) => ["bloqueado", "reprovado"].includes(norm(row.select.value))).length;
-      const pendentes = docRows.filter((row) => norm(row.select.value) === "pendente").length;
-      const aguardando = docRows.filter((row) => norm(row.select.value) === "aguardando").length;
+      const bloqueados = docRows.filter((row) => normalizeDocUiStatusLocal(row.select.value) === "bloqueado").length;
+      const pendentes = docRows.filter((row) => normalizeDocUiStatusLocal(row.select.value) === "pendente").length;
+      const aguardando = docRows.filter((row) => normalizeDocUiStatusLocal(row.select.value) === "aguardando").length;
       if (bloqueados > 0) {
-        addFranksteinRule(items, "bloqueio", "Documentos bloqueados/reprovados", `${bloqueados} documento(s) exigem correcao antes de avancar.`);
+        addFranksteinRule(items, "bloqueio", "Documentos bloqueados", `${bloqueados} documento(s) exigem correcao antes de avancar.`);
       }
       if (pendentes > 0) {
         addFranksteinRule(items, "atencao", "Documentos pendentes", `${pendentes} documento(s) pendente(s) no checklist.`);
@@ -4747,7 +4996,7 @@ DIVORCIADO: Certidão averbada.</td>
         addFranksteinRule(items, "atencao", "Documentos aguardando envio", `${aguardando} documento(s) ainda aguardando envio ou analise.`);
       }
       if (docRows.length > 0 && bloqueados === 0 && pendentes === 0 && aguardando === 0) {
-        addFranksteinRule(items, "ok", "Checklist sem pendencias", "Documentos visiveis estao aprovados para a regra atual.");
+        addFranksteinRule(items, "ok", "Checklist sem pendencias", "Documentos visiveis estao concluidos para a regra atual.");
       }
 
       franksteinLearnedPatterns.forEach((pattern) => {
@@ -4842,7 +5091,8 @@ DIVORCIADO: Certidão averbada.</td>
       });
     }
 
-    function getDocRows() {
+    function getDocRows(options = {}) {
+      const includeHidden = Boolean(options.includeHidden);
       const tipoDependente = byId("tipo-dependente")?.value || "";
       const ignorarDocsDependente = tipoDependente === "nao-definido";
       return Array.from(document.querySelectorAll("select.status.status-pill[data-doc][data-id]")).map((sel) => {
@@ -4853,6 +5103,7 @@ DIVORCIADO: Certidão averbada.</td>
         const docId = sel.dataset.id || inferDocId(categoria, rawName);
         return {
           select: sel,
+          rowElement: row,
           reasonInput,
           categoria,
           docId,
@@ -4860,6 +5111,9 @@ DIVORCIADO: Certidão averbada.</td>
         };
       }).filter((row) => {
         if (!row) return false;
+        if (!includeHidden && row.categoria === "relacionamento") {
+          return !row.rowElement || (row.rowElement.style.display !== "none" && row.select.offsetParent !== null);
+        }
         if (!ignorarDocsDependente) return true;
         return row.categoria !== "depmenor" && row.categoria !== "depmaior";
       });
@@ -4943,7 +5197,7 @@ DIVORCIADO: Certidão averbada.</td>
       if (byId("sla-credito")) byId("sla-credito").value = toHoursFromBackend(processo.sla_analista_horas, processo.sla_credito_dias);
       if (byId("observacao")) byId("observacao").value = processo.observacao || "";
 
-      getDocRows().forEach((row) => {
+      getDocRows({ includeHidden: true }).forEach((row) => {
         const key = docLookupKey(row.categoria, row.nome, row.docId);
         const found = docMap.get(key);
         if (found) {
@@ -4957,6 +5211,7 @@ DIVORCIADO: Certidão averbada.</td>
         if (typeof toggleDocReasonField === "function") toggleDocReasonField(row.select);
         if (typeof applySelectColor === "function") applySelectColor(row.select);
       });
+      atualizarRelacionamentoBancoProduto();
 
       if (typeof atualizarDependente === "function") atualizarDependente();
       if (typeof atualizarConjuge === "function") atualizarConjuge();
@@ -5044,25 +5299,34 @@ DIVORCIADO: Certidão averbada.</td>
 
       const documentos = [];
       const documentosAprendizado = [];
-      for (const row of getDocRows()) {
-        const statusDocUi = norm(row.select.value);
+      for (const row of getDocRows({ includeHidden: true })) {
+        const statusDocUi = normalizeDocUiStatusLocal(row.select.value);
         const motivo = normalizeDocReasonText(row.reasonInput?.value || "");
         let statusDoc = "PENDENTE";
         let statusCreditoDoc = "AGUARDANDO_ENVIO";
         let pendenciaInfo = null;
 
-        if (statusDocUi === "aprovado") {
+        if (row.categoria === "relacionamento") {
+          if (statusDocUi === "sim") {
+            statusDoc = "ENVIADO";
+            statusCreditoDoc = "APROVADO";
+          } else if (statusDocUi === "nao_aplica") {
+            statusDoc = "NAO_APLICA";
+            statusCreditoDoc = "NAO_APLICA";
+          } else if (statusDocUi === "nao") {
+            statusDoc = "PENDENTE";
+            statusCreditoDoc = "PENDENCIADO";
+            pendenciaInfo = "PENDENTE - Resposta marcada como Nao.";
+          } else {
+            statusDoc = "NAO_APLICA";
+            statusCreditoDoc = "NAO_APLICA";
+          }
+        } else if (statusDocUi === "aprovado") {
           statusDoc = "ENVIADO";
           statusCreditoDoc = "APROVADO";
-        } else if (statusDocUi === "reprovado") {
-          if (!motivo) {
-            alert(`Informe o motivo da reprovação no documento "${row.nome}".`);
-            row.reasonInput?.focus();
-            return;
-          }
-          statusDoc = "ENVIADO";
-          statusCreditoDoc = "REPROVADO";
-          pendenciaInfo = `REPROVADO - ${motivo}`;
+        } else if (statusDocUi === "nao_aplica") {
+          statusDoc = "NAO_APLICA";
+          statusCreditoDoc = "NAO_APLICA";
         } else if (statusDocUi === "pendente") {
           if (!motivo) {
             alert(`Informe o motivo da pendencia no documento "${row.nome}".`);
@@ -5180,11 +5444,20 @@ DIVORCIADO: Certidão averbada.</td>
     ["renda-complementar-responsavel", "renda-complementar-vinculo", "status-caixa", "status-agehab", "status-sinal", "status-fiador", "observacao", "tipo-dependente", "cotista-3-anos", "tempo-empresa-atual", "unidade-retomada-agehab"].forEach((id) => {
       const field = byId(id);
       if (!field) return;
-      field.addEventListener("input", runFranksteinValidation);
-      field.addEventListener("change", runFranksteinValidation);
+      field.addEventListener("input", () => {
+        atualizarRelacionamentoBancoProduto();
+        runFranksteinValidation();
+      });
+      field.addEventListener("change", () => {
+        atualizarRelacionamentoBancoProduto();
+        runFranksteinValidation();
+      });
     });
     document.querySelectorAll("select.status.status-pill[data-doc][data-id]").forEach((field) => {
-      field.addEventListener("change", runFranksteinValidation);
+      field.addEventListener("change", () => {
+        atualizarRelacionamentoBancoProduto();
+        runFranksteinValidation();
+      });
     });
     ["diaClienteVencimento", "mesBaseVencimento"].forEach((id) => {
       const field = byId(id);
@@ -5210,6 +5483,4 @@ DIVORCIADO: Certidão averbada.</td>
 </script>
 </body>
 </html>
-
-
 
