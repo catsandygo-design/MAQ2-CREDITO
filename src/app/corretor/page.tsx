@@ -1,15 +1,47 @@
 const agenda = [
-  { time: '09:00', title: 'Retorno documental - Ana Ribeiro', meta: 'Documento de renda | hoje' },
-  { time: '11:30', title: 'Conferir pendencia - Marcos Lima', meta: 'Comprovante residencial | hoje' },
-  { time: '15:00', title: 'Follow-up assinatura - Carla Souza', meta: 'Sinal e fiador | hoje' },
+  { time: '08:30', title: 'Abrir carteira do dia', meta: 'Revisar prioridades e pendencias novas' },
+  { time: '09:00', title: 'Retorno documental - Ana Ribeiro', meta: 'Documento de renda | fazer agora' },
+  { time: '11:30', title: 'Conferir pendencia - Marcos Lima', meta: 'Comprovante residencial | urgente' },
+  { time: '15:00', title: 'Follow-up assinatura - Carla Souza', meta: 'Sinal e fiador | fechamento do dia' },
 ];
 
-const tasks = {
-  now: ['Enviar documento pendente de Ana Ribeiro', 'Responder retorno de CCA para Carla Souza'],
-  urgent: ['Regularizar comprovante de renda', 'Validar dados de contato do cliente'],
-  today: ['Fechar pendencias documentais do dia', 'Atualizar status dos clientes em atendimento'],
-  week: ['Revisar carteira sem movimentacao', 'Confirmar agenda de assinaturas', 'Atualizar previsao dos clientes em analise'],
-};
+const taskGroups = [
+  {
+    key: 'now',
+    title: 'Preciso fazer agora',
+    rule: 'Interrompe a fila. Se atrasar, trava cliente ou assinatura.',
+    tone: 'now',
+    items: ['Enviar documento pendente de Ana Ribeiro', 'Responder retorno de CCA para Carla Souza'],
+  },
+  {
+    key: 'critical',
+    title: 'Urgentes',
+    rule: 'Prazo curto ou pendencia que ja esta impactando o fluxo.',
+    tone: 'critical',
+    items: ['Regularizar comprovante de renda', 'Validar dados de contato do cliente'],
+  },
+  {
+    key: 'softUrgent',
+    title: 'Urgentes, mas nao criticas',
+    rule: 'Precisa entrar no radar hoje, mas pode vir depois do bloco critico.',
+    tone: 'soft-urgent',
+    items: ['Confirmar previsao de envio com cliente', 'Relembrar corretor parceiro sobre documento complementar'],
+  },
+  {
+    key: 'dayClose',
+    title: 'Nao finalizar o dia sem cumprir',
+    rule: 'Fechamento operacional obrigatorio antes de sair.',
+    tone: 'day-close',
+    items: ['Fechar pendencias documentais do dia', 'Atualizar status dos clientes em atendimento'],
+  },
+  {
+    key: 'week',
+    title: 'Tarefas semanais',
+    rule: 'Rotina de manutencao para evitar carteira parada.',
+    tone: 'week',
+    items: ['Revisar carteira sem movimentacao', 'Confirmar agenda de assinaturas', 'Atualizar previsao dos clientes em analise'],
+  },
+];
 
 const pendencias = [
   { cliente: 'Ana Ribeiro', documento: 'Comprovante de renda atualizado', prazo: 'Resolver hoje', tone: 'danger' },
@@ -24,11 +56,14 @@ const clientes = [
   { cliente: 'Beatriz Nunes', etapa: 'Assinatura', caixa: 'Conforme', agehab: 'Validado', prazo: 'OK', acao: 'Acompanhar assinatura' },
 ];
 
-function TaskBox({ title, items, tone }: { title: string; items: string[]; tone: string }) {
+function TaskBox({ title, rule, items, tone }: { title: string; rule: string; items: string[]; tone: string }) {
   return (
     <article className={`task-box ${tone}`}>
       <div className="task-head">
-        <h3>{title}</h3>
+        <div>
+          <h3>{title}</h3>
+          <p>{rule}</p>
+        </div>
         <span>{items.length}</span>
       </div>
       <ul>
@@ -41,6 +76,8 @@ function TaskBox({ title, items, tone }: { title: string; items: string[]; tone:
 }
 
 export default function CorretorPage() {
+  const totalWeeklyTasks = taskGroups.find((group) => group.key === 'week')?.items.length ?? 0;
+
   return (
     <main className="broker-page">
       <style>{`
@@ -61,23 +98,30 @@ export default function CorretorPage() {
         .top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
         .btn { border: 1px solid #cbd5e1; background: white; border-radius: 8px; padding: 10px 12px; font-weight: 700; color: #0f172a; text-decoration: none; }
         .btn.primary { background: #16a34a; border-color: #16a34a; color: white; }
-        .grid-top { display: grid; grid-template-columns: 1fr 1.45fr; gap: 16px; }
+        .grid-top { display: grid; grid-template-columns: .9fr 1.6fr; gap: 16px; align-items: start; }
         .panel { background: white; border: 1px solid #dbe4ef; border-radius: 8px; padding: 16px; box-shadow: 0 10px 22px rgba(15,23,42,.05); }
         .panel-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
-        .count { background: #e2e8f0; border-radius: 999px; padding: 5px 9px; font-size: 12px; font-weight: 800; }
+        .count { background: #e2e8f0; border-radius: 999px; padding: 5px 9px; font-size: 12px; font-weight: 800; white-space: nowrap; }
         .agenda-list { display: grid; gap: 8px; }
         .agenda-item { display: grid; grid-template-columns: 56px 1fr; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; }
         .agenda-time { font-weight: 900; color: #0f766e; }
         .agenda-title { font-weight: 800; }
-        .task-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-        .task-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; background: #f8fafc; }
-        .task-box.now { border-color: #ef4444; }
-        .task-box.urgent { border-color: #f59e0b; }
-        .task-box.today { border-color: #0284c7; }
-        .task-box.week { border-color: #16a34a; }
-        .task-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .task-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+        .task-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; background: #f8fafc; min-width: 0; }
+        .task-box.now { border-color: #dc2626; background: #fff7f7; }
+        .task-box.critical { border-color: #f97316; background: #fff7ed; }
+        .task-box.soft-urgent { border-color: #f59e0b; background: #fffbeb; }
+        .task-box.day-close { border-color: #0284c7; background: #f0f9ff; }
+        .task-box.week { border-color: #16a34a; background: #f0fdf4; }
+        .task-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+        .task-head h3 { font-size: 14px; line-height: 1.2; }
+        .task-head p { color: #64748b; font-size: 12px; margin-top: 5px; line-height: 1.25; }
         .task-head span { min-width: 24px; height: 24px; border-radius: 999px; background: #e2e8f0; display: grid; place-items: center; font-weight: 900; }
         ul { margin: 0; padding-left: 18px; color: #334155; display: grid; gap: 6px; }
+        li { line-height: 1.3; }
+        .method-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+        .method-chip { border: 1px solid #dbe4ef; border-radius: 8px; padding: 10px; background: white; font-size: 12px; color: #475569; }
+        .method-chip strong { display: block; color: #0f172a; margin-bottom: 3px; }
         .docs-table, .client-table { width: 100%; border-collapse: collapse; }
         th { text-align: left; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0; padding: 10px; }
         td { border-bottom: 1px solid #edf2f7; padding: 11px 10px; font-size: 14px; }
@@ -92,7 +136,8 @@ export default function CorretorPage() {
         .pill.bad { background: #fee2e2; color: #991b1b; }
         .pill.warn { background: #fef3c7; color: #92400e; }
         .pill.ok { background: #dcfce7; color: #166534; }
-        @media (max-width: 900px) { .grid-top, .task-grid, .filters { grid-template-columns: 1fr; } .broker-top { align-items: flex-start; flex-direction: column; } }
+        @media (max-width: 1200px) { .task-grid, .method-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } .grid-top { grid-template-columns: 1fr; } }
+        @media (max-width: 900px) { .task-grid, .method-strip, .filters { grid-template-columns: 1fr; } .broker-top { align-items: flex-start; flex-direction: column; } }
       `}</style>
 
       <div className="broker-shell">
@@ -101,7 +146,7 @@ export default function CorretorPage() {
             <div className="broker-mark">M2</div>
             <div>
               <h1>Corretor</h1>
-              <p className="muted">Agenda, prioridades, pendencias documentais e carteira vinculada.</p>
+              <p className="muted">Agenda organizada por tempo, urgencia, fechamento do dia e rotina semanal.</p>
             </div>
           </div>
           <nav className="top-actions" aria-label="Acoes do corretor">
@@ -111,12 +156,20 @@ export default function CorretorPage() {
           </nav>
         </header>
 
+        <section className="method-strip" aria-label="Metodo de organizacao do corretor">
+          <div className="method-chip"><strong>Agora</strong>trava cliente ou assinatura</div>
+          <div className="method-chip"><strong>Urgente</strong>prazo curto e impacto direto</div>
+          <div className="method-chip"><strong>Urgente leve</strong>entra hoje, mas depois do critico</div>
+          <div className="method-chip"><strong>Fechamento</strong>nao sair sem cumprir</div>
+          <div className="method-chip"><strong>Semanal</strong>manutencao da carteira</div>
+        </section>
+
         <section className="grid-top">
           <div className="panel">
             <div className="panel-head">
               <div>
                 <h2>Agenda</h2>
-                <p className="muted">Compromissos do dia.</p>
+                <p className="muted">Compromissos do dia em ordem de horario.</p>
               </div>
               <span className="count">{agenda.length}</span>
             </div>
@@ -136,16 +189,15 @@ export default function CorretorPage() {
           <div className="panel">
             <div className="panel-head">
               <div>
-                <h2>Prioridades</h2>
-                <p className="muted">O que fazer agora, hoje e nesta semana.</p>
+                <h2>Mapa de tarefas</h2>
+                <p className="muted">Priorize de cima para baixo: agora, urgente, urgente leve, fechamento e semanal.</p>
               </div>
-              <span className="count">{tasks.week.length} semanais</span>
+              <span className="count">{totalWeeklyTasks} semanais</span>
             </div>
             <div className="task-grid">
-              <TaskBox title="Fazer agora" items={tasks.now} tone="now" />
-              <TaskBox title="Urgentes" items={tasks.urgent} tone="urgent" />
-              <TaskBox title="Nao finalizar o dia sem cumprir" items={tasks.today} tone="today" />
-              <TaskBox title="Tarefas semanais" items={tasks.week} tone="week" />
+              {taskGroups.map((group) => (
+                <TaskBox key={group.key} title={group.title} rule={group.rule} items={group.items} tone={group.tone} />
+              ))}
             </div>
           </div>
         </section>
