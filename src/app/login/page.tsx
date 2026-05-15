@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { createClient } from '../../lib/supabase/client';
 
+const LOGO_SRC = '/login-symbol.png';
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,7 +37,9 @@ export default function LoginPage() {
       <div className="login-wrapper">
         <section className="login-card">
           <div className="logo-container">
-            <div className="logo-icon">SC</div>
+            <div className="logo-icon" aria-label="SioCred">
+              <img className="logo-image" src={LOGO_SRC} alt="SioCred" />
+            </div>
           </div>
 
           <h1 className="login-title">Sistema de Crédito</h1>
