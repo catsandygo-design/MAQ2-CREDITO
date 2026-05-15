@@ -28,8 +28,8 @@ a {
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.14), transparent 34%),
-    radial-gradient(circle at 82% 78%, rgba(168, 85, 247, 0.16), transparent 34%),
+    radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.08), transparent 34%),
+    radial-gradient(circle at 82% 78%, rgba(168, 85, 247, 0.08), transparent 34%),
     #030712;
   position: relative;
   overflow: hidden;
@@ -40,8 +40,8 @@ a {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(56,189,248,0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(168,85,247,0.04) 1px, transparent 1px);
+    linear-gradient(rgba(56,189,248,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168,85,247,0.028) 1px, transparent 1px);
   background-size: 52px 52px;
   mask-image: radial-gradient(circle at center, black 0%, transparent 75%);
   pointer-events: none;
@@ -56,16 +56,13 @@ a {
 
 .login-card {
   position: relative;
-  background: linear-gradient(145deg, rgba(8, 13, 28, 0.82), rgba(11, 16, 34, 0.62));
-  backdrop-filter: blur(24px) saturate(1.35);
-  border: 1px solid rgba(125, 211, 252, 0.42);
+  background: linear-gradient(145deg, rgba(8, 13, 28, 0.92), rgba(11, 16, 34, 0.86));
+  backdrop-filter: blur(20px) saturate(1.15);
+  border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 28px;
   padding: clamp(24px, 4vh, 36px) 32px;
-  box-shadow:
-    0 0 0 1px rgba(168, 85, 247, 0.28) inset,
-    0 0 24px rgba(125, 211, 252, 0.25),
-    0 0 56px rgba(168, 85, 247, 0.18),
-    0 28px 70px rgba(0, 0, 0, 0.52);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.56);
+  overflow: hidden;
 }
 
 .login-card::before {
@@ -74,18 +71,33 @@ a {
   inset: -2px;
   z-index: -1;
   border-radius: 30px;
-  background: linear-gradient(135deg, rgba(125,211,252,0.78), rgba(168,85,247,0.72), rgba(56,189,248,0.38));
-  filter: blur(10px);
-  opacity: 0.55;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(125,211,252,0.95) 55deg, rgba(168,85,247,0.95) 105deg, transparent 160deg, transparent 360deg);
+  animation: neonBorderSpin 4.5s linear infinite;
 }
 
 .login-card::after {
   content: "";
   position: absolute;
-  inset: 1px;
-  border-radius: 27px;
+  inset: 2px;
+  border-radius: 26px;
   pointer-events: none;
-  background: linear-gradient(135deg, rgba(255,255,255,0.07), transparent 42%, rgba(168,85,247,0.06));
+  background: linear-gradient(145deg, rgba(8, 13, 28, 0.96), rgba(11, 16, 34, 0.92));
+  z-index: -1;
+}
+
+@keyframes neonBorderSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.login-title,
+.login-subtitle,
+.logo-container,
+form,
+.card-hint {
+  position: relative;
+  z-index: 1;
 }
 
 .login-title {
@@ -116,13 +128,13 @@ a {
   width: clamp(58px, 10vh, 72px);
   height: clamp(58px, 10vh, 72px);
   border-radius: 22px;
-  background: linear-gradient(135deg, rgba(125,211,252,0.22), rgba(168,85,247,0.18));
+  background: rgba(15, 23, 42, 0.78);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(125,211,252,0.46);
+  border: 1px solid rgba(125,211,252,0.32);
   overflow: hidden;
-  box-shadow: 0 0 28px rgba(125,211,252,0.22), 0 0 46px rgba(168,85,247,0.16);
+  box-shadow: 0 0 18px rgba(125,211,252,0.12);
 }
 
 .logo-image {
@@ -149,20 +161,17 @@ a {
   width: 100%;
   padding: 13px 16px;
   border-radius: 15px;
-  border: 1px solid rgba(125, 211, 252, 0.32);
-  background: rgba(3, 7, 18, 0.76);
+  border: 1px solid rgba(125, 211, 252, 0.24);
+  background: rgba(3, 7, 18, 0.82);
   color: white;
   outline: none;
-  box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.14) inset;
+  box-shadow: none;
   transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
 }
 
 .field-input:focus {
   border-color: #7dd3fc;
-  box-shadow:
-    0 0 0 3px rgba(125, 211, 252, 0.12),
-    0 0 22px rgba(168, 85, 247, 0.22),
-    0 0 0 1px rgba(192, 132, 252, 0.32) inset;
+  box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.10);
   transform: translateY(-1px);
 }
 
@@ -175,13 +184,13 @@ a {
   font-weight: 800;
   background: linear-gradient(135deg, #7dd3fc, #c084fc);
   color: #020617;
-  box-shadow: 0 12px 32px rgba(125,211,252,0.18), 0 0 30px rgba(168,85,247,0.18);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.22);
   transition: transform .2s ease, box-shadow .2s ease;
 }
 
 .submit-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 18px 42px rgba(125,211,252,0.26), 0 0 44px rgba(168,85,247,0.26);
+  box-shadow: 0 16px 36px rgba(0,0,0,0.28);
 }
 
 .submit-btn:disabled {
@@ -201,7 +210,7 @@ a {
 .card-hint {
   margin-top: clamp(12px, 2.2vh, 18px);
   padding-top: 14px;
-  border-top: 1px solid rgba(125,211,252,0.18);
+  border-top: 1px solid rgba(125,211,252,0.14);
   color: #a5b4fc;
   text-align: center;
   font-size: 0.8rem;
@@ -210,15 +219,15 @@ a {
 .bg-orb {
   position: fixed;
   border-radius: 50%;
-  filter: blur(90px);
-  opacity: 0.42;
+  filter: blur(100px);
+  opacity: 0.20;
   pointer-events: none;
 }
 
 .bg-orb--green {
   width: 420px;
   height: 420px;
-  background: radial-gradient(circle, rgba(125,211,252,0.32), transparent 70%);
+  background: radial-gradient(circle, rgba(125,211,252,0.22), transparent 70%);
   top: -120px;
   left: -110px;
 }
@@ -226,7 +235,7 @@ a {
 .bg-orb--blue {
   width: 360px;
   height: 360px;
-  background: radial-gradient(circle, rgba(56,189,248,0.26), transparent 70%);
+  background: radial-gradient(circle, rgba(56,189,248,0.16), transparent 70%);
   right: -90px;
   bottom: -90px;
 }
@@ -234,7 +243,7 @@ a {
 .bg-orb--purple {
   width: 320px;
   height: 320px;
-  background: radial-gradient(circle, rgba(168,85,247,0.28), transparent 70%);
+  background: radial-gradient(circle, rgba(168,85,247,0.18), transparent 70%);
   top: 36%;
   right: 8%;
 }
