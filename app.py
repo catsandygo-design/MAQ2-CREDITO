@@ -6050,7 +6050,7 @@ def app_corretor_page(request: Request):
     _, denied = _ensure_corretor_presentation_access(request)
     if denied:
         return denied
-    return RedirectResponse(url=_corretor_presentation_url(request), status_code=302)
+    return _html_page("corretor_painel.html")
 
 
 @app.get("/app/corretor/precadastro")
