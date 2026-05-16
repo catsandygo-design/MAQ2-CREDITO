@@ -1,14 +1,14 @@
-# Projeto de Execucao Final - SioCred Operacional Inteligente
+# Projeto de Execucao Final - MAQ2-Credito Corporativo
 
 ## 1. Nome do Projeto
 
-**SioCred Operacional Inteligente**
+**MAQ2-Credito**
 
-Sistema personalizado para a rotina diaria do setor de credito, com FOGUETINHO como copiloto operacional supervisionado.
+Aplicativo corporativo para a rotina diaria do setor de credito, evoluido a partir da base historica SioCred, com FOGUETINHO como copiloto operacional supervisionado.
 
 ## 2. Objetivo Final
 
-Construir a versao final do SioCred mantendo a complexidade do negocio por tras das cortinas e entregando ao usuario uma experiencia simples:
+Construir a versao final do MAQ2-Credito mantendo a complexidade do negocio por tras das cortinas e entregando ao usuario uma experiencia simples:
 
 1. O que esta acontecendo?
 2. O que esta travando?
@@ -88,24 +88,31 @@ Observacao:
 
 ## 6. Mapa Final de Telas
 
+Referencia detalhada:
+
+- `docs/mapa_telas_perfis_maq2_credito.md`
+
 ### 6.1 Menu Final para Usuario
 
 - Inicio
-- Central Operacional
-- Analise
-- Importacao
-- Repasse
+- Auxiliar Credito
+- Analista Credito
+- Corretor
 - Gestor
+- Diretoria
 - Admin
+- Foguetinho
 
 ### 6.2 Telas por Perfil
 
 | Perfil | Telas principais | O que precisa ver |
 | --- | --- | --- |
-| Analista | Inicio, Central Operacional, Analise, Importacao, Repasse | O que fazer agora, documentos, pendencias, bloqueios, Foguetinho |
-| CCA/Repasse | Repasse, Analise, Fila Tecnica | Status CCA, Agehab, assinatura, sinal, fiador |
-| Gestor | Inicio, Gestor, Central Operacional | Gargalos, retrabalho, SLA, prontos, bloqueados |
-| Admin | Admin, Regras do Foguetinho, Auditoria | Usuarios, regras, logs, configuracoes |
+| Auxiliar Credito | Inicio, Fila Auxiliar, Conferencia Documental, Pendencias, Importacao | O que conferir, corrigir, organizar ou encaminhar |
+| Analista Credito | Inicio, Central de Credito, Analise do Cliente, Dossie, Repasse Tecnico, Foguetinho | O que decidir, o que bloqueia, qual regra disparou e qual proxima acao |
+| Corretor | Inicio, Pre-cadastro, Meus Clientes, Pendencias Solicitadas, Apresentacao | O que cadastrar, acompanhar ou responder sem acessar operacao interna |
+| Gestor | Inicio, Dashboard Gestor, Central Operacional, Produtividade, Gargalos, Qualidade | Gargalos, SLA, retrabalho, produtividade e processos em risco |
+| Diretoria | Inicio Executivo, Dashboard Diretoria, Carteira, Riscos, Performance, Relatorios | Indicadores consolidados, risco macro e tendencia da carteira |
+| Admin | Inicio Admin, Usuarios, Permissoes, Auditoria, Integracoes, Regras do Foguetinho, Logs | Usuarios, regras, seguranca, integracoes e saude do sistema |
 
 ## 7. Desenho das Telas
 
@@ -117,7 +124,7 @@ Mostrar o que precisa de atencao no dia.
 
 ```text
 +------------------------------------------------------+
-| SioCred                         Perfil / Sair        |
+| MAQ2-Credito                    Perfil / Sair        |
 +------------------------------------------------------+
 | Hoje                                                 |
 | [Pendencias novas] [Em risco] [Prontos] [SLA]        |
@@ -307,7 +314,7 @@ Entregavel:
 Arquivos provaveis:
 
 - `docs/matriz_regras_frankstein_execucao.md`
-- `docs/mapa_telas_final_siocred.md`
+- `docs/mapa_telas_final_maq2_credito.md`
 
 Criterio de aceite:
 
@@ -510,7 +517,7 @@ Uma entrega so esta pronta quando:
 
 ## 14. Direcao Final
 
-Construir o SioCred como uma ferramenta operacional inteligente:
+Construir o MAQ2-Credito como uma ferramenta operacional inteligente:
 
 - forte por dentro;
 - simples por fora;

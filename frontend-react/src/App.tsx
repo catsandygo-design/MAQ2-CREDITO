@@ -24,21 +24,25 @@ export default function App() {
 
       {/* Rotas React finais: cada modulo ganha estrutura antes da tela HTML sair do menu. */}
       <Route path="/inicio" element={<FinalModuleRoute moduleKey="inicio" />} />
+      <Route path="/auxiliar-credito" element={<FinalModuleRoute moduleKey="auxiliar-credito" />} />
+      <Route path="/analista-credito" element={<Navigate to="/analista" replace />} />
       <Route path="/central" element={<Navigate to="/analista" replace />} />
-      <Route path="/analise" element={<FinalModuleRoute moduleKey="analise" />} />
+      <Route path="/analise" element={<FinalModuleRoute moduleKey="analise-cliente" />} />
+      <Route path="/corretor" element={<FinalModuleRoute moduleKey="corretor" />} />
       <Route path="/importacao" element={<FinalModuleRoute moduleKey="importacao" />} />
       <Route path="/repasse" element={<FinalModuleRoute moduleKey="repasse" />} />
+      <Route path="/diretoria" element={<FinalModuleRoute moduleKey="diretoria" />} />
       <Route path="/foguetinho" element={<FinalModuleRoute moduleKey="foguetinho" />} />
       <Route path="/frankstein" element={<Navigate to="/foguetinho" replace />} />
       <Route path="/admin" element={<FinalModuleRoute moduleKey="admin" />} />
 
       {/* Pontes com nomes antigos para facilitar a migracao incremental. */}
-      <Route path="/analista/acompanhamento" element={<FinalModuleRoute moduleKey="central" />} />
-      <Route path="/analista/acompanhamento-operacional" element={<FinalModuleRoute moduleKey="central" />} />
-      <Route path="/analista/reuniao-comercial" element={<FinalModuleRoute moduleKey="central" />} />
+      <Route path="/analista/acompanhamento" element={<Navigate to="/analista" replace />} />
+      <Route path="/analista/acompanhamento-operacional" element={<FinalModuleRoute moduleKey="auxiliar-credito" />} />
+      <Route path="/analista/reuniao-comercial" element={<Navigate to="/analista" replace />} />
       <Route path="/analista/repasse" element={<FinalModuleRoute moduleKey="repasse" />} />
       <Route path="/analista/importacao" element={<FinalModuleRoute moduleKey="importacao" />} />
-      <Route path="/analista/arquivados" element={<FinalModuleRoute moduleKey="central" />} />
+      <Route path="/analista/arquivados" element={<Navigate to="/analista" replace />} />
 
       {/* Telas React que ja usam dados reais continuam como modulos produtivos. */}
       <Route path="/gestor" element={<GestorDashboardPage />} />

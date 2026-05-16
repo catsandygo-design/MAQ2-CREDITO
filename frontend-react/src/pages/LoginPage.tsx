@@ -43,8 +43,8 @@ export function LoginPage() {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <div className="auth-brand">SioCred</div>
-        <h1>Sistema de Credito</h1>
+        <div className="auth-brand">MAQ2</div>
+        <h1>MAQ2-Credito</h1>
         <p>Acesso oficial do sistema com a mesma base e as mesmas permissoes da operacao.</p>
 
         <form onSubmit={onSubmit} className="auth-form">

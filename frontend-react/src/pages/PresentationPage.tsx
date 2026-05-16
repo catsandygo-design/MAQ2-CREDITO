@@ -621,7 +621,7 @@ export function PresentationPage() {
       <div className="min-h-screen bg-[radial-gradient(circle_at_top,#1e3a8a_0%,#0f172a_55%,#020617_100%)] p-4 text-white md:p-8">
         <div className="mx-auto flex min-h-[70vh] max-w-lg items-center justify-center">
           <div className="w-full rounded-[28px] border border-white/15 bg-white/10 p-8 text-center shadow-2xl backdrop-blur-xl">
-            <p className="text-xs uppercase tracking-[0.35em] text-cyan-200">SioCred Showcase</p>
+            <p className="text-xs uppercase tracking-[0.35em] text-cyan-200">MAQ2-Credito Showcase</p>
             <h1 className="mt-4 text-3xl font-black tracking-tight">Validando acesso</h1>
             <p className="mt-3 text-sm text-slate-200">
               Conferindo a sessao do corretor para liberar a apresentacao comercial.

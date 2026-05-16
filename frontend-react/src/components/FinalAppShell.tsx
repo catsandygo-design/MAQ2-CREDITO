@@ -18,7 +18,7 @@ const STATUS_LABEL = {
 
 // Shell final da aplicacao React. Ele concentra navegacao, sessao e saida,
 // deixando cada pagina cuidar apenas do conteudo de negocio.
-export function FinalAppShell({ children, title = 'SioCred Final', subtitle }: FinalAppShellProps) {
+export function FinalAppShell({ children, title = 'MAQ2-Credito', subtitle }: FinalAppShellProps) {
   const navigate = useNavigate()
   const [session, setSession] = useState<AuthSession | null>(null)
   const [error, setError] = useState('')

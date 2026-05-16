@@ -445,6 +445,9 @@
       letter-spacing:.3px;
       cursor:help;
     }
+    .rd-badge[hidden]{
+      display:none !important;
+    }
     .fg.has-renda-duplicada input{
       border-color:rgba(239,68,68,.9) !important;
       box-shadow:0 0 0 2px rgba(239,68,68,.18);
@@ -1048,6 +1051,215 @@
         linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,251,255,.96));
       border-color: rgba(14,165,233,.22);
     }
+    .mac-dashboard{
+      margin-top:10px;
+      margin-bottom:10px;
+      padding:12px;
+      border:1px solid rgba(14,165,233,.24);
+      border-radius:16px;
+      background:
+        linear-gradient(180deg, rgba(14,165,233,.08), rgba(15,23,42,.26)),
+        radial-gradient(360px 180px at 0% 0%, rgba(34,197,94,.10), transparent 70%);
+      display:grid;
+      gap:12px;
+    }
+    .mac-head,
+    .mac-decision{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .mac-kicker{
+      display:block;
+      color:var(--muted);
+      font-size:var(--fs-xxs);
+      font-weight:900;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+    }
+    .mac-head h3{
+      margin:3px 0 0;
+      font-size:18px;
+      line-height:1.15;
+    }
+    .mac-head p,
+    .mac-decision p{
+      margin:4px 0 0;
+      color:var(--muted);
+      font-size:var(--fs-xs);
+      line-height:1.35;
+    }
+    .mac-grid{
+      display:grid;
+      grid-template-columns: minmax(220px, 1.2fr) repeat(4, minmax(130px, 1fr));
+      gap:8px;
+    }
+    .mac-controls{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap:8px;
+    }
+    .mac-control{
+      border:1px solid rgba(148,163,184,.16);
+      border-radius:14px;
+      padding:9px;
+      background:rgba(15,23,42,.24);
+      display:grid;
+      gap:5px;
+    }
+    .mac-control label{
+      color:var(--muted);
+      font-size:var(--fs-xxs);
+      font-weight:900;
+      letter-spacing:.10em;
+      text-transform:uppercase;
+    }
+    .mac-control select{
+      width:100%;
+      min-height:34px;
+      border-radius:12px;
+      border:1px solid rgba(148,163,184,.24);
+      background:rgba(255,255,255,.05);
+      color:var(--text);
+      padding:0 10px;
+      font-weight:800;
+    }
+    .mac-card{
+      min-width:0;
+      border:1px solid rgba(148,163,184,.16);
+      border-radius:14px;
+      padding:10px;
+      background:rgba(15,23,42,.34);
+      display:grid;
+      gap:6px;
+    }
+    .mac-card span{
+      color:var(--muted);
+      font-size:var(--fs-xxs);
+      font-weight:900;
+      letter-spacing:.10em;
+      text-transform:uppercase;
+    }
+    .mac-card strong{
+      font-size:22px;
+      line-height:1;
+    }
+    .mac-card p{
+      margin:0;
+      color:var(--muted);
+      font-size:var(--fs-xs);
+      line-height:1.28;
+    }
+    .mac-progress{
+      height:10px;
+      border-radius:999px;
+      background:rgba(148,163,184,.18);
+      overflow:hidden;
+      border:1px solid rgba(148,163,184,.16);
+    }
+    .mac-progress-fill{
+      height:100%;
+      width:0%;
+      border-radius:inherit;
+      background:linear-gradient(90deg, #ef4444, #f59e0b, #22c55e);
+      transition:width .2s ease;
+    }
+    .mac-card.is-ok,
+    .mac-card.is-boa,
+    .mac-card.is-excelente{
+      border-color:rgba(34,197,94,.34);
+    }
+    .mac-card.is-moderado,
+    .mac-card.is-recuperavel{
+      border-color:rgba(245,158,11,.34);
+    }
+    .mac-card.is-alto{
+      border-color:rgba(249,115,22,.36);
+    }
+    .mac-card.is-critico{
+      border-color:rgba(239,68,68,.38);
+    }
+    .mac-lists{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap:8px;
+    }
+    .mac-list{
+      border:1px solid rgba(148,163,184,.14);
+      border-radius:14px;
+      padding:10px;
+      background:rgba(15,23,42,.24);
+    }
+    .mac-list h4,
+    .mac-decision h4{
+      margin:0 0 6px;
+      font-size:13px;
+    }
+    .mac-list ul{
+      margin:0;
+      padding-left:18px;
+      color:var(--muted);
+      font-size:var(--fs-xs);
+      line-height:1.35;
+    }
+    .mac-status{
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.20);
+      padding:7px 10px;
+      background:rgba(255,255,255,.04);
+      color:var(--text);
+      font-size:var(--fs-xs);
+      font-weight:900;
+      white-space:nowrap;
+    }
+    .mac-card .mac-status,
+    .mac-head .mac-status{
+      display:inline-flex;
+      white-space:normal;
+      line-height:1.2;
+    }
+    .mac-head .mac-status{
+      max-width:360px;
+    }
+    .mac-status.is-excelente,
+    .mac-status.is-boa,
+    .mac-status.is-ok,
+    .mac-status.is-recuperavel{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.34);color:#bbf7d0}
+    .mac-status.is-moderado{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.34);color:#fde68a}
+    .mac-status.is-alto{background:rgba(249,115,22,.12);border-color:rgba(249,115,22,.36);color:#fed7aa}
+    .mac-status.is-critico{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.38);color:#fecaca}
+    body.theme-corporate .mac-dashboard{
+      background:linear-gradient(180deg, #ffffff, #f8fbff);
+      border-color:rgba(14,165,233,.22);
+      box-shadow:0 10px 22px rgba(15,23,42,.06);
+    }
+    body.theme-corporate .mac-card,
+    body.theme-corporate .mac-list,
+    body.theme-corporate .mac-control{
+      background:#f8fafc;
+      border-color:rgba(15,23,42,.12);
+    }
+    body.theme-corporate .mac-control select{
+      background:#ffffff;
+      color:#0f172a;
+      border-color:rgba(15,23,42,.14);
+    }
+    body.theme-corporate .mac-status.is-excelente,
+    body.theme-corporate .mac-status.is-boa,
+    body.theme-corporate .mac-status.is-ok,
+    body.theme-corporate .mac-status.is-recuperavel{background:#ecfdf5;border-color:#bbf7d0;color:#166534}
+    body.theme-corporate .mac-status.is-moderado{background:#fffbeb;border-color:#fde68a;color:#92400e}
+    body.theme-corporate .mac-status.is-alto{background:#fff7ed;border-color:#fdba74;color:#9a3412}
+    body.theme-corporate .mac-status.is-critico{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+    body.theme-corporate .mac-card.is-ok,
+    body.theme-corporate .mac-card.is-boa,
+    body.theme-corporate .mac-card.is-excelente{background:#f0fdf4;border-color:#bbf7d0}
+    body.theme-corporate .mac-card.is-moderado,
+    body.theme-corporate .mac-card.is-recuperavel{background:#fffbeb;border-color:#fde68a}
+    body.theme-corporate .mac-card.is-alto{background:#fff7ed;border-color:#fdba74}
+    body.theme-corporate .mac-card.is-critico{background:#fef2f2;border-color:#fecaca}
     body.theme-corporate .section-chip{
       background:#ffffff;
       color:#0f172a;
@@ -1625,9 +1837,19 @@
       .workspace-ribbon{
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
+      .mac-grid,
+      .mac-controls,
+      .mac-lists{
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
     }
     @media (max-width: 760px){
       .workspace-ribbon{
+        grid-template-columns: 1fr;
+      }
+      .mac-grid,
+      .mac-controls,
+      .mac-lists{
         grid-template-columns: 1fr;
       }
     }
@@ -1733,6 +1955,92 @@
             <strong id="summaryProgresso">0/0 concluídos</strong>
             <p id="summaryProgressoHint">Nenhuma pendencia visivel neste momento.</p>
           </article>
+        </div>
+
+        <div class="mac-dashboard" id="macDashboard" aria-label="Metrica de Aderencia Caixa">
+          <div class="mac-head">
+            <div>
+              <span class="mac-kicker">MAC</span>
+              <h3>Metrica de Aderencia Caixa</h3>
+              <p>Leitura operacional de IS, portabilidade, PIX CPF Caixa e Open Finance antes de seguir com o financiamento.</p>
+            </div>
+            <span class="mac-status is-moderado" id="macStatusGeral">Aguardando dados</span>
+          </div>
+
+          <div class="mac-controls" aria-label="Campos da metrica de aderencia Caixa">
+            <div class="mac-control">
+              <label for="mac-portabilidade-caixa">Fez portabilidade salario?</label>
+              <select id="mac-portabilidade-caixa" data-mac-rel="portabilidade-caixa">
+                <option value="Não se Aplica">N/A</option>
+                <option value="sim">Sim</option>
+                <option value="nao">Nao</option>
+              </select>
+            </div>
+            <div class="mac-control">
+              <label for="mac-cpf-pix-caixa">CPF como PIX Caixa?</label>
+              <select id="mac-cpf-pix-caixa" data-mac-rel="cpf-pix-caixa">
+                <option value="Não se Aplica">N/A</option>
+                <option value="sim">Sim</option>
+                <option value="nao">Nao</option>
+              </select>
+            </div>
+            <div class="mac-control">
+              <label for="mac-open-finance-caixa">Fez Open Finance?</label>
+              <select id="mac-open-finance-caixa" data-mac-rel="open-finance-caixa">
+                <option value="Não se Aplica">N/A</option>
+                <option value="sim">Sim</option>
+                <option value="nao">Nao</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mac-grid">
+            <article class="mac-card" id="macScoreCard">
+              <span>Score final</span>
+              <strong id="macScore">0%</strong>
+              <div class="mac-progress" aria-hidden="true"><div class="mac-progress-fill" id="macProgressFill"></div></div>
+              <p id="macScoreHint">Pontuacao maxima: 100%.</p>
+            </article>
+            <article class="mac-card" id="macIsCard">
+              <span>Status do IS</span>
+              <strong id="macStatusIS">-</strong>
+              <p id="macIsHint">Preencha renda e parcelas.</p>
+            </article>
+            <article class="mac-card" id="macPortabilidadeCard">
+              <span>Portabilidade salario</span>
+              <strong id="macPortabilidadeStatus">-</strong>
+              <p>Peso 20%.</p>
+            </article>
+            <article class="mac-card" id="macPixCard">
+              <span>PIX CPF Caixa</span>
+              <strong id="macPixStatus">-</strong>
+              <p>Peso 30%.</p>
+            </article>
+            <article class="mac-card" id="macOpenFinanceCard">
+              <span>Open Finance</span>
+              <strong id="macOpenFinanceStatus">-</strong>
+              <p>Peso 50%.</p>
+            </article>
+          </div>
+
+          <div class="mac-lists">
+            <section class="mac-list">
+              <h4>Alertas individuais</h4>
+              <ul id="macAlertas"><li>Sem alertas.</li></ul>
+            </section>
+            <section class="mac-list">
+              <h4>Recomendacoes automaticas</h4>
+              <ul id="macRecomendacoes"><li>Preencha os criterios para receber orientacao.</li></ul>
+            </section>
+          </div>
+
+          <div class="mac-list mac-decision">
+            <div>
+              <h4>Resumo final para tomada de decisao</h4>
+              <p id="macResumoFinal">Aguardando calculo.</p>
+            </div>
+            <span class="mac-status is-moderado" id="macRecuperavel">Recuperavel: -</span>
+          </div>
         </div>
 
         <!-- ====== Dados / Regras (compacto) ====== -->
@@ -2249,42 +2557,42 @@ DIVORCIADO: Certidão averbada.</td>
               <tr>
                 <td class="doc-name">Cliente ciente da portabilidade para a agencia Caixa que vai assinar o contrato?</td>
                 <td class="doc-desc">Relacionamento Caixa</td>
-                <td><select class="status status-pill" data-doc="relacionamento" data-id="portabilidade-caixa"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
+                <td><select id="portabilidade-caixa" class="status status-pill" data-doc="relacionamento" data-id="portabilidade-caixa"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Cliente ciente que sera preciso fazer Open Finance com a agencia Caixa?</td>
                 <td class="doc-desc">Relacionamento Caixa</td>
-                <td><select class="status status-pill" data-doc="relacionamento" data-id="open-finance-caixa"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
+                <td><select id="open-finance-caixa" class="status status-pill" data-doc="relacionamento" data-id="open-finance-caixa"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Cliente ciente que sera necessario cadastrar o CPF como Pix na agencia Caixa?</td>
                 <td class="doc-desc">Relacionamento Caixa</td>
-                <td><select class="status status-pill" data-doc="relacionamento" data-id="cpf-pix-caixa"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
+                <td><select id="cpf-pix-caixa" class="status status-pill" data-doc="relacionamento" data-id="cpf-pix-caixa"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
               </tr>
               <tr id="row-rel-fgts-propos" style="display:none;">
                 <td class="doc-name">Propos e orientou o cliente sobre o FGTS Futuro?</td>
                 <td class="doc-desc">Obrigatorio quando o cliente entrar na regra de FGTS Futuro.</td>
-                <td><select class="status status-pill" data-doc="relacionamento" data-id="fgts-futuro-orientado"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
+                <td><select id="fgts-futuro-orientado" class="status status-pill" data-doc="relacionamento" data-id="fgts-futuro-orientado"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
               </tr>
               <tr id="row-rel-fgts-app" style="display:none;">
                 <td class="doc-name">Cliente autorizou no app FGTS a consulta para utilizar o FGTS Futuro?</td>
                 <td class="doc-desc">Obrigatorio quando o cliente entrar na regra de FGTS Futuro.</td>
-                <td><select class="status status-pill" data-doc="relacionamento" data-id="fgts-futuro-app-autorizado"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
+                <td><select id="fgts-futuro-app-autorizado" class="status status-pill" data-doc="relacionamento" data-id="fgts-futuro-app-autorizado"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
               </tr>
               <tr>
                 <td class="doc-name">Cliente foi orientado sobre o produto?</td>
                 <td class="doc-desc">Produto</td>
-                <td><select class="status status-pill" data-doc="relacionamento" data-id="produto-orientado"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
+                <td><select id="produto-orientado" class="status status-pill" data-doc="relacionamento" data-id="produto-orientado"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
               </tr>
               <tr id="row-rel-produto-pago" style="display:none;">
                 <td class="doc-name">O cliente ja pagou o produto no fechamento?</td>
                 <td class="doc-desc">Produto</td>
-                <td><select class="status status-pill" data-doc="relacionamento" data-id="produto-pago-fechamento"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
+                <td><select id="produto-pago-fechamento" class="status status-pill" data-doc="relacionamento" data-id="produto-pago-fechamento"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
               </tr>
               <tr id="row-rel-produto-300" style="display:none;">
                 <td class="doc-name">Cliente saiu ciente que na assinatura tera que ter R$ 300,00 para o produto?</td>
                 <td class="doc-desc">Produto</td>
-                <td><select class="status status-pill" data-doc="relacionamento" data-id="produto-ciente-300-assinatura"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
+                <td><select id="produto-ciente-300-assinatura" class="status status-pill" data-doc="relacionamento" data-id="produto-ciente-300-assinatura"><option value="Não se Aplica">N/A</option><option value="sim">Sim</option><option value="nao">Não</option></select></td>
               </tr>
             </tbody>
           </table>
@@ -4345,6 +4653,200 @@ DIVORCIADO: Certidão averbada.</td>
       }
     }
 
+    const MAC_PESOS = Object.freeze({
+      PORTABILIDADE_SALARIO: 20,
+      PIX_CPF_CAIXA: 30,
+      OPEN_FINANCE: 50,
+    });
+
+    const MAC_LIMITES = Object.freeze({
+      IS_MAXIMO_OK: 40,
+      SCORE_EXCELENTE: 100,
+      SCORE_BOM_MINIMO: 80,
+      SCORE_MODERADO_MINIMO: 50,
+    });
+
+    function calcularAderenciaCaixa({
+      isPercentual,
+      possuiRendaSuporte,
+      fezPortabilidadeSalario,
+      fezPixCpfCaixa,
+      fezOpenFinance,
+    }) {
+      const isAtual = Math.max(0, Number(isPercentual) || 0);
+      const alertas = [];
+      const recomendacoes = [];
+
+      let statusIS = "OK - IS dentro da regra Caixa";
+      if (isAtual > MAC_LIMITES.IS_MAXIMO_OK && possuiRendaSuporte) {
+        statusIS = "Recuperavel - IS acima de 40% com renda suporte";
+        recomendacoes.push("Validar renda suporte e documentar justificativa antes de prosseguir.");
+      } else if (isAtual > MAC_LIMITES.IS_MAXIMO_OK) {
+        statusIS = "Critico - IS acima de 40% sem renda suporte";
+        recomendacoes.push("Reavaliar capacidade de pagamento antes de avancar.");
+      }
+
+      let score = 0;
+      if (fezPortabilidadeSalario) {
+        score += MAC_PESOS.PORTABILIDADE_SALARIO;
+        if (fezPixCpfCaixa) score += MAC_PESOS.PIX_CPF_CAIXA;
+        if (fezOpenFinance) score += MAC_PESOS.OPEN_FINANCE;
+      } else {
+        alertas.push("Critico - sem portabilidade, alto risco de nao liberacao.");
+        recomendacoes.push("Priorizar portabilidade antes de seguir com o processo.");
+      }
+
+      if (!fezPixCpfCaixa) {
+        alertas.push("Problema grave: ausencia de PIX CPF na Caixa.");
+        recomendacoes.push("Regularizar portabilidade do CPF para PIX Caixa, pois este ponto compromete fortemente a aderencia.");
+      }
+      if (!fezOpenFinance) {
+        alertas.push("Risco relevante: Open Finance nao realizado.");
+        recomendacoes.push("Solicitar Open Finance para fortalecer relacionamento e leitura de renda.");
+      }
+      if (isAtual > MAC_LIMITES.IS_MAXIMO_OK) {
+        alertas.push(possuiRendaSuporte ? "IS acima de 40%, mas com renda suporte informada." : "IS acima de 40% sem renda suporte.");
+      }
+
+      let statusGeral = "Alto risco";
+      if (!fezPortabilidadeSalario) {
+        statusGeral = "Critico - sem portabilidade, alto risco de nao liberacao";
+        score = 0;
+      } else if (score === MAC_LIMITES.SCORE_EXCELENTE) {
+        statusGeral = "Excelente aderencia";
+      } else if (score >= MAC_LIMITES.SCORE_BOM_MINIMO) {
+        statusGeral = "Boa aderencia";
+      } else if (score >= MAC_LIMITES.SCORE_MODERADO_MINIMO) {
+        statusGeral = "Risco moderado";
+      }
+
+      const bloqueioCritico = !fezPortabilidadeSalario || (isAtual > MAC_LIMITES.IS_MAXIMO_OK && !possuiRendaSuporte);
+      const recuperavel = !bloqueioCritico && (score >= MAC_LIMITES.SCORE_MODERADO_MINIMO || possuiRendaSuporte);
+
+      return {
+        score,
+        statusGeral,
+        statusIS,
+        alertas,
+        recomendacoes,
+        recuperavel,
+        bloqueioCritico,
+      };
+    }
+
+    function macNormalizeText(text) {
+      return String(text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function macToneFromStatus(status, result = null) {
+      const normalized = macNormalizeText(status);
+      if (result?.bloqueioCritico || normalized.includes("critico")) return "is-critico";
+      if (normalized.includes("alto")) return "is-alto";
+      if (normalized.includes("moderado") || normalized.includes("recuperavel")) return "is-moderado";
+      if (normalized.includes("boa")) return "is-boa";
+      if (normalized.includes("excelente") || normalized.includes("ok")) return "is-excelente";
+      return "is-moderado";
+    }
+
+    function setMacStatus(id, text, tone) {
+      const element = byId(id);
+      if (!element) return;
+      element.textContent = text;
+      element.className = `mac-status ${tone}`;
+    }
+
+    function setMacCardTone(id, tone) {
+      const element = byId(id);
+      if (!element) return;
+      element.classList.remove("is-ok", "is-boa", "is-excelente", "is-moderado", "is-recuperavel", "is-alto", "is-critico");
+      element.classList.add(tone);
+    }
+
+    function renderMacList(id, items, emptyText) {
+      const list = byId(id);
+      if (!list) return;
+      list.innerHTML = "";
+      const values = items.length ? items : [emptyText];
+      values.forEach((text) => {
+        const item = document.createElement("li");
+        item.textContent = text;
+        list.appendChild(item);
+      });
+    }
+
+    function hasRendaSuporteInformada() {
+      return Boolean(
+        readMoneyField("renda-complementar-valor") > 0 &&
+        String(byId("renda-complementar-responsavel")?.value || "").trim() &&
+        String(byId("renda-complementar-vinculo")?.value || "").trim()
+      );
+    }
+
+    function syncMacRelationshipControls() {
+      document.querySelectorAll("select[data-mac-rel]").forEach((select) => {
+        const target = byId(select.dataset.macRel);
+        if (target) select.value = target.value || "Não se Aplica";
+      });
+    }
+
+    function updateMacDashboard() {
+      if (!byId("macDashboard")) return;
+      syncMacRelationshipControls();
+      const comp = getComprometimentoSnapshot();
+      const input = {
+        isPercentual: comp.percent,
+        possuiRendaSuporte: hasRendaSuporteInformada(),
+        fezPortabilidadeSalario: relValue("portabilidade-caixa") === "sim",
+        fezPixCpfCaixa: relValue("cpf-pix-caixa") === "sim",
+        fezOpenFinance: relValue("open-finance-caixa") === "sim",
+      };
+      const result = calcularAderenciaCaixa(input);
+      const geralTone = macToneFromStatus(result.statusGeral, result);
+      const isTone = macToneFromStatus(result.statusIS);
+
+      const score = byId("macScore");
+      if (score) score.textContent = `${result.score}%`;
+      const progress = byId("macProgressFill");
+      if (progress) progress.style.width = `${Math.max(0, Math.min(100, result.score))}%`;
+      const scoreHint = byId("macScoreHint");
+      if (scoreHint) scoreHint.textContent = `Base: portabilidade ${MAC_PESOS.PORTABILIDADE_SALARIO}%, PIX ${MAC_PESOS.PIX_CPF_CAIXA}% e Open Finance ${MAC_PESOS.OPEN_FINANCE}%.`;
+
+      setMacStatus("macStatusGeral", result.statusGeral, geralTone);
+      setMacStatus("macStatusIS", result.statusIS, isTone);
+      const isHint = byId("macIsHint");
+      if (isHint) {
+        isHint.textContent = `IS atual: ${formatPercent(comp.percent)}. ${input.possuiRendaSuporte ? "Renda suporte informada." : "Sem renda suporte informada."}`;
+      }
+
+      const portabilidadeText = input.fezPortabilidadeSalario ? "Sim" : "Nao";
+      const pixText = input.fezPixCpfCaixa ? "Sim" : "Nao";
+      const openFinanceText = input.fezOpenFinance ? "Sim" : "Nao";
+      if (byId("macPortabilidadeStatus")) byId("macPortabilidadeStatus").textContent = portabilidadeText;
+      if (byId("macPixStatus")) byId("macPixStatus").textContent = pixText;
+      if (byId("macOpenFinanceStatus")) byId("macOpenFinanceStatus").textContent = openFinanceText;
+
+      setMacCardTone("macScoreCard", geralTone);
+      setMacCardTone("macIsCard", isTone);
+      setMacCardTone("macPortabilidadeCard", input.fezPortabilidadeSalario ? "is-ok" : "is-critico");
+      setMacCardTone("macPixCard", input.fezPixCpfCaixa ? "is-ok" : "is-alto");
+      setMacCardTone("macOpenFinanceCard", input.fezOpenFinance ? "is-ok" : "is-moderado");
+
+      renderMacList("macAlertas", result.alertas, "Sem alertas para a MAC no momento.");
+      renderMacList("macRecomendacoes", result.recomendacoes, "Cliente aderente aos pontos principais. Manter conferencia documental.");
+
+      const resumo = byId("macResumoFinal");
+      if (resumo) {
+        if (result.bloqueioCritico) {
+          resumo.textContent = "Existe bloqueio critico ou risco alto. Corrija o relacionamento Caixa e/ou a renda antes de avancar.";
+        } else if (result.recuperavel) {
+          resumo.textContent = "Cliente recuperavel. Avance somente com a justificativa documentada e os pontos de relacionamento ajustados.";
+        } else {
+          resumo.textContent = "Cliente aderente aos criterios principais da Caixa para continuidade operacional.";
+        }
+      }
+      setMacStatus("macRecuperavel", `Recuperavel: ${result.recuperavel ? "Sim" : "Nao"}`, result.recuperavel ? "is-recuperavel" : geralTone);
+    }
+
     function clienteEntraRegraFgtsFuturo() {
       const rendaBruta = readMoneyField("renda-bruta-cliente");
       const prestacaoCaixa = readMoneyField("prestacao-caixa");
@@ -4374,6 +4876,7 @@ DIVORCIADO: Certidão averbada.</td>
       });
       if (typeof updateSectionCounters === "function") updateSectionCounters();
       if (typeof buildPendenciasResumo === "function") buildPendenciasResumo();
+      updateMacDashboard();
     }
 
     function formatPercent(value) {
@@ -5455,6 +5958,17 @@ DIVORCIADO: Certidão averbada.</td>
     });
     document.querySelectorAll("select.status.status-pill[data-doc][data-id]").forEach((field) => {
       field.addEventListener("change", () => {
+        atualizarRelacionamentoBancoProduto();
+        runFranksteinValidation();
+      });
+    });
+    document.querySelectorAll("select[data-mac-rel]").forEach((field) => {
+      field.addEventListener("change", () => {
+        const target = byId(field.dataset.macRel);
+        if (target) {
+          target.value = field.value;
+          applySelectColor(target);
+        }
         atualizarRelacionamentoBancoProduto();
         runFranksteinValidation();
       });

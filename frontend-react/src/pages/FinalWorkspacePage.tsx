@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
+import { MetricaAderenciaCaixa } from '../components/MetricaAderenciaCaixa'
 import { FINAL_MODULE_BY_KEY } from '../config/finalNavigation'
+import type { AderenciaCaixaInput } from '../lib/aderenciaCaixa'
 
 interface FinalWorkspacePageProps {
   moduleKey: string
@@ -9,6 +11,14 @@ const STATUS_COPY = {
   'react-ready': 'Modulo ja possui tela React com dados reais.',
   'react-structure': 'Modulo criado como estrutura React para orientar a implementacao final.',
   'legacy-bridge': 'Modulo ainda depende do HTML legado; a rota React documenta o corte de migracao.',
+}
+
+const MAC_PREVIEW_INPUT: AderenciaCaixaInput = {
+  isPercentual: 38,
+  possuiRendaSuporte: false,
+  fezPortabilidadeSalario: true,
+  fezPixCpfCaixa: false,
+  fezOpenFinance: true,
 }
 
 // Pagina estrutural usada enquanto cada modulo ganha paridade real.
@@ -56,6 +66,8 @@ export function FinalWorkspacePage({ moduleKey }: FinalWorkspacePageProps) {
           ))}
         </ul>
       </section>
+
+      {module.key === 'analise-cliente' ? <MetricaAderenciaCaixa input={MAC_PREVIEW_INPUT} /> : null}
 
       <div className="final-actions">
         {module.status === 'react-ready' ? <Link to={module.path}>Abrir modulo React</Link> : null}

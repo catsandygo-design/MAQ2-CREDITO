@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CommercialStage {
+  RESERVA
+  EM_PROCESSO
+  CREDITO
+  SECRETARIA_VENDAS
+  ASSINATURA_DIRETORIA
+  AUTORIZACAO_DIRETORIA
+  ENVIO_SIENGE
+  VENDA_FINALIZADA
+}
+
+enum CurrentQueue {
+  COMERCIAL
+  REPASSE
+}
+
+enum DocumentStatus {
+  PENDENTE
+  ENVIADO
+  APROVADO
+  NAO_APLICA
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  name      String
+  document  String?
+  email     String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  processes Process[]
+}
+
+model Process {
+  id              String          @id @default(uuid())
+  clientId        String
+  empreendimento  String
+  corretor        String?
+  imobiliaria     String?
+  commercialStage CommercialStage @default(RESERVA)
+  currentQueue    CurrentQueue    @default(COMERCIAL)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  client    Client     @relation(fields: [clientId], references: [id])
+  documents Document[]
+  events    AuditEvent[]
+
+  @@index([clientId])
+  @@index([commercialStage])
+  @@index([currentQueue])
+}
+
+model Document {
+  id            String         @id @default(uuid())
+  processId     String
+  name          String
+  category      String
+  status        DocumentStatus @default(PENDENTE)
+  pendingReason String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  process Process @relation(fields: [processId], references: [id])
+
+  @@index([processId])
+  @@index([status])
+}
+
+model FoguetinhoRule {
+  id             String   @id @default(uuid())
+  code           String   @unique
+  name           String
+  category       String
+  version        String
+  status         String
+  severity       String
+  autonomyLevel  Int
+  conditionJson  Json
+  actionJson     Json?
+  message        String
+  source         String?
+  createdBy      String?
+  approvedBy     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model AuditEvent {
+  id         String   @id @default(uuid())
+  processId  String?
+  actorId    String
+  action     String
+  entityType String
+  entityId   String
+  beforeJson Json?
+  afterJson  Json?
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  process Process? @relation(fields: [processId], references: [id])
+
+  @@index([processId])
+  @@index([entityType, entityId])
+}

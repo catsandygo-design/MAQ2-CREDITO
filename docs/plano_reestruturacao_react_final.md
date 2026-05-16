@@ -1,4 +1,4 @@
-# Plano de reestruturacao React final - SioCred
+# Plano de reestruturacao React final - MAQ2-Credito
 
 Backup criado antes desta etapa:
 
@@ -7,7 +7,9 @@ Backup criado antes desta etapa:
 
 ## Objetivo
 
-Migrar o SioCred para uma aplicacao React final sem perder regras que hoje ainda vivem nas telas HTML legadas.
+Migrar o MAQ2-Credito para uma aplicacao React final sem perder regras que hoje ainda vivem nas telas HTML legadas.
+
+Observacao de produto: SioCred passa a ser tratado como contexto historico/legado. A comunicacao nova, a interface final e a documentacao de evolucao devem usar MAQ2-Credito.
 
 A direcao e:
 
