@@ -1,6 +1,7 @@
 'use client';
 
-import { ChangeEvent, useMemo, useState } from 'react';
+import type { ChangeEvent } from 'react';
+import { useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Building2,
@@ -56,13 +57,9 @@ export default function CorretorPage() {
   const [notice, setNotice] = useState<{ title: string; text: string } | null>(null);
   const [status, setStatus] = useState<Record<string, string>>({});
 
-  const documentos = useMemo(() => {
-    return documentosBase.filter((doc) => !doc.rendaInformal || form.tipoRenda === 'informal');
-  }, [form.tipoRenda]);
+  const documentos = useMemo(() => documentosBase.filter((doc) => !doc.rendaInformal || form.tipoRenda === 'informal'), [form.tipoRenda]);
 
-  const update = (field: keyof typeof form, value: string) => {
-    setForm((current) => ({ ...current, [field]: value }));
-  };
+  const update = (field: keyof typeof form, value: string) => setForm((current) => ({ ...current, [field]: value }));
 
   const notify = (title: string, text: string) => {
     setNotice({ title, text });
@@ -71,8 +68,7 @@ export default function CorretorPage() {
 
   const salvar = () => {
     const obrigatorios = ['nome', 'reserva', 'cidade', 'empreendimento', 'estadoCivil', 'tipoRenda'] as const;
-    const hasMissing = obrigatorios.some((field) => !form[field].trim());
-    if (hasMissing) {
+    if (obrigatorios.some((field) => !form[field].trim())) {
       notify('Atencao', 'Preencha os dados obrigatorios do proponente antes de enviar documentos.');
       return;
     }
@@ -85,8 +81,7 @@ export default function CorretorPage() {
       notify('Atencao', 'Salve os dados do proponente antes de anexar documentos.');
       return;
     }
-    const currentStatus = status[doc.id];
-    if (currentStatus === 'em-analise') {
+    if (status[doc.id] === 'em-analise') {
       notify('Bloqueado', 'Documento ja enviado. Aguarde a analise ou pendencia.');
       return;
     }
@@ -120,7 +115,8 @@ export default function CorretorPage() {
   return (
     <main className="broker-doc-page">
       <style>{`
-        .broker-doc-page { min-height: 100vh; background: radial-gradient(circle at top, #1f2937 0, #020617 48%, #020617 100%); color: #e5e7eb; padding: 24px 16px 40px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; }
+        .broker-doc-page { height: 100vh; overflow-y: auto; background: radial-gradient(circle at top, #1f2937 0, #020617 48%, #020617 100%); color: #e5e7eb; padding: 24px 16px 40px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; }
+        .broker-doc-page::-webkit-scrollbar { width: 12px; } .broker-doc-page::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; border: 3px solid #020617; } .broker-doc-page::-webkit-scrollbar-track { background: #020617; }
         .shell { max-width: 1120px; margin: 0 auto; display: grid; gap: 20px; }
         .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
         .title h1 { margin: 0; font-size: 28px; display: flex; gap: 12px; align-items: center; } .title svg { color: #22c55e; }
@@ -214,14 +210,12 @@ export default function CorretorPage() {
             </div>
 
             <div className="card"><div className="sla-box"><div><div className="soft">SLA do analista</div><div className="sla-time">02:58:14</div></div><div className="sla-role">Quem esta com o relogio:<br /><strong>Analista</strong></div></div><div className="hint">Quando houver pendencia, o relogio do analista pausa e passa a contar o prazo de resposta do corretor.</div></div>
-
             <div className="kit"><FolderOpen size={34} /><strong>Organizacao do kit</strong><p className="soft">Salve o proponente, anexe os documentos e acompanhe o status de analise.</p></div>
           </aside>
         </section>
       </div>
 
       {modalDoc && <div className="modal"><div className="modal-content"><div className="modal-head"><h3><UploadCloud size={21} /> Enviar documento</h3><button className="icon-btn" onClick={() => setModalDoc(null)}><X /></button></div><p className="soft">Enviar documento: <strong>{modalDoc.titulo}</strong></p><label className="btn-upload file-input-label"><input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={onFile} />{fileName ? fileName : 'Selecionar arquivo'}</label>{fileName && <div className="progress"><span /></div>}<button className="btn-primary" disabled={!fileName} onClick={enviarDocumento}><UploadCloud size={17} /> Enviar documento</button></div></div>}
-
       {notice && <div className="notification"><CheckCircle2 /><div><strong>{notice.title}</strong><div className="soft">{notice.text}</div></div></div>}
     </main>
   );
