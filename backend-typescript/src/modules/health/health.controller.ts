@@ -6,7 +6,7 @@ export class HealthController {
   health(): { ok: true; service: string } {
     return {
       ok: true,
-      service: 'maq2-credito-backend-typescript',
+      service: 'siocred-backend-typescript',
     };
   }
 }

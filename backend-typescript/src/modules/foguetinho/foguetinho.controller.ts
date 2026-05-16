@@ -1,7 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
 
-import type { FoguetinhoContext } from './domain/foguetinho-context';
-import { FoguetinhoEvaluation, FoguetinhoService } from './foguetinho.service';
+import { FoguetinhoContext, FoguetinhoEvaluation, FoguetinhoService } from './foguetinho.service';
 
 @Controller('foguetinho')
 export class FoguetinhoController {

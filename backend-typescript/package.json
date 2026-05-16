@@ -1,8 +1,8 @@
 {
-  "name": "maq2-credito-backend-typescript",
+  "name": "siocred-backend-typescript",
   "version": "0.1.0",
   "private": true,
-  "description": "Backend TypeScript modular para o MAQ2-Credito corporativo.",
+  "description": "Backend TypeScript modular para o SioCred Operacional Inteligente.",
   "license": "UNLICENSED",
   "scripts": {
     "dev": "nest start --watch",
@@ -10,7 +10,6 @@
     "build": "nest build",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "jest --runInBand",
-    "test:watch": "jest --watch",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
@@ -21,6 +20,7 @@
     "@nestjs/core": "^11.1.0",
     "@nestjs/platform-express": "^11.1.0",
     "@prisma/client": "^6.7.0",
+    "@vercel/node": "^5.3.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "helmet": "^8.1.0",
