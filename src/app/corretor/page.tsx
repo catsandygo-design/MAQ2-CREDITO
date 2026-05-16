@@ -1,121 +1,228 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { AlertTriangle, BellRing, CheckCircle2, Clock3, FileWarning, LogOut, RefreshCw, Search, ShieldCheck, UserPlus } from 'lucide-react';
+import { ChangeEvent, useMemo, useState } from 'react';
+import {
+  AlertTriangle,
+  Building2,
+  CheckCircle2,
+  Clock3,
+  FileCheck2,
+  FileText,
+  FolderOpen,
+  LogOut,
+  Paperclip,
+  PiggyBank,
+  Save,
+  UploadCloud,
+  UserCircle2,
+  Users,
+  X,
+} from 'lucide-react';
 
-const agenda = [
-  { time: '08:30', title: 'Abrir carteira do dia', meta: 'Revisar prioridades e pendencias novas' },
-  { time: '09:00', title: 'Retorno documental - Ana Ribeiro', meta: 'Documento de renda | fazer agora' },
-  { time: '11:30', title: 'Conferir pendencia - Marcos Lima', meta: 'Comprovante residencial | urgente' },
-  { time: '15:00', title: 'Follow-up assinatura - Carla Souza', meta: 'Sinal e fiador | fechamento do dia' },
+const documentosBase = [
+  { id: 'rg-cpf', titulo: 'RG e CPF do proponente', desc: 'Documento oficial com foto e CPF legivel.', icon: UserCircle2 },
+  { id: 'comprovante-residencia', titulo: 'Comprovante de residencia', desc: 'Conta de consumo recente ou declaracao aceita pela politica.', icon: Building2 },
+  { id: 'certidao-nascimento', titulo: 'Certidao de nascimento / casamento', desc: 'Obrigatorio conforme estado civil e composicao familiar.', icon: FileText },
+  { id: 'declaracao-parentesco', titulo: 'Declaracao de parentesco', desc: 'Exigida para dependente maior ou parente ate 3o grau.', icon: Users },
+  { id: 'nao-renda-agehab', titulo: 'Declaracao de Nao Renda Agehab', desc: 'Obrigatoria quando a renda for informal.', icon: AlertTriangle, rendaInformal: true },
+  { id: 'checklist-caixa', titulo: 'Checklist Caixa', desc: 'Conferencia do kit documental exigido pela Caixa.', icon: FileCheck2 },
+  { id: 'checklist-agehab', titulo: 'Checklist Agehab', desc: 'Conferencia dos documentos exigidos pela Agehab.', icon: FileCheck2 },
+  { id: 'extrato-fgts', titulo: 'Extrato de FGTS', desc: 'Obrigatorio para renda formal ou mista.', icon: PiggyBank },
 ];
 
-const taskGroups = [
-  { title: 'Fazer agora', tone: 'critical', icon: BellRing, items: ['Enviar renda de Ana Ribeiro', 'Responder retorno de CCA'] },
-  { title: 'Urgentes', tone: 'high', icon: AlertTriangle, items: ['Regularizar renda', 'Validar contato'] },
-  { title: 'Urgentes nao criticas', tone: 'medium', icon: Clock3, items: ['Confirmar previsao', 'Cobrar complemento'] },
-  { title: 'Fechamento do dia', tone: 'info', icon: ShieldCheck, items: ['Fechar docs', 'Atualizar ativos'] },
-  { title: 'Semana', tone: 'success', icon: CheckCircle2, items: ['Carteira parada', 'Agenda assinatura'] },
-];
-
-const clientes = [
-  { cliente: 'Everson Lourenco Pereira da Silva', empreendimento: 'AGLO30 - Vila Girassol', corretor: 'Rebeca Carvalho', etapa: 'Em Processo', caixa: 'Analise Credito', agehab: 'Analise Credito', acao: 'Atuar em Caixa: Analise Credito', risco: 'Alto', prioridade: 'Prioridade alta', comercial: 'Em Processo', repasse: 'Sem Repasse', aging: '107 anos', slaCca: '14 dias', docs: '27 de 36', sinal: 'Nao tem', fiador: 'Nao tem', pendencias: 'Caixa e Agehab em analise de credito' },
-  { cliente: 'Ana Ribeiro', empreendimento: 'MAQ Jardim', corretor: 'Juliana Sales', etapa: 'Credito', caixa: 'Pendente Credito', agehab: 'Analise Credito', acao: 'Enviar comprovante de renda atualizado', risco: 'Alto', prioridade: 'Prioridade alta', comercial: 'Credito', repasse: 'Sem Repasse', aging: '18 dias', slaCca: '48h', docs: '31 de 36', sinal: 'Pendente', fiador: 'Nao se aplica', pendencias: 'Renda vencida e retorno de CCA' },
-  { cliente: 'Marcos Lima', empreendimento: 'MAQ Parque', corretor: 'Rafael Mendes', etapa: 'Em Processo', caixa: 'Analise CCA', agehab: 'Pendente Agehab', acao: 'Corrigir comprovante residencial', risco: 'Medio', prioridade: 'Urgente nao critica', comercial: 'Em Processo', repasse: 'Sem Repasse', aging: '32 dias', slaCca: '24h', docs: '29 de 36', sinal: 'Validado', fiador: 'Nao tem', pendencias: 'Documento de residencia e Agehab' },
-  { cliente: 'Carla Souza', empreendimento: 'MAQ Vista', corretor: 'Rebeca Carvalho', etapa: 'Repasse', caixa: 'Condicionado', agehab: 'Validado', acao: 'Confirmar documento do fiador', risco: 'Medio', prioridade: 'Fechamento do dia', comercial: 'Aprovacao', repasse: 'Inicio Repasse', aging: '41 dias', slaCca: '12h', docs: '34 de 36', sinal: 'Validado', fiador: 'Pendente', pendencias: 'Documento do fiador trava repasse' },
-  { cliente: 'Beatriz Nunes', empreendimento: 'MAQ Prime', corretor: 'Lucas Andrade', etapa: 'Assinatura', caixa: 'Conforme', agehab: 'Validado', acao: 'Acompanhar assinatura', risco: 'Baixo', prioridade: 'Acompanhar', comercial: 'Assinatura', repasse: 'Assinatura Caixa', aging: '22 dias', slaCca: 'No prazo', docs: '36 de 36', sinal: 'Validado', fiador: 'Nao tem', pendencias: 'Sem pendencia critica' },
-];
-
-type Cliente = (typeof clientes)[number];
-const toneFromRisk = (risco: string) => (risco === 'Alto' ? 'danger' : risco === 'Medio' ? 'warn' : 'ok');
-
-function StatusPill({ value, tone = 'neutral' }: { value: string; tone?: string }) {
-  return <span className={`status-pill ${tone}`}>{value}</span>;
-}
-
-function TaskCard({ group }: { group: (typeof taskGroups)[number] }) {
-  const Icon = group.icon;
-  return (
-    <article className={`task-card ${group.tone}`}>
-      <span className="task-icon"><Icon size={15} /></span>
-      <div><h3>{group.title}</h3><p>{group.items.join(' | ')}</p></div>
-      <span className="task-count">{group.items.length}</span>
-    </article>
-  );
-}
-
-function ClientQueueCard({ cliente }: { cliente: Cliente }) {
-  const tone = toneFromRisk(cliente.risco);
-  return (
-    <article className={`client-row ${tone}`}>
-      <div className="client-main"><span className={`risk-dot ${tone}`} /><div className="client-copy"><div className="client-title-row"><h3>{cliente.cliente}</h3><StatusPill value={cliente.prioridade} tone={tone} /></div><p>{cliente.empreendimento} | {cliente.corretor}</p><strong>{cliente.acao}</strong></div></div>
-      <div className="client-stats"><div><span>Etapa</span><strong>{cliente.etapa}</strong></div><div><span>Caixa</span><strong>{cliente.caixa}</strong></div><div><span>Agehab</span><strong>{cliente.agehab}</strong></div><div><span>Docs</span><strong>{cliente.docs}</strong></div><div><span>SLA CCA</span><strong>{cliente.slaCca}</strong></div></div>
-      <div className="client-footer"><span>Comercial: {cliente.comercial}</span><span>Repasse: {cliente.repasse}</span><span>Sinal: {cliente.sinal}</span><span>Fiador: {cliente.fiador}</span><span>{cliente.pendencias}</span></div>
-    </article>
-  );
-}
+const empreendimentos = ['MAQ Jardim', 'MAQ Parque', 'MAQ Vista', 'MAQ Prime'];
+const statusLabel: Record<string, string> = {
+  'nao-enviado': 'Anexar',
+  'em-analise': 'Em analise',
+  pendenciado: 'Pendente',
+  reprovado: 'Reprovado',
+};
 
 export default function CorretorPage() {
-  const [query, setQuery] = useState('');
-  const [risk, setRisk] = useState('Todos');
+  const [form, setForm] = useState({
+    nome: '',
+    reserva: '',
+    cidade: '',
+    empreendimento: '',
+    corretor: 'Rebeca Carvalho',
+    estadoCivil: '',
+    tipoRenda: '',
+    tipoDependente: '',
+    dependenteCasado: 'nao',
+  });
+  const [saved, setSaved] = useState(false);
+  const [modalDoc, setModalDoc] = useState<(typeof documentosBase)[number] | null>(null);
+  const [fileName, setFileName] = useState('');
+  const [notice, setNotice] = useState<{ title: string; text: string } | null>(null);
+  const [status, setStatus] = useState<Record<string, string>>({});
 
-  const filteredClientes = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return clientes.filter((cliente) => {
-      const fields = [cliente.cliente, cliente.empreendimento, cliente.corretor, cliente.etapa, cliente.caixa, cliente.agehab, cliente.acao];
-      return (!q || fields.some((field) => field.toLowerCase().includes(q))) && (risk === 'Todos' || cliente.risco === risk);
-    });
-  }, [query, risk]);
+  const documentos = useMemo(() => {
+    return documentosBase.filter((doc) => !doc.rendaInformal || form.tipoRenda === 'informal');
+  }, [form.tipoRenda]);
 
-  const waitingDocsCount = clientes.filter((cliente) => cliente.docs !== '36 de 36').length;
-  const highPriorityCount = clientes.filter((cliente) => cliente.risco === 'Alto').length;
+  const update = (field: keyof typeof form, value: string) => {
+    setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const notify = (title: string, text: string) => {
+    setNotice({ title, text });
+    window.setTimeout(() => setNotice(null), 3600);
+  };
+
+  const salvar = () => {
+    const obrigatorios = ['nome', 'reserva', 'cidade', 'empreendimento', 'estadoCivil', 'tipoRenda'] as const;
+    const hasMissing = obrigatorios.some((field) => !form[field].trim());
+    if (hasMissing) {
+      notify('Atencao', 'Preencha os dados obrigatorios do proponente antes de enviar documentos.');
+      return;
+    }
+    setSaved(true);
+    notify('Sucesso', `Proponente ${form.nome} salvo. Documentos liberados para envio.`);
+  };
+
+  const abrirUpload = (doc: (typeof documentosBase)[number]) => {
+    if (!saved) {
+      notify('Atencao', 'Salve os dados do proponente antes de anexar documentos.');
+      return;
+    }
+    const currentStatus = status[doc.id];
+    if (currentStatus === 'em-analise') {
+      notify('Bloqueado', 'Documento ja enviado. Aguarde a analise ou pendencia.');
+      return;
+    }
+    setFileName('');
+    setModalDoc(doc);
+  };
+
+  const enviarDocumento = () => {
+    if (!modalDoc || !fileName) return;
+    setStatus((current) => ({ ...current, [modalDoc.id]: 'em-analise' }));
+    notify('Sucesso', `${modalDoc.titulo} enviado e em analise.`);
+    setModalDoc(null);
+  };
+
+  const onFile = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      notify('Erro', 'O arquivo excede o limite de 5MB.');
+      return;
+    }
+    setFileName(file.name);
+  };
+
+  const rendaHint = form.tipoRenda === 'informal'
+    ? 'Renda informal exige Declaracao de Nao Renda para Agehab.'
+    : form.tipoRenda === 'formal'
+      ? 'Renda formal exige extrato de FGTS atualizado.'
+      : 'Selecione o tipo de renda para liberar regras documentais.';
 
   return (
-    <main className="broker-page">
+    <main className="broker-doc-page">
       <style>{`
-        .broker-page { min-height: 100vh; overflow-y: auto; background: #f4f7fb; color: #071225; padding: 12px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; }
-        .broker-page::-webkit-scrollbar { width: 12px; } .broker-page::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 999px; } .broker-page::-webkit-scrollbar-track { background: #e2e8f0; }
-        .broker-shell { max-width: 1480px; margin: 0 auto; display: grid; gap: 8px; }
-        .topbar, .panel, .metric { background: #fff; border: 1px solid #d8e2ee; border-radius: 8px; box-shadow: 0 8px 20px rgba(15, 23, 42, .05); }
-        .topbar { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 13px; }
-        .brand { display: flex; align-items: center; gap: 11px; min-width: 0; } .mark { width: 38px; height: 38px; border-radius: 8px; display: grid; place-items: center; background: #0f766e; color: #fff; font-weight: 900; font-size: 17px; }
-        h1, h2, h3, p { margin: 0; } h1 { font-size: 21px; } h2 { font-size: 16px; } h3 { font-size: 13px; }
-        .subtle { color: #53627a; font-size: 12px; line-height: 1.3; margin-top: 2px; }
-        .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; } .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid #cbd5e1; background: #fff; border-radius: 7px; padding: 8px 10px; font-weight: 800; font-size: 13px; color: #071225; text-decoration: none; } .btn.primary { background: #0f766e; border-color: #0f766e; color: #fff; }
-        .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; } .metric { padding: 10px 12px; display: flex; justify-content: space-between; align-items: flex-start; } .metric span { color: #53627a; font-size: 12px; font-weight: 800; } .metric strong { display: block; margin-top: 2px; font-size: 22px; } .metric svg { color: #0f766e; }
-        .workspace { display: grid; grid-template-columns: 305px 1fr; gap: 8px; align-items: start; }
-        .left-rail, .right-workstream { display: grid; gap: 8px; align-content: start; }
-        .panel { overflow: hidden; } .panel-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; padding: 9px 13px; border-bottom: 1px solid #e5edf5; } .panel-body { padding: 9px 13px; } .count { background: #eef2f7; color: #334155; border-radius: 999px; padding: 5px 9px; font-size: 12px; font-weight: 900; white-space: nowrap; }
-        .agenda-list { display: grid; gap: 8px; } .agenda-item { display: grid; grid-template-columns: 55px 1fr; gap: 9px; padding: 9px; border: 1px solid #dce6f1; border-radius: 7px; background: #f8fafc; } .agenda-time { color: #04736b; font-weight: 900; } .agenda-title { font-weight: 900; font-size: 13px; } .agenda-meta { color: #53627a; font-size: 12px; margin-top: 3px; }
-        .task-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; } .task-card { display: grid; grid-template-columns: 27px 1fr 22px; gap: 7px; align-items: start; border: 1px solid #dbe4ef; border-radius: 8px; padding: 8px; background: #fbfdff; } .task-card.critical { border-top: 4px solid #dc2626; } .task-card.high { border-top: 4px solid #f97316; } .task-card.medium { border-top: 4px solid #d97706; } .task-card.info { border-top: 4px solid #0284c7; } .task-card.success { border-top: 4px solid #16a34a; } .task-icon { width: 25px; height: 25px; border-radius: 7px; display: grid; place-items: center; background: #eef2f7; } .task-count { min-width: 22px; height: 22px; display: grid; place-items: center; border-radius: 999px; background: #e2e8f0; font-weight: 900; } .task-card p { color: #334155; font-size: 11px; line-height: 1.2; margin-top: 3px; }
-        .client-list-panel { background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%); } .client-list-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; } .client-list-actions .count { background: #fff; border: 1px solid #d8e2ee; padding: 6px 10px; font-size: 13px; }
-        .filters { display: grid; grid-template-columns: 1fr 170px 170px; gap: 10px; align-items: end; } .field { display: grid; gap: 4px; } .field label { color: #475569; font-size: 12px; font-weight: 900; } .field input, .field select { width: 100%; border: 1px solid #cbd5e1; border-radius: 7px; padding: 8px 10px; background: #fff; color: #071225; font-size: 13px; outline: none; }
-        .client-flow-list { display: grid; align-content: start; gap: 9px; padding: 10px; background: #eef8ff; }
-        .client-row { display: grid; grid-template-columns: minmax(310px, 1.2fr) 1.8fr; gap: 10px; background: #fff; border: 1px solid #dbe4ef; border-left-width: 4px; border-radius: 8px; padding: 10px; box-shadow: 0 10px 24px rgba(15, 23, 42, .05); } .client-row.danger { border-left-color: #dc2626; } .client-row.warn { border-left-color: #d97706; } .client-row.ok { border-left-color: #16a34a; }
-        .client-main { display: flex; gap: 10px; min-width: 0; } .client-copy { min-width: 0; } .client-title-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } .client-title-row h3 { color: #082f49; font-size: 15px; line-height: 1.2; text-transform: uppercase; } .client-copy p { color: #334155; font-size: 12px; margin-top: 4px; } .client-copy strong { display: block; color: #071225; font-size: 13px; margin-top: 7px; }
-        .risk-dot { width: 11px; height: 11px; border-radius: 999px; margin-top: 4px; box-shadow: 0 0 0 5px #eef8ff; flex: 0 0 auto; } .risk-dot.danger { background: #dc2626; } .risk-dot.warn { background: #d97706; } .risk-dot.ok { background: #16a34a; }
-        .status-pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 8px; font-weight: 900; font-size: 11px; white-space: nowrap; border: 1px solid #e2e8f0; background: #eef2f7; color: #334155; } .status-pill.danger { background: #fee2e2; color: #991b1b; border-color: #fecaca; } .status-pill.warn { background: #fef3c7; color: #92400e; border-color: #fde68a; } .status-pill.ok { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
-        .client-stats { display: grid; grid-template-columns: repeat(5, minmax(92px, 1fr)); gap: 7px; } .client-stats div { border: 1px solid #e5edf5; border-radius: 7px; padding: 8px; background: #f8fbff; } .client-stats span { display: block; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; font-weight: 900; margin-bottom: 5px; } .client-stats strong { color: #075985; font-size: 12px; line-height: 1.2; }
-        .client-footer { grid-column: 1 / -1; display: flex; gap: 7px; flex-wrap: wrap; border-top: 1px solid #e5edf5; padding-top: 8px; } .client-footer span { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 999px; color: #334155; font-size: 11px; font-weight: 800; padding: 5px 8px; }
-        @media (max-width: 1180px) { .workspace { grid-template-columns: 1fr; } .task-grid, .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-row { grid-template-columns: 1fr; } }
-        @media (max-width: 760px) { .broker-page { padding: 10px; } .topbar, .actions { align-items: flex-start; flex-direction: column; } .task-grid, .summary-grid, .filters, .client-stats { grid-template-columns: 1fr; } .client-title-row h3 { font-size: 14px; } }
+        .broker-doc-page { min-height: 100vh; background: radial-gradient(circle at top, #1f2937 0, #020617 48%, #020617 100%); color: #e5e7eb; padding: 24px 16px 40px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; }
+        .shell { max-width: 1120px; margin: 0 auto; display: grid; gap: 20px; }
+        .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+        .title h1 { margin: 0; font-size: 28px; display: flex; gap: 12px; align-items: center; } .title svg { color: #22c55e; }
+        .badge { display: inline-flex; margin-top: 8px; border: 1px solid rgba(34,197,94,.45); color: #22c55e; background: rgba(34,197,94,.14); border-radius: 999px; padding: 6px 14px; font-size: 12px; font-weight: 800; letter-spacing: .08em; }
+        .subtitle, .soft { color: #9ca3af; font-size: 13px; line-height: 1.45; margin-top: 6px; }
+        .sla-mini { background: rgba(30,41,59,.55); border: 1px solid rgba(148,163,184,.16); border-radius: 12px; padding: 12px 16px; color: #9ca3af; font-size: 13px; display: grid; gap: 4px; } .sla-mini strong { color: #22c55e; }
+        .grid { display: grid; grid-template-columns: 2fr 1.35fr; gap: 20px; align-items: start; }
+        .card { background: radial-gradient(circle at top left, rgba(34,197,94,.09), transparent 55%), radial-gradient(circle at bottom right, rgba(59,130,246,.16), transparent 60%), #0b1120; border: 1px solid rgba(148,163,184,.18); border-radius: 16px; padding: 20px 24px; box-shadow: 0 20px 35px rgba(15,23,42,.72); }
+        .card h2 { margin: 0 0 6px; font-size: 19px; display: flex; gap: 10px; align-items: center; } .card h2 svg { color: #22c55e; }
+        .section { margin-top: 20px; padding-top: 16px; border-top: 1px dashed rgba(148,163,184,.35); }
+        .section-title { color: #9ca3af; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; display: flex; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+        .pill { border: 1px solid rgba(148,163,184,.35); color: #9ca3af; background: rgba(15,23,42,.5); border-radius: 999px; padding: 4px 10px; text-transform: none; letter-spacing: 0; white-space: nowrap; }
+        .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+        .form-group { display: grid; gap: 6px; } label { color: #9ca3af; font-size: 13px; font-weight: 650; }
+        input, select { width: 100%; background: #020617; border: 1px solid #1f2937; border-radius: 10px; color: #e5e7eb; padding: 10px 12px; font-size: 13px; outline: none; } input:focus, select:focus { border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.18); }
+        .hint { color: #9ca3af; font-size: 12px; line-height: 1.55; margin-top: 6px; } .hint strong { color: #22c55e; }
+        .rules { background: rgba(15,23,42,.55); border-left: 3px solid #22c55e; border-radius: 10px; padding: 14px; color: #d1d5db; font-size: 13px; } .rules li { margin-bottom: 6px; }
+        .button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .btn-primary, .btn-ghost, .btn-upload { border: 0; cursor: pointer; border-radius: 12px; font-weight: 800; display: inline-flex; justify-content: center; align-items: center; gap: 8px; transition: .2s ease; }
+        .btn-primary { background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; padding: 13px; box-shadow: 0 12px 25px rgba(34,197,94,.22); } .btn-ghost { background: transparent; color: #e5e7eb; border: 1px solid #1f2937; padding: 13px; }
+        .right-panel { display: grid; gap: 20px; }
+        .sla-box { display: flex; justify-content: space-between; gap: 16px; align-items: center; background: radial-gradient(circle at top left, rgba(34,197,94,.2), transparent 60%), #020617; border: 1px solid rgba(34,197,94,.5); border-radius: 14px; padding: 16px; }
+        .sla-time { color: #22c55e; font-size: 31px; font-weight: 900; letter-spacing: 2px; } .sla-role { text-align: right; color: #9ca3af; font-size: 13px; } .sla-role strong { color: #22c55e; font-size: 16px; }
+        .status-dots { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; } .dot-label { display: flex; gap: 8px; align-items: center; background: rgba(15,23,42,.55); border-radius: 8px; padding: 7px 10px; color: #d1d5db; font-size: 12px; }
+        .dot { width: 11px; height: 11px; border-radius: 999px; display: inline-block; } .nao-enviado { background: #9ca3af; } .em-analise { background: #f59e0b; } .pendenciado { background: #ef4444; } .reprovado { background: #020617; border: 1px solid #4b5563; }
+        .file-list { margin-top: 12px; display: grid; gap: 10px; }
+        .file-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(15,23,42,.78); border: 1px solid rgba(31,41,55,.86); border-radius: 12px; padding: 13px; }
+        .file-title { display: flex; gap: 8px; align-items: center; font-size: 14px; font-weight: 800; } .file-title svg { color: #22c55e; } .file-desc { color: #9ca3af; font-size: 12px; line-height: 1.4; margin-top: 4px; }
+        .file-actions { display: flex; gap: 12px; align-items: center; flex: 0 0 auto; } .btn-upload { color: #22c55e; border: 1px solid rgba(34,197,94,.5); background: rgba(34,197,94,.12); padding: 8px 14px; } .btn-upload.pending { color: #f59e0b; border-color: #f59e0b; background: rgba(245,158,11,.14); }
+        .kit { background: rgba(30,41,59,.5); border-radius: 12px; padding: 16px; text-align: center; color: #d1d5db; } .kit svg { color: #22c55e; margin-bottom: 8px; }
+        .modal { position: fixed; inset: 0; background: rgba(15,23,42,.9); display: grid; place-items: center; z-index: 20; } .modal-content { width: min(500px, calc(100vw - 32px)); background: #0b1120; border: 1px solid rgba(148,163,184,.22); border-radius: 16px; padding: 26px; box-shadow: 0 20px 35px rgba(0,0,0,.6); }
+        .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; } .modal-head h3 { margin: 0; display: flex; gap: 9px; align-items: center; } .icon-btn { background: transparent; border: 0; color: #9ca3af; cursor: pointer; }
+        .file-input-label { width: 100%; margin: 18px 0; } .file-input-label input { display: none; }
+        .progress { height: 6px; background: rgba(148,163,184,.2); border-radius: 999px; overflow: hidden; margin-bottom: 14px; } .progress span { display: block; width: 68%; height: 100%; background: linear-gradient(90deg, #22c55e, #16a34a); }
+        .notification { position: fixed; right: 24px; bottom: 24px; background: #0b1120; border: 1px solid rgba(34,197,94,.5); border-radius: 12px; padding: 14px 18px; display: flex; gap: 10px; align-items: center; box-shadow: 0 20px 35px rgba(0,0,0,.5); z-index: 30; } .notification svg { color: #22c55e; }
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .form-grid, .button-row { grid-template-columns: 1fr; } .topbar { align-items: flex-start; } }
+        @media (max-width: 640px) { .file-row { align-items: flex-start; flex-direction: column; } .file-actions { width: 100%; justify-content: space-between; } }
       `}</style>
 
-      <div className="broker-shell">
-        <header className="topbar"><div className="brand"><div className="mark">M2</div><div><h1>Corretor</h1><p className="subtle">Agenda, prioridades e carteira vinculada.</p></div></div><nav className="actions" aria-label="Acoes do corretor"><a className="btn" href="/corretor"><RefreshCw size={16} />Atualizar</a><a className="btn primary" href="/corretor"><UserPlus size={16} />Novo pre-cadastro</a><a className="btn" href="/login"><LogOut size={16} />Sair</a></nav></header>
-        <section className="summary-grid" aria-label="Resumo operacional"><article className="metric"><div><span>Fazer agora</span><strong>2</strong></div><BellRing size={21} /></article><article className="metric"><div><span>Aguardando docs</span><strong>{waitingDocsCount}</strong></div><FileWarning size={21} /></article><article className="metric"><div><span>Prioridade alta</span><strong>{highPriorityCount}</strong></div><AlertTriangle size={21} /></article><article className="metric"><div><span>Carteira ativa</span><strong>{clientes.length}</strong></div><ShieldCheck size={21} /></article></section>
-        <section className="workspace">
-          <aside className="panel left-rail"><div className="panel-head"><div><h2>Agenda</h2><p className="subtle">Compromissos do dia.</p></div><span className="count">{agenda.length}</span></div><div className="panel-body agenda-list">{agenda.map((item) => <article className="agenda-item" key={item.title}><span className="agenda-time">{item.time}</span><div><p className="agenda-title">{item.title}</p><p className="agenda-meta">{item.meta}</p></div></article>)}</div></aside>
-          <div className="right-workstream">
-            <section className="panel"><div className="panel-head"><div><h2>Mapa de tarefas</h2><p className="subtle">Agora, urgente, fechamento e semana.</p></div><span className="count">5 blocos</span></div><div className="panel-body task-grid">{taskGroups.map((group) => <TaskCard key={group.title} group={group} />)}</div></section>
-            <section className="panel client-list-panel">
-              <div className="panel-head"><div><p className="subtle" style={{ color: '#0284c7', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.14em' }}>Fila viva</p><h2 style={{ fontSize: 22, marginTop: 4 }}>Fluxo do cliente</h2><p className="subtle">Lista de clientes do corretor com etapa, travas, SLA e proxima acao.</p></div><div className="client-list-actions"><span className="count">{filteredClientes.length} processo(s)</span><span className="count">{waitingDocsCount} aguardando docs</span><span className="count">{highPriorityCount} prioridade alta</span></div></div>
-              <div className="panel-body filters"><div className="field"><label>Buscar cliente</label><div style={{ position: 'relative' }}><Search size={15} style={{ position: 'absolute', left: 10, top: 9, color: '#64748b' }} /><input style={{ paddingLeft: 34 }} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cliente, empreendimento, etapa, caixa ou acao" /></div></div><div className="field"><label>Risco</label><select value={risk} onChange={(event) => setRisk(event.target.value)}><option>Todos</option><option>Alto</option><option>Medio</option><option>Baixo</option></select></div><div className="field"><label>Ordem</label><select><option>Mais criticos primeiro</option></select></div></div>
-              <div className="client-flow-list">{filteredClientes.map((cliente) => <ClientQueueCard cliente={cliente} key={cliente.cliente} />)}</div>
-            </section>
+      <div className="shell">
+        <header className="topbar">
+          <div className="title">
+            <h1><FileText size={30} /> Painel do Corretor</h1>
+            <div className="badge">Envio de documentos</div>
+            <p className="subtitle">Reserva atual: acompanhe o envio de kit Caixa e Agehab com status visual.</p>
           </div>
+          <div className="sla-mini">
+            <div><strong>SLA analista:</strong> 3h uteis</div>
+            <div><strong>SLA corretor em pendencia:</strong> 24h corridas</div>
+            <div>Logado como: <strong>{form.corretor}</strong></div>
+            <a href="/login" style={{ color: '#ef4444', textDecoration: 'none', fontSize: 12 }}><LogOut size={13} /> Sair</a>
+          </div>
+        </header>
+
+        <section className="grid">
+          <div className="card">
+            <h2><UserCircle2 size={22} /> Dados do Proponente & Dependentes</h2>
+            <p className="soft">Preencha os dados basicos. Informacoes sensiveis continuam apenas no CRM.</p>
+
+            <div className="section">
+              <div className="section-title"><span>Proponente</span><span className="pill">Identificacao do processo</span></div>
+              <div className="form-grid">
+                <div className="form-group"><label>Nome completo</label><input value={form.nome} onChange={(e) => update('nome', e.target.value)} placeholder="Nome do proponente" /></div>
+                <div className="form-group"><label>No da reserva</label><input value={form.reserva} onChange={(e) => update('reserva', e.target.value)} placeholder="Ex: 458712" /></div>
+                <div className="form-group"><label>Cidade</label><input value={form.cidade} onChange={(e) => update('cidade', e.target.value)} placeholder="Ex: Aguas Lindas de Goias" /></div>
+                <div className="form-group"><label>Empreendimento</label><select value={form.empreendimento} onChange={(e) => update('empreendimento', e.target.value)}><option value="">Selecione...</option>{empreendimentos.map((item) => <option key={item}>{item}</option>)}</select></div>
+                <div className="form-group"><label>Corretor responsavel</label><input value={form.corretor} readOnly /></div>
+                <div className="form-group"><label>Estado civil</label><select value={form.estadoCivil} onChange={(e) => update('estadoCivil', e.target.value)}><option value="">Selecione...</option><option value="solteiro">Solteiro(a)</option><option value="casado">Casado(a)</option><option value="uniao_estavel">Uniao estavel</option><option value="divorciado">Divorciado(a)</option><option value="viuvo">Viuvo(a)</option></select><div className="hint">Casado ou uniao estavel exige documentos do conjuge.</div></div>
+                <div className="form-group"><label>Tipo de renda</label><select value={form.tipoRenda} onChange={(e) => update('tipoRenda', e.target.value)}><option value="">Selecione...</option><option value="formal">Formal</option><option value="informal">Informal</option><option value="mista">Mista</option></select><div className="hint"><strong>{rendaHint}</strong></div></div>
+              </div>
+            </div>
+
+            <div className="section">
+              <div className="section-title"><span>Dependentes</span><span className="pill">Regras automaticas por tipo</span></div>
+              <div className="form-grid">
+                <div className="form-group"><label>Tipo de dependente</label><select value={form.tipoDependente} onChange={(e) => update('tipoDependente', e.target.value)}><option value="">Selecione...</option><option value="filho_menor">Filho menor</option><option value="filho_maior">Filho maior</option><option value="parente">Parente ate 3o grau</option></select></div>
+                {form.tipoDependente !== 'filho_menor' && <div className="form-group"><label>Dependente casado?</label><select value={form.dependenteCasado} onChange={(e) => update('dependenteCasado', e.target.value)}><option value="nao">Nao</option><option value="sim">Sim</option></select></div>}
+              </div>
+              <div className="rules"><ul><li><strong>Filho menor</strong>: apenas certidao de nascimento.</li><li><strong>Maior / parente 3o grau</strong>: identidade + declaracao de parentesco.</li><li><strong>Se casado</strong>: identidade do conjuge e declaracao de renda/nao renda.</li></ul></div>
+            </div>
+
+            <div className="button-row"><button className="btn-primary" onClick={salvar}><Save size={17} /> {saved ? 'Dados salvos' : 'Salvar'}</button><a className="btn-ghost" href="/corretor"><Clock3 size={17} /> Acompanhar</a></div>
+          </div>
+
+          <aside className="right-panel">
+            <div className="card">
+              <h2><Paperclip size={22} /> Kit documental</h2>
+              <p className="soft">Status visual do envio dos documentos do proponente.</p>
+              <div className="status-dots"><span className="dot-label"><span className="dot nao-enviado" /> Nao enviado</span><span className="dot-label"><span className="dot em-analise" /> Em analise</span><span className="dot-label"><span className="dot pendenciado" /> Pendenciado</span><span className="dot-label"><span className="dot reprovado" /> Reprovado</span></div>
+              <div className="file-list">{documentos.map((doc) => { const Icon = doc.icon; const current = status[doc.id] || 'nao-enviado'; return <div className="file-row" key={doc.id}><div><div className="file-title"><Icon size={17} /> {doc.titulo}</div><div className="file-desc">{doc.desc}</div></div><div className="file-actions"><span className={`dot ${current}`} /><button className={`btn-upload ${current === 'em-analise' ? 'pending' : ''}`} onClick={() => abrirUpload(doc)}><Paperclip size={14} /> {statusLabel[current]}</button></div></div>; })}</div>
+            </div>
+
+            <div className="card"><div className="sla-box"><div><div className="soft">SLA do analista</div><div className="sla-time">02:58:14</div></div><div className="sla-role">Quem esta com o relogio:<br /><strong>Analista</strong></div></div><div className="hint">Quando houver pendencia, o relogio do analista pausa e passa a contar o prazo de resposta do corretor.</div></div>
+
+            <div className="kit"><FolderOpen size={34} /><strong>Organizacao do kit</strong><p className="soft">Salve o proponente, anexe os documentos e acompanhe o status de analise.</p></div>
+          </aside>
         </section>
       </div>
+
+      {modalDoc && <div className="modal"><div className="modal-content"><div className="modal-head"><h3><UploadCloud size={21} /> Enviar documento</h3><button className="icon-btn" onClick={() => setModalDoc(null)}><X /></button></div><p className="soft">Enviar documento: <strong>{modalDoc.titulo}</strong></p><label className="btn-upload file-input-label"><input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={onFile} />{fileName ? fileName : 'Selecionar arquivo'}</label>{fileName && <div className="progress"><span /></div>}<button className="btn-primary" disabled={!fileName} onClick={enviarDocumento}><UploadCloud size={17} /> Enviar documento</button></div></div>}
+
+      {notice && <div className="notification"><CheckCircle2 /><div><strong>{notice.title}</strong><div className="soft">{notice.text}</div></div></div>}
     </main>
   );
 }
