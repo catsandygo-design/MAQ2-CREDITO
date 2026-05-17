@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 
 const navItems = [
   ['Painel', '/analista'],
@@ -64,7 +65,7 @@ const clientes = [
   },
 ];
 
-function Badge({ children, tone = 'neutral' }: { children: string; tone?: string }) {
+function Badge({ children, tone = 'neutral' }: { children: ReactNode; tone?: string }) {
   return <span className={`analista-badge analista-badge-${tone}`}>{children}</span>;
 }
 
