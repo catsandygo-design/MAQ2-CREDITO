@@ -37,8 +37,7 @@ export default function AcompanhamentoCorretorPage() {
             <p>Tela inicial do corretor com alertas, SLA de entrega de documentos e evolucao das reservas ate o repasse.</p>
           </div>
         </div>
-        <div className="cor-premium-actions">
-          <button>+ Nova reserva</button>
+        <div className="cor-premium-actions cor-actions-no-primary">
           <button>↻ Atualizar</button>
           <button>↪ Sair</button>
         </div>
@@ -72,7 +71,6 @@ export default function AcompanhamentoCorretorPage() {
           <div className="cor-panel-head">
             <div>
               <small>Dashboard 2 — SLA</small>
-              <p>Melhor SLA de entrega de documentos versus SLA atual do corretor.</p>
             </div>
           </div>
           <div className="cor-speed-premium">
