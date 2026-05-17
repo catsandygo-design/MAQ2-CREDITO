@@ -1,12 +1,12 @@
 import Link from 'next/link';
 
 const processosCca = [
-  ['458712', 'Matheus Alves de Melo', 'Bianca Moura', 'Ag. 3884 - Caixa Sul', 'aguardando documentos'],
-  ['458713', 'Ana Paula Ribeiro', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'emitir formularios'],
-  ['458714', 'Carlos Henrique Souza', 'Patricia Nunes', 'Ag. 4201 - Caixa Norte', 'formularios emitidos'],
-  ['458715', 'Joao Pedro Martins', 'CCA Central', 'Ag. 1562 - Caixa Oeste', 'formularios assinados'],
-  ['458716', 'Mariana Costa Lima', 'Bianca Moura', 'Ag. 3884 - Caixa Sul', 'pendencia documental'],
-  ['458717', 'Renato Gomes Paiva', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'agendado para 22/05 - 14h'],
+  ['458712', 'PP', 'Matheus Alves de Melo', 'Bianca Moura', 'Ag. 3884 - Caixa Sul', 'aguardando documentos'],
+  ['458713', 'PN', 'Ana Paula Ribeiro', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'emitir formularios'],
+  ['458714', 'PA', 'Carlos Henrique Souza', 'Patricia Nunes', 'Ag. 4201 - Caixa Norte', 'formularios emitidos'],
+  ['458715', 'PP', 'Joao Amorin', 'CCA Central', 'Ag. 1562 - Caixa Oeste', 'formularios assinados'],
+  ['458716', 'PN', 'Mariana Costa Lima', 'Bianca Moura', 'Ag. 3884 - Caixa Sul', 'pendencia documental'],
+  ['458717', 'PA', 'Renato Gomes Paiva', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'agendado para 22/05 - 14h'],
 ];
 
 const alertasCca = [
@@ -15,8 +15,6 @@ const alertasCca = [
   ['ok', 'ANA PAULA', 'Kit pronto para emissao de formularios Caixa', '12h'],
   ['medio', 'JOAO PEDRO', 'Aguardando retorno de biometria para assinatura', '48h'],
 ];
-
-const taxaRetrabalho = 2.6;
 
 const momentosCliente = [
   'aguardando documentos',
@@ -48,12 +46,6 @@ function badge(status: string) {
   if (s.includes('ok') || s.includes('pronto') || s.includes('finalizado') || s.includes('enviada')) return 'cor-badge cor-badge-ok';
   if (s.includes('aguardando') || s.includes('agendado') || s.includes('agendamento') || s.includes('validacao') || s.includes('solicitada')) return 'cor-badge cor-badge-warn';
   return 'cor-badge cor-badge-info';
-}
-
-function retrabalhoClass(value: number) {
-  if (value <= 2) return 'cor-rework cor-rework-ok';
-  if (value <= 4) return 'cor-rework cor-rework-warn';
-  return 'cor-rework cor-rework-danger';
 }
 
 export default function CcaAcompanhamentoPage() {
@@ -114,13 +106,6 @@ export default function CcaAcompanhamentoPage() {
               ))}
             </div>
           </article>
-          <article className="cor-card cor-rework-card">
-            <div className={retrabalhoClass(taxaRetrabalho)}>
-              <span className="cor-rework-icon">🔨</span>
-              <span>Retrabalho documental CCA</span>
-              <b>{taxaRetrabalho.toFixed(1).replace('.', ',')}%</b>
-            </div>
-          </article>
         </div>
 
         <article className="cor-card cor-panel-conversion">
@@ -155,10 +140,10 @@ export default function CcaAcompanhamentoPage() {
               </tr>
             </thead>
             <tbody>
-              {processosCca.map(([reserva, nome, gestor, agencia, momento]) => (
+              {processosCca.map(([reserva, produto, nome, gestor, agencia, momento]) => (
                 <tr key={reserva}>
                   <td><strong>{reserva}</strong></td>
-                  <td><Link className="cor-link" href={`/painel/checklist-documentos?id=${reserva}`}>{nome}</Link></td>
+                  <td><Link className="cor-link" href={`/painel/checklist-documentos?id=${reserva}`}>({produto}) {nome}</Link></td>
                   <td>{gestor}</td>
                   <td><span className="cor-badge cor-badge-info">{agencia}</span></td>
                   <td><span className={badge(momento)}>{momento}</span></td>
