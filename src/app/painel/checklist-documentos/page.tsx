@@ -8,7 +8,7 @@ export default function ChecklistDocumentosPage() {
   }, []);
 
   return (
-    <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#020617', color: '#e5e7eb', fontFamily: 'Inter, Arial, sans-serif' }}>
+    <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#ffffff', color: '#e5e7eb', fontFamily: 'Inter, Arial, sans-serif' }}>
       <p>Carregando checklist documental...</p>
     </main>
   );

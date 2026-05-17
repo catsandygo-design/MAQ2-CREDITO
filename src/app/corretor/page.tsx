@@ -129,7 +129,7 @@ export default function CorretorPage() {
   return (
     <main className="broker-doc-page">
       <style>{`
-        .broker-doc-page { height: 100vh; overflow-y: auto; background: radial-gradient(circle at top, #1f2937 0, #020617 48%, #020617 100%); color: #e5e7eb; padding: 24px 16px 40px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; }
+        .broker-doc-page { height: 100vh; overflow-y: auto; background: #ffffff; color: #e5e7eb; padding: 24px 16px 40px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; }
         .broker-doc-page::-webkit-scrollbar { width: 12px; } .broker-doc-page::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; border: 3px solid #020617; } .broker-doc-page::-webkit-scrollbar-track { background: #020617; }
         .shell { max-width: 1120px; margin: 0 auto; display: grid; gap: 20px; }
         .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }

@@ -152,3 +152,9 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 1200px) { .cor-dash-grid { grid-template-columns:1fr; } .cor-premium-top { flex-direction:column; align-items:flex-start; } .cor-card { min-height:auto; } .cor-panel-alerts,.cor-sla-stack,.cor-panel-conversion { grid-column:auto; grid-row:auto; height:auto; } .cor-sla-stack > .cor-rework-card { grid-column:auto; } }
 @media (max-width: 760px) { .cor-mini-metrics { grid-template-columns:1fr; } .cor-alert-item { grid-template-columns:10px 1fr; } .cor-alert-item em { grid-column:2; text-align:left; } .cor-premium-actions button { width:100%; } .cor-premium-actions { width:100%; } }
 @media (max-width: 560px) { .cor-page { padding:14px 10px 30px; } .cor-card,.cor-table-card { border-radius:18px; padding:16px; } .cor-premium-title h1 { font-size:2.15rem; } .cor-speed-premium { transform:scale(.86); transform-origin:left center; } }
+
+body,
+.login-page,
+.cor-page {
+  background: #ffffff !important;
+}
