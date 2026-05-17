@@ -34,6 +34,13 @@ const momentosCliente = [
 
 const momentosComAlerta = ['emitir formularios', 'formularios assinados'];
 
+const clientesPorAgencia = [
+  ['Ag. 3884 - Caixa Sul', '2'],
+  ['Ag. 2710 - Caixa Centro', '2'],
+  ['Ag. 4201 - Caixa Norte', '1'],
+  ['Ag. 1562 - Caixa Oeste', '1'],
+];
+
 function badge(status: string) {
   const s = status.toLowerCase();
   if (momentosComAlerta.includes(s)) return 'cor-badge cor-badge-danger cca-alert-badge';
@@ -94,18 +101,17 @@ export default function CcaAcompanhamentoPage() {
           <article className="cor-card cor-panel-sla">
             <div className="cor-panel-head">
               <div>
-                <small>Dashboard 2 — SLA CCA</small>
-                <p>Tempo medio entre recebimento do kit, validacao e devolutiva operacional.</p>
+                <small>Dashboard 2 — Clientes por agencia</small>
+                <p>Distribuicao dos processos CCA por agencia Caixa responsavel.</p>
               </div>
             </div>
-            <div className="cor-speed-premium">
-              <div className="cor-speed-arc" />
-              <div className="cor-speed-needle" />
-              <span />
-            </div>
-            <div className="cor-sla-lines">
-              <div><span>Melhor SLA CCA</span><small>Carteira atual</small><b className="green">2h</b></div>
-              <div><span>SLA medio da fila</span><small>Processos em tratamento</small><b className="orange">9h</b></div>
+            <div className="cca-agency-list">
+              {clientesPorAgencia.map(([agencia, total]) => (
+                <div className="cca-agency-row" key={agencia}>
+                  <span>{agencia}</span>
+                  <b>{total}</b>
+                </div>
+              ))}
             </div>
           </article>
           <article className="cor-card cor-rework-card">
@@ -120,15 +126,15 @@ export default function CcaAcompanhamentoPage() {
         <article className="cor-card cor-panel-conversion">
           <div className="cor-panel-head">
             <div>
-              <small>Dashboard 3 — Analises x Assinaturas</small>
-              <p>Quantidade de processos recebidos comparada aos processos liberados para assinatura.</p>
+              <small>Dashboard 3 — Esteira CCA</small>
+              <p>Volume atual com CCA, encaminhados para conformidade e contratos ja assinados.</p>
             </div>
           </div>
-          <div className="cor-mini-metrics">
-            <div><span>Em analise CCA</span><b>31</b><small>processos ativos</small></div>
-            <div><span>Liberados assinatura</span><b>14</b><small>kits aprovados</small></div>
+          <div className="cca-flow-metrics">
+            <div><span>Com o CCA</span><b>31</b><small>processos ativos</small></div>
+            <div><span>Para conformidade</span><b>18</b><small>encaminhados</small></div>
+            <div><span>Assinados</span><b>9</b><small>minutas assinadas</small></div>
           </div>
-          <div className="cor-conversion-bar"><span>Taxa de liberacao</span><b>45,1%</b></div>
         </article>
       </section>
 
