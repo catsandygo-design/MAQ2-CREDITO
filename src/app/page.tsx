@@ -5,6 +5,7 @@ export default function HomePage() {
         <h1 style={{ margin: 0 }}>MAQ2 Credito</h1>
         <p style={{ margin: 0, color: '#9ca3af' }}>Plataforma enterprise de credito imobiliario Caixa + Agehab.</p>
         <a href="/painel/acompanhamento" style={{ color: '#86efac', fontWeight: 800 }}>Entrar no painel do corretor</a>
+        <a href="/cca/acompanhamento" style={{ color: '#93c5fd', fontWeight: 800 }}>Entrar no painel CCA</a>
       </div>
     </main>
   );
