@@ -50,7 +50,7 @@ function badge(status: string) {
 
 export default function CcaAcompanhamentoPage() {
   return (
-    <main className="cor-page cor-page-premium" data-layout-version="cca-dashboards-agencias-v2">
+    <main className="cor-page cor-page-premium" data-layout-version="cca-dashboards-agencias-v3">
       <header className="cor-premium-top">
         <div className="cor-premium-title">
           <span className="cor-chart-icon">↗</span>
@@ -93,7 +93,7 @@ export default function CcaAcompanhamentoPage() {
           <article className="cor-card cor-panel-sla">
             <div className="cor-panel-head">
               <div>
-                <small>Dashboard 2 — Clientes por agencia</small>
+                <small>Dashboard 2 — Clientes por agencia Caixa</small>
                 <p>Distribuicao dos processos CCA por agencia Caixa responsavel.</p>
               </div>
             </div>
@@ -111,7 +111,7 @@ export default function CcaAcompanhamentoPage() {
         <article className="cor-card cor-panel-conversion">
           <div className="cor-panel-head">
             <div>
-              <small>Dashboard 3 — Esteira CCA</small>
+              <small>Dashboard 3 — Resumo operacional CCA</small>
               <p>Volume atual com CCA, encaminhados para conformidade e contratos ja assinados.</p>
             </div>
           </div>
