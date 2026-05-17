@@ -158,3 +158,17 @@ body,
 .cor-page {
   background: #ffffff !important;
 }
+
+.cor-page {
+  color: #0f172a;
+}
+
+.cor-premium-title h1,
+.cor-table-card h2 {
+  color: #0f172a;
+}
+
+.cor-premium-title p,
+.cor-panel-head p {
+  color: #475569;
+}
