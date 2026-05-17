@@ -124,7 +124,7 @@ export default function AcompanhamentoCorretorPage() {
               {clientes.map(([reserva, nome, caixa, agehab, sinal, fiador, momento, prazo]) => (
                 <tr key={reserva}>
                   <td><strong>{reserva}</strong></td>
-                  <td><Link className="cor-link" href={`/painel/checklist-documentos?id=${reserva}`}>{nome}</Link></td>
+                  <td><Link className="cor-link" href={`/painel/checklist-documentos?cliente=${encodeURIComponent(nome)}&reserva=${reserva}`}>{nome}</Link></td>
                   <td><span className={badge(caixa)}>{caixa}</span></td>
                   <td><span className={badge(agehab)}>{agehab}</span></td>
                   <td><span className={badge(sinal)}>{sinal}</span></td>

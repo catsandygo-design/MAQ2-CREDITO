@@ -173,9 +173,9 @@ export default function CorretorPage() {
       <div className="shell">
         <header className="topbar">
           <div className="title">
-            <h1><FileText size={30} /> Painel do Corretor</h1>
-            <div className="badge">Envio de documentos</div>
-            <p className="subtitle">Reserva atual: acompanhe o envio de kit Caixa e Agehab com status visual.</p>
+            <h1><FileText size={30} /> Checklist de Documentos</h1>
+            <div className="badge">Upload com formulario</div>
+            <p className="subtitle">Tela baseada no checklist_documentos_upload_com_formulario para envio de kit Caixa e Agehab.</p>
           </div>
           <div className="sla-mini">
             <div><strong>SLA analista:</strong> 3h uteis</div>

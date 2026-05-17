@@ -143,7 +143,7 @@ export default function CcaAcompanhamentoPage() {
               {processosCca.map(([reserva, produto, nome, gestor, agencia, momento]) => (
                 <tr key={reserva}>
                   <td><strong>{reserva}</strong></td>
-                  <td><Link className="cor-link" href={`/painel/checklist-documentos?id=${reserva}`}>({produto}) {nome}</Link></td>
+                  <td><Link className="cor-link" href={`/painel/checklist-documentos?cliente=${encodeURIComponent(nome)}&reserva=${reserva}`}>({produto}) {nome}</Link></td>
                   <td>{gestor}</td>
                   <td><span className="cor-badge cor-badge-info">{agencia}</span></td>
                   <td><span className={badge(momento)}>{momento}</span></td>
