@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Checklist de Documentos - Upload</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #0b1120;
+      --card-soft: #020617;
+      --accent: #22c55e;
+      --accent-soft: rgba(34, 197, 94, 0.15);
+      --accent-dark: #16a34a;
+      --text: #e5e7eb;
+      --text-soft: #9ca3af;
+      --danger: #ef4444;
+      --warning: #f97316;
+      --info: #0ea5e9;
+      --border: #1f2937;
+      --shadow: 0 20px 35px rgba(15, 23, 42, 0.9);
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top, #1f2937 0, #020617 45%, #020617 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .app-container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 24px 16px 40px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .topbar-left h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .topbar-left h1 i {
+      color: var(--accent);
+    }
+
+    .topbar-left .badge {
+      font-size: 0.8rem;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(34, 197, 94, 0.4);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-weight: 600;
+      display: inline-block;
+      margin-top: 8px;
+    }
+
+    .topbar-left .subtitle {
+      color: var(--text-soft);
+      font-size: 0.9rem;
+      margin-top: 6px;
+    }
+
+    .topbar-right {
+      font-size: 0.85rem;
+      color: var(--text-soft);
+      background: rgba(30, 41, 59, 0.5);
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .topbar-right strong {
+      color: var(--accent);
+    }
+
+    .topbar-right .user-line {
+      font-size: 0.8rem;
+      color: var(--text-soft);
+      margin-top: 4px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 2fr 1.4fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, rgba(34, 197, 94, 0.09), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.16), transparent 60%),
+                  var(--card);
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      padding: 20px 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      transition: var(--transition);
+    }
+
+    .card:hover {
+      border-color: rgba(148, 163, 184, 0.3);
+      box-shadow: 0 25px 40px rgba(15, 23, 42, 0.95);
+    }
+
+    .card h2 {
+      font-size: 1.2rem;
+      margin: 0 0 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card h2 i {
+      color: var(--accent);
+    }
+
+    .card small {
+      color: var(--text-soft);
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+
+    .section {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px dashed rgba(148, 163, 184, 0.35);
+    }
+
+    .section-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-soft);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .section-title span.pill {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      color: var(--text-soft);
+      background: rgba(15, 23, 42, 0.5);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px 16px;
+    }
+
+    @media (max-width: 600px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.85rem;
+    }
+
+    label {
+      color: var(--text-soft);
+      font-weight: 500;
+    }
+
+    input, select {
+      background: var(--card-soft);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 0.85rem;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    input:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+    }
+
+    .input-error {
+      border-color: var(--danger) !important;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
+    }
+
+    input[readonly] {
+      background: rgba(30, 41, 59, 0.5);
+      color: var(--text-soft);
+    }
+
+    .hint {
+      font-size: 0.75rem;
+      color: var(--text-soft);
+      line-height: 1.6;
+      margin-top: 6px;
+    }
+
+    .hint i {
+      margin-right: 4px;
+      color: var(--accent);
+    }
+
+    .hint strong {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .rules-list {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 12px;
+      border-left: 3px solid var(--accent);
+    }
+
+    .rules-list ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .rules-list li {
+      margin-bottom: 6px;
+      font-size: 0.8rem;
+    }
+
+    .status-dots {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      font-size: 0.8rem;
+      margin-top: 8px;
+    }
+
+    .dot-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.5);
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .dot.nao-enviado { background: #9ca3af; box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.2); }
+    .dot.em-analise { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2); }
+    .dot.pendenciado { background: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2); }
+    .dot.reprovado { background: #020617; border: 1px solid #4b5563; }
+
+    .file-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(31, 41, 55, 0.85);
+      margin-bottom: 10px;
+      transition: var(--transition);
+    }
+
+    .file-row:hover {
+      border-color: rgba(148, 163, 184, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .file-row-main {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .file-row-title {
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .file-row-title i {
+      color: var(--accent);
+    }
+
+    .file-row-desc {
+      font-size: 0.75rem;
+      color: var(--text-soft);
+    }
+
+    .file-row-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.75rem;
+    }
+
+    .btn-upload {
+      border-radius: 999px;
+      padding: 8px 16px;
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.2));
+      border: 1px solid rgba(34, 197, 94, 0.5);
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 500;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-upload:hover {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.3));
+      border-color: var(--accent);
+      transform: scale(1.05);
+    }
+
+    .btn-upload.uploaded {
+      background: rgba(34, 197, 94, 0.2);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-upload.pending {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: var(--warning);
+      color: var(--warning);
+    }
+
+    .btn-upload.rejected {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .btn-primary {
+      margin-top: 20px;
+      width: 100%;
+      border-radius: 12px;
+      padding: 14px 0;
+      border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: white;
+      font-size: 0.95rem;
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: 0 12px 25px rgba(34, 197, 94, 0.3);
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.1);
+      transform: translateY(-2px);
+      box-shadow: 0 16px 30px rgba(34, 197, 94, 0.4);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .sla-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      padding: 16px;
+      border-radius: 14px;
+      background: radial-gradient(circle at top left, rgba(34, 197, 94, 0.2), transparent 60%),
+                  var(--card-soft);
+      border: 1px solid rgba(34, 197, 94, 0.5);
+      transition: var(--transition);
+    }
+
+    .sla-box:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+    }
+
+    .sla-time {
+      font-size: 2rem;
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--accent);
+    }
+
+    .sla-label {
+      color: var(--text-soft);
+      font-size: 0.75rem;
+    }
+
+    .sla-role {
+      font-size: 0.8rem;
+      text-align: right;
+    }
+
+    .sla-role strong {
+      color: var(--accent);
+      font-size: 1rem;
+    }
+
+    .kit-section {
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 12px;
+      text-align: center;
+    }
+
+    .kit-section i {
+      font-size: 2rem;
+      color: var(--accent);
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .notification {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--card);
+      border: 1px solid rgba(34, 197, 94, 0.5);
+      border-radius: 12px;
+      padding: 16px 20px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 1000;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: var(--transition);
+    }
+
+    .notification.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .notification i {
+      color: var(--accent);
+      font-size: 1.2rem;
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      opacity: 0;
+      visibility: hidden;
+      transition: var(--transition);
+    }
+
+    .modal.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 30px;
+      max-width: 500px;
+      width: 90%;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      box-shadow: var(--shadow);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-soft);
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+    .progress-bar {
+      height: 6px;
+      background: rgba(148, 163, 184, 0.2);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-dark));
+      width: 0%;
+      transition: width 0.5s ease;
+    }
+
+    .doc-thumbnail {
+      height: 36px;
+      width: 36px;
+      object-fit: cover;
+      border-radius: 6px;
+      margin-left: 12px;
+      border: 2px solid rgba(148, 163, 184, 0.2);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .doc-thumbnail:hover {
+      transform: scale(1.8);
+      border-color: var(--accent);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      z-index: 100;
+    }
+
+    /* Loading Overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+      opacity: 0;
+      visibility: hidden;
+      transition: var(--transition);
+    }
+
+    .loading-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(34, 197, 94, 0.3);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  
+
+    .checklist-only-card { max-width: 1120px; margin: 0 auto; }
+    .file-row-desc { white-space: pre-line; }
+    .file-row-actions { min-width: 145px; justify-content: flex-end; }
+    .section-summary { color: var(--text-soft); font-size: .78rem; }
+    .doc-counter { color: var(--accent); font-weight: 700; }
+    .btn-upload input[type="file"] { display: none; }
+    @media (max-width: 700px) {
+      .file-row { align-items: flex-start; flex-direction: column; }
+      .file-row-actions { width: 100%; justify-content: space-between; }
+      .btn-upload { flex: 1; justify-content: center; }
+    }
+</style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1><i class="fas fa-file-contract"></i> Checklist de Documentos</h1>
+        <div class="badge">UPLOAD DE DOCUMENTOS</div>
+        <div class="subtitle">Checklist extraído do painel do analista com layout, cores, luz indicadora e botão de upload do DOCTYPE HTML.</div>
+      </div>
+      <div class="topbar-right">
+        <div><strong>Total de documentos:</strong> 36</div>
+        <div><strong>Status:</strong> <span id="totalEnviados">0</span> enviados</div>
+        <div class="user-line">Cada documento mantém o semáforo visual individual.</div>
+      </div>
+    </div>
+
+
+    <div class="card dados-proponente-card">
+      <h2><i class="fas fa-user-circle"></i> Dados do Proponente & Dependentes</h2>
+      <small>Preencha os dados básicos. Informações sensíveis (CPF, telefone, etc.) continuam apenas no CRM.</small>
+
+      <div class="section">
+        <div class="section-title">
+          <span>Proponente</span>
+          <span class="pill">Identificação do processo</span>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nome completo</label>
+            <input type="text" id="nomeCompleto" placeholder="Nome do proponente" />
+          </div>
+
+          <div class="form-group">
+            <label>Nº da reserva (cliente_id)</label>
+            <input type="text" id="numeroReserva" placeholder="Ex: 458712" />
+          </div>
+
+          <div class="form-group">
+            <label>Cidade</label>
+            <input type="text" id="cidade" placeholder="Ex: Águas Lindas de Goiás" />
+          </div>
+
+          <div class="form-group">
+            <label>Empreendimento</label>
+            <select id="empreendimento">
+              <option value="">Selecione...</option>
+              <option>AGL</option>
+              <option>FSA</option>
+              <option>Catalão</option>
+              <option>Outro</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Corretor responsável</label>
+            <input type="text" id="corretor" placeholder="Nome do corretor" />
+          </div>
+
+          <div class="form-group">
+            <label>Estado civil</label>
+            <select id="estadoCivil">
+              <option value="">Selecione...</option>
+              <option value="solteiro">Solteiro(a)</option>
+              <option value="casado">Casado(a)</option>
+              <option value="uniao_estavel">União estável</option>
+              <option value="divorciado">Divorciado(a)</option>
+              <option value="viuvo">Viúvo(a)</option>
+            </select>
+            <div class="hint">
+              <i class="fas fa-info-circle"></i> Se marcar <strong>casado</strong> ou <strong>união estável</strong>, serão exigidos docs do cônjuge.
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Tipo de renda</label>
+            <select id="tipoRenda">
+              <option value="">Selecione...</option>
+              <option value="formal">Formal (CLT / comprovada)</option>
+              <option value="informal">Informal</option>
+              <option value="mista">Mista (formal + informal)</option>
+            </select>
+            <div class="hint">
+              <i class="fas fa-exclamation-triangle"></i>
+              <strong>Formal:</strong> obrigatório enviar <strong>extrato de FGTS</strong>.<br>
+              <strong>Informal:</strong> obrigatório anexar <strong>Declaração de Não Renda para Agehab.</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          <span>Dependentes</span>
+          <span class="pill">Regras automáticas por tipo</span>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Tipo de dependente</label>
+            <select id="tipoDependente">
+              <option value="">Selecione...</option>
+              <option value="filho_menor">Filho menor</option>
+              <option value="filho_maior">Filho maior</option>
+              <option value="parente">Parente até 3º grau</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="dependenteCasadoGroup">
+            <label>Dependente casado?</label>
+            <select id="dependenteCasado">
+              <option value="nao" selected>Não</option>
+              <option value="sim">Sim</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="rules-list">
+          <ul>
+            <li><strong>Filho menor</strong> → apenas certidão de nascimento.</li>
+            <li><strong>Maior / parente 3º grau</strong> → identidade + declaração de parentesco.</li>
+            <li><strong>Se casado</strong> → também identidade do cônjuge e declaração de renda/não renda.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:20px; flex-wrap:wrap;">
+        <button class="btn-primary" id="btnSalvar" style="flex:1; min-width:220px;">
+          <i class="fas fa-save"></i> Salvar
+        </button>
+        <button class="btn-primary" id="btnAcompanhar" style="flex:1; min-width:220px; background:transparent; border:1px solid var(--border); box-shadow:none;">
+          <i class="fas fa-list"></i> Acompanhamento
+        </button>
+      </div>
+    </div>
+
+    <div class="card checklist-only-card">
+      <h2><i class="fas fa-list-check"></i> Conferência e envio do checklist</h2>
+      <small>Somente tipo de documento, descrição, indicador visual e botão de upload. Sem os campos extras do painel do analista.</small>
+      
+          <div class="section">
+            <div class="section-title">
+              <span>Documentos do Proponente</span>
+              <span class="pill"><span class="doc-counter">6</span> documentos</span>
+            </div>
+            <div class="section-summary">Base do dossiê do proponente (identidade, estado civil, residência, etc.).</div>
+
+
+            <div class="file-row" data-doc="documentos-do-proponente-identidade-e-cpf-1" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-id-card"></i> Identidade e CPF</span>
+                <span class="file-row-desc">CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fé pública (dentro da validade) do proponente.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-do-proponente-identidade-e-cpf-1" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-do-proponente-identidade-e-cpf-1">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-do-proponente-identidade-e-cpf-1" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="documentos-do-proponente-comp-de-estado-civil-2" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-heart"></i> Comp. de estado civil</span>
+                <span class="file-row-desc">Certidão de nascimento.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-do-proponente-comp-de-estado-civil-2" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-do-proponente-comp-de-estado-civil-2">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-do-proponente-comp-de-estado-civil-2" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="documentos-do-proponente-comprovante-de-residencia-3" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-house"></i> Comprovante de residência</span>
+                <span class="file-row-desc">Comprovante aberto; não precisa estar no nome do cliente.
+Água, luz, telefone, internet, celular, cartão de crédito.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-do-proponente-comprovante-de-residencia-3" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-do-proponente-comprovante-de-residencia-3">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-do-proponente-comprovante-de-residencia-3" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="documentos-do-proponente-irpf-recibo-4" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-file-lines"></i> IRPF + recibo</span>
+                <span class="file-row-desc">Declaração completa do ano atual + recibo de entrega + DARF pago (se houver).
+⚠️ Somente se perfil = INFORMAL e IRPF para informal = SIM.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-do-proponente-irpf-recibo-4" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-do-proponente-irpf-recibo-4">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-do-proponente-irpf-recibo-4" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="documentos-do-proponente-extrato-fgts-5" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-money-bill-wave"></i> Extrato FGTS</span>
+                <span class="file-row-desc">App FGTS / site Caixa / agência.
+Militar/soldado: anexar também 3 últimos extratos bancários da conta salário.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-do-proponente-extrato-fgts-5" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-do-proponente-extrato-fgts-5">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-do-proponente-extrato-fgts-5" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="documentos-do-proponente-ctps-carteira-6" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-file-lines"></i> CTPS (carteira)</span>
+                <span class="file-row-desc">Carteira Digital (todas infos) ou CTPS física: qualificação, contratos e anotações.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-do-proponente-ctps-carteira-6" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-do-proponente-ctps-carteira-6">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-do-proponente-ctps-carteira-6" />
+                </label>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <span>Dependente — Filhos menores de 18 anos</span>
+              <span class="pill"><span class="doc-counter">1</span> documentos</span>
+            </div>
+            <div class="section-summary">Aparece quando o tipo de dependente for &quot;Filho menor&quot;.</div>
+
+
+            <div class="file-row" data-doc="dependente-filhos-menores-de-18-anos-certidao-de-nascimento-1" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-heart"></i> Certidão de nascimento</span>
+                <span class="file-row-desc">Guarda/adoção: anexar termos respectivos.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-dependente-filhos-menores-de-18-anos-certidao-de-nascimento-1" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-dependente-filhos-menores-de-18-anos-certidao-de-nascimento-1">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="dependente-filhos-menores-de-18-anos-certidao-de-nascimento-1" />
+                </label>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <span>Dependente — Filhos maiores / parentes até 3º grau</span>
+              <span class="pill"><span class="doc-counter">3</span> documentos</span>
+            </div>
+            <div class="section-summary">Aparece quando o dependente não for &quot;Filho menor&quot;.</div>
+
+
+            <div class="file-row" data-doc="dependente-filhos-maiores-parentes-ate-3-grau-identidade-e-cpf-1" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-id-card"></i> Identidade e CPF</span>
+                <span class="file-row-desc">CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fé pública (dentro da validade) do dependente.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-dependente-filhos-maiores-parentes-ate-3-grau-identidade-e-cpf-1" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-dependente-filhos-maiores-parentes-ate-3-grau-identidade-e-cpf-1">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="dependente-filhos-maiores-parentes-ate-3-grau-identidade-e-cpf-1" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="dependente-filhos-maiores-parentes-ate-3-grau-comp-de-estado-civil-2" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-heart"></i> Comp. de estado civil</span>
+                <span class="file-row-desc">SOLTEIRO: Certidão de nascimento
+CASADO: Certidão de casamento – RG/CPF do cônjuge se houver renda
+VIÚVO: Certidão de casamento e óbito
+DIVORCIADO: Certidão averbada.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-dependente-filhos-maiores-parentes-ate-3-grau-comp-de-estado-civil-2" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-dependente-filhos-maiores-parentes-ate-3-grau-comp-de-estado-civil-2">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="dependente-filhos-maiores-parentes-ate-3-grau-comp-de-estado-civil-2" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="dependente-filhos-maiores-parentes-ate-3-grau-declaracao-de-parentesco-3" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-file-lines"></i> Declaração de parentesco</span>
+                <span class="file-row-desc">Declaração conforme regras Caixa, vinculando dependente ao proponente.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-dependente-filhos-maiores-parentes-ate-3-grau-declaracao-de-parentesco-3" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-dependente-filhos-maiores-parentes-ate-3-grau-declaracao-de-parentesco-3">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="dependente-filhos-maiores-parentes-ate-3-grau-declaracao-de-parentesco-3" />
+                </label>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <span>Renda formal (CLT / vínculo)</span>
+              <span class="pill"><span class="doc-counter">2</span> documentos</span>
+            </div>
+            <div class="section-summary">Aparece quando perfil de renda = CLT.</div>
+
+
+            <div class="file-row" data-doc="renda-formal-clt-vinculo-holerites-1" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-money-bill-wave"></i> Holerites</span>
+                <span class="file-row-desc">3 últimos holerites/contracheques (nome/CNPJ/cargo/admissão/bruto).</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-renda-formal-clt-vinculo-holerites-1" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-renda-formal-clt-vinculo-holerites-1">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="renda-formal-clt-vinculo-holerites-1" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="renda-formal-clt-vinculo-renda-variavel-2" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-money-bill-wave"></i> Renda variável</span>
+                <span class="file-row-desc">Comissões/HE/adicional: holerites suficientes para média conforme Caixa.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-renda-formal-clt-vinculo-renda-variavel-2" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-renda-formal-clt-vinculo-renda-variavel-2">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="renda-formal-clt-vinculo-renda-variavel-2" />
+                </label>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <span>Renda informal (autônomo / liberal)</span>
+              <span class="pill"><span class="doc-counter">1</span> documentos</span>
+            </div>
+            <div class="section-summary">Aparece quando perfil de renda = INFORMAL.</div>
+
+
+            <div class="file-row" data-doc="renda-informal-autonomo-liberal-extrato-bancario-1" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-money-bill-wave"></i> Extrato bancário</span>
+                <span class="file-row-desc">3 últimos meses (preferir mês fechado). Aceita PDF/impresso e bancos digitais.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-renda-informal-autonomo-liberal-extrato-bancario-1" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-renda-informal-autonomo-liberal-extrato-bancario-1">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="renda-informal-autonomo-liberal-extrato-bancario-1" />
+                </label>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <span>Aposentados / Pensionistas</span>
+              <span class="pill"><span class="doc-counter">1</span> documentos</span>
+            </div>
+            <div class="section-summary">Aparece quando perfil de renda = APOSENTADO.</div>
+
+
+            <div class="file-row" data-doc="aposentados-pensionistas-extrato-do-beneficio-1" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-money-bill-wave"></i> Extrato do benefício</span>
+                <span class="file-row-desc">Último extrato (Meu INSS / Dataprev).</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-aposentados-pensionistas-extrato-do-beneficio-1" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-aposentados-pensionistas-extrato-do-beneficio-1">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="aposentados-pensionistas-extrato-do-beneficio-1" />
+                </label>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <span>Domésticos / contratação por CPF</span>
+              <span class="pill"><span class="doc-counter">1</span> documentos</span>
+            </div>
+            <div class="section-summary">Aparece quando perfil de renda = DOMÉSTICO.</div>
+
+
+            <div class="file-row" data-doc="domesticos-contratacao-por-cpf-esocial-1" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-file-lines"></i> eSocial</span>
+                <span class="file-row-desc">3 últimos comprovantes do eSocial.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-domesticos-contratacao-por-cpf-esocial-1" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-domesticos-contratacao-por-cpf-esocial-1">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="domesticos-contratacao-por-cpf-esocial-1" />
+                </label>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <span>Documentos Caixa</span>
+              <span class="pill"><span class="doc-counter">7</span> documentos</span>
+            </div>
+            <div class="section-summary">Extras (Cheque Azul/Cartão) aparecem se &quot;CCA gerou formulários&quot; = SIM.</div>
+
+
+            <div class="file-row" data-doc="documentos-caixa-damp-1" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-file-lines"></i> DAMP</span>
+                <span class="file-row-desc">Preenchida e assinada digitalmente. Físico só com aprovação do crédito.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-caixa-damp-1" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-caixa-damp-1">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-caixa-damp-1" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="documentos-caixa-ficha-de-cadastro-caixa-2" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-building-columns"></i> Ficha de cadastro Caixa</span>
+                <span class="file-row-desc">Preenchida (endereço igual ao cadastro). Assinada digitalmente; físico com aprovação.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-caixa-ficha-de-cadastro-caixa-2" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-caixa-ficha-de-cadastro-caixa-2">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-caixa-ficha-de-cadastro-caixa-2" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="documentos-caixa-abertura-de-conta-3" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-building-columns"></i> Abertura de conta</span>
+                <span class="file-row-desc">Assinada digitalmente; físico precisa aprovação do crédito.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-caixa-abertura-de-conta-3" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-caixa-abertura-de-conta-3">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-caixa-abertura-de-conta-3" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="documentos-caixa-mo-4" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-file-lines"></i> MO</span>
+                <span class="file-row-desc">Assinatura correta (2ª página). Casal: assinatura de ambos.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-caixa-mo-4" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-caixa-mo-4">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-caixa-mo-4" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="documentos-caixa-formulario-cheque-azul-5" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-file-lines"></i> Formulário Cheque Azul</span>
+                <span class="file-row-desc">Formulário de contratação (assinatura digital). Físico somente com aprovação.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-caixa-formulario-cheque-azul-5" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-caixa-formulario-cheque-azul-5">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-caixa-formulario-cheque-azul-5" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="documentos-caixa-formulario-cartao-6" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-file-lines"></i> Formulário Cartão</span>
+                <span class="file-row-desc">Formulário do cartão Caixa com campos obrigatórios e assinatura digital.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-caixa-formulario-cartao-6" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-caixa-formulario-cartao-6">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-caixa-formulario-cartao-6" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="documentos-caixa-proposta-cartao-7" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-file-lines"></i> Proposta Cartão</span>
+                <span class="file-row-desc">Proposta comercial vinculada ao cliente e assinada digitalmente.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-caixa-proposta-cartao-7" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-caixa-proposta-cartao-7">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-caixa-proposta-cartao-7" />
+                </label>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <span>Documentos Agehab</span>
+              <span class="pill"><span class="doc-counter">6</span> documentos</span>
+            </div>
+            <div class="section-summary">Padrões Agehab: assinaturas via GOV.BR ou Clicksign (quando aplicável).</div>
+
+
+            <div class="file-row" data-doc="documentos-agehab-declaracao-de-endereco-1" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-house"></i> Declaração de endereço</span>
+                <span class="file-row-desc">Quando necessário. Assinada via GOV.BR ou Clicksign.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-agehab-declaracao-de-endereco-1" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-agehab-declaracao-de-endereco-1">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-agehab-declaracao-de-endereco-1" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="documentos-agehab-declaracao-renda-informal-2" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-money-bill-wave"></i> Declaração renda informal</span>
+                <span class="file-row-desc">Assinada pelo dependente via GOV.BR/Clicksign (modelo Agehab).</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-agehab-declaracao-renda-informal-2" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-agehab-declaracao-renda-informal-2">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-agehab-declaracao-renda-informal-2" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="documentos-agehab-declaracao-de-nao-renda-3" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-money-bill-wave"></i> Declaração de não renda</span>
+                <span class="file-row-desc">Para dependentes sem renda. Assinada via GOV.BR/Clicksign.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-agehab-declaracao-de-nao-renda-3" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-agehab-declaracao-de-nao-renda-3">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-agehab-declaracao-de-nao-renda-3" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="documentos-agehab-vinculo-3-anos-4" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-file-lines"></i> Vínculo ≥ 3 anos</span>
+                <span class="file-row-desc">Docs com fé pública comprovando vínculo mínimo na cidade do Cheque Moradia.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-agehab-vinculo-3-anos-4" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-agehab-vinculo-3-anos-4">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-agehab-vinculo-3-anos-4" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="documentos-agehab-checklist-agehab-5" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-list-check"></i> Checklist Agehab</span>
+                <span class="file-row-desc">Preenchido e assinado GOV.BR (ou próprio punho conforme orientação).</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-agehab-checklist-agehab-5" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-agehab-checklist-agehab-5">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-agehab-checklist-agehab-5" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="documentos-agehab-ficha-agehab-6" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-list-check"></i> Ficha Agehab</span>
+                <span class="file-row-desc">Preenchida pelo Assistente de Crédito; assinada GOV.BR (ou próprio punho).</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-documentos-agehab-ficha-agehab-6" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-documentos-agehab-ficha-agehab-6">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="documentos-agehab-ficha-agehab-6" />
+                </label>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <span>Relacionamento com o banco e produto</span>
+              <span class="pill"><span class="doc-counter">8</span> documentos</span>
+            </div>
+            <div class="section-summary">Confirmações operacionais registradas com Sim, Não ou N/A.</div>
+
+
+            <div class="file-row" data-doc="relacionamento-com-o-banco-e-produto-cliente-ciente-da-portabilidade-para-a-agencia-cai-1" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-building-columns"></i> Cliente ciente da portabilidade para a agencia Caixa que vai assinar o contrato?</span>
+                <span class="file-row-desc">Relacionamento Caixa</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-relacionamento-com-o-banco-e-produto-cliente-ciente-da-portabilidade-para-a-agencia-cai-1" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-relacionamento-com-o-banco-e-produto-cliente-ciente-da-portabilidade-para-a-agencia-cai-1">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="relacionamento-com-o-banco-e-produto-cliente-ciente-da-portabilidade-para-a-agencia-cai-1" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="relacionamento-com-o-banco-e-produto-cliente-ciente-que-sera-preciso-fazer-open-finance-2" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-building-columns"></i> Cliente ciente que sera preciso fazer Open Finance com a agencia Caixa?</span>
+                <span class="file-row-desc">Relacionamento Caixa</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-relacionamento-com-o-banco-e-produto-cliente-ciente-que-sera-preciso-fazer-open-finance-2" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-relacionamento-com-o-banco-e-produto-cliente-ciente-que-sera-preciso-fazer-open-finance-2">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="relacionamento-com-o-banco-e-produto-cliente-ciente-que-sera-preciso-fazer-open-finance-2" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="relacionamento-com-o-banco-e-produto-cliente-ciente-que-sera-necessario-cadastrar-o-cpf-3" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-id-card"></i> Cliente ciente que sera necessario cadastrar o CPF como Pix na agencia Caixa?</span>
+                <span class="file-row-desc">Relacionamento Caixa</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-relacionamento-com-o-banco-e-produto-cliente-ciente-que-sera-necessario-cadastrar-o-cpf-3" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-relacionamento-com-o-banco-e-produto-cliente-ciente-que-sera-necessario-cadastrar-o-cpf-3">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="relacionamento-com-o-banco-e-produto-cliente-ciente-que-sera-necessario-cadastrar-o-cpf-3" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="relacionamento-com-o-banco-e-produto-propos-e-orientou-o-cliente-sobre-o-fgts-futuro-4" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-money-bill-wave"></i> Propos e orientou o cliente sobre o FGTS Futuro?</span>
+                <span class="file-row-desc">Obrigatorio quando o cliente entrar na regra de FGTS Futuro.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-relacionamento-com-o-banco-e-produto-propos-e-orientou-o-cliente-sobre-o-fgts-futuro-4" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-relacionamento-com-o-banco-e-produto-propos-e-orientou-o-cliente-sobre-o-fgts-futuro-4">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="relacionamento-com-o-banco-e-produto-propos-e-orientou-o-cliente-sobre-o-fgts-futuro-4" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="relacionamento-com-o-banco-e-produto-cliente-autorizou-no-app-fgts-a-consulta-para-util-5" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-money-bill-wave"></i> Cliente autorizou no app FGTS a consulta para utilizar o FGTS Futuro?</span>
+                <span class="file-row-desc">Obrigatorio quando o cliente entrar na regra de FGTS Futuro.</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-relacionamento-com-o-banco-e-produto-cliente-autorizou-no-app-fgts-a-consulta-para-util-5" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-relacionamento-com-o-banco-e-produto-cliente-autorizou-no-app-fgts-a-consulta-para-util-5">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="relacionamento-com-o-banco-e-produto-cliente-autorizou-no-app-fgts-a-consulta-para-util-5" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="relacionamento-com-o-banco-e-produto-cliente-foi-orientado-sobre-o-produto-6" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-file-lines"></i> Cliente foi orientado sobre o produto?</span>
+                <span class="file-row-desc">Produto</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-relacionamento-com-o-banco-e-produto-cliente-foi-orientado-sobre-o-produto-6" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-relacionamento-com-o-banco-e-produto-cliente-foi-orientado-sobre-o-produto-6">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="relacionamento-com-o-banco-e-produto-cliente-foi-orientado-sobre-o-produto-6" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="relacionamento-com-o-banco-e-produto-o-cliente-ja-pagou-o-produto-no-fechamento-7" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-file-lines"></i> O cliente ja pagou o produto no fechamento?</span>
+                <span class="file-row-desc">Produto</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-relacionamento-com-o-banco-e-produto-o-cliente-ja-pagou-o-produto-no-fechamento-7" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-relacionamento-com-o-banco-e-produto-o-cliente-ja-pagou-o-produto-no-fechamento-7">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="relacionamento-com-o-banco-e-produto-o-cliente-ja-pagou-o-produto-no-fechamento-7" />
+                </label>
+              </div>
+            </div>
+
+
+            <div class="file-row" data-doc="relacionamento-com-o-banco-e-produto-cliente-saiu-ciente-que-na-assinatura-tera-que-ter-8" data-status="nao-enviado">
+              <div class="file-row-main">
+                <span class="file-row-title"><i class="fas fa-file-lines"></i> Cliente saiu ciente que na assinatura tera que ter R$ 300,00 para o produto?</span>
+                <span class="file-row-desc">Produto</span>
+              </div>
+              <div class="file-row-actions">
+                <span class="dot nao-enviado" id="dot-relacionamento-com-o-banco-e-produto-cliente-saiu-ciente-que-na-assinatura-tera-que-ter-8" title="Não enviado"></span>
+                <label class="btn-upload" id="btn-relacionamento-com-o-banco-e-produto-cliente-saiu-ciente-que-na-assinatura-tera-que-ter-8">
+                  <i class="fas fa-paperclip"></i> Anexar
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="relacionamento-com-o-banco-e-produto-cliente-saiu-ciente-que-na-assinatura-tera-que-ter-8" />
+                </label>
+              </div>
+            </div>
+
+          </div>
+    </div>
+  </div>
+
+  <div class="notification" id="notification">
+    <i class="fas fa-check-circle"></i>
+    <div>
+      <strong id="notificationTitle">Documento anexado</strong>
+      <div id="notificationText">Arquivo selecionado com sucesso.</div>
+    </div>
+  </div>
+
+  <script>
+    const notification = document.getElementById('notification');
+    const notificationTitle = document.getElementById('notificationTitle');
+    const notificationText = document.getElementById('notificationText');
+    const totalEnviados = document.getElementById('totalEnviados');
+
+    function showNotification(title, text) {
+      notificationTitle.textContent = title;
+      notificationText.textContent = text;
+      notification.classList.add('show');
+      setTimeout(() => notification.classList.remove('show'), 2800);
+    }
+
+    function updateTotal() {
+      const total = document.querySelectorAll('.file-row[data-status="em-analise"]').length;
+      totalEnviados.textContent = total;
+    }
+
+    document.querySelectorAll('input[data-doc-input]').forEach((input) => {
+      input.addEventListener('change', () => {
+        const docId = input.dataset.docInput;
+        const row = document.querySelector(`.file-row[data-doc="${docId}"]`);
+        const dot = document.getElementById(`dot-${docId}`);
+        const button = document.getElementById(`btn-${docId}`);
+        if (!input.files || !input.files[0] || !row || !dot || !button) return;
+
+        row.dataset.status = 'em-analise';
+        dot.className = 'dot em-analise';
+        dot.title = 'Em análise';
+        button.classList.add('pending');
+        button.innerHTML = '<i class="fas fa-clock"></i> Em análise <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="' + docId + '" />';
+
+        const newInput = button.querySelector('input');
+        newInput.addEventListener('change', input.onchange);
+
+        showNotification('Documento anexado', input.files[0].name);
+        updateTotal();
+      });
+    });
+  </script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const params = new URLSearchParams(window.location.search);
+    const cliente = params.get('cliente');
+    const reserva = params.get('reserva');
+    const nomeCompleto = document.getElementById('nomeCompleto');
+    const numeroReserva = document.getElementById('numeroReserva');
+
+    if (cliente && nomeCompleto) nomeCompleto.value = cliente;
+    if (reserva && numeroReserva) numeroReserva.value = reserva;
+
+    const tipoDependente = document.getElementById('tipoDependente');
+    const dependenteCasadoGroup = document.getElementById('dependenteCasadoGroup');
+    const dependenteCasado = document.getElementById('dependenteCasado');
+    const tipoRenda = document.getElementById('tipoRenda');
+
+    if (tipoDependente && dependenteCasadoGroup && dependenteCasado) {
+      tipoDependente.addEventListener('change', function () {
+        if (this.value === 'filho_menor') {
+          dependenteCasadoGroup.classList.add('hidden');
+          dependenteCasado.value = 'nao';
+        } else {
+          dependenteCasadoGroup.classList.remove('hidden');
+        }
+      });
+    }
+
+    if (tipoRenda) {
+      tipoRenda.addEventListener('change', function () {
+        const agehabRows = document.querySelectorAll('[data-doc*="nao-renda"], [data-doc*="declaracao-renda-informal"], [data-doc*="declaração-renda-informal"]');
+        agehabRows.forEach((row) => {
+          if (this.value === 'informal') row.classList.remove('hidden');
+        });
+      });
+    }
+  });
+</script>
+</body>
+</html>
