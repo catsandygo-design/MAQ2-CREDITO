@@ -1,10 +1,10 @@
 import Link from 'next/link';
 
 const processosCca = [
-  ['458712', 'Matheus Alves de Melo', 'credito em validacao', 'documento pendente', 'biometria pendente', 'sem fiador', 'analise inicial', 'Hoje 17:00'],
-  ['458713', 'Ana Paula Ribeiro', 'formularios disponiveis', 'kit conformidade ok', 'biometria agendada', 'fiador finalizado', 'emissao de formularios', '12h'],
-  ['458714', 'Carlos Henrique Souza', 'renda em revisao', 'pendencia FGTS', 'aguardando cliente', 'sem fiador', 'retorno corretor', '24h'],
-  ['458715', 'Joao Pedro Martins', 'minuta solicitada', 'conformidade enviada', 'assinatura aguardando', 'sem fiador', 'pre-assinatura', '48h'],
+  ['458712', 'Matheus Alves de Melo', 'Bianca Moura', 'Ag. 3884 - Caixa Sul', 'documentacao pendente'],
+  ['458713', 'Ana Paula Ribeiro', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'formularios disponiveis'],
+  ['458714', 'Carlos Henrique Souza', 'Patricia Nunes', 'Ag. 4201 - Caixa Norte', 'renda em revisao'],
+  ['458715', 'Joao Pedro Martins', 'CCA Central', 'Ag. 1562 - Caixa Oeste', 'aguardando assinatura'],
 ];
 
 const alertasCca = [
@@ -119,20 +119,17 @@ export default function CcaAcompanhamentoPage() {
           <table className="cor-table">
             <thead>
               <tr>
-                <th>Reserva</th><th>Cliente</th><th>Status Credito</th><th>Status Documental</th><th>Biometria</th><th>Fiador</th><th>Momento CCA</th><th>Prazo</th>
+                <th>Reserva</th><th>Cliente</th><th>Gestor</th><th>Agencia</th><th>Momento do cliente</th>
               </tr>
             </thead>
             <tbody>
-              {processosCca.map(([reserva, nome, credito, documental, biometria, fiador, momento, prazo]) => (
+              {processosCca.map(([reserva, nome, gestor, agencia, momento]) => (
                 <tr key={reserva}>
                   <td><strong>{reserva}</strong></td>
                   <td><Link className="cor-link" href={`/painel/checklist-documentos?id=${reserva}`}>{nome}</Link></td>
-                  <td><span className={badge(credito)}>{credito}</span></td>
-                  <td><span className={badge(documental)}>{documental}</span></td>
-                  <td><span className={badge(biometria)}>{biometria}</span></td>
-                  <td><span className={badge(fiador)}>{fiador}</span></td>
-                  <td>{momento}</td>
-                  <td><span className={badge(prazo)}>{prazo}</span></td>
+                  <td>{gestor}</td>
+                  <td><span className="cor-badge cor-badge-info">{agencia}</span></td>
+                  <td><span className={badge(momento)}>{momento}</span></td>
                 </tr>
               ))}
             </tbody>
