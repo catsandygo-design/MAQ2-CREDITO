@@ -12,12 +12,20 @@ const alertas = [
   ['ok', 'JOAO PEDRO', 'Analista: CCA Central • Documento pendente: Assinatura MO', '48h'],
 ];
 
+const taxaRetrabalho = 3.2;
+
 function badge(status: string) {
   const s = status.toLowerCase();
   if (s.includes('pend')) return 'cor-badge cor-badge-danger';
   if (s.includes('pago') || s.includes('finalizado') || s.includes('liberada')) return 'cor-badge cor-badge-ok';
   if (s.includes('analise') || s.includes('validacao') || s.includes('aguardando')) return 'cor-badge cor-badge-warn';
   return 'cor-badge cor-badge-info';
+}
+
+function retrabalhoClass(value: number) {
+  if (value <= 2) return 'cor-rework cor-rework-ok';
+  if (value <= 4) return 'cor-rework cor-rework-warn';
+  return 'cor-rework cor-rework-danger';
 }
 
 export default function AcompanhamentoCorretorPage() {
@@ -76,6 +84,11 @@ export default function AcompanhamentoCorretorPage() {
           <div className="cor-sla-lines">
             <div><span>Melhor SLA de entrega</span><small>Referencia da carteira</small><b className="green">3h</b></div>
             <div><span>SLA atual do corretor</span><small>Media de resposta as pendencias</small><b className="orange">14h</b></div>
+          </div>
+          <div className={retrabalhoClass(taxaRetrabalho)}>
+            <span className="cor-rework-icon">🔨</span>
+            <span>Taxa de retrabalho</span>
+            <b>{taxaRetrabalho.toFixed(1).replace('.', ',')}%</b>
           </div>
         </article>
 
