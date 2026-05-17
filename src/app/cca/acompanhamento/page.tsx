@@ -3,10 +3,10 @@ import Link from 'next/link';
 const processosCca = [
   ['458712', 'Matheus Alves de Melo', 'Bianca Moura', 'Ag. 3884 - Caixa Sul', 'aguardando documentos'],
   ['458713', 'Ana Paula Ribeiro', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'emitir formularios'],
-  ['458714', 'Carlos Henrique Souza', 'Patricia Nunes', 'Ag. 4201 - Caixa Norte', 'formularios entregues'],
-  ['458715', 'Joao Pedro Martins', 'CCA Central', 'Ag. 1562 - Caixa Oeste', 'pendencia documental'],
-  ['458716', 'Mariana Costa Lima', 'Bianca Moura', 'Ag. 3884 - Caixa Sul', 'agendado para 22/05 - 14h'],
-  ['458717', 'Renato Gomes Paiva', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'processo finalizado'],
+  ['458714', 'Carlos Henrique Souza', 'Patricia Nunes', 'Ag. 4201 - Caixa Norte', 'formularios emitidos'],
+  ['458715', 'Joao Pedro Martins', 'CCA Central', 'Ag. 1562 - Caixa Oeste', 'formularios assinados'],
+  ['458716', 'Mariana Costa Lima', 'Bianca Moura', 'Ag. 3884 - Caixa Sul', 'pendencia documental'],
+  ['458717', 'Renato Gomes Paiva', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'agendado para 22/05 - 14h'],
 ];
 
 const alertasCca = [
@@ -22,7 +22,8 @@ const momentosCliente = [
   'aguardando documentos',
   'analise credito',
   'emitir formularios',
-  'formularios entregues',
+  'formularios emitidos',
+  'formularios assinados',
   'pendencia documental',
   'aguardando conformidade',
   'em agendamento',
@@ -31,7 +32,7 @@ const momentosCliente = [
   'processo finalizado',
 ];
 
-const momentosComAlerta = ['emitir formularios', 'formularios entregues'];
+const momentosComAlerta = ['emitir formularios', 'formularios assinados'];
 
 function badge(status: string) {
   const s = status.toLowerCase();
