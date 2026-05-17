@@ -1,10 +1,12 @@
 import Link from 'next/link';
 
 const processosCca = [
-  ['458712', 'Matheus Alves de Melo', 'Bianca Moura', 'Ag. 3884 - Caixa Sul', 'documentacao pendente'],
-  ['458713', 'Ana Paula Ribeiro', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'formularios disponiveis'],
-  ['458714', 'Carlos Henrique Souza', 'Patricia Nunes', 'Ag. 4201 - Caixa Norte', 'renda em revisao'],
-  ['458715', 'Joao Pedro Martins', 'CCA Central', 'Ag. 1562 - Caixa Oeste', 'aguardando assinatura'],
+  ['458712', 'Matheus Alves de Melo', 'Bianca Moura', 'Ag. 3884 - Caixa Sul', 'aguardando documentos'],
+  ['458713', 'Ana Paula Ribeiro', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'emitir formularios'],
+  ['458714', 'Carlos Henrique Souza', 'Patricia Nunes', 'Ag. 4201 - Caixa Norte', 'formularios entregues'],
+  ['458715', 'Joao Pedro Martins', 'CCA Central', 'Ag. 1562 - Caixa Oeste', 'pendencia documental'],
+  ['458716', 'Mariana Costa Lima', 'Bianca Moura', 'Ag. 3884 - Caixa Sul', 'agendado para 22/05 - 14h'],
+  ['458717', 'Renato Gomes Paiva', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'processo finalizado'],
 ];
 
 const alertasCca = [
@@ -16,11 +18,27 @@ const alertasCca = [
 
 const taxaRetrabalho = 2.6;
 
+const momentosCliente = [
+  'aguardando documentos',
+  'analise credito',
+  'emitir formularios',
+  'formularios entregues',
+  'pendencia documental',
+  'aguardando conformidade',
+  'em agendamento',
+  'agendado para data - horas abrevidadas',
+  'minuta assinada',
+  'processo finalizado',
+];
+
+const momentosComAlerta = ['emitir formularios', 'formularios entregues'];
+
 function badge(status: string) {
   const s = status.toLowerCase();
+  if (momentosComAlerta.includes(s)) return 'cor-badge cor-badge-danger cca-alert-badge';
   if (s.includes('pend') || s.includes('critica') || s.includes('revisao')) return 'cor-badge cor-badge-danger';
   if (s.includes('ok') || s.includes('pronto') || s.includes('finalizado') || s.includes('enviada')) return 'cor-badge cor-badge-ok';
-  if (s.includes('aguardando') || s.includes('agendada') || s.includes('validacao') || s.includes('solicitada')) return 'cor-badge cor-badge-warn';
+  if (s.includes('aguardando') || s.includes('agendado') || s.includes('agendamento') || s.includes('validacao') || s.includes('solicitada')) return 'cor-badge cor-badge-warn';
   return 'cor-badge cor-badge-info';
 }
 
@@ -115,6 +133,13 @@ export default function CcaAcompanhamentoPage() {
 
       <section className="cor-table-card">
         <h2>Fila CCA de analise e conformidade</h2>
+        <div className="cca-moment-strip">
+          {momentosCliente.map((momento) => (
+            <span className={momentosComAlerta.includes(momento) ? 'cca-moment-chip cca-moment-chip-alert' : 'cca-moment-chip'} key={momento}>
+              {momento}
+            </span>
+          ))}
+        </div>
         <div className="cor-table-scroll">
           <table className="cor-table">
             <thead>
