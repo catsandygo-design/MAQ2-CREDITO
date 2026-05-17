@@ -58,7 +58,7 @@ function retrabalhoClass(value: number) {
 
 export default function CcaAcompanhamentoPage() {
   return (
-    <main className="cor-page cor-page-premium" data-layout-version="cca-dashboards-v1">
+    <main className="cor-page cor-page-premium" data-layout-version="cca-dashboards-agencias-v2">
       <header className="cor-premium-top">
         <div className="cor-premium-title">
           <span className="cor-chart-icon">↗</span>
