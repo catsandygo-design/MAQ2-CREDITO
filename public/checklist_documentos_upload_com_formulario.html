@@ -383,6 +383,17 @@
       color: var(--accent);
     }
 
+    .decision-select {
+      min-width: 132px;
+      border-radius: 999px;
+      border: 1px solid rgba(34, 197, 94, 0.45);
+      background: #ecfdf5;
+      color: #166534;
+      font-weight: 700;
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+
     .btn-upload.pending {
       background: rgba(245, 158, 11, 0.2);
       border-color: var(--warning);
@@ -1300,7 +1311,7 @@ DIVORCIADO: Certidão averbada.</span>
           <div class="section">
             <div class="section-title">
               <span>Relacionamento com o banco e produto</span>
-              <span class="pill"><span class="doc-counter">8</span> documentos</span>
+              <span class="pill"><span class="doc-counter">8</span> confirmações</span>
             </div>
             <div class="section-summary">Confirmações operacionais registradas com Sim, Não ou N/A.</div>
 
@@ -1312,10 +1323,7 @@ DIVORCIADO: Certidão averbada.</span>
               </div>
               <div class="file-row-actions">
                 <span class="dot nao-enviado" id="dot-relacionamento-com-o-banco-e-produto-cliente-ciente-da-portabilidade-para-a-agencia-cai-1" title="Não enviado"></span>
-                <label class="btn-upload" id="btn-relacionamento-com-o-banco-e-produto-cliente-ciente-da-portabilidade-para-a-agencia-cai-1">
-                  <i class="fas fa-paperclip"></i> Anexar
-                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="relacionamento-com-o-banco-e-produto-cliente-ciente-da-portabilidade-para-a-agencia-cai-1" />
-                </label>
+                <select class="decision-select" data-decision-input="relacionamento-com-o-banco-e-produto-cliente-ciente-da-portabilidade-para-a-agencia-cai-1"><option value="">Selecione...</option><option>Sim</option><option>Não</option><option>N/A</option></select>
               </div>
             </div>
 
@@ -1327,10 +1335,7 @@ DIVORCIADO: Certidão averbada.</span>
               </div>
               <div class="file-row-actions">
                 <span class="dot nao-enviado" id="dot-relacionamento-com-o-banco-e-produto-cliente-ciente-que-sera-preciso-fazer-open-finance-2" title="Não enviado"></span>
-                <label class="btn-upload" id="btn-relacionamento-com-o-banco-e-produto-cliente-ciente-que-sera-preciso-fazer-open-finance-2">
-                  <i class="fas fa-paperclip"></i> Anexar
-                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="relacionamento-com-o-banco-e-produto-cliente-ciente-que-sera-preciso-fazer-open-finance-2" />
-                </label>
+                <select class="decision-select" data-decision-input="relacionamento-com-o-banco-e-produto-cliente-ciente-que-sera-preciso-fazer-open-finance-2"><option value="">Selecione...</option><option>Sim</option><option>Não</option><option>N/A</option></select>
               </div>
             </div>
 
@@ -1342,10 +1347,7 @@ DIVORCIADO: Certidão averbada.</span>
               </div>
               <div class="file-row-actions">
                 <span class="dot nao-enviado" id="dot-relacionamento-com-o-banco-e-produto-cliente-ciente-que-sera-necessario-cadastrar-o-cpf-3" title="Não enviado"></span>
-                <label class="btn-upload" id="btn-relacionamento-com-o-banco-e-produto-cliente-ciente-que-sera-necessario-cadastrar-o-cpf-3">
-                  <i class="fas fa-paperclip"></i> Anexar
-                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="relacionamento-com-o-banco-e-produto-cliente-ciente-que-sera-necessario-cadastrar-o-cpf-3" />
-                </label>
+                <select class="decision-select" data-decision-input="relacionamento-com-o-banco-e-produto-cliente-ciente-que-sera-necessario-cadastrar-o-cpf-3"><option value="">Selecione...</option><option>Sim</option><option>Não</option><option>N/A</option></select>
               </div>
             </div>
 
@@ -1357,10 +1359,7 @@ DIVORCIADO: Certidão averbada.</span>
               </div>
               <div class="file-row-actions">
                 <span class="dot nao-enviado" id="dot-relacionamento-com-o-banco-e-produto-propos-e-orientou-o-cliente-sobre-o-fgts-futuro-4" title="Não enviado"></span>
-                <label class="btn-upload" id="btn-relacionamento-com-o-banco-e-produto-propos-e-orientou-o-cliente-sobre-o-fgts-futuro-4">
-                  <i class="fas fa-paperclip"></i> Anexar
-                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="relacionamento-com-o-banco-e-produto-propos-e-orientou-o-cliente-sobre-o-fgts-futuro-4" />
-                </label>
+                <select class="decision-select" data-decision-input="relacionamento-com-o-banco-e-produto-propos-e-orientou-o-cliente-sobre-o-fgts-futuro-4"><option value="">Selecione...</option><option>Sim</option><option>Não</option><option>N/A</option></select>
               </div>
             </div>
 
@@ -1372,10 +1371,7 @@ DIVORCIADO: Certidão averbada.</span>
               </div>
               <div class="file-row-actions">
                 <span class="dot nao-enviado" id="dot-relacionamento-com-o-banco-e-produto-cliente-autorizou-no-app-fgts-a-consulta-para-util-5" title="Não enviado"></span>
-                <label class="btn-upload" id="btn-relacionamento-com-o-banco-e-produto-cliente-autorizou-no-app-fgts-a-consulta-para-util-5">
-                  <i class="fas fa-paperclip"></i> Anexar
-                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="relacionamento-com-o-banco-e-produto-cliente-autorizou-no-app-fgts-a-consulta-para-util-5" />
-                </label>
+                <select class="decision-select" data-decision-input="relacionamento-com-o-banco-e-produto-cliente-autorizou-no-app-fgts-a-consulta-para-util-5"><option value="">Selecione...</option><option>Sim</option><option>Não</option><option>N/A</option></select>
               </div>
             </div>
 
@@ -1387,10 +1383,7 @@ DIVORCIADO: Certidão averbada.</span>
               </div>
               <div class="file-row-actions">
                 <span class="dot nao-enviado" id="dot-relacionamento-com-o-banco-e-produto-cliente-foi-orientado-sobre-o-produto-6" title="Não enviado"></span>
-                <label class="btn-upload" id="btn-relacionamento-com-o-banco-e-produto-cliente-foi-orientado-sobre-o-produto-6">
-                  <i class="fas fa-paperclip"></i> Anexar
-                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="relacionamento-com-o-banco-e-produto-cliente-foi-orientado-sobre-o-produto-6" />
-                </label>
+                <select class="decision-select" data-decision-input="relacionamento-com-o-banco-e-produto-cliente-foi-orientado-sobre-o-produto-6"><option value="">Selecione...</option><option>Sim</option><option>Não</option><option>N/A</option></select>
               </div>
             </div>
 
@@ -1402,10 +1395,7 @@ DIVORCIADO: Certidão averbada.</span>
               </div>
               <div class="file-row-actions">
                 <span class="dot nao-enviado" id="dot-relacionamento-com-o-banco-e-produto-o-cliente-ja-pagou-o-produto-no-fechamento-7" title="Não enviado"></span>
-                <label class="btn-upload" id="btn-relacionamento-com-o-banco-e-produto-o-cliente-ja-pagou-o-produto-no-fechamento-7">
-                  <i class="fas fa-paperclip"></i> Anexar
-                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="relacionamento-com-o-banco-e-produto-o-cliente-ja-pagou-o-produto-no-fechamento-7" />
-                </label>
+                <select class="decision-select" data-decision-input="relacionamento-com-o-banco-e-produto-o-cliente-ja-pagou-o-produto-no-fechamento-7"><option value="">Selecione...</option><option>Sim</option><option>Não</option><option>N/A</option></select>
               </div>
             </div>
 
@@ -1417,10 +1407,7 @@ DIVORCIADO: Certidão averbada.</span>
               </div>
               <div class="file-row-actions">
                 <span class="dot nao-enviado" id="dot-relacionamento-com-o-banco-e-produto-cliente-saiu-ciente-que-na-assinatura-tera-que-ter-8" title="Não enviado"></span>
-                <label class="btn-upload" id="btn-relacionamento-com-o-banco-e-produto-cliente-saiu-ciente-que-na-assinatura-tera-que-ter-8">
-                  <i class="fas fa-paperclip"></i> Anexar
-                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="relacionamento-com-o-banco-e-produto-cliente-saiu-ciente-que-na-assinatura-tera-que-ter-8" />
-                </label>
+                <select class="decision-select" data-decision-input="relacionamento-com-o-banco-e-produto-cliente-saiu-ciente-que-na-assinatura-tera-que-ter-8"><option value="">Selecione...</option><option>Sim</option><option>Não</option><option>N/A</option></select>
               </div>
             </div>
 
@@ -1472,6 +1459,28 @@ DIVORCIADO: Certidão averbada.</span>
         newInput.addEventListener('change', input.onchange);
 
         showNotification('Documento anexado', input.files[0].name);
+        updateTotal();
+      });
+    });
+
+    document.querySelectorAll('select[data-decision-input]').forEach((select) => {
+      select.addEventListener('change', () => {
+        const docId = select.dataset.decisionInput;
+        const row = document.querySelector(`.file-row[data-doc="${docId}"]`);
+        const dot = document.getElementById(`dot-${docId}`);
+        if (!row || !dot) return;
+
+        if (select.value) {
+          row.dataset.status = 'em-analise';
+          dot.className = 'dot em-analise';
+          dot.title = `Respondido: ${select.value}`;
+          showNotification('Resposta registrada', select.value);
+        } else {
+          row.dataset.status = 'nao-enviado';
+          dot.className = 'dot nao-enviado';
+          dot.title = 'Não respondido';
+        }
+
         updateTotal();
       });
     });
