@@ -1,7 +1,7 @@
 'use client';
 
 import type { ChangeEvent } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Building2,
@@ -56,6 +56,20 @@ export default function CorretorPage() {
   const [fileName, setFileName] = useState('');
   const [notice, setNotice] = useState<{ title: string; text: string } | null>(null);
   const [status, setStatus] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const cliente = params.get('cliente');
+    const reserva = params.get('reserva');
+
+    if (!cliente && !reserva) return;
+
+    setForm((current) => ({
+      ...current,
+      nome: cliente || current.nome,
+      reserva: reserva || current.reserva,
+    }));
+  }, []);
 
   const documentos = useMemo(() => documentosBase.filter((doc) => !doc.rendaInformal || form.tipoRenda === 'informal'), [form.tipoRenda]);
 
@@ -198,7 +212,7 @@ export default function CorretorPage() {
               <div className="rules"><ul><li><strong>Filho menor</strong>: apenas certidao de nascimento.</li><li><strong>Maior / parente 3o grau</strong>: identidade + declaracao de parentesco.</li><li><strong>Se casado</strong>: identidade do conjuge e declaracao de renda/nao renda.</li></ul></div>
             </div>
 
-            <div className="button-row"><button className="btn-primary" onClick={salvar}><Save size={17} /> {saved ? 'Dados salvos' : 'Salvar'}</button><a className="btn-ghost" href="/corretor"><Clock3 size={17} /> Acompanhar</a></div>
+            <div className="button-row"><button className="btn-primary" onClick={salvar}><Save size={17} /> {saved ? 'Dados salvos' : 'Salvar'}</button><a className="btn-ghost" href="/painel/acompanhamento"><Clock3 size={17} /> Acompanhar</a></div>
           </div>
 
           <aside className="right-panel">

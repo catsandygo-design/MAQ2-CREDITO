@@ -69,6 +69,7 @@ export default function AcompanhamentoCorretorPage() {
           </div>
         </article>
 
+        <div className="cor-sla-stack">
         <article className="cor-card cor-panel-sla">
           <div className="cor-panel-head">
             <div>
@@ -85,12 +86,15 @@ export default function AcompanhamentoCorretorPage() {
             <div><span>Melhor SLA de entrega</span><small>Referencia da carteira</small><b className="green">3h</b></div>
             <div><span>SLA atual do corretor</span><small>Media de resposta as pendencias</small><b className="orange">14h</b></div>
           </div>
+        </article>
+        <article className="cor-card cor-rework-card">
           <div className={retrabalhoClass(taxaRetrabalho)}>
             <span className="cor-rework-icon">🔨</span>
             <span>Taxa de retrabalho</span>
             <b>{taxaRetrabalho.toFixed(1).replace('.', ',')}%</b>
           </div>
         </article>
+        </div>
 
         <article className="cor-card cor-panel-conversion">
           <div className="cor-panel-head">
