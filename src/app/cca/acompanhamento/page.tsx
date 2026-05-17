@@ -8,9 +8,9 @@ const processosCca = [
 ];
 
 const alertasCca = [
-  ['critico', 'MATHEUS ALVES', 'Pendencia critica: extrato FGTS e comprovante de renda', 'Hoje 17:00'],
-  ['medio', 'CARLOS HENRIQUE', 'Revisar renda informal e declaracao complementar', '24h'],
-  ['ok', 'ANA PAULA', 'Kit pronto para emissao de formularios Caixa', '12h'],
+  ['critico', 'ANA PAULA', 'Pendente emissao de formulario Caixa', 'Aguardando'],
+  ['medio', 'MATHEUS ALVES', 'Aguardando documentos para iniciar analise CCA', '24h'],
+  ['ok', 'CARLOS HENRIQUE', 'Formulario emitido e em conferencia', '12h'],
   ['medio', 'JOAO PEDRO', 'Aguardando retorno de biometria para assinatura', '48h'],
 ];
 

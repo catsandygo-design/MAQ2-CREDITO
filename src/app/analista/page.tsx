@@ -8,6 +8,7 @@ const navItems = [
   ['Repasse', '/analista/minuta'],
   ['Importacao', '/analista/checklist'],
   ['Metricas', '/analista/metricas'],
+  ['Gestor', '/gestor/telemetria'],
 ];
 
 const tarefas = [
@@ -43,7 +44,7 @@ const clientes = [
     repasse: 'Inicio repasse',
     caixa: 'Formularios disponiveis',
     agehab: 'Ficha Agehab liberada',
-    acao: 'Enviar kit para assinatura dos formularios',
+    acao: 'Enviar para o CCA analisar e emitir formularios',
     slaCor: '8h',
     slaAnalista: '11h',
     tone: 'ok',
@@ -81,6 +82,7 @@ export default function AnalistaPage() {
         <div className="analista-actions">
           <Link href="/painel/acompanhamento">Corretor</Link>
           <Link href="/cca/acompanhamento">CCA</Link>
+          <Link href="/gestor/telemetria">Gestor</Link>
         </div>
       </header>
 
@@ -168,6 +170,7 @@ export default function AnalistaPage() {
               <div className="analista-next-action">
                 <span>Proxima acao</span>
                 <strong>{cliente.acao}</strong>
+                {cliente.id === '458713' ? <Badge tone="warn">Encaminhar para CCA</Badge> : null}
                 <Link href={`/checklist_documentos_upload_com_formulario.html?cliente=${encodeURIComponent(cliente.nome)}&reserva=${cliente.id}`}>
                   Abrir checklist
                 </Link>
