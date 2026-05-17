@@ -6,6 +6,12 @@ const clientes = [
   ['458714', 'Carlos Henrique Souza', 'em validacao credito', 'em analise do credito', 'nao tem', 'nao tem', 'analise inicial', '36h'],
 ];
 
+const alertas = [
+  ['critico', 'MATHEUS ALVES', 'Analista: Bianca • Documento pendente: Extrato FGTS', 'Hoje 17:00'],
+  ['medio', 'ANA CLARA', 'Analista: Douglas • Documento pendente: Ficha Agehab', '24h'],
+  ['ok', 'JOAO PEDRO', 'Analista: CCA Central • Documento pendente: Assinatura MO', '48h'],
+];
+
 function badge(status: string) {
   const s = status.toLowerCase();
   if (s.includes('pend')) return 'cor-badge cor-badge-danger';
@@ -16,34 +22,75 @@ function badge(status: string) {
 
 export default function AcompanhamentoCorretorPage() {
   return (
-    <main className="cor-page">
-      <header className="cor-header">
-        <div>
-          <span>Painel do Corretor</span>
-          <h1>Acompanhamento de Clientes</h1>
-          <p>Ao clicar no nome do cliente, abre o checklist de documentos e upload.</p>
+    <main className="cor-page cor-page-premium">
+      <header className="cor-premium-top">
+        <div className="cor-premium-title">
+          <span className="cor-chart-icon">↗</span>
+          <div>
+            <h1>Acompanhamento do Corretor</h1>
+            <p>Tela inicial do corretor com alertas, SLA de entrega de documentos e evolucao das reservas ate o repasse.</p>
+          </div>
         </div>
-        <b>Tela inicial apos login</b>
+        <div className="cor-premium-actions">
+          <button>+ Nova reserva</button>
+          <button>↻ Atualizar</button>
+          <button>↪ Sair</button>
+        </div>
       </header>
 
-      <section className="cor-dash-grid">
-        <article className="cor-card">
-          <small>Dashboard 1</small>
-          <h2>Alertas do analista</h2>
-          <p>Cliente, documento pendente e prazo de entrega.</p>
-          <strong>3 alertas ativos</strong>
+      <section className="cor-dash-grid cor-dash-premium">
+        <article className="cor-card cor-panel-alerts">
+          <div className="cor-panel-head">
+            <div>
+              <small>Dashboard 1 — Alertas</small>
+              <p>Analista de credito, cliente, documento pendente e prazo de entrega.</p>
+            </div>
+            <strong className="cor-urgent-pill">3 urgentes</strong>
+          </div>
+          <div className="cor-alert-list">
+            {alertas.map(([tone, nome, desc, prazo]) => (
+              <div className={`cor-alert-item cor-alert-${tone}`} key={nome}>
+                <i />
+                <div>
+                  <b>{nome}</b>
+                  <span>{desc}</span>
+                </div>
+                <em><small>Prazo</small>{prazo}</em>
+              </div>
+            ))}
+          </div>
         </article>
-        <article className="cor-card">
-          <small>Dashboard 2</small>
-          <h2>SLA de documentos</h2>
-          <div className="cor-speed"><span>82%</span></div>
-          <p>Melhor SLA de entrega x SLA medio do corretor.</p>
+
+        <article className="cor-card cor-panel-sla">
+          <div className="cor-panel-head">
+            <div>
+              <small>Dashboard 2 — SLA</small>
+              <p>Melhor SLA de entrega de documentos versus SLA atual do corretor.</p>
+            </div>
+          </div>
+          <div className="cor-speed-premium">
+            <div className="cor-speed-arc" />
+            <div className="cor-speed-needle" />
+            <span />
+          </div>
+          <div className="cor-sla-lines">
+            <div><span>Melhor SLA de entrega</span><small>Referencia da carteira</small><b className="green">3h</b></div>
+            <div><span>SLA atual do corretor</span><small>Media de resposta as pendencias</small><b className="orange">14h</b></div>
+          </div>
         </article>
-        <article className="cor-card">
-          <small>Dashboard 3</small>
-          <h2>Reservas x Repasses</h2>
-          <p>421 clientes em reserva x 263 clientes repassados.</p>
-          <strong>62% repassados</strong>
+
+        <article className="cor-card cor-panel-conversion">
+          <div className="cor-panel-head">
+            <div>
+              <small>Dashboard 3 — Reservas x Repasses</small>
+              <p>Quantidade de clientes em reserva comparada aos clientes repassados.</p>
+            </div>
+          </div>
+          <div className="cor-mini-metrics">
+            <div><span>Clientes em reserva</span><b>42</b><small>processos ativos</small></div>
+            <div><span>Clientes repassados</span><b>18</b><small>vendas repassadas</small></div>
+          </div>
+          <div className="cor-conversion-bar"><span>Taxa de conversao</span><b>42,9%</b></div>
         </article>
       </section>
 
