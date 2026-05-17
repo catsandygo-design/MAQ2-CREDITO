@@ -120,7 +120,7 @@ export default function CcaAcompanhamentoPage() {
         </article>
       </section>
 
-      <section className="cor-table-card">
+      <section className="cor-table-card cca-table-card">
         <h2>Fila CCA de analise e conformidade</h2>
         <div className="cca-moment-strip">
           {momentosCliente.map((momento) => (
