@@ -62,7 +62,7 @@ a { color: inherit; text-decoration: none; }
 .cor-panel-head small { display:block; color:#f8fafc; font-size:clamp(1.05rem, 1.25vw, 1.28rem); font-weight:950; text-transform:none; letter-spacing:-.02em; line-height:1.25; }
 .cor-panel-head p { margin:8px 0 0; color:#b6c3d6; font-size:.95rem; line-height:1.45; max-width:540px; }
 .cor-urgent-pill { min-width:110px; height:54px; display:flex; align-items:center; justify-content:center; flex-direction:column; border-radius:999px; border:1px solid rgba(239,68,68,.34); background:rgba(239,68,68,.13); color:#fecaca; box-shadow:0 0 22px rgba(239,68,68,.13); font-size:.85rem; text-align:center; }
-.cor-alert-list { position:relative; z-index:2; display:grid; gap:10px; max-height:250px; overflow-y:auto; overflow-x:hidden; padding-right:6px; scrollbar-width:thin; scrollbar-color:#334155 rgba(15,23,42,.58); }
+.cor-alert-list { position:relative; z-index:2; display:grid; gap:10px; max-height:232px; overflow-y:auto; overflow-x:hidden; padding-right:6px; scrollbar-width:thin; scrollbar-color:#334155 rgba(15,23,42,.58); }
 .cor-alert-list::-webkit-scrollbar { width:8px; }
 .cor-alert-list::-webkit-scrollbar-thumb { background:#334155; border-radius:999px; }
 .cor-alert-list::-webkit-scrollbar-track { background:rgba(15,23,42,.58); border-radius:999px; }

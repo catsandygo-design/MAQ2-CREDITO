@@ -30,7 +30,7 @@ function retrabalhoClass(value: number) {
 
 export default function AcompanhamentoCorretorPage() {
   return (
-    <main className="cor-page cor-page-premium">
+    <main className="cor-page cor-page-premium" data-layout-version="dashboards-compactos-v2">
       <header className="cor-premium-top">
         <div className="cor-premium-title">
           <span className="cor-chart-icon">↗</span>
