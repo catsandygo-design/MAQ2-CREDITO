@@ -57,8 +57,7 @@ export default function CcaAcompanhamentoPage() {
             <p>Esteira de analise, conformidade documental, pendencias Caixa e preparacao para assinatura.</p>
           </div>
         </div>
-        <div className="cor-premium-actions">
-          <button>+ Novo protocolo</button>
+        <div className="cor-premium-actions cor-actions-no-primary">
           <button>↻ Atualizar</button>
           <button>↪ Sair</button>
         </div>
