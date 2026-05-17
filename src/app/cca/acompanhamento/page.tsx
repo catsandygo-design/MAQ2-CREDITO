@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 const processosCca = [
   ['458712', 'PP', 'Matheus Alves de Melo', 'Bianca Moura', 'Ag. 3884 - Caixa Sul', 'aguardando documentos'],
   ['458713', 'PN', 'Ana Paula Ribeiro', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'emitir formularios'],
@@ -143,7 +141,7 @@ export default function CcaAcompanhamentoPage() {
               {processosCca.map(([reserva, produto, nome, gestor, agencia, momento]) => (
                 <tr key={reserva}>
                   <td><strong>{reserva}</strong></td>
-                  <td><Link className="cor-link" href={`/painel/checklist-documentos?cliente=${encodeURIComponent(nome)}&reserva=${reserva}`}>({produto}) {nome}</Link></td>
+                  <td><a className="cor-link" href={`/checklist_documentos_upload_com_formulario.html?cliente=${encodeURIComponent(nome)}&reserva=${reserva}`}>({produto}) {nome}</a></td>
                   <td>{gestor}</td>
                   <td><span className="cor-badge cor-badge-info">{agencia}</span></td>
                   <td><span className={badge(momento)}>{momento}</span></td>

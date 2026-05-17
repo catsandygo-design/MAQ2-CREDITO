@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 const clientes = [
   ['458712', 'Matheus Alves de Melo', 'pendencia documentacao', 'documentos pendenciados', 'pendente', 'nao tem', 'reserva ativa', '24h'],
   ['458713', 'Ana Paula Ribeiro', 'formularios disponiveis', 'ficha agehab liberada', 'pago', 'finalizado', 'aguardando envio', '12h'],
@@ -124,7 +122,7 @@ export default function AcompanhamentoCorretorPage() {
               {clientes.map(([reserva, nome, caixa, agehab, sinal, fiador, momento, prazo]) => (
                 <tr key={reserva}>
                   <td><strong>{reserva}</strong></td>
-                  <td><Link className="cor-link" href={`/painel/checklist-documentos?cliente=${encodeURIComponent(nome)}&reserva=${reserva}`}>{nome}</Link></td>
+                  <td><a className="cor-link" href={`/checklist_documentos_upload_com_formulario.html?cliente=${encodeURIComponent(nome)}&reserva=${reserva}`}>{nome}</a></td>
                   <td><span className={badge(caixa)}>{caixa}</span></td>
                   <td><span className={badge(agehab)}>{agehab}</span></td>
                   <td><span className={badge(sinal)}>{sinal}</span></td>
