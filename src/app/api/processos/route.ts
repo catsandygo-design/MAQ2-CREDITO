@@ -1,28 +1,104 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-import { criarProcessoCv } from '../../../lib/workflow/engine';
-import { listProcessos, saveProcesso } from '../../../lib/workflow/store';
+import { supabase } from '@/lib/supabase';
 
 export async function GET() {
-  return NextResponse.json({ data: listProcessos() });
+  const { data, error } = await supabase
+    .from('processos_credito')
+    .select(`
+      id,
+      reserva,
+      empreendimento,
+      cidade,
+      estado_caixa,
+      estado_agehab,
+      status_reserva,
+      momento_cliente,
+      prioridade,
+      created_at,
+      clientes (
+        nome
+      )
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error.message,
+      },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    total: data?.length || 0,
+    data,
+  });
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const processo = criarProcessoCv({
-      reserva: String(body.reserva ?? ''),
-      cliente: String(body.cliente ?? ''),
-      corretor: String(body.corretor ?? ''),
-    });
 
-    if (!processo.reserva || !processo.cliente || !processo.corretor) {
-      return NextResponse.json({ error: 'reserva, cliente e corretor sao obrigatorios.' }, { status: 400 });
+    const { data: cliente, error: clienteError } = await supabase
+      .from('clientes')
+      .insert({
+        nome: body.cliente,
+      })
+      .select()
+      .single();
+
+    if (clienteError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: clienteError.message,
+        },
+        { status: 500 },
+      );
     }
 
-    saveProcesso(processo);
-    return NextResponse.json({ data: processo }, { status: 201 });
+    const { data: processo, error: processoError } = await supabase
+      .from('processos_credito')
+      .insert({
+        cliente_id: cliente.id,
+        reserva: body.reserva,
+        empreendimento: body.empreendimento,
+        cidade: body.cidade,
+        estado_caixa: body.estado_caixa,
+        estado_agehab: body.estado_agehab,
+        status_reserva: body.status_reserva,
+        momento_cliente: body.momento_cliente || 'aguardando_documentos',
+      })
+      .select()
+      .single();
+
+    if (processoError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: processoError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        ok: true,
+        data: processo,
+      },
+      { status: 201 },
+    );
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Erro ao criar processo.' }, { status: 400 });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Erro interno.',
+      },
+      { status: 500 },
+    );
   }
 }
