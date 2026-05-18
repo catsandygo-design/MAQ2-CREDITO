@@ -196,6 +196,16 @@
       color:#0c4a6e !important;
     }
 
+    /* MAQ2: escopo atual do checklist do analista */
+    #macDashboard,
+    .vencimento-simulator,
+    .frankstein-validator,
+    .status-snapshot,
+    .right-panel-hidden,
+    .top-actions .chip:first-child {
+      display: none !important;
+    }
+
     #bhCanvas{
       position: fixed;
       inset: 0;
@@ -2554,7 +2564,7 @@ DIVORCIADO: Certidão averbada.</td>
     </section>
 
     <!-- RIGHT: Retorno do analista + status/SLA -->
-    <aside class="panel" aria-label="Retorno do analista e status">
+    <aside class="panel right-panel-hidden" aria-label="Retorno do analista e status">
       <div class="panel-header">
         <div class="panel-title">
           <h2>Retorno do Analista</h2>
