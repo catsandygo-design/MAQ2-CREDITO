@@ -70,6 +70,11 @@ a { color: inherit; text-decoration: none; }
 .cor-page[data-layout-version^="cca-"] .cor-sla-stack,
 .cor-page[data-layout-version^="cca-"] .cor-panel-conversion { height:auto; min-height:430px; }
 .cor-page[data-layout-version^="cca-"] .cor-panel-sla { height:100%; }
+.cor-page[data-layout-version^="analista-"] .cor-dash-grid { grid-template-columns:repeat(3, minmax(320px, 1fr)); align-items:stretch; }
+.cor-page[data-layout-version^="analista-"] .cor-panel-alerts,
+.cor-page[data-layout-version^="analista-"] .cor-sla-stack,
+.cor-page[data-layout-version^="analista-"] .cor-panel-conversion { height:auto; min-height:360px; }
+.cor-page[data-layout-version^="analista-"] .cor-panel-sla { height:100%; }
 .cor-panel-head { position:relative; z-index:2; display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:12px; min-height:0; }
 .cor-panel-head small { display:block; color:#0f172a; font-size:clamp(1.05rem, 1.25vw, 1.28rem); font-weight:950; text-transform:none; letter-spacing:-.02em; line-height:1.25; }
 .cor-panel-head p { margin:6px 0 0; color:#475569; font-size:.9rem; line-height:1.34; max-width:540px; }
