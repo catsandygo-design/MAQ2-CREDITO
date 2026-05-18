@@ -1517,6 +1517,30 @@ DIVORCIADO: Certidão averbada.</span>
     if (cliente && nomeCompleto) nomeCompleto.value = cliente;
     if (reserva && numeroReserva) numeroReserva.value = reserva;
 
+    if (params.get('origem') === 'cca') {
+      const pageTitle = document.querySelector('.topbar-left h1');
+      const badge = document.querySelector('.topbar-left .badge');
+      const subtitle = document.querySelector('.topbar-left .subtitle');
+      const totalDocumentos = document.querySelector('.topbar-right strong')?.parentElement;
+      const voltar = document.querySelector('.btn-voltar-acompanhamento');
+
+      if (pageTitle) pageTitle.innerHTML = '<i class="fas fa-file-contract"></i> Checklist CCA - Kit Caixa';
+      if (badge) badge.textContent = 'VALIDACAO CCA';
+      if (subtitle) subtitle.textContent = 'Formulario CCA baseado no checklist do corretor, sem Kit Agehab e sem relacionamento.';
+      if (totalDocumentos) totalDocumentos.innerHTML = '<strong>Total de documentos:</strong> 22';
+      if (voltar) {
+        voltar.setAttribute('href', '/cca/acompanhamento');
+        voltar.textContent = 'Voltar para CCA';
+      }
+
+      document.querySelectorAll('.section').forEach((section) => {
+        const title = section.querySelector('.section-title span')?.textContent?.trim().toLowerCase() || '';
+        if (title === 'documentos agehab' || title === 'relacionamento com o banco e produto') {
+          section.remove();
+        }
+      });
+    }
+
     const tipoDependente = document.getElementById('tipoDependente');
     const dependenteCasadoGroup = document.getElementById('dependenteCasadoGroup');
     const dependenteCasado = document.getElementById('dependenteCasado');
