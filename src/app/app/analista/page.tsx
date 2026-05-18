@@ -258,11 +258,11 @@ export default function AppAnalistaPage() {
 
                   <section className="analyst-stage-card">
                     <div className="analyst-stage-head">
-                      <b>Comercial</b>
-                      <strong>Em Processo</strong>
+                      <b>Kit Caixa</b>
+                      <strong>Em Analise Credito</strong>
                     </div>
-                    <div className="analyst-stage-line commercial">
-                      {['Reserva', 'Em Processo', 'Credito', 'Secretaria', 'Assinatura', 'Aprovacao', 'Sienge', 'Finalizada'].map((etapa, index) => (
+                    <div className="analyst-stage-line kit-caixa">
+                      {['Reserva', 'Em Analise Credito', 'Emitindo Formularios', 'Formularios Em Assinatura', 'Formularios Assinados', 'Finalizado'].map((etapa, index) => (
                         <div className={index === 1 ? 'current' : index === 0 ? 'done' : ''} key={etapa}>
                           <i />
                           <span>{etapa}</span>
@@ -273,12 +273,12 @@ export default function AppAnalistaPage() {
 
                   <section className="analyst-stage-card analyst-repasse">
                     <div className="analyst-stage-head">
-                      <b>Repasse</b>
-                      <strong>Sem Repasse</strong>
+                      <b>Kit Agehab</b>
+                      <strong>Em Analise Credito</strong>
                     </div>
-                    <div className="analyst-stage-line">
-                      {['Em Repasse', 'Inicio Repasse', 'Assinatura Caixa', 'Inicio Garantia'].map((etapa) => (
-                        <div key={etapa}>
+                    <div className="analyst-stage-line kit-agehab">
+                      {['Reserva', 'Em Analise Credito', 'Ficha emitida', 'Ficha Recebida', 'Em Validacao Agehab', 'Agehab Validada'].map((etapa, index) => (
+                        <div className={index === 1 ? 'current' : index === 0 ? 'done' : ''} key={etapa}>
                           <i />
                           <span>{etapa}</span>
                         </div>
