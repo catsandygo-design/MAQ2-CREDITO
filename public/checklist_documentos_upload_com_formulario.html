@@ -303,6 +303,8 @@
 
     .dot.nao-enviado { background: #9ca3af; box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.2); }
     .dot.em-analise { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2); }
+    .dot.aprovado { background: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2); }
+    .dot.rejeitado { background: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2); }
     .dot.pendenciado { background: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2); }
     .dot.reprovado { background: #020617; border: 1px solid #4b5563; }
 
@@ -1522,6 +1524,142 @@ DIVORCIADO: Certidão averbada.</span>
       });
     }
   });
+</script>
+<script>
+  (function () {
+    const workflowStorageKey = 'maq2_document_workflow_v1';
+
+    function readWorkflowState() {
+      try {
+        return JSON.parse(localStorage.getItem(workflowStorageKey) || '{}');
+      } catch {
+        return {};
+      }
+    }
+
+    function writeWorkflowState(nextState) {
+      localStorage.setItem(workflowStorageKey, JSON.stringify(nextState));
+      window.dispatchEvent(new Event('maq2-workflow-updated'));
+    }
+
+    function getDocTitle(row) {
+      return row?.querySelector('.file-row-title')?.textContent?.replace(/\s+/g, ' ').trim() || 'Documento';
+    }
+
+    function getDocCategory(row) {
+      return row?.closest('section')?.querySelector('.section-title')?.textContent?.replace(/\s+/g, ' ').trim() || 'Documento';
+    }
+
+    function setWorkflowDoc(docId, patch) {
+      const current = readWorkflowState();
+      current[docId] = {
+        ...(current[docId] || {}),
+        ...patch,
+        docId,
+        updatedAt: new Date().toISOString(),
+      };
+      writeWorkflowState(current);
+      return current[docId];
+    }
+
+    function updateWorkflowTotal() {
+      const totalEnviados = document.getElementById('totalEnviados');
+      if (!totalEnviados) return;
+      const total = document.querySelectorAll('.file-row[data-status="em-analise"], .file-row[data-status="aprovado"]').length;
+      totalEnviados.textContent = total;
+    }
+
+    function paintCorretorDocument(row, state) {
+      if (!row) return;
+      const docId = row.dataset.doc;
+      const dot = document.getElementById(`dot-${docId}`);
+      const button = document.getElementById(`btn-${docId}`);
+      if (!dot || !button) return;
+
+      const status = state?.status || 'IDLE';
+      row.dataset.status = status === 'APROVADO' ? 'aprovado' : status === 'ENVIADO' || status === 'EM_ANALISE' ? 'em-analise' : 'nao-enviado';
+      button.classList.remove('pending', 'uploaded', 'rejected');
+
+      if (status === 'ENVIADO' || status === 'EM_ANALISE') {
+        dot.className = 'dot em-analise';
+        dot.title = 'Enviado para analise';
+        button.classList.add('pending');
+        button.innerHTML = '<i class="fas fa-lock"></i> Documento enviado';
+        button.style.pointerEvents = 'none';
+        button.setAttribute('aria-disabled', 'true');
+        return;
+      }
+
+      if (status === 'APROVADO') {
+        dot.className = 'dot aprovado';
+        dot.title = 'Aprovado pelo analista';
+        button.classList.add('uploaded');
+        button.innerHTML = '<i class="fas fa-lock"></i> Aprovado';
+        button.style.pointerEvents = 'none';
+        button.setAttribute('aria-disabled', 'true');
+        return;
+      }
+
+      if (status === 'PENDENTE') {
+        dot.className = 'dot rejeitado';
+        dot.title = state?.observacao || 'Pendenciado pelo analista';
+        button.classList.add('rejected');
+        button.style.pointerEvents = '';
+        button.removeAttribute('aria-disabled');
+        button.innerHTML = '<i class="fas fa-rotate"></i> Corrigir e reenviar <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="' + docId + '" />';
+        wireWorkflowInput(button.querySelector('input[data-doc-input]'));
+        return;
+      }
+
+      dot.className = 'dot nao-enviado';
+      dot.title = 'Nao enviado';
+      button.style.pointerEvents = '';
+      button.removeAttribute('aria-disabled');
+      button.innerHTML = '<i class="fas fa-paperclip"></i> Anexar <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="' + docId + '" />';
+      wireWorkflowInput(button.querySelector('input[data-doc-input]'));
+    }
+
+    function wireWorkflowInput(input) {
+      if (!input || input.dataset.workflowWired === 'true') return;
+      input.dataset.workflowWired = 'true';
+      input.addEventListener('change', (event) => {
+        event.stopImmediatePropagation();
+        const docId = input.dataset.docInput;
+        const row = document.querySelector(`.file-row[data-doc="${docId}"]`);
+        if (!input.files || !input.files[0] || !row) return;
+
+        const file = input.files[0];
+        const state = setWorkflowDoc(docId, {
+          status: 'ENVIADO',
+          nome: getDocTitle(row),
+          categoria: getDocCategory(row),
+          cliente: document.getElementById('nomeCompleto')?.value || new URLSearchParams(window.location.search).get('cliente') || 'Cliente',
+          reserva: document.getElementById('numeroReserva')?.value || new URLSearchParams(window.location.search).get('reserva') || '',
+          fileName: file.name,
+          fileUrl: window.location.href,
+        });
+
+        paintCorretorDocument(row, state);
+        updateWorkflowTotal();
+      }, true);
+    }
+
+    function applyWorkflowState() {
+      const state = readWorkflowState();
+      document.querySelectorAll('.file-row[data-doc]').forEach((row) => {
+        paintCorretorDocument(row, state[row.dataset.doc]);
+      });
+      updateWorkflowTotal();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('input[data-doc-input]').forEach(wireWorkflowInput);
+      applyWorkflowState();
+    });
+
+    window.addEventListener('storage', applyWorkflowState);
+    window.addEventListener('maq2-workflow-updated', applyWorkflowState);
+  })();
 </script>
 </body>
 </html>
