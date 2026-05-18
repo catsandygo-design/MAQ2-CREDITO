@@ -80,7 +80,7 @@ export default function GestorTelemetriaPage() {
                 <span>Gestor</span>
                 <span>QT reserva</span>
                 <span>Finalizado</span>
-                <span>% concluido</span>
+                <span>%</span>
               </div>
               {produtividadeGestor.map(([gestor, reservas, finalizado, percentual]) => (
                 <div className="gestor-mini-row" key={gestor}>
@@ -114,7 +114,7 @@ export default function GestorTelemetriaPage() {
           </div>
           <div className="cor-sla-lines">
             <div><span>Melhor SLA</span><small>Processo mais eficiente</small><b className="green">3h</b></div>
-            <div><span>Pior SLA</span><small>Maior tempo em aberto</small><b className="orange">36h</b></div>
+            <div><span>Pior SLA</span><small>Maior tempo em aberto</small><b className="red">36h</b></div>
             <div><span>Media SLA</span><small>Carteira atual</small><b className="green">14h</b></div>
           </div>
         </article>
