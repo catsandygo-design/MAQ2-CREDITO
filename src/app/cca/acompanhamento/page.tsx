@@ -1,10 +1,10 @@
 const processosCca = [
-  ['458712', 'PP', 'Matheus Alves de Melo', 'Bianca Moura', 'Ag. 3884 - Caixa Sul', 'aguardando documentos'],
-  ['458713', 'PN', 'Ana Paula Ribeiro', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'emitir formularios'],
-  ['458714', 'PA', 'Carlos Henrique Souza', 'Patricia Nunes', 'Ag. 4201 - Caixa Norte', 'formularios emitidos'],
-  ['458715', 'PP', 'Joao Amorin', 'CCA Central', 'Ag. 1562 - Caixa Oeste', 'formularios assinados'],
-  ['458716', 'PN', 'Mariana Costa Lima', 'Bianca Moura', 'Ag. 3884 - Caixa Sul', 'pendencia documental'],
-  ['458717', 'PA', 'Renato Gomes Paiva', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'agendado para 22/05 - 14h'],
+  ['458712', 'PP', 'Matheus Alves de Melo', 'Bianca Moura', 'Ag. 3884 - Caixa Sul', 'DOC PENDENCIADO CCA'],
+  ['458713', 'PN', 'Ana Paula Ribeiro', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'EMITIR FORMULARIOS'],
+  ['458714', 'PA', 'Carlos Henrique Souza', 'Patricia Nunes', 'Ag. 4201 - Caixa Norte', 'AGUARDANDO FORMULARIOS'],
+  ['458715', 'PP', 'Joao Amorin', 'CCA Central', 'Ag. 1562 - Caixa Oeste', 'FORMULARIOS ASSINADOS'],
+  ['458716', 'PN', 'Mariana Costa Lima', 'Bianca Moura', 'Ag. 3884 - Caixa Sul', 'DOC PENDENCIADO CCA'],
+  ['458717', 'PA', 'Renato Gomes Paiva', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'PROCESSO FINALIZADO'],
 ];
 
 const alertasCca = [
@@ -14,21 +14,7 @@ const alertasCca = [
   ['medio', 'JOAO PEDRO', 'Aguardando retorno de biometria para assinatura', '48h'],
 ];
 
-const momentosCliente = [
-  'aguardando documentos',
-  'analise credito',
-  'emitir formularios',
-  'formularios emitidos',
-  'formularios assinados',
-  'pendencia documental',
-  'aguardando conformidade',
-  'em agendamento',
-  'agendado para data - horas abrevidadas',
-  'minuta assinada',
-  'processo finalizado',
-];
-
-const momentosComAlerta = ['emitir formularios', 'formularios assinados'];
+const momentosComAlerta = ['EMITIR FORMULARIOS', 'FORMULARIOS ASSINADOS'];
 
 const clientesPorAgencia = [
   ['Ag. 3884 - Caixa Sul', '2'],
@@ -122,13 +108,6 @@ export default function CcaAcompanhamentoPage() {
 
       <section className="cor-table-card cca-table-card">
         <h2>Fila CCA de analise e conformidade</h2>
-        <div className="cca-moment-strip">
-          {momentosCliente.map((momento) => (
-            <span className={momentosComAlerta.includes(momento) ? 'cca-moment-chip cca-moment-chip-alert' : 'cca-moment-chip'} key={momento}>
-              {momento}
-            </span>
-          ))}
-        </div>
         <div className="cor-table-scroll">
           <table className="cor-table">
             <thead>
