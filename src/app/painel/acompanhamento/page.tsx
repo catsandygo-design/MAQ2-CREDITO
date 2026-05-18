@@ -1,7 +1,7 @@
 const clientes = [
-  ['458712', 'Matheus Alves de Melo', 'pendencia documentacao', 'documentos pendenciados', 'pendente', 'nao tem', 'reserva ativa', '24h'],
-  ['458713', 'Ana Paula Ribeiro', 'formularios disponiveis', 'ficha agehab liberada', 'pago', 'finalizado', 'aguardando envio', '12h'],
-  ['458714', 'Carlos Henrique Souza', 'em validacao credito', 'em analise do credito', 'nao tem', 'nao tem', 'analise inicial', '36h'],
+  ['458712', 'Matheus Alves de Melo', 'pendencia documentacao', 'documentos pendenciados', 'pendente', 'nao tem', 'reserva ativa', '18h', '24h'],
+  ['458713', 'Ana Paula Ribeiro', 'formularios disponiveis', 'ficha agehab liberada', 'pago', 'finalizado', 'aguardando envio', '6h', '12h'],
+  ['458714', 'Carlos Henrique Souza', 'em validacao credito', 'em analise do credito', 'nao tem', 'nao tem', 'analise inicial', '22h', '36h'],
 ];
 
 const alertas = [
@@ -113,11 +113,11 @@ export default function AcompanhamentoCorretorPage() {
           <table className="cor-table">
             <thead>
               <tr>
-                <th>Reserva</th><th>Nome do cliente</th><th>Status Caixa</th><th>Status Agehab</th><th>Sinal</th><th>Fiador</th><th>Momento da reserva</th><th>Prazo</th>
+                <th>Reserva</th><th>Nome do cliente</th><th>Status Caixa</th><th>Status Agehab</th><th>Sinal</th><th>Fiador</th><th>Momento da reserva</th><th>SLA Cliente</th><th>Prazo</th>
               </tr>
             </thead>
             <tbody>
-              {clientes.map(([reserva, nome, caixa, agehab, sinal, fiador, momento, prazo]) => (
+              {clientes.map(([reserva, nome, caixa, agehab, sinal, fiador, momento, slaCliente, prazo]) => (
                 <tr key={reserva}>
                   <td><strong>{reserva}</strong></td>
                   <td><a className="cor-link" href={`/checklist_documentos_upload_com_formulario.html?cliente=${encodeURIComponent(nome)}&reserva=${reserva}`}>{nome}</a></td>
@@ -126,6 +126,7 @@ export default function AcompanhamentoCorretorPage() {
                   <td><span className={badge(sinal)}>{sinal}</span></td>
                   <td><span className={badge(fiador)}>{fiador}</span></td>
                   <td>{momento}</td>
+                  <td><span className={badge(slaCliente)}>{slaCliente}</span></td>
                   <td><span className="cor-badge cor-badge-info">{prazo}</span></td>
                 </tr>
               ))}
