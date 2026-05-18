@@ -146,6 +146,11 @@
       color:#0f172a;
       border-color: rgba(15,23,42,.18);
     }
+    body.theme-corporate .doc-deadline-select{
+      background:#ffffff;
+      color:#0f172a;
+      border-color: rgba(15,23,42,.18);
+    }
     body.theme-corporate .alertRow{
       background:#f8fbff;
       border-color: rgba(15,23,42,.14);
@@ -902,9 +907,22 @@
       border:1px solid rgba(148,163,184,.18);
       background: rgba(2,6,23,.42);
       border-radius: 10px;
-      padding:8px;
-      gap:6px;
+      margin-top:12px;
+      padding:10px;
+      gap:8px;
       flex-direction:column;
+    }
+    .doc-reason-grid{
+      display:grid;
+      grid-template-columns:minmax(0, 1fr) minmax(130px, 180px);
+      gap:10px;
+      align-items:end;
+    }
+    .doc-reason-field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width:0;
     }
     .doc-reason-label{
       font-size: var(--fs-xxs);
@@ -923,11 +941,39 @@
       padding:8px 9px;
       font-size: var(--fs-xs);
       line-height:1.3;
+      text-transform:uppercase;
     }
     .doc-reason-input:focus{
       outline:none;
       border-color: rgba(34,197,94,.45);
       box-shadow: 0 0 0 4px rgba(34,197,94,.08);
+    }
+    .doc-deadline-select{
+      width:100%;
+      min-height:38px;
+      border:1px solid rgba(148,163,184,.2);
+      background: rgba(2,6,23,.6);
+      color: var(--text);
+      border-radius: 10px;
+      padding:8px 9px;
+      font-size: var(--fs-xs);
+      font-weight:800;
+    }
+    .doc-deadline-select:focus{
+      outline:none;
+      border-color: rgba(34,197,94,.45);
+      box-shadow: 0 0 0 4px rgba(34,197,94,.08);
+    }
+    .doc-reason-counter{
+      color:var(--muted);
+      font-size:var(--fs-xxs);
+      font-weight:800;
+      text-align:right;
+    }
+    @media (max-width: 760px){
+      .doc-reason-grid{
+        grid-template-columns:1fr;
+      }
     }
     input[type="checkbox"]{
       appearance: auto;
@@ -3278,45 +3324,110 @@ DIVORCIADO: Certidão averbada.</td>
 
   function reasonFromPendenciaInfo(raw){
     const text = normalizeDocReasonText(raw);
-    return text.replace(/^(BLOQUEADO|PENDENTE|REPROVADO)\s*[-:]\s*/i, "");
+    return text
+      .replace(/^(BLOQUEADO|PENDENTE|REPROVADO)\s*[-:]\s*/i, "")
+      .replace(/\s*\|\s*PRAZO\s*:\s*(09:00|10:00|12:00|13:00|14:00|15:00|16:00|17:00|24HS|36HS)\s*$/i, "")
+      .trim();
+  }
+
+  function deadlineFromPendenciaInfo(raw){
+    const match = String(raw || "").trim().match(/\|\s*PRAZO\s*:\s*(09:00|10:00|12:00|13:00|14:00|15:00|16:00|17:00|24hs|36hs)\s*$/i);
+    return match ? match[1].replace(/HS$/i, "hs") : "";
   }
 
   function getDocReasonInputFromSelect(sel){
-    const td = sel?.closest("td");
-    return td ? td.querySelector(".doc-reason-input") : null;
+    const row = sel?.closest("tr");
+    return row ? row.querySelector(".doc-reason-input") : null;
+  }
+
+  function getDocDeadlineInputFromSelect(sel){
+    const row = sel?.closest("tr");
+    return row ? row.querySelector(".doc-deadline-select") : null;
   }
 
   function toggleDocReasonField(sel){
-    const td = sel?.closest("td");
-    if(!td) return;
-    const wrap = td.querySelector(".doc-reason-wrap");
-    const input = td.querySelector(".doc-reason-input");
-    if(!wrap || !input) return;
+    const row = sel?.closest("tr");
+    if(!row) return;
+    const wrap = row.querySelector(".doc-reason-wrap");
+    const input = row.querySelector(".doc-reason-input");
+    const deadline = row.querySelector(".doc-deadline-select");
+    if(!wrap || !input || !deadline) return;
     const status = normalizeDocUiStatus(sel.value);
     const needReason = status === "pendente" || status === "bloqueado";
     wrap.style.display = needReason ? "flex" : "none";
     input.required = needReason;
+    deadline.required = needReason;
     if(!needReason){
       input.value = "";
+      deadline.value = "";
     }
+  }
+
+  function bindDocReasonInput(input){
+    if(!input || input.dataset.upperBound) return;
+    input.dataset.upperBound = "1";
+    const updateCounter = () => {
+      const row = input.closest("tr");
+      const count = row?.querySelector(".doc-reason-count");
+      if(count) count.textContent = String((input.value || "").length);
+    };
+    input.addEventListener("input", () => {
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      input.value = input.value.slice(0, 255).toUpperCase();
+      input.setSelectionRange(start, end);
+      updateCounter();
+    });
+    updateCounter();
+  }
+
+  function updateDocReasonCounter(input){
+    if(!input) return;
+    const row = input.closest("tr");
+    const count = row?.querySelector(".doc-reason-count");
+    if(count) count.textContent = String((input.value || "").length);
   }
 
   function ensureDocReasonFields(){
     document.querySelectorAll("select.status.status-pill[data-doc][data-id]").forEach((sel)=>{
       if ((sel.dataset.doc || "") === "relacionamento") return;
       const td = sel.closest("td");
-      if(!td) return;
+      const row = sel.closest("tr");
+      if(!td || !row) return;
       td.classList.add("doc-status-cell");
-      let wrap = td.querySelector(".doc-reason-wrap");
+      const descriptionCell = row.querySelector(".doc-desc")?.closest("td") || row.children?.[1] || td;
+      let wrap = row.querySelector(".doc-reason-wrap");
       if(!wrap){
         wrap = document.createElement("div");
         wrap.className = "doc-reason-wrap";
         wrap.innerHTML = `
-          <div class="doc-reason-label">Motivo (obrigatório para Pendente/Bloqueado)</div>
-          <textarea class="doc-reason-input" maxlength="500" placeholder="Descreva o motivo da pendência ou bloqueio."></textarea>
+          <div class="doc-reason-grid">
+            <label class="doc-reason-field">
+              <span class="doc-reason-label">Descrição da pendência</span>
+              <textarea class="doc-reason-input" maxlength="255" placeholder="DESCREVA O MOTIVO DA PENDÊNCIA OU BLOQUEIO."></textarea>
+            </label>
+            <label class="doc-reason-field">
+              <span class="doc-reason-label">Prazo</span>
+              <select class="doc-deadline-select">
+                <option value="">Selecionar</option>
+                <option value="09:00">09:00</option>
+                <option value="10:00">10:00</option>
+                <option value="12:00">12:00</option>
+                <option value="13:00">13:00</option>
+                <option value="14:00">14:00</option>
+                <option value="15:00">15:00</option>
+                <option value="16:00">16:00</option>
+                <option value="17:00">17:00</option>
+                <option value="24hs">24hs</option>
+                <option value="36hs">36hs</option>
+              </select>
+            </label>
+          </div>
+          <div class="doc-reason-counter"><span class="doc-reason-count">0</span>/255</div>
         `;
-        td.appendChild(wrap);
+        descriptionCell.appendChild(wrap);
       }
+      bindDocReasonInput(row.querySelector(".doc-reason-input"));
       if(!sel.dataset.reasonBound){
         sel.addEventListener("change", ()=> toggleDocReasonField(sel));
         sel.dataset.reasonBound = "1";
@@ -5209,6 +5320,7 @@ DIVORCIADO: Certidão averbada.</td>
         nome: row.nome,
         status: norm(row.select.value) || "aguardando",
         motivo: normalizeDocReasonText(row.reasonInput?.value || ""),
+        prazo: String(row.deadlineInput?.value || "").trim(),
       }));
       return {
         processo_id: processoId,
@@ -5593,6 +5705,7 @@ DIVORCIADO: Certidão averbada.</td>
       return Array.from(document.querySelectorAll("select.status.status-pill[data-doc][data-id]")).map((sel) => {
         const row = sel.closest("tr");
         const reasonInput = getDocReasonInputFromSelect(sel);
+        const deadlineInput = getDocDeadlineInputFromSelect(sel);
         const rawName = row?.querySelector(".doc-name")?.textContent || sel.dataset.id || "Documento";
         const categoria = sel.dataset.doc || "geral";
         const docId = sel.dataset.id || inferDocId(categoria, rawName);
@@ -5600,6 +5713,7 @@ DIVORCIADO: Certidão averbada.</td>
           select: sel,
           rowElement: row,
           reasonInput,
+          deadlineInput,
           categoria,
           docId,
           nome: canonicalDocName(categoria, rawName, docId),
@@ -5699,9 +5813,15 @@ DIVORCIADO: Certidão averbada.</td>
           row.select.value = uiDocStatusFromBackend(found);
           if (row.reasonInput) {
             row.reasonInput.value = reasonFromPendenciaInfo(found.pendencia_info);
+            updateDocReasonCounter(row.reasonInput);
+          }
+          if (row.deadlineInput) {
+            row.deadlineInput.value = deadlineFromPendenciaInfo(found.pendencia_info);
           }
         } else if (row.reasonInput) {
           row.reasonInput.value = "";
+          updateDocReasonCounter(row.reasonInput);
+          if (row.deadlineInput) row.deadlineInput.value = "";
         }
         if (typeof toggleDocReasonField === "function") toggleDocReasonField(row.select);
         if (typeof applySelectColor === "function") applySelectColor(row.select);
@@ -5797,6 +5917,7 @@ DIVORCIADO: Certidão averbada.</td>
       for (const row of getDocRows({ includeHidden: true })) {
         const statusDocUi = normalizeDocUiStatusLocal(row.select.value);
         const motivo = normalizeDocReasonText(row.reasonInput?.value || "");
+        const prazoPendencia = String(row.deadlineInput?.value || "").trim();
         let statusDoc = "PENDENTE";
         let statusCreditoDoc = "AGUARDANDO_ENVIO";
         let pendenciaInfo = null;
@@ -5828,18 +5949,28 @@ DIVORCIADO: Certidão averbada.</td>
             row.reasonInput?.focus();
             return;
           }
+          if (!prazoPendencia) {
+            alert(`Informe o prazo da pendencia no documento "${row.nome}".`);
+            row.deadlineInput?.focus();
+            return;
+          }
           statusDoc = "PENDENTE";
           statusCreditoDoc = "PENDENCIADO";
-          pendenciaInfo = `PENDENTE - ${motivo}`;
+          pendenciaInfo = `PENDENTE - ${motivo} | PRAZO: ${prazoPendencia}`;
         } else if (statusDocUi === "bloqueado") {
           if (!motivo) {
             alert(`Informe o motivo do bloqueio no documento "${row.nome}".`);
             row.reasonInput?.focus();
             return;
           }
+          if (!prazoPendencia) {
+            alert(`Informe o prazo do bloqueio no documento "${row.nome}".`);
+            row.deadlineInput?.focus();
+            return;
+          }
           statusDoc = "PENDENTE";
           statusCreditoDoc = "PENDENCIADO";
-          pendenciaInfo = `BLOQUEADO - ${motivo}`;
+          pendenciaInfo = `BLOQUEADO - ${motivo} | PRAZO: ${prazoPendencia}`;
         } else {
           statusDoc = "PENDENTE";
           statusCreditoDoc = "AGUARDANDO_ENVIO";
@@ -5857,6 +5988,7 @@ DIVORCIADO: Certidão averbada.</td>
           nome: row.nome,
           status: statusDocUi || "aguardando",
           motivo,
+          prazo: prazoPendencia,
         });
       }
 
@@ -5879,9 +6011,15 @@ DIVORCIADO: Certidão averbada.</td>
             row.select.value = uiDocStatusFromBackend(found);
             if (row.reasonInput) {
               row.reasonInput.value = reasonFromPendenciaInfo(found.pendencia_info);
+              updateDocReasonCounter(row.reasonInput);
+            }
+            if (row.deadlineInput) {
+              row.deadlineInput.value = deadlineFromPendenciaInfo(found.pendencia_info);
             }
           } else if (row.reasonInput) {
             row.reasonInput.value = "";
+            updateDocReasonCounter(row.reasonInput);
+            if (row.deadlineInput) row.deadlineInput.value = "";
           }
           if (typeof toggleDocReasonField === "function") toggleDocReasonField(row.select);
           if (typeof applySelectColor === "function") applySelectColor(row.select);
