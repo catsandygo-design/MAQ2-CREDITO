@@ -64,11 +64,10 @@ a { color: inherit; text-decoration: none; }
 .cor-panel-conversion { grid-column:3; grid-row:1; }
 .cor-panel-alerts,.cor-panel-conversion,.cor-sla-stack { height:360px; }
 .cor-page[data-layout-version^="cca-"] .cor-sla-stack { display:block; }
-.cor-page[data-layout-version^="cca-"] .cor-panel-sla { height:430px; }
 .cor-page[data-layout-version^="cca-"] .cor-dash-grid { grid-template-columns:repeat(3, minmax(320px, 1fr)); align-items:stretch; }
 .cor-page[data-layout-version^="cca-"] .cor-panel-alerts,
 .cor-page[data-layout-version^="cca-"] .cor-sla-stack,
-.cor-page[data-layout-version^="cca-"] .cor-panel-conversion { height:auto; min-height:430px; }
+.cor-page[data-layout-version^="cca-"] .cor-panel-conversion { height:auto; min-height:320px; }
 .cor-page[data-layout-version^="cca-"] .cor-panel-sla { height:100%; }
 .cor-page[data-layout-version^="analista-"] .cor-dash-grid { grid-template-columns:repeat(3, minmax(320px, 1fr)); align-items:stretch; }
 .cor-page[data-layout-version^="analista-"] .cor-panel-alerts,
