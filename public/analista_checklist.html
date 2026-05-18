@@ -558,8 +558,95 @@
     .process-rules-grid .fg{
       gap:4px;
     }
+    .analyst-proponent-card{
+      margin:12px;
+      padding:18px;
+      border:1px solid rgba(15,23,42,.14);
+      border-radius:16px;
+      background:#ffffff;
+      box-shadow:0 14px 34px rgba(15,23,42,.06);
+    }
+    .analyst-proponent-card h2{
+      margin:0 0 8px;
+      color:#0f172a;
+      font-size:1.1rem;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .analyst-proponent-card h2::before{
+      content:"";
+      width:18px;
+      height:18px;
+      border-radius:999px;
+      background:#22c55e;
+      box-shadow:inset 0 0 0 6px #ffffff, 0 0 0 1px rgba(34,197,94,.35);
+      flex:0 0 auto;
+    }
+    .analyst-proponent-card > p{
+      margin:0;
+      color:#475569;
+      font-size:.78rem;
+    }
+    .analyst-proponent-divider{
+      height:1px;
+      margin:16px 0;
+      border-top:1px dashed rgba(15,23,42,.18);
+    }
+    .analyst-proponent-section-title{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      margin-bottom:12px;
+      color:#334155;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      font-size:.72rem;
+    }
+    .analyst-proponent-section-title span:last-child{
+      border:1px solid rgba(15,23,42,.14);
+      border-radius:999px;
+      padding:5px 12px;
+      background:#f8fafc;
+    }
+    .analyst-proponent-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+    }
+    .analyst-proponent-field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width:0;
+    }
+    .analyst-proponent-field label{
+      color:#334155;
+      font-size:.78rem;
+      font-weight:800;
+    }
+    .analyst-proponent-field input,
+    .analyst-proponent-field select{
+      min-height:40px;
+      border:1px solid rgba(15,23,42,.18);
+      border-radius:10px;
+      background:#f8fafc;
+      color:#0f172a;
+      padding:8px 12px;
+      font:inherit;
+    }
+    .analyst-proponent-note{
+      margin-top:10px;
+      color:#475569;
+      font-size:.74rem;
+    }
+    .analyst-proponent-note b{
+      color:#16a34a;
+    }
     @media (max-width: 1400px){ .form-grid{grid-template-columns: repeat(3, 1fr)} }
     @media (max-width: 900px){ .form-grid{grid-template-columns: repeat(2, 1fr)} }
+    @media (max-width: 760px){ .analyst-proponent-grid{grid-template-columns:1fr} }
     @media (max-width: 600px){ .form-grid{grid-template-columns: 1fr} }
 
     .fg{
@@ -2111,6 +2198,93 @@
 
     <!-- LEFT: Checklist completo (organizado e ocupando espaço) -->
     <section class="panel" aria-label="Checklist de documentos">
+      <div class="analyst-proponent-card" aria-label="Dados do proponente e dependentes">
+        <h2>Dados do Proponente &amp; Dependentes</h2>
+        <p>Preencha os dados básicos. Informações sensíveis (CPF, telefone, etc.) continuam apenas no CRM.</p>
+
+        <div class="analyst-proponent-divider"></div>
+
+        <div class="analyst-proponent-section-title">
+          <span>Proponente</span>
+          <span>Identificação do processo</span>
+        </div>
+
+        <div class="analyst-proponent-grid">
+          <div class="analyst-proponent-field">
+            <label for="header-nome-cliente">Nome completo</label>
+            <input id="header-nome-cliente" type="text" placeholder="Nome do proponente" readonly>
+          </div>
+          <div class="analyst-proponent-field">
+            <label for="header-numero-reserva">Nº da reserva (cliente_id)</label>
+            <input id="header-numero-reserva" type="text" placeholder="Ex: 458712" readonly>
+          </div>
+          <div class="analyst-proponent-field">
+            <label for="header-cidade">Cidade</label>
+            <input id="header-cidade" type="text" placeholder="Ex: Águas Lindas de Goiás">
+          </div>
+          <div class="analyst-proponent-field">
+            <label for="header-empreendimento">Empreendimento</label>
+            <select id="header-empreendimento">
+              <option value="">Selecione...</option>
+            </select>
+          </div>
+          <div class="analyst-proponent-field">
+            <label for="header-corretor">Corretor responsável</label>
+            <input id="header-corretor" type="text" placeholder="Nome do corretor" readonly>
+          </div>
+          <div class="analyst-proponent-field">
+            <label for="header-estado-civil">Estado civil</label>
+            <select id="header-estado-civil">
+              <option value="">Selecione...</option>
+              <option value="solteiro">Solteiro(a)</option>
+              <option value="casado">Casado(a)</option>
+              <option value="divorciado">Divorciado(a)</option>
+              <option value="viuvo">Viúvo(a)</option>
+              <option value="uniao-estavel">União estável</option>
+            </select>
+            <div class="analyst-proponent-note">Se marcar <b>casado</b> ou <b>união estável</b>, serão exigidos docs do cônjuge.</div>
+          </div>
+          <div class="analyst-proponent-field">
+            <label for="header-tipo-renda">Tipo de renda</label>
+            <select id="header-tipo-renda">
+              <option value="">Selecione...</option>
+              <option value="clt">CLT / Formal</option>
+              <option value="informal">Informal / Autônomo</option>
+              <option value="aposentado">Aposentado / Pensionista</option>
+              <option value="domestico">Doméstico / eSocial</option>
+            </select>
+            <div class="analyst-proponent-note"><b>Formal:</b> obrigatório enviar extrato de FGTS.<br><b>Informal:</b> obrigatório anexar Declaração de Não Renda para Agehab.</div>
+          </div>
+        </div>
+
+        <div class="analyst-proponent-divider"></div>
+
+        <div class="analyst-proponent-section-title">
+          <span>Dependentes</span>
+          <span>Regras automáticas por tipo</span>
+        </div>
+
+        <div class="analyst-proponent-grid">
+          <div class="analyst-proponent-field">
+            <label for="header-tipo-dependente">Tipo de dependente</label>
+            <select id="header-tipo-dependente">
+              <option value="">Selecione...</option>
+              <option value="nao-definido">Nao definido</option>
+              <option value="conjuge">Conjuge</option>
+              <option value="filho-menor">Filho menor</option>
+              <option value="filho-maior">Filho maior</option>
+            </select>
+          </div>
+          <div class="analyst-proponent-field">
+            <label for="header-dependente-casado">Dependente casado?</label>
+            <select id="header-dependente-casado">
+              <option value="nao">Não</option>
+              <option value="sim">Sim</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <div class="panel-header">
         <div class="panel-title">
           <h2>Checklist (Conferência de Documentos)</h2>
@@ -4036,6 +4210,53 @@ DIVORCIADO: Certidão averbada.</td>
 
     function byId(id) {
       return document.getElementById(id);
+    }
+
+    function syncProponentHeaderFromVisibleData() {
+      const clienteParam = url.searchParams.get("cliente") || "";
+      const reservaParam = url.searchParams.get("reserva") || "";
+      const setValue = (id, value) => {
+        const field = byId(id);
+        if (!field || !value) return;
+        if (field.tagName === "SELECT" && !Array.from(field.options).some((option) => option.value === value)) {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = value;
+          field.appendChild(option);
+        }
+        field.value = value;
+      };
+
+      setValue("header-nome-cliente", byId("nome-cliente")?.value || clienteParam);
+      setValue("header-numero-reserva", reservaParam || processoId || "");
+      setValue("header-corretor", byId("corretor")?.value || "");
+      setValue("header-empreendimento", byId("obra")?.value || "");
+      setValue("header-estado-civil", byId("estado-civil-proponente")?.value || "");
+      setValue("header-tipo-renda", byId("perfil-renda")?.value || "");
+      setValue("header-tipo-dependente", byId("tipo-dependente")?.value || "");
+    }
+
+    function bindProponentHeaderInputs() {
+      [
+        ["header-estado-civil", "estado-civil-proponente"],
+        ["header-tipo-renda", "perfil-renda"],
+        ["header-tipo-dependente", "tipo-dependente"],
+        ["header-empreendimento", "obra"],
+        ["header-cidade", "cidade"],
+      ].forEach(([sourceId, targetId]) => {
+        const source = byId(sourceId);
+        const target = byId(targetId);
+        if (!source || !target || source.dataset.headerBound) return;
+        source.dataset.headerBound = "1";
+        source.addEventListener("change", () => {
+          target.value = source.value;
+          target.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+        source.addEventListener("input", () => {
+          target.value = source.value;
+          target.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+      });
     }
 
     function pad2(value) {
@@ -5985,6 +6206,7 @@ DIVORCIADO: Certidão averbada.</td>
       if (typeof setSlaBadges === "function") setSlaBadges();
       if (typeof updateSectionCounters === "function") updateSectionCounters();
       if (typeof buildPendenciasResumo === "function") buildPendenciasResumo();
+      syncProponentHeaderFromVisibleData();
       runFranksteinValidation();
     }
 
@@ -6254,6 +6476,8 @@ DIVORCIADO: Certidão averbada.</td>
       window.setTimeout(runFranksteinValidation, 0);
     });
     initFranksteinAvatar();
+    bindProponentHeaderInputs();
+    syncProponentHeaderFromVisibleData();
     updateComprometimento();
     runFranksteinValidation();
     window.setTimeout(loadFranksteinLearningPatterns, 700);
