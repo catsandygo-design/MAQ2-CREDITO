@@ -72,6 +72,10 @@
       background: rgba(255,255,255,.95);
       border-color: rgba(15,23,42,.14);
     }
+    body.theme-corporate .topbar.checklist-topbar{
+      background:transparent;
+      border-color:transparent;
+    }
     body.theme-corporate .chip{
       color:#334155;
       background:#f8fbff;
@@ -267,6 +271,108 @@
       background: var(--card);
     }
 
+    .checklist-topbar{
+      align-items:flex-start;
+      padding:0;
+      border:0;
+      background:transparent;
+      border-radius:0;
+      box-shadow:none;
+    }
+
+    .checklist-heading{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-width:0;
+    }
+
+    .checklist-title-row{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width:0;
+    }
+
+    .checklist-doc-icon{
+      width:40px;
+      height:40px;
+      border-radius:8px;
+      display:grid;
+      place-items:center;
+      background:#22c55e;
+      color:#ffffff;
+      flex:0 0 auto;
+      box-shadow:0 10px 24px rgba(34,197,94,.18);
+    }
+
+    .checklist-doc-icon svg{
+      width:26px;
+      height:26px;
+      display:block;
+    }
+
+    .checklist-topbar h1{
+      margin:0;
+      color:var(--text);
+      font-size:clamp(30px, 3.1vw, 46px);
+      line-height:1;
+      letter-spacing:.01em;
+      font-weight:950;
+    }
+
+    .checklist-badge{
+      width:max-content;
+      max-width:100%;
+      border:1px solid rgba(34,197,94,.38);
+      background:rgba(34,197,94,.11);
+      color:#16a34a;
+      border-radius:999px;
+      padding:10px 20px;
+      text-transform:uppercase;
+      letter-spacing:.16em;
+      font-weight:900;
+      font-size:var(--fs-md);
+    }
+
+    .checklist-subtitle{
+      color:#334155;
+      font-size:clamp(16px, 1.25vw, 22px);
+      line-height:1.35;
+      max-width:980px;
+    }
+
+    .checklist-summary-card{
+      min-width:320px;
+      max-width:520px;
+      background:#ffffff;
+      border:1px solid rgba(15,23,42,.12);
+      border-radius:16px;
+      padding:20px 24px;
+      color:#1f2937;
+      box-shadow:0 20px 44px rgba(15,23,42,.08);
+      font-size:var(--fs-lg);
+      line-height:1.6;
+    }
+
+    .checklist-summary-card strong{
+      color:#16a34a;
+      font-weight:950;
+    }
+
+    .checklist-summary-card .muted{
+      color:#334155;
+      margin-top:8px;
+    }
+
+    .checklist-header-actions{
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+
     .brand{
       display:flex;
       align-items:center;
@@ -356,6 +462,17 @@
     @media (max-width: 1100px){
       html,body{overflow:auto}
       .grid{grid-template-columns: 1fr; min-height:auto}
+      .checklist-topbar{
+        flex-direction:column;
+      }
+      .checklist-summary-card{
+        min-width:0;
+        max-width:none;
+        width:100%;
+      }
+      .checklist-header-actions{
+        justify-content:flex-start;
+      }
     }
 
     .panel{
@@ -1958,20 +2075,34 @@
 <div class="wrap">
 
   <!-- ===== Top ===== -->
-  <header class="topbar">
-    <div class="brand" aria-label="Marca">
-      <img class="brand-logo" src="./logo-100-repasses.png" alt="100 Repasses Sistema">
-      <div class="brand-text">
-        <div class="brand-name">Painel do Analista</div>
-        <div class="brand-tag">Análise de documentação (e-mail) • Atualização de status • SLA</div>
+  <header class="topbar checklist-topbar">
+    <div class="checklist-heading" aria-label="Cabeçalho do checklist">
+      <div class="checklist-title-row">
+        <span class="checklist-doc-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M7 3h7l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M14 3v5h5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M8 16c1.5 0 1.5-3 3-3s1.5 4 3 4 1.5-2 3-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <h1>Checklist de Documentos</h1>
       </div>
+      <div class="checklist-badge">Análise de documentos</div>
+      <div class="checklist-subtitle">Checklist extraído do painel do analista com conferência documental, pendências, prazo de retorno e decisão operacional.</div>
     </div>
 
-    <div class="top-actions">
-      <span class="chip"><span class="pulseDot" style="margin-right:8px;vertical-align:middle"></span>Auto refresh: <b id="refreshLabel">30s</b></span>
-      <button class="btn" id="btnVoltar">Voltar</button>
-      <button class="btn primary" id="btnSalvarTopo">Salvar alterações</button>
-      <button class="btn danger" id="btnSair">Sair</button>
+    <div>
+      <div class="checklist-summary-card">
+        <div><strong>Total de documentos:</strong> <span id="headerTotalDocs">36</span></div>
+        <div><strong>Status:</strong> <span id="headerSentDocs">0</span> enviados</div>
+        <div class="muted">Cada documento mantém o semáforo visual individual.</div>
+      </div>
+      <div class="top-actions checklist-header-actions">
+        <span class="chip"><span class="pulseDot" style="margin-right:8px;vertical-align:middle"></span>Auto refresh: <b id="refreshLabel">30s</b></span>
+        <button class="btn" id="btnVoltar">Voltar</button>
+        <button class="btn primary" id="btnSalvarTopo">Salvar alterações</button>
+        <button class="btn danger" id="btnSair">Sair</button>
+      </div>
     </div>
   </header>
 
@@ -3637,6 +3768,16 @@ DIVORCIADO: Certidão averbada.</td>
     setPillCount("pill-caixa", "caixa");
     setPillCount("pill-agehab", "agehab");
     setPillCount("pill-relacionamento", "relacionamento");
+
+    const headerTotalDocs = $("headerTotalDocs");
+    const headerSentDocs = $("headerSentDocs");
+    if(headerTotalDocs || headerSentDocs){
+      const visible = getVisibleChecklistSelects();
+      const total = visible.length;
+      const enviados = visible.filter((sel)=> isDocCompleteUiStatus(sel.value)).length;
+      if(headerTotalDocs) headerTotalDocs.textContent = String(total);
+      if(headerSentDocs) headerSentDocs.textContent = String(enviados);
+    }
   }
 
   function getVisibleChecklistSelects(docKeys = null){
