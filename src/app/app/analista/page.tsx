@@ -6,11 +6,11 @@ const pendenciasAnalista = [
 ];
 
 const telemetria = [
-  ['458712', 'Matheus Alves de Melo', 'Bianca Moura', 'Reserva ativa', 'Pendencia documental', '24h'],
-  ['458713', 'Ana Paula Ribeiro', 'Douglas Silva', 'Reserva ativa', 'Em analise documental', '12h'],
+  ['458712', 'Matheus Alves de Melo', 'Bianca Moura', 'Em Processo', 'Pendencia documental', '24h'],
+  ['458713', 'Ana Paula Ribeiro', 'Douglas Silva', 'Em Processo', 'Em analise documental', '12h'],
   ['458714', 'Carlos Henrique Souza', 'Patricia Nunes', 'Pendencia', 'Renda em revisao', '36h'],
   ['458715', 'Joao Amorin', 'CCA Central', 'Finalizado', 'Enviado ao CCA', 'OK'],
-  ['458716', 'Mariana Costa Lima', 'Bianca Moura', 'Reserva ativa', 'Aguardando documentos', '18h'],
+  ['458716', 'Mariana Costa Lima', 'Bianca Moura', 'Em Processo', 'Aguardando documentos', '18h'],
 ];
 
 const resumoCarteira = [
@@ -114,7 +114,7 @@ export default function AppAnalistaPage() {
               <tr>
                 <th>Reserva</th>
                 <th>Cliente</th>
-                <th>Corretor</th>
+                <th>Responsavel</th>
                 <th>Momento</th>
                 <th>Status documental</th>
                 <th>SLA</th>
