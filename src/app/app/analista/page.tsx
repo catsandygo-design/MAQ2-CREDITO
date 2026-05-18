@@ -5,12 +5,51 @@ const pendenciasAnalista = [
   ['ok', 'JOAO AMORIN', 'Kit documental aprovado para envio ao CCA', 'OK'],
 ];
 
-const telemetria = [
-  ['458712', 'Matheus Alves de Melo', 'Bianca Moura', 'Em Processo', 'Pendencia documental', '24h'],
-  ['458713', 'Ana Paula Ribeiro', 'Douglas Silva', 'Em Processo', 'Em analise documental', '12h'],
-  ['458714', 'Carlos Henrique Souza', 'Patricia Nunes', 'Pendencia', 'Renda em revisao', '36h'],
-  ['458715', 'Joao Amorin', 'CCA Central', 'Finalizado', 'Enviado ao CCA', 'OK'],
-  ['458716', 'Mariana Costa Lima', 'Bianca Moura', 'Em Processo', 'Aguardando documentos', '18h'],
+const filaViva = [
+  {
+    id: '458712',
+    produto: 'RD',
+    cliente: 'EVERSON LOURENCO PEREIRA DA SILVA',
+    empreendimento: 'AGL030 - Vila Girassol',
+    corretor: 'rebeca carvalho',
+    cca: '-',
+    prioridade: 'Prioridade alta',
+    comercial: '76 dias',
+    credito: '17 dias',
+  },
+  {
+    id: '458713',
+    produto: 'RD',
+    cliente: 'KHETLLEN GERMANO DA SILVA',
+    empreendimento: 'AGL032 - Vila Margarida - Receitas de Incorporacao',
+    corretor: 'joao andrade',
+    cca: '-',
+    prioridade: 'Prioridade alta',
+    comercial: '27 dias',
+    credito: '8 dias',
+  },
+  {
+    id: '458714',
+    produto: 'RD',
+    cliente: 'ELIEZIO ALVES DO CARMO',
+    empreendimento: 'AGL030 - Vila Girassol',
+    corretor: 'leticia brito',
+    cca: '-',
+    prioridade: 'Prioridade alta',
+    comercial: '23 dias',
+    credito: '5 dias',
+  },
+  {
+    id: '458715',
+    produto: 'RD',
+    cliente: 'JOAO AMORIN',
+    empreendimento: 'AGL030 - Vila Girassol',
+    corretor: 'mariana costa',
+    cca: '-',
+    prioridade: 'Prioridade alta',
+    comercial: '19 dias',
+    credito: '4 dias',
+  },
 ];
 
 const resumoCarteira = [
@@ -18,14 +57,6 @@ const resumoCarteira = [
   ['Finalizados', '18', 'kits aprovados ou enviados ao CCA'],
   ['Em pendencia', '9', 'dependem de ajuste documental'],
 ];
-
-function badge(status: string) {
-  const s = status.toLowerCase();
-  if (s.includes('pend')) return 'cor-badge cor-badge-danger';
-  if (s.includes('finalizado') || s.includes('aprovado') || s.includes('ok')) return 'cor-badge cor-badge-ok';
-  if (s.includes('analise') || s.includes('aguardando') || s.includes('revisao')) return 'cor-badge cor-badge-warn';
-  return 'cor-badge cor-badge-info';
-}
 
 export default function AppAnalistaPage() {
   return (
@@ -106,33 +137,50 @@ export default function AppAnalistaPage() {
         </article>
       </section>
 
-      <section className="cor-table-card">
-        <h2>Telemetria da carteira do analista</h2>
-        <div className="cor-table-scroll">
-          <table className="cor-table">
-            <thead>
-              <tr>
-                <th>Reserva</th>
-                <th>Cliente</th>
-                <th>Responsavel</th>
-                <th>Momento</th>
-                <th>Status documental</th>
-                <th>SLA</th>
-              </tr>
-            </thead>
-            <tbody>
-              {telemetria.map(([reserva, cliente, corretor, momento, status, sla]) => (
-                <tr key={reserva}>
-                  <td><strong>{reserva}</strong></td>
-                  <td><a className="cor-link" href={`/analista/checklist?cliente=${encodeURIComponent(cliente)}&reserva=${reserva}`}>{cliente}</a></td>
-                  <td>{corretor}</td>
-                  <td>{momento}</td>
-                  <td><span className={badge(status)}>{status}</span></td>
-                  <td><span className={badge(sla)}>{sla}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section className="analyst-live-board">
+        <header className="analyst-live-head">
+          <div>
+            <span>Fila viva</span>
+            <h2>Fluxo do cliente</h2>
+            <p>Cada card mostra etapa, travas e proxima acao sem repetir o mesmo resumo em varios blocos.</p>
+          </div>
+          <div className="analyst-live-actions">
+            <strong>20 processo(s)</strong>
+            <strong>17 aguardando docs</strong>
+            <strong>20 prioridade alta</strong>
+            <button>Abrir todos</button>
+            <button>Fechar todos</button>
+            <button>Fechar</button>
+          </div>
+        </header>
+
+        <div className="analyst-live-list">
+          {filaViva.map((cliente) => (
+            <article className="analyst-live-card" key={cliente.id}>
+              <div className="analyst-live-main">
+                <div className="analyst-client-title">
+                  <i />
+                  <b>{cliente.produto}</b>
+                  <h3>{cliente.cliente}</h3>
+                </div>
+                <p>{cliente.empreendimento}</p>
+                <p>{cliente.corretor}</p>
+                <div className="analyst-cca-line">
+                  <span>CCA responsavel</span>
+                  <em>{cliente.cca}</em>
+                </div>
+                <small>{cliente.prioridade}</small>
+              </div>
+
+              <div className="analyst-live-status">
+                <div>
+                  <span>Comercial {cliente.comercial}</span>
+                  <span>Credito {cliente.credito}</span>
+                </div>
+                <a href={`/analista/checklist?cliente=${encodeURIComponent(cliente.cliente)}&reserva=${cliente.id}`}>Abrir detalhes</a>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
     </main>
