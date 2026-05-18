@@ -6055,8 +6055,9 @@ DIVORCIADO: Certidão averbada.</td>
         ensureOption(select, 'Aguardando', 'Aguardando');
         const docState = state[docKey] || { status: 'IDLE' };
         select.value = uiValueFromWorkflow(docState.status);
+        if (typeof applySelectColor === 'function') applySelectColor(select);
+        if (typeof toggleDocReasonField === 'function') toggleDocReasonField(select);
         markReceived(select, docState);
-        select.dispatchEvent(new Event('change', { bubbles: true }));
       });
     }
 
@@ -6086,7 +6087,6 @@ DIVORCIADO: Certidão averbada.</td>
       document.body.classList.add('theme-corporate');
       bindAnalystDecisions();
       applyWorkflowToAnalyst();
-      window.setInterval(applyWorkflowToAnalyst, 2500);
     });
 
     window.addEventListener('storage', applyWorkflowToAnalyst);
