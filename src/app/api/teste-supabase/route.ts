@@ -1,8 +1,22 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 
 export async function GET() {
-  const { data, error } = await supabase
+  let db;
+  try {
+    db = getSupabase();
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: 'Supabase ainda nao configurado na Vercel.',
+        error: error instanceof Error ? error.message : 'Supabase nao configurado.',
+      },
+      { status: 503 },
+    );
+  }
+
+  const { data, error } = await db
     .from('clientes')
     .select('*')
     .limit(10);

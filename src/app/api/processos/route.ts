@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 
 export async function GET() {
-  const { data, error } = await supabase
+  let db;
+  try {
+    db = getSupabase();
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Supabase nao configurado.',
+      },
+      { status: 503 },
+    );
+  }
+
+  const { data, error } = await db
     .from('processos_credito')
     .select(`
       id,
@@ -40,9 +53,10 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const db = getSupabase();
     const body = await request.json();
 
-    const { data: cliente, error: clienteError } = await supabase
+    const { data: cliente, error: clienteError } = await db
       .from('clientes')
       .insert({
         nome: body.cliente,
@@ -60,7 +74,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: processo, error: processoError } = await supabase
+    const { data: processo, error: processoError } = await db
       .from('processos_credito')
       .insert({
         cliente_id: cliente.id,
