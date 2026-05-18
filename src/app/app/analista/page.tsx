@@ -1,3 +1,7 @@
+'use client';
+
+import { useState } from 'react';
+
 const pendenciasAnalista = [
   ['critico', 'MATHEUS ALVES', 'Extrato FGTS pendente de retorno do corretor', 'Hoje 17:00'],
   ['medio', 'ANA PAULA', 'Documento enviado aguardando abertura do analista', '12h'],
@@ -16,6 +20,15 @@ const filaViva = [
     prioridade: 'Prioridade alta',
     comercial: '76 dias',
     credito: '17 dias',
+    panorama: 'Em Processo',
+    resumo: 'Repasse em Sem Repasse. Documentos pendentes: 27 de 36',
+    aging: '107 anos',
+    slaCca: '17 dias',
+    caixa: 'Analise Credito',
+    agehab: 'Analise Credito',
+    sinal: 'Nao tem',
+    fiador: 'Nao tem',
+    pendencias: ['Caixa: Analise Credito', 'Agehab: Analise Credito'],
   },
   {
     id: '458713',
@@ -27,6 +40,15 @@ const filaViva = [
     prioridade: 'Prioridade alta',
     comercial: '27 dias',
     credito: '8 dias',
+    panorama: 'Em Processo',
+    resumo: 'Repasse em Sem Repasse. Documentos pendentes: 18 de 36',
+    aging: '82 dias',
+    slaCca: '8 dias',
+    caixa: 'Analise Credito',
+    agehab: 'Analise Credito',
+    sinal: 'Nao tem',
+    fiador: 'Nao tem',
+    pendencias: ['Caixa: Analise Credito', 'Agehab: Analise Credito'],
   },
   {
     id: '458714',
@@ -38,6 +60,15 @@ const filaViva = [
     prioridade: 'Prioridade alta',
     comercial: '23 dias',
     credito: '5 dias',
+    panorama: 'Em Processo',
+    resumo: 'Repasse em Sem Repasse. Documentos pendentes: 12 de 36',
+    aging: '64 dias',
+    slaCca: '5 dias',
+    caixa: 'Analise Credito',
+    agehab: 'Analise Credito',
+    sinal: 'Nao tem',
+    fiador: 'Nao tem',
+    pendencias: ['Caixa: Analise Credito'],
   },
   {
     id: '458715',
@@ -49,6 +80,15 @@ const filaViva = [
     prioridade: 'Prioridade alta',
     comercial: '19 dias',
     credito: '4 dias',
+    panorama: 'Em Processo',
+    resumo: 'Kit documental aprovado para acompanhamento operacional',
+    aging: '51 dias',
+    slaCca: '4 dias',
+    caixa: 'Analise Credito',
+    agehab: 'Analise Credito',
+    sinal: 'Nao tem',
+    fiador: 'Nao tem',
+    pendencias: ['Caixa: Analise Credito'],
   },
 ];
 
@@ -59,6 +99,16 @@ const resumoCarteira = [
 ];
 
 export default function AppAnalistaPage() {
+  const [detalhesAbertos, setDetalhesAbertos] = useState<string[]>([]);
+
+  const abrirTodos = () => setDetalhesAbertos(filaViva.map((cliente) => cliente.id));
+  const fecharTodos = () => setDetalhesAbertos([]);
+  const alternarDetalhe = (id: string) => {
+    setDetalhesAbertos((abertos) => (
+      abertos.includes(id) ? abertos.filter((item) => item !== id) : [...abertos, id]
+    ));
+  };
+
   return (
     <main className="cor-page cor-page-premium" data-layout-version="analista-dashboards-v1">
       <header className="cor-premium-top">
@@ -148,15 +198,18 @@ export default function AppAnalistaPage() {
             <strong>20 processo(s)</strong>
             <strong>17 aguardando docs</strong>
             <strong>20 prioridade alta</strong>
-            <button>Abrir todos</button>
-            <button>Fechar todos</button>
+            <button type="button" onClick={abrirTodos}>Abrir todos</button>
+            <button type="button" onClick={fecharTodos}>Fechar todos</button>
             <button>Fechar</button>
           </div>
         </header>
 
         <div className="analyst-live-list">
-          {filaViva.map((cliente) => (
-            <article className="analyst-live-card" key={cliente.id}>
+          {filaViva.map((cliente) => {
+            const detalheAberto = detalhesAbertos.includes(cliente.id);
+
+            return (
+            <article className={`analyst-live-card ${detalheAberto ? 'is-open' : ''}`} key={cliente.id}>
               <div className="analyst-live-main">
                 <div className="analyst-client-title">
                   <i />
@@ -177,10 +230,87 @@ export default function AppAnalistaPage() {
                   <span>Comercial {cliente.comercial}</span>
                   <span>Credito {cliente.credito}</span>
                 </div>
-                <a href={`/analista/checklist?cliente=${encodeURIComponent(cliente.cliente)}&reserva=${cliente.id}`}>Abrir detalhes</a>
+                <button type="button" onClick={() => alternarDetalhe(cliente.id)}>
+                  {detalheAberto ? 'Fechar detalhes' : 'Abrir detalhes'}
+                </button>
               </div>
+
+              {detalheAberto && (
+                <div className="analyst-detail-panel">
+                  <div className="analyst-detail-grid">
+                    <section className="analyst-detail-box">
+                      <span>Panorama</span>
+                      <h4>{cliente.panorama}</h4>
+                      <p>{cliente.resumo}</p>
+                      <div className="analyst-detail-tags">
+                        <b>Aging {cliente.aging}</b>
+                        <b className="danger">SLA CCA {cliente.slaCca}</b>
+                      </div>
+                    </section>
+
+                    <section className="analyst-detail-box analyst-next-action">
+                      <span>Proxima acao</span>
+                      <h4>Atuar em Caixa: Analise Credito</h4>
+                      <p>Caixa: Analise Credito</p>
+                      <p>Sem observacao registrada</p>
+                    </section>
+                  </div>
+
+                  <section className="analyst-stage-card">
+                    <div className="analyst-stage-head">
+                      <b>Comercial</b>
+                      <strong>Em Processo</strong>
+                    </div>
+                    <div className="analyst-stage-line commercial">
+                      {['Reserva', 'Em Processo', 'Credito', 'Secretaria', 'Assinatura', 'Aprovacao', 'Sienge', 'Finalizada'].map((etapa, index) => (
+                        <div className={index === 1 ? 'current' : index === 0 ? 'done' : ''} key={etapa}>
+                          <i />
+                          <span>{etapa}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="analyst-stage-card analyst-repasse">
+                    <div className="analyst-stage-head">
+                      <b>Repasse</b>
+                      <strong>Sem Repasse</strong>
+                    </div>
+                    <div className="analyst-stage-line">
+                      {['Em Repasse', 'Inicio Repasse', 'Assinatura Caixa', 'Inicio Garantia'].map((etapa) => (
+                        <div key={etapa}>
+                          <i />
+                          <span>{etapa}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  <div className="analyst-detail-bottom">
+                    {[
+                      ['Caixa', cliente.caixa],
+                      ['Agehab', cliente.agehab],
+                      ['Sinal', cliente.sinal],
+                      ['Fiador', cliente.fiador],
+                      ['SLA CCA', cliente.slaCca],
+                    ].map(([label, value]) => (
+                      <section className="analyst-mini-card" key={label}>
+                        <span>{label}</span>
+                        <b>{value}</b>
+                      </section>
+                    ))}
+                    <section className="analyst-pendency-card">
+                      <h4>Pendencias mapeadas</h4>
+                      {cliente.pendencias.map((pendencia) => (
+                        <p key={pendencia}>{pendencia}</p>
+                      ))}
+                    </section>
+                  </div>
+                </div>
+              )}
             </article>
-          ))}
+          );
+          })}
         </div>
       </section>
     </main>
