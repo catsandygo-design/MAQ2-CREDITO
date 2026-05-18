@@ -4,10 +4,10 @@ import path from 'node:path';
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const referer = request.headers.get('referer') || '';
-  const isCca = url.searchParams.get('origem') === 'cca' || referer.includes('/cca/');
-  const fileName = isCca
-    ? 'cca_checklist_documentos_upload.html'
-    : 'corretor_checklist_documentos_upload_com_formulario.html';
+  const isCorretor = url.searchParams.get('origem') === 'corretor' || referer.includes('/painel/');
+  const fileName = isCorretor
+    ? 'corretor_checklist_documentos_upload_com_formulario.html'
+    : 'cca_checklist_documentos_upload.html';
   const htmlPath = path.join(process.cwd(), 'public', fileName);
   const html = await readFile(htmlPath, 'utf8');
 

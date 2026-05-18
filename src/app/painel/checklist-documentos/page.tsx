@@ -4,7 +4,9 @@ import { useEffect } from 'react';
 
 export default function ChecklistDocumentosPage() {
   useEffect(() => {
-    window.location.replace(`/checklist_documentos_upload_com_formulario.html${window.location.search}`);
+    const params = new URLSearchParams(window.location.search);
+    params.set('origem', 'corretor');
+    window.location.replace(`/checklist_documentos_upload_com_formulario.html?${params.toString()}`);
   }, []);
 
   return (
