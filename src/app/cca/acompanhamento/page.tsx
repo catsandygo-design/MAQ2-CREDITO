@@ -35,6 +35,11 @@ function badge(status: string) {
 export default function CcaAcompanhamentoPage() {
   return (
     <main className="cor-page cor-page-premium" data-layout-version="cca-dashboards-agencias-v3">
+      <script
+        dangerouslySetInnerHTML={{
+          __html: "try { localStorage.setItem('maq2_last_context', 'cca'); } catch (e) {}",
+        }}
+      />
       <header className="cor-premium-top">
         <div className="cor-premium-title">
           <span className="cor-chart-icon">↗</span>

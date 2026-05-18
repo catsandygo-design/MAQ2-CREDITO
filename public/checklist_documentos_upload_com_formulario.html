@@ -1517,7 +1517,11 @@ DIVORCIADO: Certidão averbada.</span>
     if (cliente && nomeCompleto) nomeCompleto.value = cliente;
     if (reserva && numeroReserva) numeroReserva.value = reserva;
 
-    if (params.get('origem') === 'cca') {
+    const contextoCca = params.get('origem') === 'cca'
+      || document.referrer.includes('/cca/')
+      || localStorage.getItem('maq2_last_context') === 'cca';
+
+    if (contextoCca) {
       const pageTitle = document.querySelector('.topbar-left h1');
       const badge = document.querySelector('.topbar-left .badge');
       const subtitle = document.querySelector('.topbar-left .subtitle');
