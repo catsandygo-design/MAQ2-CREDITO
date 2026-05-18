@@ -11,7 +11,7 @@ const alertasCca = [
   ['critico', 'ANA PAULA', 'Pendente emissao de formulario Caixa', 'Aguardando'],
   ['medio', 'MATHEUS ALVES', 'Aguardando documentos para iniciar analise CCA', '24h'],
   ['ok', 'CARLOS HENRIQUE', 'Formulario emitido e em conferencia', '12h'],
-  ['medio', 'JOAO PEDRO', 'Aguardando retorno de biometria para assinatura', '48h'],
+  ['medio', 'JOAO PEDRO', 'Aguardando assinatura dos Formularios', '48h'],
 ];
 
 const momentosComAlerta = ['EMITIR FORMULARIOS', 'FORMULARIOS ASSINADOS'];
