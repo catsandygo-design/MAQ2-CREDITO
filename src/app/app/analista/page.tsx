@@ -336,7 +336,7 @@ export default function AppAnalistaPage() {
                       <strong>Em Analise Credito</strong>
                     </div>
                     <div className="analyst-stage-line kit-caixa">
-                      {['Reserva', 'Em Analise Credito', 'Emitindo Formularios', 'Formularios Em Assinatura', 'Formularios Assinados', 'Finalizado'].map((etapa, index) => (
+                      {['Reserva', 'Em Analise Credito', 'Emitindo Formularios', 'Formularios Em Assinatura', 'Formularios Assinados', 'Envio à conformidade'].map((etapa, index) => (
                         <div className={index === 1 ? 'current' : index === 0 ? 'done' : ''} key={etapa}>
                           <i />
                           <span>{etapa}</span>
