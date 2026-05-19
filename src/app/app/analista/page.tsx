@@ -98,35 +98,34 @@ const resumoCarteira = [
 ];
 
 export default function AppAnalistaPage() {
-  const [detalhesAbertos, setDetalhesAbertos] = useState<string[]>([]);
   const [filtros, setFiltros] = useState({
     reserva: '',
     nome: '',
     corretor: '',
+    gestor: '',
     caixa: '',
     agehab: '',
+    produto: '',
   });
-
-  const alternarDetalhe = (id: string) => {
-    setDetalhesAbertos((abertos) => (
-      abertos.includes(id) ? abertos.filter((item) => item !== id) : [...abertos, id]
-    ));
-  };
 
   const filaFiltrada = useMemo(() => {
     const normalizar = (valor: string) => valor.trim().toLowerCase();
     const reserva = normalizar(filtros.reserva);
     const nome = normalizar(filtros.nome);
     const corretor = normalizar(filtros.corretor);
+    const gestor = normalizar(filtros.gestor);
     const caixa = normalizar(filtros.caixa);
     const agehab = normalizar(filtros.agehab);
+    const produto = normalizar(filtros.produto);
 
     return filaViva.filter((cliente) => (
       (!reserva || cliente.id.toLowerCase().includes(reserva)) &&
       (!nome || cliente.cliente.toLowerCase().includes(nome)) &&
       (!corretor || cliente.corretor.toLowerCase().includes(corretor)) &&
+      (!gestor || cliente.cca.toLowerCase().includes(gestor)) &&
       (!caixa || cliente.caixa.toLowerCase() === caixa) &&
-      (!agehab || cliente.agehab.toLowerCase() === agehab)
+      (!agehab || cliente.agehab.toLowerCase() === agehab) &&
+      (!produto || cliente.produto.toLowerCase() === produto)
     ));
   }, [filtros]);
 
@@ -218,14 +217,15 @@ export default function AppAnalistaPage() {
 
       <section className="analyst-live-board">
         <header className="analyst-live-head">
-          <div>
-            <span>Fila viva</span>
-            <h2>Fluxo do cliente</h2>
+          <div className="analyst-live-title">
+            <h2>Fila Viva - Fluxo do Cliente</h2>
           </div>
-          <div className="analyst-live-actions analyst-live-filters">
+          <div className="analyst-live-summary">
             <strong>20 processo(s)</strong>
             <strong>17 aguardando docs</strong>
             <strong>20 prioridade alta</strong>
+          </div>
+          <div className="analyst-live-filters">
             <input
               value={filtros.reserva}
               onChange={(event) => setFiltros((atual) => ({ ...atual, reserva: event.target.value }))}
@@ -240,6 +240,11 @@ export default function AppAnalistaPage() {
               value={filtros.corretor}
               onChange={(event) => setFiltros((atual) => ({ ...atual, corretor: event.target.value }))}
               placeholder="Corretor"
+            />
+            <input
+              value={filtros.gestor}
+              onChange={(event) => setFiltros((atual) => ({ ...atual, gestor: event.target.value }))}
+              placeholder="Gestor"
             />
             <select
               value={filtros.caixa}
@@ -257,116 +262,46 @@ export default function AppAnalistaPage() {
               <option value="">Status Agehab</option>
               <option value="analise credito">Analise Credito</option>
             </select>
+            <select
+              value={filtros.produto}
+              onChange={(event) => setFiltros((atual) => ({ ...atual, produto: event.target.value }))}
+              aria-label="Produto"
+            >
+              <option value="">Produto</option>
+              <option value="rd">RD</option>
+            </select>
           </div>
         </header>
 
-        <div className="analyst-live-list">
-          {filaFiltrada.map((cliente) => {
-            const detalheAberto = detalhesAbertos.includes(cliente.id);
-
-            return (
-            <article className={`analyst-live-card ${detalheAberto ? 'is-open' : ''}`} key={cliente.id}>
-              <div className="analyst-live-main">
-                <div className="analyst-client-title">
-                  <i />
-                  <b>{cliente.produto}</b>
-                  <h3>{cliente.cliente}</h3>
-                </div>
-                <p>{cliente.empreendimento}</p>
-                <p>{cliente.corretor}</p>
-                <div className="analyst-cca-line">
-                  <span>CCA responsavel</span>
-                  <em>{cliente.cca}</em>
-                </div>
-                <small>{cliente.prioridade}</small>
-              </div>
-
-              <div className="analyst-live-status">
-                <div>
-                  <span>Comercial {cliente.comercial}</span>
-                  <span>Credito {cliente.credito}</span>
-                </div>
-                <button type="button" onClick={() => alternarDetalhe(cliente.id)}>
-                  {detalheAberto ? 'Fechar detalhes' : 'Abrir detalhes'}
-                </button>
-              </div>
-
-              {detalheAberto && (
-                <div className="analyst-detail-panel">
-                  <div className="analyst-detail-grid">
-                    <section className="analyst-detail-box">
-                      <span>Panorama</span>
-                      <h4>{cliente.panorama}</h4>
-                      <p>{cliente.resumo}</p>
-                      <div className="analyst-detail-tags">
-                        <b>Aging {cliente.aging}</b>
-                        <b className="danger">SLA CCA {cliente.slaCca}</b>
-                      </div>
-                    </section>
-
-                    <section className="analyst-detail-box analyst-next-action">
-                      <span>Proxima acao</span>
-                      <h4>Atuar em Caixa: Analise Credito</h4>
-                      <p>Caixa: Analise Credito</p>
-                      <p>Sem observacao registrada</p>
-                    </section>
-                  </div>
-
-                  <section className="analyst-stage-card">
-                    <div className="analyst-stage-head">
-                      <b>Kit Caixa</b>
-                      <strong>Em Analise Credito</strong>
-                    </div>
-                    <div className="analyst-stage-line kit-caixa">
-                      {['Reserva', 'Em Analise Credito', 'Emitindo Formularios', 'Formularios Em Assinatura', 'Formularios Assinados', 'Finalizado'].map((etapa, index) => (
-                        <div className={index === 1 ? 'current' : index === 0 ? 'done' : ''} key={etapa}>
-                          <i />
-                          <span>{etapa}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-
-                  <section className="analyst-stage-card analyst-repasse">
-                    <div className="analyst-stage-head">
-                      <b>Kit Agehab</b>
-                      <strong>Em Analise Credito</strong>
-                    </div>
-                    <div className="analyst-stage-line kit-agehab">
-                      {['Reserva', 'Em Analise Credito', 'Ficha emitida', 'Ficha Recebida', 'Em Validacao Agehab', 'Agehab Validada'].map((etapa, index) => (
-                        <div className={index === 1 ? 'current' : index === 0 ? 'done' : ''} key={etapa}>
-                          <i />
-                          <span>{etapa}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-
-                  <div className="analyst-detail-bottom">
-                    {[
-                      ['Caixa', cliente.caixa],
-                      ['Agehab', cliente.agehab],
-                      ['Sinal', cliente.sinal],
-                      ['Fiador', cliente.fiador],
-                      ['SLA CCA', cliente.slaCca],
-                    ].map(([label, value]) => (
-                      <section className="analyst-mini-card" key={label}>
-                        <span>{label}</span>
-                        <b>{value}</b>
-                      </section>
-                    ))}
-                    <section className="analyst-pendency-card">
-                      <h4>Pendencias mapeadas</h4>
-                      {cliente.pendencias.map((pendencia) => (
-                        <p key={pendencia}>{pendencia}</p>
-                      ))}
-                    </section>
-                  </div>
-                </div>
-              )}
-            </article>
-          );
-          })}
+        <div className="analyst-live-table-wrap">
+          <table className="analyst-live-table">
+            <thead>
+              <tr>
+                <th>Reserva</th>
+                <th>Nome</th>
+                <th>Corretor</th>
+                <th>Status Cal</th>
+                <th>Status Ag</th>
+                <th>Produto</th>
+                <th>Prioridade</th>
+                <th>Documentos</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filaFiltrada.map((cliente) => (
+                <tr key={cliente.id}>
+                  <td>{cliente.id}</td>
+                  <td><strong>{cliente.cliente}</strong></td>
+                  <td>{cliente.corretor}</td>
+                  <td><span className="analyst-table-pill warn">{cliente.caixa}</span></td>
+                  <td><span className="analyst-table-pill warn">{cliente.agehab}</span></td>
+                  <td><span className="analyst-table-pill info">{cliente.produto}</span></td>
+                  <td><span className="analyst-table-pill danger">{cliente.prioridade}</span></td>
+                  <td>{cliente.resumo}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
     </main>
