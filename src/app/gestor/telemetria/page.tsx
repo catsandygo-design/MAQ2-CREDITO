@@ -1,3 +1,7 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+
 const pendenciasGestor = [
   ['critico', 'MATHEUS ALVES', 'Extrato FGTS pendente de retorno do corretor', 'Hoje 17:00'],
   ['medio', 'ANA PAULA', 'Documento enviado aguardando abertura do analista', '12h'],
@@ -28,6 +32,65 @@ function badge(status: string) {
 }
 
 export default function GestorTelemetriaPage() {
+  const [detalhesAbertos, setDetalhesAbertos] = useState<string[]>([]);
+  const [filtros, setFiltros] = useState({
+    reserva: '',
+    nome: '',
+    corretor: '',
+    gestor: '',
+    caixa: '',
+    agehab: '',
+    produto: '',
+  });
+
+  const alternarDetalhe = (id: string) => {
+    setDetalhesAbertos((abertos) => (
+      abertos.includes(id) ? abertos.filter((item) => item !== id) : [...abertos, id]
+    ));
+  };
+
+  const filaGestor = telemetria.map(([id, cliente, responsavel, caixa, agehab, sinal, fiador, momento, slaCliente, prazo]) => ({
+    id,
+    produto: 'RD',
+    cliente,
+    empreendimento: 'Kit Caixa | Kit Agehab',
+    corretor: responsavel,
+    cca: responsavel,
+    prioridade: 'Prioridade alta',
+    comercial: prazo,
+    credito: slaCliente,
+    panorama: momento,
+    resumo: `${caixa} | ${agehab}`,
+    aging: prazo,
+    slaCca: slaCliente,
+    caixa,
+    agehab,
+    sinal,
+    fiador,
+    pendencias: [`Caixa: ${caixa}`, `Agehab: ${agehab}`],
+  }));
+
+  const filaFiltrada = useMemo(() => {
+    const normalizar = (valor: string) => valor.trim().toLowerCase();
+    const reserva = normalizar(filtros.reserva);
+    const nome = normalizar(filtros.nome);
+    const corretor = normalizar(filtros.corretor);
+    const gestor = normalizar(filtros.gestor);
+    const caixa = normalizar(filtros.caixa);
+    const agehab = normalizar(filtros.agehab);
+    const produto = normalizar(filtros.produto);
+
+    return filaGestor.filter((cliente) => (
+      (!reserva || cliente.id.toLowerCase().includes(reserva)) &&
+      (!nome || cliente.cliente.toLowerCase().includes(nome)) &&
+      (!corretor || cliente.corretor.toLowerCase().includes(corretor)) &&
+      (!gestor || cliente.cca.toLowerCase().includes(gestor)) &&
+      (!caixa || cliente.caixa.toLowerCase() === caixa) &&
+      (!agehab || cliente.agehab.toLowerCase() === agehab) &&
+      (!produto || cliente.produto.toLowerCase() === produto)
+    ));
+  }, [filtros, filaGestor]);
+
   return (
     <main className="cor-page cor-page-premium" data-layout-version="gestor-template-analista-v1">
       <header className="cor-premium-top">
@@ -120,41 +183,93 @@ export default function GestorTelemetriaPage() {
         </article>
       </section>
 
-      <section className="cor-table-card">
-        <h2>Telemetria da carteira do gestor</h2>
-        <div className="cor-table-scroll">
-          <table className="cor-table">
-            <thead>
-              <tr>
-                <th>Reserva</th>
-                <th>Nome do cliente</th>
-                <th>Responsavel</th>
-                <th>Status Caixa</th>
-                <th>Status Agehab</th>
-                <th>Sinal</th>
-                <th>Fiador</th>
-                <th>Momento da reserva</th>
-                <th>SLA Cliente</th>
-                <th>Prazo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {telemetria.map(([reserva, nome, responsavel, caixa, agehab, sinal, fiador, momento, slaCliente, prazo]) => (
-                <tr key={reserva}>
-                  <td><strong>{reserva}</strong></td>
-                  <td><a className="cor-link" href={`/analista/checklist?cliente=${encodeURIComponent(nome)}&reserva=${reserva}`}>{nome}</a></td>
-                  <td>{responsavel}</td>
-                  <td><span className={badge(caixa)}>{caixa}</span></td>
-                  <td><span className={badge(agehab)}>{agehab}</span></td>
-                  <td><span className={badge(sinal)}>{sinal}</span></td>
-                  <td><span className={badge(fiador)}>{fiador}</span></td>
-                  <td>{momento}</td>
-                  <td><span className={badge(slaCliente)}>{slaCliente}</span></td>
-                  <td><span className="cor-badge cor-badge-info">{prazo}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section className="analyst-live-board">
+        <header className="analyst-live-head">
+          <div className="analyst-live-title-row">
+            <h2>Fila Viva - Fluxo do Cliente</h2>
+            <strong>20 processo(s)</strong>
+            <strong>17 aguardando docs</strong>
+            <strong>20 prioridade alta</strong>
+          </div>
+          <div className="analyst-live-filters">
+            <input value={filtros.reserva} onChange={(event) => setFiltros((atual) => ({ ...atual, reserva: event.target.value }))} placeholder="Reserva" />
+            <input value={filtros.nome} onChange={(event) => setFiltros((atual) => ({ ...atual, nome: event.target.value }))} placeholder="Nome" />
+            <input value={filtros.corretor} onChange={(event) => setFiltros((atual) => ({ ...atual, corretor: event.target.value }))} placeholder="Corretor" />
+            <input value={filtros.gestor} onChange={(event) => setFiltros((atual) => ({ ...atual, gestor: event.target.value }))} placeholder="Gestor" />
+            <select value={filtros.caixa} onChange={(event) => setFiltros((atual) => ({ ...atual, caixa: event.target.value }))} aria-label="Status Caixa">
+              <option value="">Status Caixa</option>
+              <option value="pendencia documentacao">Pendencia documentacao</option>
+              <option value="formularios disponiveis">Formularios disponiveis</option>
+              <option value="em validacao credito">Em validacao credito</option>
+            </select>
+            <select value={filtros.agehab} onChange={(event) => setFiltros((atual) => ({ ...atual, agehab: event.target.value }))} aria-label="Status Agehab">
+              <option value="">Status Agehab</option>
+              <option value="documentos pendenciados">Documentos pendenciados</option>
+              <option value="ficha agehab liberada">Ficha Agehab liberada</option>
+              <option value="em analise do credito">Em analise do credito</option>
+            </select>
+            <select value={filtros.produto} onChange={(event) => setFiltros((atual) => ({ ...atual, produto: event.target.value }))} aria-label="Produto">
+              <option value="">Produto</option>
+              <option value="rd">RD</option>
+            </select>
+          </div>
+        </header>
+
+        <div className="analyst-live-list">
+          {filaFiltrada.map((cliente) => {
+            const detalheAberto = detalhesAbertos.includes(cliente.id);
+
+            return (
+              <article className={`analyst-live-card ${detalheAberto ? 'is-open' : ''}`} key={cliente.id}>
+                <div className="analyst-live-main">
+                  <div className="analyst-client-title">
+                    <i />
+                    <b>{cliente.produto}</b>
+                    <h3>{cliente.cliente}</h3>
+                  </div>
+                  <p>{cliente.empreendimento}</p>
+                  <p>{cliente.corretor}</p>
+                  <div className="analyst-cca-line">
+                    <span>Gestor</span>
+                    <em>{cliente.cca}</em>
+                  </div>
+                  <small>{cliente.prioridade}</small>
+                </div>
+
+                <div className="analyst-live-status">
+                  <div>
+                    <span>Comercial {cliente.comercial}</span>
+                    <span>Credito {cliente.credito}</span>
+                  </div>
+                  <button type="button" onClick={() => alternarDetalhe(cliente.id)}>
+                    {detalheAberto ? 'Fechar detalhes' : 'Abrir detalhes'}
+                  </button>
+                </div>
+
+                {detalheAberto && (
+                  <div className="analyst-detail-panel">
+                    <div className="analyst-detail-grid">
+                      <section className="analyst-detail-box">
+                        <span>Panorama</span>
+                        <h4>{cliente.panorama}</h4>
+                        <p>{cliente.resumo}</p>
+                        <div className="analyst-detail-tags">
+                          <b>Aging {cliente.aging}</b>
+                          <b className="danger">SLA {cliente.slaCca}</b>
+                        </div>
+                      </section>
+                      <section className="analyst-detail-box analyst-next-action">
+                        <span>Proxima acao</span>
+                        <h4>Atuar em Caixa: {cliente.caixa}</h4>
+                        <p>Caixa: {cliente.caixa}</p>
+                        <p>Agehab: {cliente.agehab}</p>
+                      </section>
+                    </div>
+                  </div>
+                )}
+              </article>
+            );
+          })}
         </div>
       </section>
     </main>
