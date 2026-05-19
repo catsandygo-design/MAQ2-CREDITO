@@ -13,7 +13,7 @@ npm run build
 ## Rotas principais
 
 - `/painel/acompanhamento`
-- `/app/analista`
+- `/analista`
 - `/cca/acompanhamento`
 - `/gestor/telemetria`
 - `/checklist_documentos_upload_com_formulario.html`
