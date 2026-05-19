@@ -45,3 +45,10 @@
 ## Observacoes
 - Sem pendencias tecnicas bloqueantes abertas nesta fase.
 - Repositorio sincronizado com `origin/main`.
+
+## Atualizacao rapida (2026-05-19)
+- Tela `src/app/app/analista/page.tsx` ajustada para:
+  - manter acesso ao checklist pelo nome do cliente (botao lateral removido);
+  - card de SLA no bloco da direita replicado com o mesmo padrao do acompanhamento;
+  - bloco `Taxa de retrabalho 3,2%` abaixo do SLA no mesmo padrao visual.
+- CSS de apoio ajustado em `src/app/globals.css` para posicionamento/alinhamento dos cards no grid do analista.
