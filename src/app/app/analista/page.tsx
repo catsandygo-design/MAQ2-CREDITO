@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 const pendenciasAnalista = [
   ['critico', 'MATHEUS ALVES', 'Analista: Bianca • Documento pendente: Extrato FGTS', 'Hoje 17:00'],
@@ -99,14 +99,36 @@ const resumoCarteira = [
 
 export default function AppAnalistaPage() {
   const [detalhesAbertos, setDetalhesAbertos] = useState<string[]>([]);
+  const [filtros, setFiltros] = useState({
+    reserva: '',
+    nome: '',
+    corretor: '',
+    caixa: '',
+    agehab: '',
+  });
 
-  const abrirTodos = () => setDetalhesAbertos(filaViva.map((cliente) => cliente.id));
-  const fecharTodos = () => setDetalhesAbertos([]);
   const alternarDetalhe = (id: string) => {
     setDetalhesAbertos((abertos) => (
       abertos.includes(id) ? abertos.filter((item) => item !== id) : [...abertos, id]
     ));
   };
+
+  const filaFiltrada = useMemo(() => {
+    const normalizar = (valor: string) => valor.trim().toLowerCase();
+    const reserva = normalizar(filtros.reserva);
+    const nome = normalizar(filtros.nome);
+    const corretor = normalizar(filtros.corretor);
+    const caixa = normalizar(filtros.caixa);
+    const agehab = normalizar(filtros.agehab);
+
+    return filaViva.filter((cliente) => (
+      (!reserva || cliente.id.toLowerCase().includes(reserva)) &&
+      (!nome || cliente.cliente.toLowerCase().includes(nome)) &&
+      (!corretor || cliente.corretor.toLowerCase().includes(corretor)) &&
+      (!caixa || cliente.caixa.toLowerCase() === caixa) &&
+      (!agehab || cliente.agehab.toLowerCase() === agehab)
+    ));
+  }, [filtros]);
 
   return (
     <main className="cor-page cor-page-premium" data-layout-version="analista-dashboards-v1">
@@ -199,20 +221,47 @@ export default function AppAnalistaPage() {
           <div>
             <span>Fila viva</span>
             <h2>Fluxo do cliente</h2>
-            <p>Cada card mostra etapa, travas e proxima acao sem repetir o mesmo resumo em varios blocos.</p>
           </div>
-          <div className="analyst-live-actions">
+          <div className="analyst-live-actions analyst-live-filters">
             <strong>20 processo(s)</strong>
             <strong>17 aguardando docs</strong>
             <strong>20 prioridade alta</strong>
-            <button type="button" onClick={abrirTodos}>Abrir todos</button>
-            <button type="button" onClick={fecharTodos}>Fechar todos</button>
-            <button>Fechar</button>
+            <input
+              value={filtros.reserva}
+              onChange={(event) => setFiltros((atual) => ({ ...atual, reserva: event.target.value }))}
+              placeholder="Reserva"
+            />
+            <input
+              value={filtros.nome}
+              onChange={(event) => setFiltros((atual) => ({ ...atual, nome: event.target.value }))}
+              placeholder="Nome"
+            />
+            <input
+              value={filtros.corretor}
+              onChange={(event) => setFiltros((atual) => ({ ...atual, corretor: event.target.value }))}
+              placeholder="Corretor"
+            />
+            <select
+              value={filtros.caixa}
+              onChange={(event) => setFiltros((atual) => ({ ...atual, caixa: event.target.value }))}
+              aria-label="Status Caixa"
+            >
+              <option value="">Status Caixa</option>
+              <option value="analise credito">Analise Credito</option>
+            </select>
+            <select
+              value={filtros.agehab}
+              onChange={(event) => setFiltros((atual) => ({ ...atual, agehab: event.target.value }))}
+              aria-label="Status Agehab"
+            >
+              <option value="">Status Agehab</option>
+              <option value="analise credito">Analise Credito</option>
+            </select>
           </div>
         </header>
 
         <div className="analyst-live-list">
-          {filaViva.map((cliente) => {
+          {filaFiltrada.map((cliente) => {
             const detalheAberto = detalhesAbertos.includes(cliente.id);
 
             return (
