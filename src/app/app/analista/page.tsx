@@ -168,8 +168,8 @@ export default function AppAnalistaPage() {
           </article>
         </div>
 
-        <div className="analista-sla-rework-stack">
-          <article className="cor-card cor-panel-conversion">
+        <div className="cor-sla-stack analista-sla-rework-stack">
+          <article className="cor-card cor-panel-sla">
             <div className="cor-panel-head">
               <div>
                 <small>Dashboard 2 — SLA</small>
