@@ -113,15 +113,15 @@ export default function AppAnalistaPage() {
     <main className="cor-page cor-page-premium" data-layout-version="analista-dashboards-v1">
       <header className="cor-premium-top">
         <div className="cor-premium-title">
-          <span className="cor-chart-icon">â†—</span>
+          <span className="cor-chart-icon">↗</span>
           <div>
             <h1>Painel do Analista</h1>
             <p>Gestao documental, pendencias de credito, SLA da carteira e telemetria dos processos em reserva.</p>
           </div>
         </div>
         <div className="cor-premium-actions cor-actions-no-primary">
-          <button>â†» Atualizar</button>
-          <button>â†ª Sair</button>
+          <button>↻ Atualizar</button>
+          <button>↪ Sair</button>
         </div>
       </header>
 
@@ -129,7 +129,7 @@ export default function AppAnalistaPage() {
         <article className="cor-card cor-panel-alerts">
           <div className="cor-panel-head">
             <div>
-              <small>Dashboard 1 â€” Pendencias acompanhadas</small>
+              <small>Dashboard 1 — Pendencias acompanhadas</small>
               <p>Clientes e documentos que precisam de acao do analista ou retorno do corretor.</p>
             </div>
             <strong className="cor-urgent-pill">3 atencoes</strong>
@@ -152,7 +152,7 @@ export default function AppAnalistaPage() {
           <article className="cor-card cor-panel-sla">
             <div className="cor-panel-head">
               <div>
-                <small>Dashboard 2 â€” Carteira em reserva</small>
+                <small>Dashboard 2 — Carteira em reserva</small>
                 <p>Quantidade de clientes em reserva, finalizados e em pendencia documental.</p>
               </div>
             </div>
@@ -172,7 +172,7 @@ export default function AppAnalistaPage() {
           <article className="cor-card cor-panel-conversion">
             <div className="cor-panel-head">
               <div>
-                <small>Dashboard 2 â€” SLA</small>
+                <small>Dashboard 2 — SLA</small>
               </div>
             </div>
             <div className="cor-speed-premium">
