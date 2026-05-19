@@ -168,29 +168,31 @@ export default function AppAnalistaPage() {
           </article>
         </div>
 
-        <article className="cor-card cor-panel-conversion">
-          <div className="cor-panel-head">
-            <div>
-              <small>Dashboard 2 â€” SLA</small>
+        <div className="analista-sla-rework-stack">
+          <article className="cor-card cor-panel-conversion">
+            <div className="cor-panel-head">
+              <div>
+                <small>Dashboard 2 â€” SLA</small>
+              </div>
             </div>
-          </div>
-          <div className="cor-speed-premium">
-            <div className="cor-speed-arc" />
-            <div className="cor-speed-needle" />
-            <span />
-          </div>
-          <div className="cor-sla-lines">
-            <div><span>Melhor SLA de entrega</span><small>Referencia da carteira</small><b className="green">3h</b></div>
-            <div><span>SLA atual do corretor</span><small>Media de resposta as pendencias</small><b className="orange">14h</b></div>
-          </div>
-        </article>
-        <article className="cor-card cor-rework-card">
-          <div className="cor-rework cor-rework-warn">
-            <span className="cor-rework-icon">🔨</span>
-            <span>Taxa de retrabalho</span>
-            <b>3,2%</b>
-          </div>
-        </article>
+            <div className="cor-speed-premium">
+              <div className="cor-speed-arc" />
+              <div className="cor-speed-needle" />
+              <span />
+            </div>
+            <div className="cor-sla-lines">
+              <div><span>Melhor SLA de entrega</span><small>Referencia da carteira</small><b className="green">3h</b></div>
+              <div><span>SLA atual do corretor</span><small>Media de resposta as pendencias</small><b className="orange">14h</b></div>
+            </div>
+          </article>
+          <article className="cor-card cor-rework-card">
+            <div className="cor-rework cor-rework-warn">
+              <span className="cor-rework-icon">🔨</span>
+              <span>Taxa de retrabalho</span>
+              <b>3,2%</b>
+            </div>
+          </article>
+        </div>
       </section>
 
       <section className="analyst-live-board">
