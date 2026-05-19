@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 
@@ -113,15 +113,15 @@ export default function AppAnalistaPage() {
     <main className="cor-page cor-page-premium" data-layout-version="analista-dashboards-v1">
       <header className="cor-premium-top">
         <div className="cor-premium-title">
-          <span className="cor-chart-icon">↗</span>
+          <span className="cor-chart-icon">â†—</span>
           <div>
             <h1>Painel do Analista</h1>
             <p>Gestao documental, pendencias de credito, SLA da carteira e telemetria dos processos em reserva.</p>
           </div>
         </div>
         <div className="cor-premium-actions cor-actions-no-primary">
-          <button>↻ Atualizar</button>
-          <button>↪ Sair</button>
+          <button>â†» Atualizar</button>
+          <button>â†ª Sair</button>
         </div>
       </header>
 
@@ -129,7 +129,7 @@ export default function AppAnalistaPage() {
         <article className="cor-card cor-panel-alerts">
           <div className="cor-panel-head">
             <div>
-              <small>Dashboard 1 — Pendencias acompanhadas</small>
+              <small>Dashboard 1 â€” Pendencias acompanhadas</small>
               <p>Clientes e documentos que precisam de acao do analista ou retorno do corretor.</p>
             </div>
             <strong className="cor-urgent-pill">3 atencoes</strong>
@@ -152,7 +152,7 @@ export default function AppAnalistaPage() {
           <article className="cor-card cor-panel-sla">
             <div className="cor-panel-head">
               <div>
-                <small>Dashboard 2 — Carteira em reserva</small>
+                <small>Dashboard 2 â€” Carteira em reserva</small>
                 <p>Quantidade de clientes em reserva, finalizados e em pendencia documental.</p>
               </div>
             </div>
@@ -171,8 +171,7 @@ export default function AppAnalistaPage() {
         <article className="cor-card cor-panel-conversion">
           <div className="cor-panel-head">
             <div>
-              <small>Dashboard 3 — SLA</small>
-              <p>Tempo medio da carteira do analista comparado ao melhor SLA operacional.</p>
+              <small>Dashboard 2 â€” SLA</small>
             </div>
           </div>
           <div className="cor-speed-premium">
@@ -181,8 +180,15 @@ export default function AppAnalistaPage() {
             <span />
           </div>
           <div className="cor-sla-lines">
-            <div><span>Melhor SLA documental</span><small>Referencia da operacao</small><b className="green">3h</b></div>
-            <div><span>SLA atual do analista</span><small>Media de resposta da carteira</small><b className="orange">11h</b></div>
+            <div><span>Melhor SLA de entrega</span><small>Referencia da carteira</small><b className="green">3h</b></div>
+            <div><span>SLA atual do corretor</span><small>Media de resposta as pendencias</small><b className="orange">14h</b></div>
+          </div>
+        </article>
+        <article className="cor-card cor-rework-card">
+          <div className="cor-rework cor-rework-warn">
+            <span className="cor-rework-icon">🔨</span>
+            <span>Taxa de retrabalho</span>
+            <b>3,2%</b>
           </div>
         </article>
       </section>
