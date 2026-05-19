@@ -252,6 +252,54 @@ export default function AcompanhamentoCorretorPage() {
                         <p>Agehab: {cliente.agehab}</p>
                       </section>
                     </div>
+                    <section className="analyst-stage-card">
+                      <div className="analyst-stage-head">
+                        <b>Kit Caixa</b>
+                        <strong>Em Analise Credito</strong>
+                      </div>
+                      <div className="analyst-stage-line kit-caixa">
+                        {['Reserva', 'Em Analise Credito', 'Emitindo Formularios', 'Formularios Em Assinatura', 'Formularios Assinados', 'Envio à conformidade'].map((etapa, index) => (
+                          <div className={index === 1 ? 'current' : index === 0 ? 'done' : ''} key={etapa}>
+                            <i />
+                            <span>{etapa}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                    <section className="analyst-stage-card analyst-repasse">
+                      <div className="analyst-stage-head">
+                        <b>Kit Agehab</b>
+                        <strong>Em Analise Credito</strong>
+                      </div>
+                      <div className="analyst-stage-line kit-agehab">
+                        {['Reserva', 'Em Analise Credito', 'Ficha emitida', 'Ficha Recebida', 'Em Validacao Agehab', 'Agehab Validada'].map((etapa, index) => (
+                          <div className={index === 1 ? 'current' : index === 0 ? 'done' : ''} key={etapa}>
+                            <i />
+                            <span>{etapa}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                    <div className="analyst-detail-bottom">
+                      {[
+                        ['Caixa', cliente.caixa],
+                        ['Agehab', cliente.agehab],
+                        ['Sinal', cliente.sinal],
+                        ['Fiador', cliente.fiador],
+                        ['Produto', 'PAGO'],
+                      ].map(([label, value]) => (
+                        <section className="analyst-mini-card" key={label}>
+                          <span>{label}</span>
+                          <b>{value}</b>
+                        </section>
+                      ))}
+                      <section className="analyst-pendency-card">
+                        <h4>Pendencias mapeadas</h4>
+                        {cliente.pendencias.map((pendencia) => (
+                          <p key={pendencia}>{pendencia}</p>
+                        ))}
+                      </section>
+                    </div>
                   </div>
                 )}
               </article>
