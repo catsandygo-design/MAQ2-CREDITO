@@ -366,7 +366,7 @@ export default function AppAnalistaPage() {
                       ['Agehab', cliente.agehab],
                       ['Sinal', cliente.sinal],
                       ['Fiador', cliente.fiador],
-                      ['SLA CCA', cliente.slaCca],
+                      ['Produto', 'PAGO'],
                     ].map(([label, value]) => (
                       <section className="analyst-mini-card" key={label}>
                         <span>{label}</span>
