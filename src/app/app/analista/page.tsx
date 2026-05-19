@@ -3,10 +3,9 @@
 import { useState } from 'react';
 
 const pendenciasAnalista = [
-  ['critico', 'MATHEUS ALVES', 'Extrato FGTS pendente de retorno do corretor', 'Hoje 17:00'],
-  ['medio', 'ANA PAULA', 'Documento enviado aguardando abertura do analista', '12h'],
-  ['medio', 'CARLOS HENRIQUE', 'Renda informal exige declaracao complementar', '24h'],
-  ['ok', 'JOAO AMORIN', 'Kit documental aprovado para envio ao CCA', 'OK'],
+  ['critico', 'MATHEUS ALVES', 'Analista: Bianca • Documento pendente: Extrato FGTS', 'Hoje 17:00'],
+  ['medio', 'ANA CLARA', 'Analista: Douglas • Documento pendente: Ficha Agehab', '24h'],
+  ['ok', 'JOAO PEDRO', 'Analista: CCA Central • Documento pendente: Assinatura MO', '48h'],
 ];
 
 const filaViva = [
@@ -130,9 +129,9 @@ export default function AppAnalistaPage() {
           <div className="cor-panel-head">
             <div>
               <small>Dashboard 1 — Pendencias acompanhadas</small>
-              <p>Clientes e documentos que precisam de acao do analista ou retorno do corretor.</p>
+              <p>Analista de credito, cliente, documento pendente e prazo de entrega.</p>
             </div>
-            <strong className="cor-urgent-pill">3 atencoes</strong>
+            <strong className="cor-urgent-pill">3 urgentes</strong>
           </div>
           <div className="cor-alert-list">
             {pendenciasAnalista.map(([tone, nome, desc, prazo]) => (
