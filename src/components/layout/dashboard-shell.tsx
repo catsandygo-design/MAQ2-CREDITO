@@ -2,12 +2,8 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 const navItems = [
-  { label: 'Governança', href: '/analista/governanca' },
-  { label: 'SLA', href: '/analista/sla' },
-  { label: 'Workflow', href: '/analista/workflow' },
+  { label: 'Painel', href: '/analista' },
   { label: 'Checklist', href: '/analista/checklist' },
-  { label: 'Métricas', href: '/analista/metricas' },
-  { label: 'Minuta', href: '/analista/minuta' },
 ];
 
 export function DashboardShell({

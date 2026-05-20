@@ -6,7 +6,7 @@ export default function HomePage() {
         <p style={{ margin: 0, color: '#475569' }}>Plataforma enterprise de credito imobiliario Caixa + Agehab.</p>
         <a href="/painel/acompanhamento" style={{ color: '#166534', fontWeight: 800 }}>Entrar no painel do corretor</a>
         <a href="/cca/acompanhamento" style={{ color: '#075985', fontWeight: 800 }}>Entrar no painel CCA</a>
-        <a href="/app/analista" style={{ color: '#92400e', fontWeight: 800 }}>Entrar no painel do analista</a>
+        <a href="/analista" style={{ color: '#92400e', fontWeight: 800 }}>Entrar no painel do analista</a>
         <a href="/gestor/telemetria" style={{ color: '#334155', fontWeight: 800 }}>Entrar na telemetria do gestor</a>
       </div>
     </main>

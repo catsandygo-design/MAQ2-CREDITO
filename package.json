@@ -11,28 +11,17 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "latest",
-    "@hookform/resolvers": "latest",
-    "clsx": "latest",
-    "date-fns": "latest",
     "lucide-react": "latest",
     "next": "latest",
     "react": "latest",
-    "react-dom": "latest",
-    "react-hook-form": "latest",
-    "recharts": "latest",
-    "sonner": "latest",
-    "tailwind-merge": "latest",
-    "zod": "latest"
+    "react-dom": "latest"
   },
   "devDependencies": {
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "autoprefixer": "latest",
     "eslint": "latest",
     "eslint-config-next": "latest",
-    "postcss": "latest",
-    "tailwindcss": "latest",
     "typescript": "latest"
   }
 }
