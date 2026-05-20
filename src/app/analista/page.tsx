@@ -148,8 +148,8 @@ export default function AppAnalistaPage() {
           </div>
         </article>
 
-        <div className="cor-middle-stack">
-          <article className="cor-card cor-panel-conversion">
+        <div className="cor-sla-stack">
+          <article className="cor-card cor-panel-sla">
             <div className="cor-panel-head">
               <div>
                 <small>Dashboard 3 — SLA</small>
@@ -167,13 +167,15 @@ export default function AppAnalistaPage() {
             </div>
           </article>
           <article className="cor-card cor-rework-card">
-            <span>Taxa de retrabalho</span>
-            <b>3,2%</b>
+            <div className="cor-rework">
+              <span className="cor-rework-icon">🔨</span>
+              <span>Taxa de retrabalho</span>
+              <b>3,2%</b>
+            </div>
           </article>
         </div>
 
-        <div className="cor-sla-stack">
-          <article className="cor-card cor-panel-sla">
+        <article className="cor-card cor-panel-conversion">
             <div className="cor-panel-head">
               <div>
                 <small>Dashboard 2 — Carteira em reserva</small>
@@ -190,7 +192,6 @@ export default function AppAnalistaPage() {
               ))}
             </div>
           </article>
-        </div>
       </section>
 
       <section className="analyst-live-board">
