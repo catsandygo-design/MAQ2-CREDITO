@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { Suspense, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function ChecklistDocumentosUploadComFormularioPage() {
+function ChecklistDocumentosUploadComFormularioContent() {
   const params = useSearchParams();
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -49,5 +49,13 @@ export default function ChecklistDocumentosUploadComFormularioPage() {
         background: '#ffffff',
       }}
     />
+  );
+}
+
+export default function ChecklistDocumentosUploadComFormularioPage() {
+  return (
+    <Suspense fallback={null}>
+      <ChecklistDocumentosUploadComFormularioContent />
+    </Suspense>
   );
 }
