@@ -1,15 +1,15 @@
-'use client';
+﻿'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-type DocStatus = 'Aguardando' | 'Pendente' | 'Aprovado' | 'Não se Aplica' | 'Bloqueado';
-type RelStatus = 'Não se Aplica' | 'sim' | 'nao';
+type DocStatus = 'Aguardando' | 'Pendente' | 'Aprovado' | 'NÃ£o se Aplica' | 'Bloqueado';
+type RelStatus = 'NÃ£o se Aplica' | 'sim' | 'nao';
 
-const docStatuses: DocStatus[] = ['Aguardando', 'Pendente', 'Aprovado', 'Não se Aplica', 'Bloqueado'];
-const relStatuses: RelStatus[] = ['Não se Aplica', 'sim', 'nao'];
+const docStatuses: DocStatus[] = ['Aguardando', 'Pendente', 'Aprovado', 'NÃ£o se Aplica', 'Bloqueado'];
+const relStatuses: RelStatus[] = ['NÃ£o se Aplica', 'sim', 'nao'];
 
-const ccasVinculados = ['Endy Carvalho', 'CCA Externo', 'CCA Supera', 'CCA Agiliza', 'Federal CCA', 'CCA Impacta'];
+const agenciasVinculadas = ['1856', '0972'];
 
 const caixaStages = [
   ['reserva', 'Reserva'],
@@ -105,19 +105,6 @@ const sections = [
       ['cartao-credito', 'Cartao de Credito', 'Formulario de contratacao de cartao de credito. Sujeito a aprovacao do banco.'],
     ],
   },
-  {
-    key: 'agehab',
-    title: 'Documentos Agehab',
-    subtitle: 'Padroes Agehab: GOV.BR ou Clicksign quando aplicavel.',
-    docs: [
-      ['decl-end', 'Declaracao de endereco', 'Quando necessario. Assinada via GOV.BR ou Clicksign.'],
-      ['decl-renda', 'Declaracao renda informal', 'Assinada pelo dependente via GOV.BR/Clicksign.'],
-      ['decl-naorenda', 'Declaracao de nao renda', 'Para dependentes sem renda.'],
-      ['vinculo', 'Vinculo >= 3 anos', 'Documento com fe publica comprovando vinculo minimo.'],
-      ['check', 'Checklist Agehab', 'Preenchido e assinado GOV.BR.'],
-      ['ficha', 'Ficha Agehab', 'Preenchida pelo Assistente de Credito.'],
-    ],
-  },
 ];
 
 const relacionamento = [
@@ -131,21 +118,31 @@ const relacionamento = [
 
 function classForStatus(status: string) {
   const normalized = status.toLowerCase();
-  if (['aprovado', 'não se aplica', 'sim'].includes(normalized)) return 'ok';
+  if (['aprovado', 'nÃ£o se aplica', 'sim'].includes(normalized)) return 'ok';
   if (['pendente', 'bloqueado', 'nao'].includes(normalized)) return 'bad';
   return 'warn';
+}
+
+function normalizeCaixaStatus(status: string | null) {
+  const normalized = (status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  if (!normalized) return 'reserva';
+  if (normalized === 'emitir formularios' || normalized === 'emitindo formularios') return 'emitindo_formularios';
+  if (normalized === 'em analise credito') return 'em_analise_credito';
+  if (normalized === 'formularios em assinatura') return 'formularios_em_assinatura';
+  if (normalized === 'formularios assinados') return 'formularios_assinados';
+  if (normalized === 'envio a conformidade') return 'envio_conformidade';
+  if (normalized === 'reserva') return 'reserva';
+  return status || 'reserva';
 }
 
 function StageTimeline({
   label,
   value,
-  onChange,
   stages,
   tone,
 }: {
   label: string;
   value: string;
-  onChange: (value: string) => void;
   stages: readonly (readonly [string, string])[];
   tone: 'caixa' | 'agehab';
 }) {
@@ -156,11 +153,6 @@ function StageTimeline({
     <div className="react-stage">
       <div className="react-stage-head">
         <strong>{label}</strong>
-        <select value={value} onChange={(event) => onChange(event.target.value)}>
-          {stages.map(([stage, text]) => (
-            <option value={stage} key={stage}>{text}</option>
-          ))}
-        </select>
       </div>
       <div className={`react-stage-dots ${tone}`}>
         {stages.map(([stage], index) => (
@@ -174,41 +166,39 @@ function StageTimeline({
 
 function AnalistaChecklistContent() {
   const params = useSearchParams();
-  const [caixa, setCaixa] = useState('reserva');
+  const [caixa, setCaixa] = useState(normalizeCaixaStatus(params.get('caixa')));
   const [agehab, setAgehab] = useState('reserva');
   const [perfilRenda, setPerfilRenda] = useState('clt');
-  const [tipoDependente, setTipoDependente] = useState('nao-definido');
+  const [tipoDependente, setTipoDependente] = useState(params.get('dependente') || 'filho-maior');
   const [docMap, setDocMap] = useState<Record<string, DocStatus>>({});
   const [relMap, setRelMap] = useState<Record<string, RelStatus>>({});
-  const [temDocumentoEnviado, setTemDocumentoEnviado] = useState(false);
-  const [uploadsCca, setUploadsCca] = useState<Record<string, { name: string; data: string }>>({});
+  const [uploadsEnviados, setUploadsEnviados] = useState<Record<string, boolean>>({});
 
   const cliente = params.get('cliente') || '';
   const reserva = params.get('reserva') || '';
+  const cidade = params.get('cidade') || '';
+  const empreendimento = params.get('empreendimento') || '';
+  const corretor = params.get('corretor') || '';
+  const sinal = params.get('sinal') || 'Nao tem';
+  const fiador = params.get('fiador') || 'Nao tem';
+  const produto = params.get('produto') || 'Pago';
+
+  const temDocumentoEnviado = params.get('upload') === '1' || params.get('documento') === 'enviado';
 
   useEffect(() => {
     if (!reserva) return;
-    const carregarDados = () => {
-      const statusCaixa = localStorage.getItem(`maq2_caixa_status_${reserva}`);
-      const statusAgehab = localStorage.getItem(`maq2_agehab_status_${reserva}`);
-      const uploadCca = localStorage.getItem(`maq2_cca_upload_${reserva}`);
-      if (statusCaixa) setCaixa(statusCaixa);
-      if (statusAgehab) setAgehab(statusAgehab);
-      setTemDocumentoEnviado(uploadCca === '1' || params.get('upload') === '1' || params.get('documento') === 'enviado');
-      const uploadsSalvos = sections
-        .find((section) => section.key === 'caixa')
-        ?.docs.reduce<Record<string, { name: string; data: string }>>((acc, [id]) => {
-          const key = `caixa.${id}`;
-          const name = localStorage.getItem(`maq2_cca_upload_nome_${reserva}_${key}`);
-          const data = localStorage.getItem(`maq2_cca_upload_data_${reserva}_${key}`);
-          if (name && data) acc[key] = { name, data };
-          return acc;
-        }, {});
-      setUploadsCca(uploadsSalvos || {});
-    };
-    carregarDados();
-    window.addEventListener('focus', carregarDados);
-    return () => window.removeEventListener('focus', carregarDados);
+    const statusCaixa = localStorage.getItem(`maq2_caixa_status_${reserva}`);
+    const statusAgehab = localStorage.getItem(`maq2_agehab_status_${reserva}`);
+    if (statusCaixa) setCaixa(normalizeCaixaStatus(statusCaixa));
+    if (statusAgehab) setAgehab(statusAgehab);
+    const uploadsSalvos = sections
+      .find((section) => section.key === 'caixa')
+      ?.docs.reduce<Record<string, boolean>>((acc, [id]) => {
+        const key = `caixa.${id}`;
+        acc[key] = localStorage.getItem(`maq2_cca_upload_${reserva}_${key}`) === '1';
+        return acc;
+      }, {});
+    setUploadsEnviados((current) => ({ ...current, ...uploadsSalvos }));
   }, [reserva]);
 
   const visibleSections = useMemo(() => sections.filter((section) => {
@@ -220,51 +210,10 @@ function AnalistaChecklistContent() {
   }), [perfilRenda, tipoDependente]);
 
   const allDocs = visibleSections.flatMap((section) => section.docs.map(([id]) => `${section.key}.${id}`));
-  const doneDocs = allDocs.filter((key) => ['Aprovado', 'Não se Aplica'].includes(docMap[key] || 'Aguardando')).length;
+  const doneDocs = allDocs.filter((key) => ['Aprovado', 'NÃ£o se Aplica'].includes(docMap[key] || 'Aguardando')).length;
 
   function updateDoc(key: string, value: DocStatus) {
     setDocMap((current) => ({ ...current, [key]: value }));
-  }
-
-  function updateCaixa(value: string) {
-    const etapaAtual = caixaStages.findIndex(([stage]) => stage === caixa);
-    const novaEtapa = caixaStages.findIndex(([stage]) => stage === value);
-    const etapaEmitindo = caixaStages.findIndex(([stage]) => stage === 'emitindo_formularios');
-    const voltandoAntesDosFormularios = etapaAtual >= etapaEmitindo && novaEtapa < etapaEmitindo;
-    const temAnexoCaixa = reserva && (
-      localStorage.getItem(`maq2_cca_upload_${reserva}`) === '1'
-      || sections
-        .find((section) => section.key === 'caixa')
-        ?.docs.some(([id]) => localStorage.getItem(`maq2_cca_upload_data_${reserva}_caixa.${id}`))
-    );
-
-    if (reserva && voltandoAntesDosFormularios && temAnexoCaixa) {
-      const confirmar = window.confirm('O formulario que esta em anexo sera perdido. Deseja continuar?');
-      if (!confirmar) return;
-      sections
-        .find((section) => section.key === 'caixa')
-        ?.docs.forEach(([id]) => {
-          const key = `caixa.${id}`;
-          localStorage.removeItem(`maq2_cca_upload_${reserva}_${key}`);
-          localStorage.removeItem(`maq2_cca_upload_nome_${reserva}_${key}`);
-          localStorage.removeItem(`maq2_cca_upload_data_${reserva}_${key}`);
-        });
-      localStorage.removeItem(`maq2_cca_upload_${reserva}`);
-      setUploadsCca({});
-      setTemDocumentoEnviado(false);
-    }
-
-    setCaixa(value);
-    if (reserva) {
-      localStorage.setItem(`maq2_caixa_status_${reserva}`, value);
-    }
-  }
-
-  function updateAgehab(value: string) {
-    setAgehab(value);
-    if (reserva) {
-      localStorage.setItem(`maq2_agehab_status_${reserva}`, value);
-    }
   }
 
   function updateRel(key: string, value: RelStatus) {
@@ -282,13 +231,13 @@ function AnalistaChecklistContent() {
         <aside>
           <b>Total de documentos: {allDocs.length}</b>
           <b>Status: {doneDocs} enviados</b>
-          <a className="react-back-button" href="/analista">Voltar</a>
+          <a className="react-back-button" href="/cca/acompanhamento">Voltar</a>
         </aside>
       </header>
 
       <section className="react-stage-grid">
-        <StageTimeline label="Kit Caixa" value={caixa} onChange={updateCaixa} stages={caixaStages} tone="caixa" />
-        <StageTimeline label="Kit Agehab" value={agehab} onChange={updateAgehab} stages={agehabStages} tone="agehab" />
+        <StageTimeline label="Kit Caixa" value={caixa} stages={caixaStages} tone="caixa" />
+        <StageTimeline label="Kit Agehab" value={agehab} stages={agehabStages} tone="agehab" />
       </section>
 
       <section className="react-card">
@@ -298,16 +247,16 @@ function AnalistaChecklistContent() {
         </div>
         <div className="react-form-grid">
           <label>Nome completo<input value={cliente} readOnly placeholder="Nome do proponente" /></label>
-          <label>Nº da reserva<input value={reserva} readOnly placeholder="Ex: 458712" /></label>
-          <label>Cidade<input placeholder="Ex: Aguas Lindas de Goias" /></label>
-          <label>Empreendimento<input placeholder="Nome do empreendimento" /></label>
-          <label>Corretor responsavel<input placeholder="Nome do corretor" /></label>
-          <label>Sinal ok?<select><option>Nao tem</option><option>Sim</option><option>Nao</option></select></label>
-          <label>Fiador ok?<select><option>Nao tem</option><option>Sim</option><option>Nao</option></select></label>
-          <label>Produto?<select><option>Pago</option><option>Negociado</option><option>Em aberto</option></select></label>
-          <label>Estado civil<select><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viuvo(a)</option><option>Uniao estavel</option></select></label>
+          <label>NÂº da reserva<input value={reserva} readOnly placeholder="Ex: 458712" /></label>
+          <label>Cidade<input value={cidade} readOnly placeholder="Ex: Aguas Lindas de Goias" /></label>
+          <label>Empreendimento<input value={empreendimento} readOnly placeholder="Nome do empreendimento" /></label>
+          <label>Corretor responsavel<input value={corretor} readOnly placeholder="Nome do corretor" /></label>
+          <label>Sinal ok?<select className="is-readonly-select" value={sinal} disabled><option>Nao tem</option><option>Sim</option><option>Nao</option></select></label>
+          <label>Fiador ok?<select className="is-readonly-select" value={fiador} disabled><option>Nao tem</option><option>Sim</option><option>Nao</option></select></label>
+          <label>Produto?<select className="is-readonly-select" value={produto} disabled><option>PP</option><option>PN</option><option>PA</option><option>Pago</option><option>Negociado</option><option>Em aberto</option></select></label>
+          <label>Estado civil<select className="is-readonly-select" disabled><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viuvo(a)</option><option>Uniao estavel</option></select></label>
           <label>Tipo de renda
-            <select value={perfilRenda} onChange={(event) => setPerfilRenda(event.target.value)}>
+            <select className="is-readonly-select" value={perfilRenda} disabled onChange={(event) => setPerfilRenda(event.target.value)}>
               <option value="clt">CLT / Formal</option>
               <option value="informal">Informal / Autonomo</option>
               <option value="aposentado">Aposentado / Pensionista</option>
@@ -315,11 +264,11 @@ function AnalistaChecklistContent() {
             </select>
           </label>
           <label>Tipo de dependente
-            <select value={tipoDependente} onChange={(event) => setTipoDependente(event.target.value)}>
+            <select className="is-readonly-select" value={tipoDependente} disabled onChange={(event) => setTipoDependente(event.target.value)}>
               {dependentes.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
             </select>
           </label>
-          <label>Dependente casado?<select><option>Nao</option><option>Sim</option></select></label>
+          <label>Dependente casado?<select className="is-readonly-select" disabled><option>Nao</option><option>Sim</option></select></label>
         </div>
       </section>
 
@@ -327,7 +276,7 @@ function AnalistaChecklistContent() {
         <section className="react-card">
           {visibleSections.map((section) => {
             const total = section.docs.length;
-            const approved = section.docs.filter(([id]) => ['Aprovado', 'Não se Aplica'].includes(docMap[`${section.key}.${id}`] || 'Aguardando')).length;
+            const approved = section.docs.filter(([id]) => ['Aprovado', 'NÃ£o se Aplica'].includes(docMap[`${section.key}.${id}`] || 'Aguardando')).length;
 
             return (
               <article className="react-doc-section" key={section.key}>
@@ -341,7 +290,7 @@ function AnalistaChecklistContent() {
                     {section.docs.map(([id, name, desc]) => {
                       const key = `${section.key}.${id}`;
                       const status = docMap[key] || 'Aguardando';
-                      const uploadCca = uploadsCca[key];
+                      const uploadEnviado = Boolean(uploadsEnviados[key]);
                       return (
                         <tr key={key}>
                           <td><strong>{name}</strong></td>
@@ -350,10 +299,29 @@ function AnalistaChecklistContent() {
                             <select className={classForStatus(status)} value={status} onChange={(event) => updateDoc(key, event.target.value as DocStatus)}>
                               {docStatuses.map((item) => <option value={item} key={item}>{item}</option>)}
                             </select>
-                            {uploadCca ? (
-                              <a className="react-doc-upload" href={uploadCca.data} download={uploadCca.name}>
-                                Baixar
-                              </a>
+                            {section.key === 'caixa' && caixa === 'emitindo_formularios' ? (
+                              <label className="react-doc-upload">
+                                <input
+                                  type="file"
+                                  accept=".pdf,.jpg,.jpeg,.png"
+                                  onChange={(event) => {
+                                    const file = event.target.files?.[0];
+                                    if (!reserva || !file) return;
+                                    const reader = new FileReader();
+                                    reader.onload = () => {
+                                      if (typeof reader.result === 'string') {
+                                        localStorage.setItem(`maq2_cca_upload_data_${reserva}_${key}`, reader.result);
+                                        localStorage.setItem(`maq2_cca_upload_${reserva}`, '1');
+                                        localStorage.setItem(`maq2_cca_upload_${reserva}_${key}`, '1');
+                                        localStorage.setItem(`maq2_cca_upload_nome_${reserva}_${key}`, file.name);
+                                        setUploadsEnviados((current) => ({ ...current, [key]: true }));
+                                      }
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }}
+                                />
+                                {uploadEnviado ? 'Enviado' : 'Upload'}
+                              </label>
                             ) : null}
                           </td>
                         </tr>
@@ -365,42 +333,19 @@ function AnalistaChecklistContent() {
             );
           })}
 
-          <article className="react-doc-section">
-            <div className="react-doc-head">
-              <div><h2>Relacionamento com o banco e produto</h2><p>Confirmacoes operacionais registradas com Sim, Nao ou N/A.</p></div>
-            </div>
-            <table>
-              <thead><tr><th>Pergunta</th><th>Categoria</th><th>Status</th></tr></thead>
-              <tbody>
-                {relacionamento.map(([id, question, category]) => {
-                  const status = relMap[id] || 'Não se Aplica';
-                  return (
-                    <tr key={id}>
-                      <td><strong>{question}</strong></td>
-                      <td>{category}</td>
-                      <td>
-                        <select className={classForStatus(status)} value={status} onChange={(event) => updateRel(id, event.target.value as RelStatus)}>
-                          {relStatuses.map((item) => <option value={item} key={item}>{item === 'sim' ? 'Sim' : item === 'nao' ? 'Nao' : 'N/A'}</option>)}
-                        </select>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </article>
         </section>
 
         <aside className="react-card react-return">
           <h2>Retorno do Analista</h2>
           <p>Atualize observacoes e copie o resumo das pendencias visiveis.</p>
           <div className="react-cca-vinculado">
-            <label>CCA Vinculado
+            <label>Agencia Vinculada
               <select defaultValue="">
                 <option value="" disabled>Selecione...</option>
-                {ccasVinculados.map((cca) => <option value={cca} key={cca}>{cca}</option>)}
+                {agenciasVinculadas.map((agencia) => <option value={agencia} key={agencia}>{agencia}</option>)}
               </select>
             </label>
+            <button type="button" hidden={!temDocumentoEnviado}>Abrir</button>
           </div>
           <label>Observacao do analista<textarea placeholder="Ex.: falta extrato bancario, IRPF ilegivel..." /></label>
           <label>Resumo automatico<textarea readOnly value={`${doneDocs}/${allDocs.length} documentos concluidos nas secoes visiveis.`} /></label>

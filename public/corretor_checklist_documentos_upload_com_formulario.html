@@ -676,6 +676,162 @@
   
 
     .checklist-only-card { max-width: 1120px; margin: 0 auto; }
+    .topbar { display: none; }
+    .checklist-backbar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 14px;
+    }
+    .checklist-backbar a {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+      border-radius: 14px;
+      background: #0f172a;
+      color: #f8fafc;
+      text-decoration: none;
+      font-weight: 900;
+      box-shadow: 0 12px 26px rgba(15, 23, 42, .16);
+      white-space: nowrap;
+    }
+    .kit-timeline-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .kit-timeline-card {
+      background: #ffffff;
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      border-radius: 16px;
+      padding: 22px 24px;
+      box-shadow: var(--shadow);
+    }
+    .kit-timeline-card h2 {
+      margin: 0 0 20px;
+      color: #0f172a;
+      font-size: 1.55rem;
+      letter-spacing: .12em;
+      font-weight: 900;
+    }
+    .kit-timeline-line {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      align-items: center;
+      gap: 0;
+      margin-bottom: 20px;
+    }
+    .kit-timeline-line::before {
+      content: "";
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      top: 50%;
+      height: 3px;
+      background: #dbe4ef;
+      transform: translateY(-50%);
+      border-radius: 999px;
+    }
+    .kit-dot {
+      position: relative;
+      z-index: 1;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 3px solid #cbd8e8;
+      justify-self: center;
+    }
+    .kit-dot.active {
+      width: 20px;
+      height: 20px;
+      border-color: transparent;
+      box-shadow: 0 0 0 10px rgba(14, 165, 233, .14);
+      background: #19aee6;
+    }
+    .kit-agehab .kit-dot.active {
+      box-shadow: 0 0 0 10px rgba(245, 158, 11, .16);
+      background: #f59e0b;
+    }
+    .kit-progress-track {
+      height: 8px;
+      border-radius: 999px;
+      background: #dbe4ef;
+      overflow: hidden;
+    }
+    .kit-progress-fill {
+      display: block;
+      width: 17%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #22c55e, #0ea5e9);
+    }
+    .dados-proponente-card {
+      max-width: none;
+      border-radius: 18px;
+      padding: 26px 28px;
+    }
+    .dados-proponente-card > h2,
+    .dados-proponente-card > small {
+      display: none;
+    }
+    .dados-proponente-card .section {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 1px dashed rgba(15, 23, 42, 0.22);
+    }
+    .dados-proponente-card .section-title {
+      padding-top: 24px;
+      margin-bottom: 24px;
+    }
+    .dados-proponente-card .section-title > span:first-child {
+      font-size: 1.05rem;
+      color: #0f172a;
+      letter-spacing: .18em;
+      font-weight: 500;
+    }
+    .dados-proponente-card .section-title .pill {
+      font-size: .95rem;
+      letter-spacing: .18em;
+      font-weight: 800;
+      padding: 8px 20px;
+    }
+    .dados-proponente-card .form-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 22px;
+    }
+    .dados-proponente-card label {
+      color: #334155;
+      font-size: 1rem;
+      font-weight: 800;
+    }
+    .dados-proponente-card input,
+    .dados-proponente-card select {
+      min-height: 63px;
+      border-radius: 14px;
+      font-size: 1rem;
+      font-weight: 800;
+      color: #020617;
+      background: #f8fafc;
+    }
+    .dados-proponente-card .hint {
+      display: none;
+    }
+    .dados-proponente-card > .section:nth-of-type(2),
+    .dados-proponente-card .dependentes-section,
+    .dados-proponente-card .dados-actions {
+      display: none;
+    }
+    @media (max-width: 1100px) {
+      .dados-proponente-card .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 700px) {
+      .kit-timeline-grid { grid-template-columns: 1fr; }
+      .dados-proponente-card .form-grid { grid-template-columns: 1fr; }
+    }
     .file-row-desc { white-space: pre-line; }
     .file-row-actions { min-width: 145px; justify-content: flex-end; }
     .section-summary { color: var(--text-soft); font-size: .78rem; }
@@ -701,6 +857,39 @@
         <div><strong>Status:</strong> <span id="totalEnviados">0</span> enviados</div>
         <div class="user-line">Cada documento mantém o semáforo visual individual.</div>
         <a class="btn-voltar-acompanhamento" href="/painel/acompanhamento">Voltar para acompanhamento</a>
+      </div>
+    </div>
+
+
+    <div class="checklist-backbar">
+      <a href="/painel/acompanhamento">Voltar</a>
+    </div>
+
+
+    <div class="kit-timeline-grid">
+      <div class="kit-timeline-card kit-caixa">
+        <h2>KIT CAIXA</h2>
+        <div class="kit-timeline-line">
+          <span class="kit-dot active"></span>
+          <span class="kit-dot"></span>
+          <span class="kit-dot"></span>
+          <span class="kit-dot"></span>
+          <span class="kit-dot"></span>
+          <span class="kit-dot"></span>
+        </div>
+        <div class="kit-progress-track"><span class="kit-progress-fill"></span></div>
+      </div>
+      <div class="kit-timeline-card kit-agehab">
+        <h2>KIT AGEHAB</h2>
+        <div class="kit-timeline-line">
+          <span class="kit-dot active"></span>
+          <span class="kit-dot"></span>
+          <span class="kit-dot"></span>
+          <span class="kit-dot"></span>
+          <span class="kit-dot"></span>
+          <span class="kit-dot"></span>
+        </div>
+        <div class="kit-progress-track"><span class="kit-progress-fill"></span></div>
       </div>
     </div>
 
@@ -745,6 +934,21 @@
           <div class="form-group">
             <label>Corretor responsável</label>
             <input type="text" id="corretor" placeholder="Nome do corretor" />
+          </div>
+
+          <div class="form-group">
+            <label>Sinal ok?</label>
+            <input type="text" id="sinalOk" value="Nao tem" readonly />
+          </div>
+
+          <div class="form-group">
+            <label>Fiador ok?</label>
+            <input type="text" id="fiadorOk" value="Nao tem" readonly />
+          </div>
+
+          <div class="form-group">
+            <label>Produto?</label>
+            <input type="text" id="produto" value="PP" readonly />
           </div>
 
           <div class="form-group">
@@ -1549,6 +1753,9 @@ DIVORCIADO: Certidão averbada.</span>
     const dependenteCasadoGroup = document.getElementById('dependenteCasadoGroup');
     const dependenteCasado = document.getElementById('dependenteCasado');
     const tipoRenda = document.getElementById('tipoRenda');
+    const dadosGrid = document.querySelector('.dados-proponente-card .section:first-of-type .form-grid');
+    if (dadosGrid && tipoDependente) dadosGrid.appendChild(tipoDependente.closest('.form-group'));
+    if (dadosGrid && dependenteCasadoGroup) dadosGrid.appendChild(dependenteCasadoGroup);
 
     if (tipoDependente && dependenteCasadoGroup && dependenteCasado) {
       tipoDependente.addEventListener('change', function () {

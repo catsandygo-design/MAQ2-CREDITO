@@ -212,7 +212,11 @@ export default function AcompanhamentoCorretorPage() {
                   <div className="analyst-client-title">
                     <i />
                     <b>{cliente.produto}</b>
-                    <h3>{cliente.cliente}</h3>
+                    <h3>
+                      <a href={`/checklist_documentos_upload_com_formulario.html?origem=corretor&cliente=${encodeURIComponent(cliente.cliente)}&reserva=${encodeURIComponent(cliente.id)}`}>
+                        {cliente.cliente}
+                      </a>
+                    </h3>
                   </div>
                   <p>{cliente.empreendimento}</p>
                   <p>{cliente.corretor}</p>

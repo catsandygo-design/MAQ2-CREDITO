@@ -196,18 +196,28 @@ export default function AppAnalistaPage() {
 
       <section className="analyst-live-board">
         <header className="analyst-live-head">
-          <div>
-            <span>Fila viva</span>
-            <h2>Fluxo do cliente</h2>
-            <p>Cada card mostra etapa, travas e proxima acao sem repetir o mesmo resumo em varios blocos.</p>
+          <div className="analyst-live-title">
+            <div className="analyst-live-title-row">
+              <h2>Fila Viva - Fluxo do Cliente</h2>
+              <strong>20 processo(s)</strong>
+              <strong>17 aguardando docs</strong>
+              <strong>20 prioridade alta</strong>
+            </div>
           </div>
-          <div className="analyst-live-actions">
-            <strong>20 processo(s)</strong>
-            <strong>17 aguardando docs</strong>
-            <strong>20 prioridade alta</strong>
-            <button type="button" onClick={abrirTodos}>Abrir todos</button>
-            <button type="button" onClick={fecharTodos}>Fechar todos</button>
-            <button>Fechar</button>
+          <div className="analyst-live-filters">
+            <input placeholder="Reserva" />
+            <input placeholder="Nome" />
+            <input placeholder="Corretor" />
+            <input placeholder="Gestor" />
+            <select defaultValue="">
+              <option value="">Status Caixa</option>
+            </select>
+            <select defaultValue="">
+              <option value="">Status Agehab</option>
+            </select>
+            <select defaultValue="">
+              <option value="">Produto</option>
+            </select>
           </div>
         </header>
 

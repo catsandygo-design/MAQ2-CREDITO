@@ -484,6 +484,7 @@ body,
 .react-checklist-hero p { margin:0; max-width:980px; color:#334155; font-size:1.06rem; line-height:1.45; }
 .react-checklist-hero aside { min-width:260px; display:grid; gap:8px; padding:16px 18px; border:1px solid rgba(15,23,42,.10); border-radius:18px; background:#fff; box-shadow:0 16px 34px rgba(15,23,42,.08); }
 .react-checklist-hero aside b { color:#166534; }
+.react-back-button { min-height:42px; display:inline-flex; align-items:center; justify-content:center; padding:0 16px; border-radius:14px; background:#0f172a; color:#f8fafc; text-decoration:none; font-weight:950; box-shadow:0 12px 26px rgba(15,23,42,.16); white-space:nowrap; }
 .react-stage-grid { width:min(100%,1760px); margin:0 auto 16px; display:grid; grid-template-columns:repeat(2,minmax(260px,1fr)); gap:16px; }
 .react-stage { padding:16px; border:1px solid rgba(15,23,42,.10); border-radius:18px; background:#fff; box-shadow:0 14px 30px rgba(15,23,42,.07); }
 .react-stage-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
@@ -502,7 +503,8 @@ body,
 .react-section-head b { padding:7px 14px; border:1px solid rgba(15,23,42,.12); border-radius:999px; background:#f8fafc; }
 .react-form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; }
 .react-form-grid label,.react-return label { display:grid; gap:6px; color:#334155; font-size:.78rem; font-weight:900; }
-.react-form-grid input,.react-form-grid select,.react-return textarea { width:100%; min-height:42px; border:1px solid rgba(15,23,42,.16); border-radius:12px; background:#f8fafc; color:#0f172a; padding:9px 11px; font:inherit; }
+.react-form-grid input,.react-form-grid select,.react-return textarea,.react-return select { width:100%; min-height:42px; border:1px solid rgba(15,23,42,.16); border-radius:12px; background:#f8fafc; color:#0f172a; padding:9px 11px; font:inherit; }
+.react-form-grid select.is-readonly-select { appearance:none; -webkit-appearance:none; background-image:none; pointer-events:none; color:#334155; }
 .react-checklist-layout { width:min(100%,1760px); margin:0 auto; display:grid; grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr); gap:16px; align-items:start; }
 .react-checklist-layout > .react-card { width:100%; margin:0; }
 .react-doc-section { border:1px solid rgba(15,23,42,.08); border-radius:18px; overflow:hidden; margin-bottom:14px; }
@@ -518,10 +520,14 @@ body,
 .react-doc-section select.ok { background:#ecfdf5; border-color:#16a34a; color:#166534; }
 .react-doc-section select.bad { background:#fef2f2; border-color:#dc2626; color:#991b1b; }
 .react-doc-section select.warn { background:#fff7ed; border-color:#ea580c; color:#9a3412; }
+.react-doc-upload { margin-top:8px; min-height:38px; border:1px solid rgba(34,197,94,.45); border-radius:12px; background:#dcfce7; color:#166534; display:flex; align-items:center; justify-content:center; font-weight:950; cursor:pointer; }
+.react-doc-upload input { display:none; }
 .react-return { position:sticky; top:16px; }
 .react-return h2 { margin:0 0 6px; }
 .react-return p { margin:0 0 14px; color:#64748b; }
 .react-return textarea { min-height:130px; resize:vertical; }
 .react-return button { width:100%; margin-top:14px; min-height:44px; border:0; border-radius:14px; background:#16a34a; color:#fff; font-weight:950; cursor:pointer; }
+.react-cca-vinculado { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:end; margin-bottom:12px; }
+.react-cca-vinculado button { width:auto; min-width:86px; margin-top:0; padding:0 16px; }
 @media (max-width:1100px) { .react-checklist-hero,.react-checklist-layout { grid-template-columns:1fr; } .react-stage-grid { grid-template-columns:1fr; } .react-return { position:static; } }
 @media (max-width:720px) { .react-stage-head { align-items:flex-start; flex-direction:column; } .react-stage-head select { width:100%; } .react-doc-section { overflow-x:auto; } .react-doc-section table { min-width:760px; } }
