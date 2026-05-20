@@ -148,11 +148,29 @@ export default function AppAnalistaPage() {
           </div>
         </article>
 
+        <article className="cor-card cor-panel-conversion">
+            <div className="cor-panel-head">
+              <div>
+                <small>Dashboard 2 — Carteira em reserva</small>
+                <p>Quantidade de clientes em reserva, finalizados e em pendencia documental.</p>
+              </div>
+            </div>
+            <div className="cca-flow-metrics">
+              {resumoCarteira.map(([label, total, desc]) => (
+                <div key={label}>
+                  <span>{label}</span>
+                  <b>{total}</b>
+                  <small>{desc}</small>
+                </div>
+              ))}
+            </div>
+          </article>
+
         <div className="cor-sla-stack">
           <article className="cor-card cor-panel-sla">
             <div className="cor-panel-head">
               <div>
-                <small>Dashboard 3 — SLA</small>
+                <small>Dashboard 2 — SLA</small>
                 <p>Tempo medio da carteira do analista comparado ao melhor SLA operacional.</p>
               </div>
             </div>
@@ -174,24 +192,6 @@ export default function AppAnalistaPage() {
             </div>
           </article>
         </div>
-
-        <article className="cor-card cor-panel-conversion">
-            <div className="cor-panel-head">
-              <div>
-                <small>Dashboard 2 — Carteira em reserva</small>
-                <p>Quantidade de clientes em reserva, finalizados e em pendencia documental.</p>
-              </div>
-            </div>
-            <div className="cca-flow-metrics">
-              {resumoCarteira.map(([label, total, desc]) => (
-                <div key={label}>
-                  <span>{label}</span>
-                  <b>{total}</b>
-                  <small>{desc}</small>
-                </div>
-              ))}
-            </div>
-          </article>
       </section>
 
       <section className="analyst-live-board">

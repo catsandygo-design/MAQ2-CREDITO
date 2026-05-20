@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { nextUrl } = request;
 
   if (nextUrl.pathname === '/checklist_documentos_upload_com_formulario.html') {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 type DocStatus = 'Aguardando' | 'Pendente' | 'Aprovado' | 'Não se Aplica' | 'Bloqueado';
@@ -168,7 +168,7 @@ function StageTimeline({
   );
 }
 
-export default function AnalistaChecklistPage() {
+function AnalistaChecklistContent() {
   const params = useSearchParams();
   const [caixa, setCaixa] = useState('reserva');
   const [agehab, setAgehab] = useState('reserva');
@@ -321,5 +321,13 @@ export default function AnalistaChecklistPage() {
         </aside>
       </div>
     </main>
+  );
+}
+
+export default function AnalistaChecklistPage() {
+  return (
+    <Suspense fallback={<main className="analista-checklist-react">Carregando checklist do analista...</main>}>
+      <AnalistaChecklistContent />
+    </Suspense>
   );
 }
