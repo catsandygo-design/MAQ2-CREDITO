@@ -1543,6 +1543,30 @@
             <label for="header-corretor">Corretor responsável</label>
             <input id="header-corretor" type="text" placeholder="Nome do corretor" readonly>
           </div>
+          <div class="analyst-proponent-field">
+            <label for="status-sinal">Sinal ok?</label>
+            <select id="status-sinal">
+              <option value="nao_tem">Nao tem</option>
+              <option value="sim">Sim</option>
+              <option value="nao">Nao</option>
+            </select>
+          </div>
+          <div class="analyst-proponent-field">
+            <label for="status-fiador">Fiador ok?</label>
+            <select id="status-fiador">
+              <option value="nao_tem">Nao tem</option>
+              <option value="sim">Sim</option>
+              <option value="nao">Nao</option>
+            </select>
+          </div>
+          <div class="analyst-proponent-field">
+            <label for="status-produto">Produto?</label>
+            <select id="status-produto">
+              <option value="pago">Pago</option>
+              <option value="negociado">Negociado</option>
+              <option value="em_aberto">Em aberto</option>
+            </select>
+          </div>
           <div class="analyst-proponent-field has-wide-note">
             <label for="header-estado-civil">Estado civil</label>
             <select id="header-estado-civil">
@@ -1952,7 +1976,8 @@
   const rowChequeAzul = $("row-cheque-azul"), rowFormCartao = $("row-form-cartao"), rowPropCartao = $("row-prop-cartao");
   const irpfGroup = $("irpf-informal-group");
   function setDisplay(el, show, mode="block"){ if(el) el.style.display = show ? mode : "none"; }
-  function compactarCamposCabecalho(){ document.querySelectorAll(".analyst-proponent-field input[readonly], .analyst-proponent-field select[data-info-only='1']").forEach((el)=>{ const field = el.closest(".analyst-proponent-field"); if(!field) return; field.classList.toggle("is-hidden-empty", !(el.value || "").trim()); }); }
+  function compactarCamposCabecalho(){ document.querySelectorAll(".process-data-grid input[readonly], .process-data-grid select[data-info-only='1']").forEach((el)=>{ const field = el.closest(".fg"); if(!field) return; field.classList.toggle("is-hidden-empty", !(el.value || "").trim()); }); }
+  function preencherCabecalhoPelaUrl(){ const params = new URLSearchParams(window.location.search); const cliente = params.get("cliente") || ""; const reserva = params.get("reserva") || ""; if(cliente){ if($("header-nome-cliente")) $("header-nome-cliente").value = cliente; if($("nome-cliente")) $("nome-cliente").value = cliente; } if(reserva){ if($("header-numero-reserva")) $("header-numero-reserva").value = reserva; } }
   function atualizarMensagemSemDependente(){ if(depSemDefMsg) depSemDefMsg.textContent = depAvancarSemDependente?.checked ? "VENDA SEM DEPENDENTE." : "DEPENDENTE NAO DEFINIDO, VAI AVANCAR SEM DEPENDENTE?"; }
   function atualizarTextosDependenteMaior(tipo){ const isConjuge = tipo === "conjuge"; const title = $("depMaiorTitle"), subtitle = $("depMaiorSubtitle"), identidadeNome = $("docNameDepIdentidade"), identidadeDesc = $("desc-identidade-dep"), estadoCivilNome = $("docNameDepEstadoCivil"), estadoCivilDesc = $("desc-estado-civil-dep"), parentescoNome = $("docNameDepParentesco"), parentescoDesc = $("desc-parentesco-dep"); if(isConjuge){ if(title) title.textContent = "Dependente — Conjuge"; if(subtitle) subtitle.textContent = "Aparece quando o proponente for casado ou tiver uniao estavel."; if(identidadeNome) identidadeNome.textContent = "RG/CPF"; if(identidadeDesc) identidadeDesc.textContent = "RG e CPF do conjuge, dentro da validade."; if(estadoCivilNome) estadoCivilNome.textContent = "Certidao de casamento ou termo de uniao estavel"; if(estadoCivilDesc) estadoCivilDesc.textContent = "Certidao de casamento ou termo de uniao estavel do casal."; if(parentescoNome) parentescoNome.textContent = "Renda do conjuge se houver"; if(parentescoDesc) parentescoDesc.textContent = "Comprovante de renda do conjuge quando houver renda a considerar no processo."; return; } if(title) title.textContent = "Dependente — Filhos maiores / parentes ate 3 grau"; if(subtitle) subtitle.textContent = 'Aparece quando o dependente nao for "Filho menor".'; if(identidadeNome) identidadeNome.textContent = "Identidade e CPF"; if(identidadeDesc) identidadeDesc.textContent = "CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fe publica (dentro da validade) do dependente."; if(estadoCivilNome) estadoCivilNome.textContent = "Comp. de estado civil"; if(estadoCivilDesc) estadoCivilDesc.textContent = ["SOLTEIRO: Certidao de nascimento","CASADO: Certidao de casamento - RG/CPF do conjuge se houver renda","VIUVO: Certidao de casamento e obito","DIVORCIADO: Certidao averbada."].join("\n"); if(parentescoNome) parentescoNome.textContent = "Declaracao de parentesco"; if(parentescoDesc) parentescoDesc.textContent = "Declaracao conforme regras Caixa, vinculando dependente ao proponente."; }
   function syncHeaderDependente(tipo){ const headerTipo = $("header-tipo-dependente"); if(headerTipo && Array.from(headerTipo.options).some((opt)=> opt.value === tipo)) headerTipo.value = tipo; }
@@ -2003,6 +2028,7 @@
   ensureDocStatusOptions();
   ensureDocReasonFields();
   initStatusSelects();
+  preencherCabecalhoPelaUrl();
   compactarCamposCabecalho();
   atualizarDependente();
   atualizarConjuge();

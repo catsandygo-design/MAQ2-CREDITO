@@ -1,52 +1,107 @@
 const processosCca = [
   ['458712', 'PP', 'Matheus Alves de Melo', 'Bianca Moura', 'Ag. 3884 - Caixa Sul', 'DOC PENDENCIADO CCA'],
-  ['458713', 'PN', 'Ana Paula Ribeiro', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'EMITIR FORMULÁRIOS'],
-  ['458714', 'PA', 'Carlos Henrique Souza', 'Patricia Nunes', 'Ag. 4201 - Caixa Norte', 'AGUARDANDO FORMULÁRIOS'],
-  ['458715', 'PP', 'João Amorin', 'CCA Central', 'Ag. 1562 - Caixa Oeste', 'FORMULÁRIOS ASSINADOS'],
+  ['458713', 'PN', 'Ana Paula Ribeiro', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'EMITIR FORMULARIOS'],
+  ['458714', 'PA', 'Carlos Henrique Souza', 'Patricia Nunes', 'Ag. 4201 - Caixa Norte', 'AGUARDANDO FORMULARIOS'],
+  ['458715', 'PP', 'Joao Amorin', 'CCA Central', 'Ag. 1562 - Caixa Oeste', 'FORMULARIOS ASSINADOS'],
   ['458716', 'PN', 'Mariana Costa Lima', 'Bianca Moura', 'Ag. 3884 - Caixa Sul', 'DOC PENDENCIADO CCA'],
   ['458717', 'PA', 'Renato Gomes Paiva', 'Douglas Silva', 'Ag. 2710 - Caixa Centro', 'PROCESSO FINALIZADO'],
 ];
 
 const alertasCca = [
-  ['critico', 'ANA PAULA', 'Pendente emissão de formulário Caixa', 'Aguardando'],
-  ['medio', 'MATHEUS ALVES', 'Aguardando documentos para iniciar análise CCA', '24h'],
-  ['ok', 'CARLOS HENRIQUE', 'Formulário emitido e em conferência', '12h'],
-  ['medio', 'JOÃO PEDRO', 'Aguardando validação da assinatura eletrônica', '18h'],
+  ['critico', 'ANA PAULA', 'Pendente emissao de formulario Caixa', 'Aguardando'],
+  ['medio', 'MATHEUS ALVES', 'Aguardando documentos para iniciar analise CCA', '24h'],
+  ['ok', 'CARLOS HENRIQUE', 'Formulario emitido e em conferencia', '12h'],
+  ['medio', 'JOAO PEDRO', 'Aguardando assinatura dos Formularios', '48h'],
 ];
 
-function badge(momento: string) {
-  if (momento.includes('PENDENCIADO')) return 'cor-badge cor-badge-danger';
-  if (momento.includes('EMITIR') || momento.includes('AGUARDANDO')) return 'cor-badge cor-badge-warning';
-  if (momento.includes('ASSINADOS') || momento.includes('FINALIZADO')) return 'cor-badge cor-badge-success';
+const momentosComAlerta = ['EMITIR FORMULARIOS', 'FORMULARIOS ASSINADOS'];
+
+const clientesPorAgencia = [
+  ['Ag. 3884 - Caixa Sul', '2'],
+  ['Ag. 2710 - Caixa Centro', '2'],
+  ['Ag. 4201 - Caixa Norte', '1'],
+  ['Ag. 1562 - Caixa Oeste', '1'],
+];
+
+function badge(status: string) {
+  const s = status.toLowerCase();
+  if (momentosComAlerta.includes(s)) return 'cor-badge cor-badge-danger cca-alert-badge';
+  if (s.includes('pend') || s.includes('critica') || s.includes('revisao')) return 'cor-badge cor-badge-danger';
+  if (s.includes('ok') || s.includes('pronto') || s.includes('finalizado') || s.includes('enviada')) return 'cor-badge cor-badge-ok';
+  if (s.includes('aguardando') || s.includes('agendado') || s.includes('agendamento') || s.includes('validacao') || s.includes('solicitada')) return 'cor-badge cor-badge-warn';
   return 'cor-badge cor-badge-info';
 }
 
-import Link from 'next/link';
-
-export default function CcaDashboard() {
+export default function CcaAcompanhamentoPage() {
   return (
-    <main className="cor-main-layout">
-      <section className="cor-grid-2">
-        <article className="cor-table-card alert-card-height">
-          <div className="cor-card-header">
-            <h2>Alertas de Monitoramento CCA</h2>
+    <main className="cor-page cor-page-premium" data-layout-version="cca-dashboards-agencias-v3">
+      <script
+        dangerouslySetInnerHTML={{
+          __html: "try { localStorage.setItem('maq2_last_context', 'cca'); } catch (e) {}",
+        }}
+      />
+      <header className="cor-premium-top">
+        <div className="cor-premium-title">
+          <span className="cor-chart-icon">↗</span>
+          <div>
+            <h1>Painel CCA</h1>
+            <p>Esteira de analise, conformidade documental, pendencias Caixa e preparacao para assinatura.</p>
+          </div>
+        </div>
+        <div className="cor-premium-actions cor-actions-no-primary">
+          <button>↻ Atualizar</button>
+          <button>↪ Sair</button>
+        </div>
+      </header>
+
+      <section className="cor-dash-grid cor-dash-premium">
+        <article className="cor-card cor-panel-alerts">
+          <div className="cor-panel-head">
+            <div>
+              <small>Dashboard 1 — Pendencias CCA</small>
+              <p>Cliente, pendencia operacional, prioridade e prazo de resposta.</p>
+            </div>
+            <strong className="cor-urgent-pill">2 criticas</strong>
           </div>
           <div className="cor-alert-list">
-            {alertasCca.map(([nivel, proponente, detalhe, tempo], i) => (
-              <div key={i} className={`cor-alert-item ${nivel}`}>
+            {alertasCca.map(([tone, nome, desc, prazo]) => (
+              <div className={`cor-alert-item cor-alert-${tone}`} key={nome}>
+                <i />
                 <div>
-                  <strong>{proponente}</strong>
-                  <span>{detalhe}</span>
+                  <b>{nome}</b>
+                  <span>{desc}</span>
                 </div>
-                <div>{tempo}</div>
+                <em><small>Prazo</small>{prazo}</em>
               </div>
             ))}
           </div>
         </article>
 
-        <article className="cor-table-card info-gradient-card">
-          <div className="cor-card-header">
-            <h2>Métricas do Fluxo de Correspondente</h2>
+        <div className="cor-sla-stack">
+          <article className="cor-card cor-panel-sla">
+            <div className="cor-panel-head">
+              <div>
+                <small>Dashboard 2 — Clientes por agencia Caixa</small>
+                <p>Distribuicao dos processos CCA por agencia Caixa responsavel.</p>
+              </div>
+            </div>
+            <div className="cca-agency-list">
+              {clientesPorAgencia.map(([agencia, total]) => (
+                <div className="cca-agency-row" key={agencia}>
+                  <span>{agencia}</span>
+                  <b>{total}</b>
+                </div>
+              ))}
+            </div>
+          </article>
+        </div>
+
+        <article className="cor-card cor-panel-conversion">
+          <div className="cor-panel-head">
+            <div>
+              <small>Dashboard 3 — Resumo operacional CCA</small>
+              <p>Volume atual com CCA, encaminhados para conformidade e contratos ja assinados.</p>
+            </div>
           </div>
           <div className="cca-flow-metrics">
             <div><span>Com o CCA</span><b>31</b><small>processos ativos</small></div>
@@ -57,23 +112,19 @@ export default function CcaDashboard() {
       </section>
 
       <section className="cor-table-card cca-table-card">
-        <h2>Fila CCA de análise e conformidade</h2>
+        <h2>Fila CCA de analise e conformidade</h2>
         <div className="cor-table-scroll">
           <table className="cor-table">
             <thead>
               <tr>
-                <th>Reserva</th><th>Cliente</th><th>Gestor</th><th>Agência</th><th>Momento do cliente</th>
+                <th>Reserva</th><th>Cliente</th><th>Gestor</th><th>Agencia</th><th>Momento do cliente</th>
               </tr>
             </thead>
             <tbody>
               {processosCca.map(([reserva, produto, nome, gestor, agencia, momento]) => (
                 <tr key={reserva}>
                   <td><strong>{reserva}</strong></td>
-                  <td>
-                    <Link className="cor-link" href={`/analista/checklist?cliente=${encodeURIComponent(nome)}&reserva=${reserva}`}>
-                      ({produto}) {nome}
-                    </Link>
-                  </td>
+                  <td><a className="cor-link" href={`/analista/checklist?cliente=${encodeURIComponent(nome)}&reserva=${reserva}`}>({produto}) {nome}</a></td>
                   <td>{gestor}</td>
                   <td><span className="cor-badge cor-badge-info">{agencia}</span></td>
                   <td><span className={badge(momento)}>{momento}</span></td>
