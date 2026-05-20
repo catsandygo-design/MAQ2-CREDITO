@@ -101,8 +101,6 @@ const resumoCarteira = [
 export default function AppAnalistaPage() {
   const [detalhesAbertos, setDetalhesAbertos] = useState<string[]>([]);
 
-  const abrirTodos = () => setDetalhesAbertos(filaViva.map((cliente) => cliente.id));
-  const fecharTodos = () => setDetalhesAbertos([]);
   const alternarDetalhe = (id: string) => {
     setDetalhesAbertos((abertos) => (
       abertos.includes(id) ? abertos.filter((item) => item !== id) : [...abertos, id]
@@ -195,18 +193,28 @@ export default function AppAnalistaPage() {
 
       <section className="analyst-live-board">
         <header className="analyst-live-head">
-          <div>
-            <span>Fila viva</span>
-            <h2>Fluxo do cliente</h2>
-            <p>Cada card mostra etapa, travas e proxima acao sem repetir o mesmo resumo em varios blocos.</p>
+          <div className="analyst-live-title">
+            <div className="analyst-live-title-row">
+              <span>Fila Viva - Fluxo do Cliente</span>
+              <strong>20 processo(s)</strong>
+              <strong>17 aguardando docs</strong>
+              <strong>20 prioridade alta</strong>
+            </div>
           </div>
-          <div className="analyst-live-actions">
-            <strong>20 processo(s)</strong>
-            <strong>17 aguardando docs</strong>
-            <strong>20 prioridade alta</strong>
-            <button type="button" onClick={abrirTodos}>Abrir todos</button>
-            <button type="button" onClick={fecharTodos}>Fechar todos</button>
-            <button>Fechar</button>
+          <div className="analyst-live-filters">
+            <input aria-label="Filtrar por reserva" placeholder="Reserva" />
+            <input aria-label="Filtrar por nome" placeholder="Nome" />
+            <input aria-label="Filtrar por corretor" placeholder="Corretor" />
+            <input aria-label="Filtrar por gestor" placeholder="Gestor" />
+            <select aria-label="Filtrar por status caixa" defaultValue="">
+              <option value="">Status Caixa</option>
+            </select>
+            <select aria-label="Filtrar por status agehab" defaultValue="">
+              <option value="">Status Agehab</option>
+            </select>
+            <select aria-label="Filtrar por produto" defaultValue="">
+              <option value="">Produto</option>
+            </select>
           </div>
         </header>
 
@@ -272,7 +280,7 @@ export default function AppAnalistaPage() {
                       <strong>Em Analise Credito</strong>
                     </div>
                     <div className="analyst-stage-line kit-caixa">
-                      {['Reserva', 'Em Analise Credito', 'Emitindo Formularios', 'Formularios Em Assinatura', 'Formularios Assinados', 'Finalizado'].map((etapa, index) => (
+                      {['Reserva', 'Em Analise Credito', 'Emitindo Formularios', 'Formularios Em Assinatura', 'Formularios Assinados', 'Envio à conformidade'].map((etapa, index) => (
                         <div className={index === 1 ? 'current' : index === 0 ? 'done' : ''} key={etapa}>
                           <i />
                           <span>{etapa}</span>
@@ -302,7 +310,7 @@ export default function AppAnalistaPage() {
                       ['Agehab', cliente.agehab],
                       ['Sinal', cliente.sinal],
                       ['Fiador', cliente.fiador],
-                      ['SLA CCA', cliente.slaCca],
+                      ['Produto', 'PAGO'],
                     ].map(([label, value]) => (
                       <section className="analyst-mini-card" key={label}>
                         <span>{label}</span>
