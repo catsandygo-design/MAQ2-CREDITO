@@ -1,0 +1,14 @@
+{
+  "$schema": "https://aka.ms/azure/static-web-apps-cli/schema",
+  "configurations": {
+    "maq2-credito": {
+      "appLocation": ".",
+      "outputLocation": ".next",
+      "appBuildCommand": "npm run build",
+      "run": "npm run dev",
+      "appDevserverUrl": "http://localhost:3000",
+      "appName": "maq2-credito",
+      "resourceGroup": "maq2-credito-rg"
+    }
+  }
+}
