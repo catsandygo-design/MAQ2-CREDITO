@@ -1,23 +1,34 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { apiClient } from '@/lib/api/proxy';
 
-const pendenciasGestor = [
+type PendenciaTone = 'critico' | 'medio' | 'ok';
+type PendenciaItem = [PendenciaTone, string, string, string];
+type AlertaPendencia = { tone: PendenciaTone; nome: string; desc: string; prazo: string };
+type ProdutividadeItem = [string, string, string, string];
+type TelemetriaRow = [string, string, string, string, string, string, string, string, string, string];
+
+const pendenciasGestor: PendenciaItem[] = [
   ['critico', 'MATHEUS ALVES', 'Extrato FGTS pendente de retorno do corretor', 'Hoje 17:00'],
   ['medio', 'ANA PAULA', 'Documento enviado aguardando abertura do analista', '12h'],
   ['medio', 'CARLOS HENRIQUE', 'Renda informal exige declaracao complementar', '24h'],
   ['ok', 'JOAO AMORIN', 'Kit documental aprovado para envio ao CCA', 'OK'],
 ];
 
-const produtividadeGestor = [
+const produtividadeGestor: ProdutividadeItem[] = [
   ['Bianca Moura', '18', '8', '44,4%'],
   ['Douglas Silva', '14', '6', '42,9%'],
   ['Patricia Nunes', '10', '4', '40,0%'],
 ];
 
-const totalProdutividade = ['Total', '42', '18', '42,9%'];
+const totalProdutividade: ProdutividadeItem = ['Total', '42', '18', '42,9%'];
+const caixaStageKeys = ['reserva', 'em_analise_credito', 'emitindo_formularios', 'formularios_em_assinatura', 'formularios_assinados', 'envio_conformidade'];
+const caixaStageLabels = ['Reserva', 'Em Analise Credito', 'Emitindo Formularios', 'Formularios Em Assinatura', 'Formularios Assinados', 'Envio a conformidade'];
+const agehabStageKeys = ['reserva', 'em_analise_credito', 'ficha_emitida', 'ficha_recebida', 'em_validacao_agehab', 'agehab_validada'];
+const agehabStageLabels = ['Reserva', 'Em Analise Credito', 'Ficha emitida', 'Ficha Recebida', 'Em Validacao Agehab', 'Agehab Validada'];
 
-const telemetria = [
+const telemetria: TelemetriaRow[] = [
   ['458712', 'Matheus Alves de Melo', 'Bianca Moura', 'pendencia documentacao', 'documentos pendenciados', 'pendente', 'nao tem', 'reserva ativa', '18h', '24h'],
   ['458713', 'Ana Paula Ribeiro', 'Douglas Silva', 'formularios disponiveis', 'ficha agehab liberada', 'pago', 'finalizado', 'aguardando envio', '6h', '12h'],
   ['458714', 'Carlos Henrique Souza', 'Patricia Nunes', 'em validacao credito', 'em analise do credito', 'nao tem', 'nao tem', 'analise inicial', '22h', '36h'],
@@ -31,8 +42,97 @@ function badge(status: string) {
   return 'cor-badge cor-badge-info';
 }
 
+function statusLabel(status: string | null | undefined) {
+  const labels: Record<string, string> = {
+    reserva: 'Reserva',
+    em_analise_credito: 'Em Analise Credito',
+    emitindo_formularios: 'Emitindo Formularios',
+    formularios_em_assinatura: 'Formularios Em Assinatura',
+    formularios_assinados: 'Formularios Assinados',
+    envio_conformidade: 'Envio a conformidade',
+    ficha_emitida: 'Ficha emitida',
+    ficha_recebida: 'Ficha Recebida',
+    em_validacao_agehab: 'Em Validacao Agehab',
+    agehab_validada: 'Agehab Validada',
+  };
+  return labels[status || ''] || status || 'Reserva';
+}
+
+function formatarDocumento(key: string) {
+  return key
+    .replace(/-\d+$/g, '')
+    .replace(/\./g, ' ')
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (letra) => letra.toUpperCase());
+}
+
+function formatarPrazo(valor: unknown) {
+  if (!valor || typeof valor !== 'string') return 'Sem prazo';
+  const data = new Date(valor);
+  if (Number.isNaN(data.getTime())) return valor;
+  return data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function montarAlertasPendencia(processos: any[]): AlertaPendencia[] {
+  return processos.flatMap((processo) => Object.entries(processo?.pendencias || {})
+    .filter(([key, pendencia]: [string, any]) => {
+      const status = String(processo?.documentos?.[key] || '').toLowerCase();
+      return Boolean(pendencia?.descricao || pendencia?.prazo) && !status.includes('aprovado');
+    })
+    .map(([key, pendencia]: [string, any]) => ({
+      tone: 'critico' as PendenciaTone,
+      nome: String(processo?.cliente || processo?.reserva || 'CLIENTE').toUpperCase(),
+      desc: `${formatarDocumento(key)}: ${pendencia?.descricao || 'Documento pendente de retorno.'}`,
+      prazo: formatarPrazo(pendencia?.prazo || pendencia?.updated_at),
+    }))).sort((a, b) => a.prazo.localeCompare(b.prazo)).slice(0, 20);
+}
+
+function classeEtapa(index: number, atual: number) {
+  if (index < atual) return 'done';
+  if (index === atual) return 'current';
+  return '';
+}
+
+function pendenciasDoProcesso(processo: any) {
+  const lista = Object.entries(processo?.pendencias || {}).map(([key, pendencia]: [string, any]) => {
+    const prazo = formatarPrazo(pendencia?.prazo || pendencia?.updated_at);
+    return `${formatarDocumento(key)}: ${pendencia?.descricao || 'Documento pendente'}${prazo !== 'Sem prazo' ? ` | Prazo ${prazo}` : ''}`;
+  });
+  return lista.length ? lista : [`Caixa: ${statusLabel(processo?.caixa)}`, `Agehab: ${statusLabel(processo?.agehab)}`];
+}
+
+function checklistGestorUrl(cliente: {
+  id: string;
+  cliente: string;
+  empreendimento: string;
+  corretor: string;
+  produto: string;
+  sinal: string;
+  fiador: string;
+  caixa: string;
+  agehab: string;
+}) {
+  const params = new URLSearchParams({
+    reserva: cliente.id,
+    cliente: cliente.cliente,
+    empreendimento: cliente.empreendimento,
+    corretor: cliente.corretor,
+    produto: cliente.produto,
+    sinal: cliente.sinal,
+    fiador: cliente.fiador,
+    caixa: cliente.caixa,
+    agehab: cliente.agehab,
+    view: 'web-gestor-v1',
+  });
+
+  return `/gestor/checklist?${params.toString()}`;
+}
+
 export default function GestorTelemetriaPage() {
   const [detalhesAbertos, setDetalhesAbertos] = useState<string[]>([]);
+  const [processosBanco, setProcessosBanco] = useState<any[]>([]);
+  const [carregouProcessos, setCarregouProcessos] = useState(false);
+  const [atualizacaoDisponivel, setAtualizacaoDisponivel] = useState(false);
   const [filtros, setFiltros] = useState({
     reserva: '',
     nome: '',
@@ -49,26 +149,62 @@ export default function GestorTelemetriaPage() {
     ));
   };
 
-  const filaGestor = telemetria.map(([id, cliente, responsavel, caixa, agehab, sinal, fiador, momento, slaCliente, prazo]) => ({
-    id,
-    produto: 'RD',
-    cliente,
-    empreendimento: 'Kit Caixa | Kit Agehab',
-    corretor: responsavel,
-    cca: responsavel,
-    prioridade: 'Prioridade alta',
-    comercial: prazo,
-    credito: slaCliente,
-    panorama: momento,
-    resumo: `${caixa} | ${agehab}`,
-    aging: prazo,
-    slaCca: slaCliente,
-    caixa,
-    agehab,
-    sinal,
-    fiador,
-    pendencias: [`Caixa: ${caixa}`, `Agehab: ${agehab}`],
-  }));
+  const carregarProcessos = () => {
+    fetch('/api/processos', { headers: { Accept: 'application/json' }, cache: 'no-store' })
+      .then((response) => (response.ok ? response.json() : []))
+      .then((data) => {
+        const processos = Array.isArray(data) ? data : Array.isArray(data?.value) ? data.value : [];
+        setProcessosBanco(processos);
+        setCarregouProcessos(true);
+        setAtualizacaoDisponivel(false);
+      })
+      .catch(() => { setProcessosBanco([]); setCarregouProcessos(true); });
+  };
+
+  useEffect(() => {
+    carregarProcessos();
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === 'siocred_status_update') setAtualizacaoDisponivel(true);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  const filaGestor = telemetria.map(([id, cliente, responsavel, caixa, agehab, sinal, fiador, momento, slaCliente, prazo]) => {
+    const processo = processosBanco.find((item) => item.reserva === id);
+    const caixaRaw = processo?.caixa || 'reserva';
+    const agehabRaw = processo?.agehab || 'reserva';
+    const caixaAtual = processo ? statusLabel(caixaRaw) : caixa;
+    const agehabAtual = processo ? statusLabel(agehabRaw) : agehab;
+    const responsavelAtual = processo?.corretor || responsavel;
+    const pendencias = pendenciasDoProcesso(processo);
+    const caixaIndex = Math.max(0, caixaStageKeys.indexOf(caixaRaw));
+    const agehabIndex = Math.max(0, agehabStageKeys.indexOf(agehabRaw));
+    return {
+      id,
+      produto: processo?.produto || 'RD',
+      cliente: processo?.cliente || cliente,
+      empreendimento: processo?.empreendimento || 'Kit Caixa | Kit Agehab',
+      corretor: responsavelAtual,
+      cca: responsavelAtual,
+      prioridade: processo?.encaminhado_analista ? 'Enviado para analista' : 'Prioridade alta',
+      comercial: processo?.sla?.elapsed_label || prazo,
+      credito: processo?.sla?.elapsed_label || slaCliente,
+      panorama: processo?.encaminhado_analista ? 'Em acompanhamento' : momento,
+      resumo: `${caixaAtual} | ${agehabAtual}`,
+      proximaAcao: pendencias.length ? 'Corrigir documento pendenciado' : `Acompanhar Caixa: ${caixaAtual}`,
+      observacao: pendencias[0] || 'Sem observacao registrada',
+      aging: processo?.sla?.elapsed_label || prazo,
+      slaCca: processo?.sla?.elapsed_label || slaCliente,
+      caixa: caixaAtual,
+      agehab: agehabAtual,
+      caixaIndex,
+      agehabIndex,
+      sinal: processo?.sinal || sinal,
+      fiador: processo?.fiador || fiador,
+      pendencias,
+    };
+  });
 
   const filaFiltrada = useMemo(() => {
     const normalizar = (valor: string) => valor.trim().toLowerCase();
@@ -91,6 +227,18 @@ export default function GestorTelemetriaPage() {
     ));
   }, [filtros, filaGestor]);
 
+  const alertasPendentes = useMemo(() => {
+    const dinamicos = montarAlertasPendencia(processosBanco);
+    return dinamicos.length ? dinamicos : carregouProcessos ? [] : [];
+  }, [processosBanco, carregouProcessos]);
+  const reservasGestor = filaGestor.length;
+  const finalizadosGestor = filaGestor.filter((cliente) => (
+    cliente.caixa.toLowerCase().includes('conformidade') ||
+    cliente.caixa.toLowerCase().includes('assinado') ||
+    cliente.agehab.toLowerCase().includes('validada')
+  )).length;
+  const percentualGestor = reservasGestor ? `${((finalizadosGestor / reservasGestor) * 100).toFixed(1).replace('.', ',')}%` : '0,0%';
+
   return (
     <main className="cor-page cor-page-premium" data-layout-version="gestor-template-analista-v1">
       <header className="cor-premium-top">
@@ -102,7 +250,7 @@ export default function GestorTelemetriaPage() {
           </div>
         </div>
         <div className="cor-premium-actions cor-actions-no-primary">
-          <button>↻ Atualizar</button>
+          <button type="button" onClick={carregarProcessos}>{atualizacaoDisponivel ? '↻ Atualização disponível' : '↻ Atualizar'}</button>
           <button>↪ Sair</button>
         </div>
       </header>
@@ -114,19 +262,19 @@ export default function GestorTelemetriaPage() {
               <small>Dashboard 1 — Pendencias acompanhadas</small>
               <p>Clientes e documentos que precisam de acao do gestor ou retorno da operacao.</p>
             </div>
-            <strong className="cor-urgent-pill">3 atencoes</strong>
+            <strong className="cor-urgent-pill">{alertasPendentes.length} atencoes</strong>
           </div>
           <div className="cor-alert-list">
-            {pendenciasGestor.map(([tone, nome, desc, prazo]) => (
-              <div className={`cor-alert-item cor-alert-${tone}`} key={nome}>
+            {alertasPendentes.length ? alertasPendentes.map(({ tone, nome, desc, prazo }, index) => (
+              <div className={`cor-alert-item cor-alert-${tone}`} key={`${nome}-${index}`}>
                 <i />
-                <div>
+                <div className="cor-alert-copy">
                   <b>{nome}</b>
                   <span>{desc}</span>
                 </div>
                 <em><small>Prazo</small>{prazo}</em>
               </div>
-            ))}
+            )) : <div className="cor-alert-empty"><b>Sem pendências urgentes</b><span>Quando houver documento pendenciado, ele aparece aqui automaticamente.</span></div>}
           </div>
         </article>
 
@@ -141,11 +289,11 @@ export default function GestorTelemetriaPage() {
             <div className="gestor-mini-table">
               <div className="gestor-mini-row gestor-mini-head">
                 <span>Gestor</span>
-                <span>QT reserva</span>
+                <span>Reserva</span>
                 <span>Finalizado</span>
                 <span>%</span>
               </div>
-              {produtividadeGestor.map(([gestor, reservas, finalizado, percentual]) => (
+              {[[`Carteira`, String(reservasGestor), String(finalizadosGestor), percentualGestor]].map(([gestor, reservas, finalizado, percentual]) => (
                 <div className="gestor-mini-row" key={gestor}>
                   <strong>{gestor}</strong>
                   <b>{reservas}</b>
@@ -154,10 +302,10 @@ export default function GestorTelemetriaPage() {
                 </div>
               ))}
               <div className="gestor-mini-row gestor-mini-total">
-                <strong>{totalProdutividade[0]}</strong>
-                <b>{totalProdutividade[1]}</b>
-                <b>{totalProdutividade[2]}</b>
-                <b>{totalProdutividade[3]}</b>
+                <strong>Total</strong>
+                <b>{reservasGestor}</b>
+                <b>{finalizadosGestor}</b>
+                <b>{percentualGestor}</b>
               </div>
             </div>
           </article>
@@ -218,14 +366,19 @@ export default function GestorTelemetriaPage() {
         <div className="analyst-live-list">
           {filaFiltrada.map((cliente) => {
             const detalheAberto = detalhesAbertos.includes(cliente.id);
+            const pendenciado = cliente.pendencias.some((pendencia) => pendencia.toLowerCase().includes('pend') || pendencia.includes(':'));
 
             return (
-              <article className={`analyst-live-card ${detalheAberto ? 'is-open' : ''}`} key={cliente.id}>
+              <article className={`analyst-live-card ${detalheAberto ? 'is-open' : ''} ${pendenciado ? 'is-pending' : ''}`} key={cliente.id}>
                 <div className="analyst-live-main">
                   <div className="analyst-client-title">
                     <i />
                     <b>{cliente.produto}</b>
-                    <h3>{cliente.cliente}</h3>
+                    <h3>
+                      <a href={checklistGestorUrl(cliente)}>
+                        {cliente.cliente}
+                      </a>
+                    </h3>
                   </div>
                   <p>{cliente.empreendimento}</p>
                   <p>{cliente.corretor}</p>
@@ -234,6 +387,7 @@ export default function GestorTelemetriaPage() {
                     <em>{cliente.cca}</em>
                   </div>
                   <small>{cliente.prioridade}</small>
+                  {pendenciado ? <strong className="pending-warning">Pendenciado</strong> : null}
                 </div>
 
                 <div className="analyst-live-status">
@@ -244,6 +398,7 @@ export default function GestorTelemetriaPage() {
                   <button type="button" onClick={() => alternarDetalhe(cliente.id)}>
                     {detalheAberto ? 'Fechar detalhes' : 'Abrir detalhes'}
                   </button>
+                  <a className="analyst-open-button" href={checklistGestorUrl(cliente)}>Abrir</a>
                 </div>
 
                 {detalheAberto && (
@@ -260,33 +415,34 @@ export default function GestorTelemetriaPage() {
                       </section>
                       <section className="analyst-detail-box analyst-next-action">
                         <span>Proxima acao</span>
-                        <h4>Atuar em Caixa: {cliente.caixa}</h4>
+                        <h4>{cliente.proximaAcao}</h4>
                         <p>Caixa: {cliente.caixa}</p>
                         <p>Agehab: {cliente.agehab}</p>
+                        <p>{cliente.observacao}</p>
                       </section>
                     </div>
-                    <section className="analyst-stage-card">
+                    <section className={`analyst-stage-card ${cliente.caixaIndex >= caixaStageLabels.length - 1 ? 'stage-complete' : ''}`}>
                       <div className="analyst-stage-head">
                         <b>Kit Caixa</b>
-                        <strong>Em Analise Credito</strong>
+                        <strong>{cliente.caixa}</strong>
                       </div>
                       <div className="analyst-stage-line kit-caixa">
-                        {['Reserva', 'Em Analise Credito', 'Emitindo Formularios', 'Formularios Em Assinatura', 'Formularios Assinados', 'Envio à conformidade'].map((etapa, index) => (
-                          <div className={index === 1 ? 'current' : index === 0 ? 'done' : ''} key={etapa}>
+                        {caixaStageLabels.map((etapa, index) => (
+                          <div className={classeEtapa(index, cliente.caixaIndex)} key={etapa}>
                             <i />
                             <span>{etapa}</span>
                           </div>
                         ))}
                       </div>
                     </section>
-                    <section className="analyst-stage-card analyst-repasse">
+                    <section className={`analyst-stage-card analyst-repasse ${cliente.agehabIndex >= agehabStageLabels.length - 1 ? 'stage-complete' : ''}`}>
                       <div className="analyst-stage-head">
                         <b>Kit Agehab</b>
-                        <strong>Em Analise Credito</strong>
+                        <strong>{cliente.agehab}</strong>
                       </div>
                       <div className="analyst-stage-line kit-agehab">
-                        {['Reserva', 'Em Analise Credito', 'Ficha emitida', 'Ficha Recebida', 'Em Validacao Agehab', 'Agehab Validada'].map((etapa, index) => (
-                          <div className={index === 1 ? 'current' : index === 0 ? 'done' : ''} key={etapa}>
+                        {agehabStageLabels.map((etapa, index) => (
+                          <div className={classeEtapa(index, cliente.agehabIndex)} key={etapa}>
                             <i />
                             <span>{etapa}</span>
                           </div>

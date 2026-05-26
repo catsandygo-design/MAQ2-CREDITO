@@ -1,13 +1,11 @@
-'use client';
+﻿'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-
-type DocStatus = 'Aguardando' | 'Pendente' | 'Aprovado' | 'Não se Aplica' | 'Bloqueado';
-type RelStatus = 'Não se Aplica' | 'sim' | 'nao';
-
-const docStatuses: DocStatus[] = ['Aguardando', 'Pendente', 'Aprovado', 'Não se Aplica', 'Bloqueado'];
-const relStatuses: RelStatus[] = ['Não se Aplica', 'sim', 'nao'];
+import { apiClient } from '@/lib/api/proxy';
+import { logAppError } from '@/lib/observability/logger';
+import { montarPayloadPendencia, validarRoteamentoPendencia } from '@/lib/governanca-pendencias';
+import { dependentes, docStatuses, relStatuses, relacionamento, sections, type DocStatus, type PendenciaDoc, type RelStatus } from '@/domain/checklist/contracts';
 
 const ccasVinculados = ['Endy Carvalho', 'CCA Externo', 'CCA Supera', 'CCA Agiliza', 'Federal CCA', 'CCA Impacta'];
 
@@ -29,108 +27,38 @@ const agehabStages = [
   ['agehab_validada', 'Agehab Validada'],
 ] as const;
 
-const dependentes = [
-  ['nao-definido', 'Nao definido'],
-  ['conjuge', 'Conjuge'],
-  ['filho-menor', 'Filho menor de 18'],
-  ['filho-maior', 'Filho maior de 18'],
-  ['pai-mae', 'Pai/Mae'],
-  ['irmaos-maiores', 'Irmaos maiores de 18'],
-  ['tios-maiores', 'Tios e tias maiores de 18'],
-  ['avos', 'Avos'],
-  ['sobrinhos-maiores', 'Sobrinhos maiores de 18'],
-  ['bisavos', 'Bizavos'],
-] as const;
+const corretorToAnalistaDocKey: Record<string, string> = {
+  'documentos-do-proponente-identidade-e-cpf-1': 'proponente.identidade',
+  'documentos-do-proponente-comp-de-estado-civil-2': 'proponente.estado-civil',
+  'documentos-do-proponente-comprovante-de-residencia-3': 'proponente.residencia',
+  'documentos-do-proponente-extrato-fgts-5': 'proponente.fgts',
+  'documentos-do-proponente-ctps-carteira-6': 'rendaclt.carteira',
+  'dependente-filhos-menores-de-18-anos-certidao-de-nascimento-1': 'depmenor.certidao',
+  'dependente-filhos-maiores-parentes-ate-3-grau-identidade-e-cpf-1': 'depmaior.identidade',
+  'dependente-filhos-maiores-parentes-ate-3-grau-comp-de-estado-civil-2': 'depmaior.estado-civil',
+  'dependente-filhos-maiores-parentes-ate-3-grau-declaracao-de-parentesco-3': 'depmaior.parentesco',
+  'renda-formal-clt-vinculo-holerites-1': 'rendaclt.holerite',
+  'renda-informal-autonomo-liberal-extrato-bancario-1': 'rendainf.extrato',
+  'documentos-agehab-declaracao-renda-informal-2': 'rendainf.declaracao',
+  'documentos-caixa-damp-1': 'caixa.damp',
+  'documentos-caixa-ficha-de-cadastro-caixa-2': 'caixa.ficha',
+  'documentos-caixa-abertura-de-conta-3': 'caixa.abertura',
+  'documentos-caixa-mo-4': 'caixa.mo',
+  'documentos-caixa-formulario-cheque-azul-5': 'caixa.cheque-especial',
+  'documentos-caixa-formulario-cartao-6': 'caixa.cartao-credito',
+};
 
-const sections = [
-  {
-    key: 'proponente',
-    title: 'Proponente',
-    subtitle: 'Documentos pessoais e base cadastral.',
-    docs: [
-      ['identidade', 'RG/CNH', 'Documento com foto dentro da validade.'],
-      ['cpf', 'CPF', 'CPF legivel ou documento oficial que contenha CPF.'],
-      ['estado-civil', 'Comprovante de estado civil', 'Certidao conforme estado civil do proponente.'],
-      ['residencia', 'Comprovante de residencia', 'Agua, luz, telefone, internet ou equivalente.'],
-      ['fgts', 'Extrato FGTS', 'App FGTS, site Caixa ou agencia.'],
-    ],
-  },
-  {
-    key: 'depmenor',
-    title: 'Dependente - Filhos menores de 18 anos',
-    subtitle: 'Aparece quando o tipo de dependente for filho menor.',
-    docs: [
-      ['certidao', 'Certidao de nascimento', 'Certidao do dependente menor.'],
-      ['cpf', 'CPF do dependente', 'CPF do filho menor quando houver.'],
-    ],
-  },
-  {
-    key: 'depmaior',
-    title: 'Dependente - Maiores e parentes',
-    subtitle: 'Aparece para conjuge, filhos maiores e parentes informados.',
-    docs: [
-      ['identidade', 'Identidade e CPF', 'CNH, RG, identidade militar, passaporte brasileiro ou carteira funcional.'],
-      ['estado-civil', 'Comprovante de estado civil', 'Certidao conforme estado civil do dependente.'],
-      ['parentesco', 'Declaracao de parentesco', 'Declaracao conforme regras Caixa, vinculando dependente ao proponente.'],
-    ],
-  },
-  {
-    key: 'rendaclt',
-    title: 'Renda formal (CLT / vinculo)',
-    subtitle: 'Aparece quando perfil de renda = CLT.',
-    docs: [
-      ['holerite', 'Holerites', '3 ultimos holerites/contracheques.'],
-      ['carteira', 'Carteira de trabalho', 'Dados da carteira digital ou fisica.'],
-    ],
-  },
-  {
-    key: 'rendainf',
-    title: 'Renda informal / autonomo',
-    subtitle: 'Aparece quando perfil de renda = informal.',
-    docs: [
-      ['extrato', 'Extrato bancario', '3 ultimos meses, preferir mes fechado.'],
-      ['declaracao', 'Declaracao de renda', 'Declaracao assinada conforme modelo operacional.'],
-    ],
-  },
-  {
-    key: 'caixa',
-    title: 'Documentos Caixa',
-    subtitle: 'Kit Caixa e formularios de contratacao.',
-    docs: [
-      ['damp', 'DAMP', 'Preenchida e assinada digitalmente.'],
-      ['ficha', 'Ficha de cadastro Caixa', 'Preenchida e assinada digitalmente.'],
-      ['abertura', 'Abertura de conta', 'Assinada digitalmente; fisico precisa aprovacao.'],
-      ['mo', 'MO', 'Assinatura correta. Casal: assinatura de ambos.'],
-      ['cheque-especial', 'Cheque Especial', 'Formulario para contratacao do cheque especial junto ao banco. Sujeito a analise do banco.'],
-      ['cartao-credito', 'Cartao de Credito', 'Formulario de contratacao de cartao de credito. Sujeito a aprovacao do banco.'],
-    ],
-  },
-  {
-    key: 'agehab',
-    title: 'Documentos Agehab',
-    subtitle: 'Padroes Agehab: GOV.BR ou Clicksign quando aplicavel.',
-    docs: [
-      ['decl-end', 'Declaracao de endereco', 'Quando necessario. Assinada via GOV.BR ou Clicksign.'],
-      ['decl-renda', 'Declaracao renda informal', 'Assinada pelo dependente via GOV.BR/Clicksign.'],
-      ['decl-naorenda', 'Declaracao de nao renda', 'Para dependentes sem renda.'],
-      ['vinculo', 'Vinculo >= 3 anos', 'Documento com fe publica comprovando vinculo minimo.'],
-      ['check', 'Checklist Agehab', 'Preenchido e assinado GOV.BR.'],
-      ['ficha', 'Ficha Agehab', 'Preenchida pelo Assistente de Credito.'],
-    ],
-  },
-];
+function normalizarDocKey(key: string) {
+  return corretorToAnalistaDocKey[key] || key;
+}
 
-const relacionamento = [
-  ['portabilidade-caixa', 'Cliente ciente da portabilidade para a agencia Caixa que vai assinar o contrato?', 'Relacionamento Caixa'],
-  ['open-finance-caixa', 'Cliente ciente que sera preciso fazer Open Finance com a agencia Caixa?', 'Relacionamento Caixa'],
-  ['cpf-pix-caixa', 'Cliente ciente que sera necessario cadastrar o CPF como Pix na agencia Caixa?', 'Relacionamento Caixa'],
-  ['fgts-futuro-orientado', 'Se o cliente ja trabalhou mais de 3 anos, ele pode ganhar mais financiamento devido ao desconto de 0,5% na taxa de juros.', 'Relacionamento FGTS'],
-  ['fgts-compra-cliente', 'Sugerir para o cliente utilizar seu FGTS para melhorar o garantido.', 'Relacionamento FGTS'],
-  ['produto-orientado', 'Cliente foi orientado sobre o produto?', 'Produto'],
-] as const;
+function originalDocKey(key: string) {
+  return Object.entries(corretorToAnalistaDocKey).find(([, analistaKey]) => analistaKey === key)?.[0] || key;
+}
 
 function classForStatus(status: string) {
   const normalized = status.toLowerCase();
+  // Comparacao em minusculo para evitar divergencia de acentuacao entre fontes.
   if (['aprovado', 'não se aplica', 'sim'].includes(normalized)) return 'ok';
   if (['pendente', 'bloqueado', 'nao'].includes(normalized)) return 'bad';
   return 'warn';
@@ -142,12 +70,14 @@ function StageTimeline({
   onChange,
   stages,
   tone,
+  disabled = false,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   stages: readonly (readonly [string, string])[];
   tone: 'caixa' | 'agehab';
+  disabled?: boolean;
 }) {
   const currentIndex = Math.max(0, stages.findIndex(([stage]) => stage === value));
   const progress = ((currentIndex + 1) / stages.length) * 100;
@@ -156,7 +86,7 @@ function StageTimeline({
     <div className="react-stage">
       <div className="react-stage-head">
         <strong>{label}</strong>
-        <select value={value} onChange={(event) => onChange(event.target.value)}>
+        <select value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled}>
           {stages.map(([stage, text]) => (
             <option value={stage} key={stage}>{text}</option>
           ))}
@@ -174,42 +104,89 @@ function StageTimeline({
 
 function AnalistaChecklistContent() {
   const params = useSearchParams();
-  const [caixa, setCaixa] = useState('reserva');
-  const [agehab, setAgehab] = useState('reserva');
+  const [caixa, setCaixa] = useState('');
+  const [agehab, setAgehab] = useState('');
   const [perfilRenda, setPerfilRenda] = useState('clt');
   const [tipoDependente, setTipoDependente] = useState('nao-definido');
   const [docMap, setDocMap] = useState<Record<string, DocStatus>>({});
   const [relMap, setRelMap] = useState<Record<string, RelStatus>>({});
+  const [pendenciasDoc, setPendenciasDoc] = useState<Record<string, PendenciaDoc>>({});
   const [temDocumentoEnviado, setTemDocumentoEnviado] = useState(false);
   const [uploadsCca, setUploadsCca] = useState<Record<string, { name: string; data: string }>>({});
+  const [salvando, setSalvando] = useState(false);
+  const [avisoSalvar, setAvisoSalvar] = useState('');
+  const [dadosCarregados, setDadosCarregados] = useState(false);
 
   const cliente = params.get('cliente') || '';
   const reserva = params.get('reserva') || '';
+  const corretor = params.get('corretor') || '';
 
   useEffect(() => {
     if (!reserva) return;
-    const carregarDados = () => {
-      const statusCaixa = localStorage.getItem(`maq2_caixa_status_${reserva}`);
-      const statusAgehab = localStorage.getItem(`maq2_agehab_status_${reserva}`);
-      const uploadCca = localStorage.getItem(`maq2_cca_upload_${reserva}`);
-      if (statusCaixa) setCaixa(statusCaixa);
-      if (statusAgehab) setAgehab(statusAgehab);
-      setTemDocumentoEnviado(uploadCca === '1' || params.get('upload') === '1' || params.get('documento') === 'enviado');
-      const uploadsSalvos = sections
-        .find((section) => section.key === 'caixa')
-        ?.docs.reduce<Record<string, { name: string; data: string }>>((acc, [id]) => {
-          const key = `caixa.${id}`;
-          const name = localStorage.getItem(`maq2_cca_upload_nome_${reserva}_${key}`);
-          const data = localStorage.getItem(`maq2_cca_upload_data_${reserva}_${key}`);
-          if (name && data) acc[key] = { name, data };
+    let ativo = true;
+
+    const carregarDados = async () => {
+      try {
+        const response = await fetch(`/api/processos/${encodeURIComponent(reserva)}`, {
+          cache: 'no-store',
+          headers: { Accept: 'application/json' },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Erro ao carregar processo: ${response.status}`);
+        }
+
+        const data = await response.json() as {
+          caixa?: string;
+          agehab?: string;
+          documentos?: Record<string, DocStatus>;
+          relacionamento?: Record<string, RelStatus>;
+          pendencias?: Record<string, PendenciaDoc>;
+          uploadsCca?: Record<string, { name: string; data: string }>;
+          temDocumentoEnviado?: boolean;
+        };
+
+        if (!ativo) return;
+        setCaixa(data.caixa || 'reserva');
+        setAgehab(data.agehab || 'reserva');
+        if (data.documentos) {
+          const documentosNormalizados = Object.entries(data.documentos).reduce<Record<string, DocStatus>>((acc, [key, status]) => {
+            acc[normalizarDocKey(key)] = status as DocStatus;
+            return acc;
+          }, {});
+          setDocMap(documentosNormalizados);
+        }
+        if (data.relacionamento) setRelMap(data.relacionamento);
+        if (data.pendencias) {
+          const pendenciasNormalizadas = Object.entries(data.pendencias).reduce<Record<string, PendenciaDoc>>((acc, [key, pendencia]) => {
+            acc[normalizarDocKey(key)] = pendencia as PendenciaDoc;
+            return acc;
+          }, {});
+          setPendenciasDoc(pendenciasNormalizadas);
+        }
+        const uploadsNormalizados = Object.entries(data.uploadsCca || {}).reduce<Record<string, { name: string; data: string }>>((acc, [key, upload]) => {
+          acc[normalizarDocKey(key)] = upload as { name: string; data: string };
           return acc;
         }, {});
-      setUploadsCca(uploadsSalvos || {});
+        setUploadsCca(uploadsNormalizados);
+        setTemDocumentoEnviado(Boolean(data.temDocumentoEnviado || params.get('upload') === '1' || params.get('documento') === 'enviado'));
+        setDadosCarregados(true);
+      } catch (error) {
+        logAppError('', error);
+        if (ativo) {
+          setTemDocumentoEnviado(params.get('upload') === '1' || params.get('documento') === 'enviado');
+          setDadosCarregados(true);
+        }
+      }
     };
+
     carregarDados();
     window.addEventListener('focus', carregarDados);
-    return () => window.removeEventListener('focus', carregarDados);
-  }, [reserva]);
+    return () => {
+      ativo = false;
+      window.removeEventListener('focus', carregarDados);
+    };
+  }, [params, reserva]);
 
   const visibleSections = useMemo(() => sections.filter((section) => {
     if (section.key === 'depmenor') return tipoDependente === 'filho-menor';
@@ -223,52 +200,192 @@ function AnalistaChecklistContent() {
   const doneDocs = allDocs.filter((key) => ['Aprovado', 'Não se Aplica'].includes(docMap[key] || 'Aguardando')).length;
 
   function updateDoc(key: string, value: DocStatus) {
-    setDocMap((current) => ({ ...current, [key]: value }));
+    setDocMap((current) => {
+      const next = { ...current, [key]: value };
+
+      if (reserva) {
+        const backendKey = originalDocKey(key);
+        void apiClient.put(`/api/processos/${encodeURIComponent(reserva)}/documentos/${encodeURIComponent(backendKey)}`, {
+          // TODO FastAPI: persistir status do documento no endpoint definitivo.
+          status: value,
+        }).catch((error) => logAppError('Erro ao salvar documento na API FastAPI', error));
+
+        if (value !== 'Pendente') {
+          setPendenciasDoc((pendenciasAtuais) => {
+          const { [key]: _removida, [backendKey]: _removidaOriginal, ...restante } = pendenciasAtuais;
+          return restante;
+        });
+        }
+      }
+
+      return next;
+    });
   }
 
-  function updateCaixa(value: string) {
+  function updatePendenciaDoc(key: string, field: keyof PendenciaDoc, value: string) {
+    setPendenciasDoc((current) => {
+      const next = {
+        ...current,
+        [key]: {
+          descricao: current[key]?.descricao || '',
+          prazo: current[key]?.prazo || '',
+          [field]: value,
+        },
+      };
+
+      if (reserva) {
+        const validacao = validarRoteamentoPendencia('analista', 'corretor');
+        if (!validacao.ok) {
+          logAppError('Governanca: roteamento de pendencia invalido', new Error(validacao.motivo || 'Roteamento invalido'));
+          return next;
+        }
+
+        const backendKey = originalDocKey(key);
+        const documentoNome = backendKey.split('.').pop() || backendKey;
+        const payloadGovernanca = montarPayloadPendencia({
+          cliente,
+          reserva,
+          cadastro: reserva,
+          corretor,
+          origem: 'analista',
+          destino: 'corretor',
+          documentoId: backendKey,
+          documentoNome,
+          mensagem: next[key].descricao,
+          prazo: next[key].prazo,
+        });
+
+        void apiClient.put(`/api/processos/${encodeURIComponent(reserva)}/documentos/${encodeURIComponent(backendKey)}/pendencia`, {
+          ...next[key],
+          ...payloadGovernanca,
+        }).catch((error) => logAppError('Erro ao salvar pendencia na API FastAPI', error));
+      }
+
+      return next;
+    });
+  }
+
+  async function updateCaixa(value: string) {
     const etapaAtual = caixaStages.findIndex(([stage]) => stage === caixa);
     const novaEtapa = caixaStages.findIndex(([stage]) => stage === value);
     const etapaEmitindo = caixaStages.findIndex(([stage]) => stage === 'emitindo_formularios');
     const voltandoAntesDosFormularios = etapaAtual >= etapaEmitindo && novaEtapa < etapaEmitindo;
-    const temAnexoCaixa = reserva && (
-      localStorage.getItem(`maq2_cca_upload_${reserva}`) === '1'
-      || sections
-        .find((section) => section.key === 'caixa')
-        ?.docs.some(([id]) => localStorage.getItem(`maq2_cca_upload_data_${reserva}_caixa.${id}`))
-    );
+    let temAnexoCaixa = false;
+
+    if (reserva) {
+      try {
+        // TODO FastAPI: endpoint para verificar anexos Caixa do processo.
+        const data = await apiClient.get<{ temAnexoCaixa?: boolean; uploads?: unknown[] }>(`/api/processos/${encodeURIComponent(reserva)}/uploads?grupo=caixa`);
+        temAnexoCaixa = Boolean(data.temAnexoCaixa || data.uploads?.length);
+      } catch (error) {
+        logAppError('', error);
+      }
+    }
 
     if (reserva && voltandoAntesDosFormularios && temAnexoCaixa) {
       const confirmar = window.confirm('O formulario que esta em anexo sera perdido. Deseja continuar?');
       if (!confirmar) return;
-      sections
-        .find((section) => section.key === 'caixa')
-        ?.docs.forEach(([id]) => {
-          const key = `caixa.${id}`;
-          localStorage.removeItem(`maq2_cca_upload_${reserva}_${key}`);
-          localStorage.removeItem(`maq2_cca_upload_nome_${reserva}_${key}`);
-          localStorage.removeItem(`maq2_cca_upload_data_${reserva}_${key}`);
-        });
-      localStorage.removeItem(`maq2_cca_upload_${reserva}`);
+      try {
+        // TODO FastAPI: endpoint para remover anexos Caixa ao voltar etapa.
+        await apiClient.delete(`/api/processos/${encodeURIComponent(reserva)}/uploads?grupo=caixa`);
+      } catch (error) {
+        logAppError('', error);
+      }
       setUploadsCca({});
       setTemDocumentoEnviado(false);
     }
 
     setCaixa(value);
     if (reserva) {
-      localStorage.setItem(`maq2_caixa_status_${reserva}`, value);
+      try {
+        // TODO FastAPI: persistir status Caixa no endpoint definitivo.
+        await apiClient.put(`/api/processos/${encodeURIComponent(reserva)}`, { caixa: value });
+        localStorage.setItem('siocred_status_update', JSON.stringify({
+          reserva,
+          campo: 'caixa',
+          valor: value,
+          updatedAt: new Date().toISOString(),
+        }));
+      } catch (error) {
+        logAppError('', error);
+      }
     }
   }
 
-  function updateAgehab(value: string) {
+  async function updateAgehab(value: string) {
     setAgehab(value);
     if (reserva) {
-      localStorage.setItem(`maq2_agehab_status_${reserva}`, value);
+      try {
+        // TODO FastAPI: persistir status Agehab no endpoint definitivo.
+        await apiClient.put(`/api/processos/${encodeURIComponent(reserva)}`, { agehab: value });
+        localStorage.setItem('siocred_status_update', JSON.stringify({
+          reserva,
+          campo: 'agehab',
+          valor: value,
+          updatedAt: new Date().toISOString(),
+        }));
+      } catch (error) {
+        logAppError('', error);
+      }
     }
   }
 
   function updateRel(key: string, value: RelStatus) {
-    setRelMap((current) => ({ ...current, [key]: value }));
+    setRelMap((current) => {
+      const next = { ...current, [key]: value };
+
+      if (reserva) {
+        void apiClient.put(`/api/processos/${encodeURIComponent(reserva)}/relacionamento/${encodeURIComponent(key)}`, {
+          // TODO FastAPI: persistir resposta de relacionamento no endpoint definitivo.
+          status: value,
+        }).catch((error) => logAppError('Erro ao salvar relacionamento na API FastAPI', error));
+      }
+
+      return next;
+    });
+  }
+
+  function isSafeDownloadUrl(url: string) {
+    if (!url) return false;
+    try {
+      const parsed = new URL(url, window.location.origin);
+      return parsed.protocol === 'https:' || parsed.origin === window.location.origin;
+    } catch {
+      return false;
+    }
+  }
+
+  async function salvarTudo() {
+    if (!reserva || salvando || !dadosCarregados) return;
+    setSalvando(true);
+    setAvisoSalvar('Salvando checklist...');
+
+    try {
+      await apiClient.put(`/api/processos/${encodeURIComponent(reserva)}`, { caixa, agehab });
+
+      await Promise.all([
+        ...Object.entries(docMap).map(([key, status]) => (
+          apiClient.put(`/api/processos/${encodeURIComponent(reserva)}/documentos/${encodeURIComponent(originalDocKey(key))}`, {
+            status,
+            updated_by: 'analista',
+          })
+        )),
+        ...Object.entries(relMap).map(([key, status]) => (
+          apiClient.put(`/api/processos/${encodeURIComponent(reserva)}/relacionamento/${encodeURIComponent(key)}`, {
+            status,
+            updated_by: 'analista',
+          })
+        )),
+      ]);
+
+      setAvisoSalvar('Checklist salvo com sucesso.');
+      window.setTimeout(() => setAvisoSalvar(''), 3500);
+    } catch (error) {
+      logAppError('Erro ao salvar checklist do analista', error);
+      setAvisoSalvar('Nao foi possivel salvar. Tente novamente.');
+    } finally {
+      setSalvando(false);
+    }
   }
 
   return (
@@ -282,14 +399,24 @@ function AnalistaChecklistContent() {
         <aside>
           <b>Total de documentos: {allDocs.length}</b>
           <b>Status: {doneDocs} enviados</b>
+          <button className="react-save-top" type="button" onClick={salvarTudo} disabled={salvando || !dadosCarregados}>
+            {salvando ? 'Salvando...' : dadosCarregados ? 'Salvar' : 'Carregando...'}
+          </button>
           <a className="react-back-button" href="/analista">Voltar</a>
         </aside>
       </header>
+      {avisoSalvar ? <div className="react-save-notice">{avisoSalvar}</div> : null}
 
-      <section className="react-stage-grid">
-        <StageTimeline label="Kit Caixa" value={caixa} onChange={updateCaixa} stages={caixaStages} tone="caixa" />
-        <StageTimeline label="Kit Agehab" value={agehab} onChange={updateAgehab} stages={agehabStages} tone="agehab" />
-      </section>
+      {dadosCarregados ? (
+        <section className="react-stage-grid">
+          <StageTimeline label="Kit Caixa" value={caixa || 'reserva'} onChange={updateCaixa} stages={caixaStages} tone="caixa" disabled={salvando} />
+          <StageTimeline label="Kit Agehab" value={agehab || 'reserva'} onChange={updateAgehab} stages={agehabStages} tone="agehab" disabled={salvando} />
+        </section>
+      ) : (
+        <section className="react-stage-grid">
+          <div className="react-card react-loading-status">Carregando status Caixa e Agehab...</div>
+        </section>
+      )}
 
       <section className="react-card">
         <div className="react-section-head">
@@ -350,9 +477,15 @@ function AnalistaChecklistContent() {
                             <select className={classForStatus(status)} value={status} onChange={(event) => updateDoc(key, event.target.value as DocStatus)}>
                               {docStatuses.map((item) => <option value={item} key={item}>{item}</option>)}
                             </select>
-                            {uploadCca ? (
-                              <a className="react-doc-upload" href={uploadCca.data} download={uploadCca.name}>
-                                Baixar
+                            {status === 'Pendente' ? (
+                              <div className="react-pendency-fields">
+                                <textarea value={pendenciasDoc[key]?.descricao || ''} onChange={(event) => updatePendenciaDoc(key, 'descricao', event.target.value)} placeholder="Descricao da pendencia" />
+                                <input type="datetime-local" value={pendenciasDoc[key]?.prazo || ''} onChange={(event) => updatePendenciaDoc(key, 'prazo', event.target.value)} />
+                              </div>
+                            ) : null}
+                            {uploadCca && isSafeDownloadUrl(uploadCca.data) ? (
+                              <a className="react-doc-upload" href={uploadCca.data} target="_blank" rel="noreferrer">
+                                {status === 'Enviado' ? 'Abrir para analise' : 'Baixar'}
                               </a>
                             ) : null}
                           </td>
@@ -404,7 +537,9 @@ function AnalistaChecklistContent() {
           </div>
           <label>Observacao do analista<textarea placeholder="Ex.: falta extrato bancario, IRPF ilegivel..." /></label>
           <label>Resumo automatico<textarea readOnly value={`${doneDocs}/${allDocs.length} documentos concluidos nas secoes visiveis.`} /></label>
-          <button type="button">Salvar tudo</button>
+          <button type="button" onClick={salvarTudo} disabled={salvando || !dadosCarregados}>
+            {salvando ? 'Salvando...' : dadosCarregados ? 'Salvar tudo' : 'Carregando...'}
+          </button>
         </aside>
       </div>
     </main>
@@ -418,3 +553,7 @@ export default function AnalistaChecklistPage() {
     </Suspense>
   );
 }
+
+
+
+

@@ -1,12 +1,9 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <title>Checklist de Documentos - Upload</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    :root {
+'use client';
+
+import { useEffect, useMemo, useRef } from 'react';
+import { apiUrl } from '@/lib/api/proxy';
+
+const checklistCss = String.raw`:root {
       --bg: #0f172a;
       --card: #ffffff;
       --card-soft: #f8fafc;
@@ -752,6 +749,10 @@
       box-shadow: 0 0 0 10px rgba(14, 165, 233, .14);
       background: #19aee6;
     }
+    .kit-dot.done {
+      border-color: #22c55e;
+      background: #22c55e;
+    }
     .kit-agehab .kit-dot.active {
       box-shadow: 0 0 0 10px rgba(245, 158, 11, .16);
       background: #f59e0b;
@@ -833,6 +834,26 @@
       .dados-proponente-card .form-grid { grid-template-columns: 1fr; }
     }
     .file-row-desc { white-space: pre-line; }
+    .pendency-note {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-left: 4px solid #ef4444;
+      border-radius: 10px;
+      background: #fff1f2;
+      color: #991b1b;
+      font-size: .82rem;
+      font-weight: 800;
+      line-height: 1.35;
+      white-space: pre-line;
+      max-height: 96px;
+      overflow-y: auto;
+    }
+    .pendency-note small {
+      display: block;
+      margin-top: 4px;
+      color: #7f1d1d;
+      font-weight: 700;
+    }
     .file-row-actions { min-width: 145px; justify-content: flex-end; }
     .section-summary { color: var(--text-soft); font-size: .78rem; }
     .doc-counter { color: var(--accent); font-weight: 700; }
@@ -841,11 +862,8 @@
       .file-row { align-items: flex-start; flex-direction: column; }
       .file-row-actions { width: 100%; justify-content: space-between; }
       .btn-upload { flex: 1; justify-content: center; }
-    }
-</style>
-</head>
-<body>
-  <div class="app-container">
+    }`;
+const checklistMarkup = String.raw`<div class="app-container">
     <div class="topbar">
       <div class="topbar-left">
         <h1><i class="fas fa-file-contract"></i> Checklist de Documentos</h1>
@@ -856,13 +874,13 @@
         <div><strong>Total de documentos:</strong> 36</div>
         <div><strong>Status:</strong> <span id="totalEnviados">0</span> enviados</div>
         <div class="user-line">Cada documento mantém o semáforo visual individual.</div>
-        <a class="btn-voltar-acompanhamento" href="/painel/acompanhamento">Voltar para acompanhamento</a>
+        <a class="btn-voltar-acompanhamento" href="/corretor">Voltar para acompanhamento</a>
       </div>
     </div>
 
 
     <div class="checklist-backbar">
-      <a href="/painel/acompanhamento">Voltar</a>
+      <a href="/corretor">Voltar</a>
     </div>
 
 
@@ -1645,201 +1663,190 @@ DIVORCIADO: Certidão averbada.</span>
       <strong id="notificationTitle">Documento anexado</strong>
       <div id="notificationText">Arquivo selecionado com sucesso.</div>
     </div>
-  </div>
+  </div>`;
 
-  <script>
-    const notification = document.getElementById('notification');
-    const notificationTitle = document.getElementById('notificationTitle');
-    const notificationText = document.getElementById('notificationText');
-    const totalEnviados = document.getElementById('totalEnviados');
+function safeFileName(value: string) {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'documento';
+}
 
-    function showNotification(title, text) {
+function getWorkflowKey(reserva: string) {
+  return `maq2_workflow_docs_${reserva || 'sem-reserva'}`;
+}
+
+export default function ChecklistDocumentosForm() {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const searchParams = useMemo(() => new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search), []);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const container = root;
+
+    const params = new URLSearchParams(window.location.search);
+    const reserva = params.get('reserva') || '';
+    const workflowKey = getWorkflowKey(reserva);
+    const isAnalistaView = window.location.pathname.includes('/analista');
+    const uploadGrupo = window.location.pathname.includes('/gestor') ? 'gestor' : 'corretor';
+    let notificationTimer = 0;
+    let workflowState: Record<string, any> = {};
+
+    const setInputValue = (id: string, value: string | null) => {
+      const field = root.querySelector<HTMLInputElement | HTMLSelectElement>(`#${id}`);
+      if (field && value) field.value = value;
+    };
+
+    setInputValue('nomeCompleto', params.get('cliente'));
+    setInputValue('numeroReserva', reserva);
+    setInputValue('empreendimento', params.get('empreendimento'));
+    setInputValue('corretor', params.get('corretor'));
+    setInputValue('sinalOk', params.get('sinal'));
+    setInputValue('fiadorOk', params.get('fiador'));
+    setInputValue('produto', params.get('produto'));
+
+    const notification = root.querySelector<HTMLElement>('#notification');
+    const notificationTitle = root.querySelector<HTMLElement>('#notificationTitle');
+    const notificationText = root.querySelector<HTMLElement>('#notificationText');
+    const totalEnviados = root.querySelector<HTMLElement>('#totalEnviados');
+
+    const showNotification = (title: string, text: string, duration = 2800) => {
+      if (!notification || !notificationTitle || !notificationText) return;
       notificationTitle.textContent = title;
       notificationText.textContent = text;
       notification.classList.add('show');
-      setTimeout(() => notification.classList.remove('show'), 2800);
-    }
+      window.clearTimeout(notificationTimer);
+      notificationTimer = window.setTimeout(() => notification.classList.remove('show'), duration);
+    };
 
-    function updateTotal() {
-      const total = document.querySelectorAll('.file-row[data-status="em-analise"]').length;
-      totalEnviados.textContent = total;
-    }
+    const readWorkflowState = () => {
+      return workflowState;
+    };
 
-    document.querySelectorAll('input[data-doc-input]').forEach((input) => {
-      input.addEventListener('change', () => {
-        const docId = input.dataset.docInput;
-        const row = document.querySelector(`.file-row[data-doc="${docId}"]`);
-        const dot = document.getElementById(`dot-${docId}`);
-        const button = document.getElementById(`btn-${docId}`);
-        if (!input.files || !input.files[0] || !row || !dot || !button) return;
+    const writeWorkflowState = (state: Record<string, any>) => {
+      workflowState = state;
+      window.dispatchEvent(new CustomEvent('maq2-workflow-updated'));
+    };
 
-        row.dataset.status = 'em-analise';
-        dot.className = 'dot em-analise';
-        dot.title = 'Em análise';
-        button.classList.add('pending');
-        button.innerHTML = '<i class="fas fa-clock"></i> Em análise <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="' + docId + '" />';
-
-        const newInput = button.querySelector('input');
-        newInput.addEventListener('change', input.onchange);
-
-        showNotification('Documento anexado', input.files[0].name);
-        updateTotal();
-      });
-    });
-
-    document.querySelectorAll('select[data-decision-input]').forEach((select) => {
-      select.addEventListener('change', () => {
-        const docId = select.dataset.decisionInput;
-        const row = document.querySelector(`.file-row[data-doc="${docId}"]`);
-        const dot = document.getElementById(`dot-${docId}`);
-        if (!row || !dot) return;
-
-        if (select.value) {
-          row.dataset.status = 'em-analise';
-          dot.className = 'dot em-analise';
-          dot.title = `Respondido: ${select.value}`;
-          showNotification('Resposta registrada', select.value);
-        } else {
-          row.dataset.status = 'nao-enviado';
-          dot.className = 'dot nao-enviado';
-          dot.title = 'Não respondido';
-        }
-
-        updateTotal();
-      });
-    });
-  </script>
-
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const params = new URLSearchParams(window.location.search);
-    const cliente = params.get('cliente');
-    const reserva = params.get('reserva');
-    const nomeCompleto = document.getElementById('nomeCompleto');
-    const numeroReserva = document.getElementById('numeroReserva');
-
-    if (cliente && nomeCompleto) nomeCompleto.value = cliente;
-    if (reserva && numeroReserva) numeroReserva.value = reserva;
-
-    const contextoCca = params.get('origem') === 'cca'
-      || document.referrer.includes('/cca/')
-      || localStorage.getItem('maq2_last_context') === 'cca';
-
-    if (contextoCca) {
-      const pageTitle = document.querySelector('.topbar-left h1');
-      const badge = document.querySelector('.topbar-left .badge');
-      const subtitle = document.querySelector('.topbar-left .subtitle');
-      const totalDocumentos = document.querySelector('.topbar-right strong')?.parentElement;
-      const voltar = document.querySelector('.btn-voltar-acompanhamento');
-
-      if (pageTitle) pageTitle.innerHTML = '<i class="fas fa-file-contract"></i> Checklist CCA - Kit Caixa';
-      if (badge) badge.textContent = 'VALIDACAO CCA';
-      if (subtitle) subtitle.textContent = 'Formulario CCA baseado no checklist do corretor, sem Kit Agehab e sem relacionamento.';
-      if (totalDocumentos) totalDocumentos.innerHTML = '<strong>Total de documentos:</strong> 22';
-      if (voltar) {
-        voltar.setAttribute('href', '/cca/acompanhamento');
-        voltar.textContent = 'Voltar para CCA';
-      }
-
-      document.querySelectorAll('.section').forEach((section) => {
-        const title = section.querySelector('.section-title span')?.textContent?.trim().toLowerCase() || '';
-        if (title === 'documentos agehab' || title === 'relacionamento com o banco e produto') {
-          section.remove();
-        }
-      });
-    }
-
-    const tipoDependente = document.getElementById('tipoDependente');
-    const dependenteCasadoGroup = document.getElementById('dependenteCasadoGroup');
-    const dependenteCasado = document.getElementById('dependenteCasado');
-    const tipoRenda = document.getElementById('tipoRenda');
-    const dadosGrid = document.querySelector('.dados-proponente-card .section:first-of-type .form-grid');
-    if (dadosGrid && tipoDependente) dadosGrid.appendChild(tipoDependente.closest('.form-group'));
-    if (dadosGrid && dependenteCasadoGroup) dadosGrid.appendChild(dependenteCasadoGroup);
-
-    if (tipoDependente && dependenteCasadoGroup && dependenteCasado) {
-      tipoDependente.addEventListener('change', function () {
-        if (this.value === 'filho_menor') {
-          dependenteCasadoGroup.classList.add('hidden');
-          dependenteCasado.value = 'nao';
-        } else {
-          dependenteCasadoGroup.classList.remove('hidden');
-        }
-      });
-    }
-
-    if (tipoRenda) {
-      tipoRenda.addEventListener('change', function () {
-        const agehabRows = document.querySelectorAll('[data-doc*="nao-renda"], [data-doc*="declaracao-renda-informal"], [data-doc*="declaração-renda-informal"]');
-        agehabRows.forEach((row) => {
-          if (this.value === 'informal') row.classList.remove('hidden');
-        });
-      });
-    }
-  });
-</script>
-<script>
-  (function () {
-    const workflowStorageKey = 'maq2_document_workflow_v1';
-
-    function readWorkflowState() {
-      try {
-        return JSON.parse(localStorage.getItem(workflowStorageKey) || '{}');
-      } catch {
-        return {};
-      }
-    }
-
-    function writeWorkflowState(nextState) {
-      localStorage.setItem(workflowStorageKey, JSON.stringify(nextState));
-      window.dispatchEvent(new Event('maq2-workflow-updated'));
-    }
-
-    function getDocTitle(row) {
-      return row?.querySelector('.file-row-title')?.textContent?.replace(/\s+/g, ' ').trim() || 'Documento';
-    }
-
-    function getDocCategory(row) {
-      return row?.closest('section')?.querySelector('.section-title')?.textContent?.replace(/\s+/g, ' ').trim() || 'Documento';
-    }
-
-    function setWorkflowDoc(docId, patch) {
-      const current = readWorkflowState();
-      current[docId] = {
-        ...(current[docId] || {}),
-        ...patch,
-        docId,
-        updatedAt: new Date().toISOString(),
+    const saveProcesso = async (encaminhadoAnalista = false) => {
+      if (!reserva) return;
+      const payload: Record<string, unknown> = {
+        cliente: root.querySelector<HTMLInputElement>('#nomeCompleto')?.value || params.get('cliente'),
+        empreendimento: root.querySelector<HTMLSelectElement>('#empreendimento')?.value || params.get('empreendimento'),
+        corretor: root.querySelector<HTMLInputElement>('#corretor')?.value || params.get('corretor'),
+        produto: root.querySelector<HTMLInputElement>('#produto')?.value || params.get('produto'),
+        sinal: root.querySelector<HTMLInputElement>('#sinalOk')?.value || params.get('sinal'),
+        fiador: root.querySelector<HTMLInputElement>('#fiadorOk')?.value || params.get('fiador'),
       };
-      writeWorkflowState(current);
-      return current[docId];
-    }
 
-    function updateWorkflowTotal() {
-      const totalEnviados = document.getElementById('totalEnviados');
+      if (encaminhadoAnalista) {
+        payload.encaminhado_analista = true;
+      }
+
+      const response = await fetch(apiUrl(`/api/processos/${encodeURIComponent(reserva)}`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error('Nao foi possivel salvar o processo.');
+      }
+    };
+
+    const updateTotal = () => {
       if (!totalEnviados) return;
-      const total = document.querySelectorAll('.file-row[data-status="em-analise"], .file-row[data-status="aprovado"]').length;
-      totalEnviados.textContent = total;
-    }
+      totalEnviados.textContent = String(root.querySelectorAll('.file-row[data-status="em-analise"], .file-row[data-status="aprovado"]').length);
+    };
+    const caixaStages = ['reserva', 'em_analise_credito', 'emitindo_formularios', 'formularios_em_assinatura', 'formularios_assinados', 'envio_conformidade'];
+    const agehabStages = ['reserva', 'em_analise_credito', 'ficha_emitida', 'ficha_recebida', 'em_validacao_agehab', 'agehab_validada'];
+    const paintTimeline = (selector: string, stages: string[], value?: string) => {
+      const card = root.querySelector<HTMLElement>(selector);
+      if (!card) return;
+      const currentIndex = Math.max(0, stages.indexOf(value || 'reserva'));
+      const dots = Array.from(card.querySelectorAll<HTMLElement>('.kit-dot'));
+      dots.forEach((dot, index) => {
+        dot.classList.toggle('done', index < currentIndex);
+        dot.classList.toggle('active', index === currentIndex);
+      });
+      const fill = card.querySelector<HTMLElement>('.kit-progress-fill');
+      if (fill) fill.style.width = `${((currentIndex + 1) / stages.length) * 100}%`;
+    };
 
-    function paintCorretorDocument(row, state) {
-      if (!row) return;
-      const docId = row.dataset.doc;
-      const dot = document.getElementById(`dot-${docId}`);
-      const button = document.getElementById(`btn-${docId}`);
+    const getDocTitle = (row: Element) => row.querySelector('.file-row-title')?.textContent?.replace(/\s+/g, ' ').trim() || row.getAttribute('data-doc') || 'Documento';
+    const getDocCategory = (row: Element) => row.closest('.section')?.querySelector('.section-title')?.textContent?.replace(/\s+/g, ' ').trim() || 'Documento';
+    const statusFromBackend = (status?: string) => {
+      const normalized = (status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      if (normalized.includes('aprovado') || normalized.includes('nao se aplica')) return 'APROVADO';
+      if (normalized.includes('pendente') || normalized.includes('bloqueado')) return 'PENDENTE';
+      if (normalized.includes('analise') || normalized.includes('enviado')) return 'ENVIADO';
+      return 'IDLE';
+    };
+    const formatPrazoPendencia = (valor?: string) => {
+      if (!valor) return '';
+      const data = new Date(valor);
+      if (Number.isNaN(data.getTime())) return valor;
+      return data.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    };
+    const isSafeFileUrl = (url?: string) => {
+      if (!url) return false;
+      try {
+        const parsed = new URL(url, window.location.origin);
+        return parsed.protocol === 'https:' || parsed.origin === window.location.origin;
+      } catch {
+        return false;
+      }
+    };
+
+    const paintDocument = (row: HTMLElement, state?: any) => {
+      const docId = row.dataset.doc || '';
+      const dot = root.querySelector<HTMLElement>(`#dot-${CSS.escape(docId)}`);
+      const button = root.querySelector<HTMLElement>(`#btn-${CSS.escape(docId)}`);
       if (!dot || !button) return;
 
       const status = state?.status || 'IDLE';
+      row.querySelector('.pendency-note')?.remove();
       row.dataset.status = status === 'APROVADO' ? 'aprovado' : status === 'ENVIADO' || status === 'EM_ANALISE' ? 'em-analise' : 'nao-enviado';
       button.classList.remove('pending', 'uploaded', 'rejected');
+      button.onclick = null;
+
+      if (state?.observacao || state?.descricao || state?.prazo) {
+        const desc = row.querySelector<HTMLElement>('.file-row-desc');
+        const mensagem = state?.observacao || state?.descricao || 'Documento pendenciado pelo analista.';
+        if (desc) {
+          const note = document.createElement('span');
+          note.className = 'pendency-note';
+          note.innerHTML = `Pendencia: ${mensagem}${state?.prazo ? `<small>Prazo: ${formatPrazoPendencia(state.prazo)}</small>` : ''}`;
+          desc.insertAdjacentElement('afterend', note);
+        }
+      }
 
       if (status === 'ENVIADO' || status === 'EM_ANALISE') {
         dot.className = 'dot em-analise';
         dot.title = 'Enviado para analise';
         button.classList.add('pending');
-        button.innerHTML = '<i class="fas fa-lock"></i> Documento enviado';
-        button.style.pointerEvents = 'none';
-        button.setAttribute('aria-disabled', 'true');
+        if (isAnalistaView) {
+          button.innerHTML = '<i class="fas fa-folder-open"></i> Abrir para analise';
+          button.style.pointerEvents = '';
+          button.removeAttribute('aria-disabled');
+          button.onclick = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (isSafeFileUrl(state?.fileUrl)) {
+              window.open(state.fileUrl, '_blank', 'noopener,noreferrer');
+            } else {
+              showNotification('Arquivo indisponivel', 'O documento foi enviado, mas o link do arquivo nao foi localizado.', 4200);
+            }
+          };
+        } else {
+          button.innerHTML = '<i class="fas fa-lock"></i> Enviado';
+          button.style.pointerEvents = 'none';
+          button.setAttribute('aria-disabled', 'true');
+        }
         return;
       }
 
@@ -1860,7 +1867,7 @@ DIVORCIADO: Certidão averbada.</span>
         button.style.pointerEvents = '';
         button.removeAttribute('aria-disabled');
         button.innerHTML = '<i class="fas fa-rotate"></i> Corrigir e reenviar <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="' + docId + '" />';
-        wireWorkflowInput(button.querySelector('input[data-doc-input]'));
+        wireInput(button.querySelector<HTMLInputElement>('input[data-doc-input]'));
         return;
       }
 
@@ -1869,50 +1876,203 @@ DIVORCIADO: Certidão averbada.</span>
       button.style.pointerEvents = '';
       button.removeAttribute('aria-disabled');
       button.innerHTML = '<i class="fas fa-paperclip"></i> Anexar <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-doc-input="' + docId + '" />';
-      wireWorkflowInput(button.querySelector('input[data-doc-input]'));
-    }
+      wireInput(button.querySelector<HTMLInputElement>('input[data-doc-input]'));
+    };
 
-    function wireWorkflowInput(input) {
+    const uploadDocument = async (docId: string, file: File) => {
+      if (!reserva) throw new Error('Reserva nao informada.');
+      const formData = new FormData();
+      const corretor = params.get('corretor') || 'corretor';
+      const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, '');
+      const extension = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')).toLowerCase() : '';
+      formData.append('grupo', uploadGrupo);
+      formData.append('key', docId);
+      formData.append('name', `${safeFileName(docId)}-${timestamp}-${safeFileName(corretor)}${extension}`);
+      formData.append('file', file);
+
+      const response = await fetch(apiUrl(`/api/processos/${encodeURIComponent(reserva)}/uploads`), {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.detail || data.error || 'Falha ao enviar documento.');
+      }
+      return response.json();
+    };
+
+    function wireInput(input: HTMLInputElement | null) {
       if (!input || input.dataset.workflowWired === 'true') return;
       input.dataset.workflowWired = 'true';
-      input.addEventListener('change', (event) => {
+      input.addEventListener('change', async (event) => {
         event.stopImmediatePropagation();
-        const docId = input.dataset.docInput;
-        const row = document.querySelector(`.file-row[data-doc="${docId}"]`);
-        if (!input.files || !input.files[0] || !row) return;
+        const docId = input.dataset.docInput || '';
+        const row = container.querySelector<HTMLElement>(`.file-row[data-doc="${CSS.escape(docId)}"]`);
+        const file = input.files?.[0];
+        if (!docId || !row || !file) return;
 
-        const file = input.files[0];
-        const state = setWorkflowDoc(docId, {
-          status: 'ENVIADO',
-          nome: getDocTitle(row),
-          categoria: getDocCategory(row),
-          cliente: document.getElementById('nomeCompleto')?.value || new URLSearchParams(window.location.search).get('cliente') || 'Cliente',
-          reserva: document.getElementById('numeroReserva')?.value || new URLSearchParams(window.location.search).get('reserva') || '',
-          fileName: file.name,
-          fileUrl: window.location.href,
-        });
+        const button = container.querySelector<HTMLElement>(`#btn-${CSS.escape(docId)}`);
+        if (button) {
+          button.classList.add('pending');
+          button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+        }
+        showNotification('Salvando documento', 'Enviando arquivo para CCA e analista...', 6000);
 
-        paintCorretorDocument(row, state);
-        updateWorkflowTotal();
+        try {
+          await saveProcesso();
+          const uploadResult = await uploadDocument(docId, file);
+          const state = readWorkflowState();
+          state[docId] = {
+            status: 'ENVIADO',
+            nome: getDocTitle(row),
+            categoria: getDocCategory(row),
+            cliente: container.querySelector<HTMLInputElement>('#nomeCompleto')?.value || params.get('cliente') || 'Cliente',
+            reserva,
+            fileName: file.name,
+            fileUrl: uploadResult.url || window.location.href,
+            updatedAt: new Date().toISOString(),
+          };
+          writeWorkflowState(state);
+          void fetch(apiUrl(`/api/processos/${encodeURIComponent(reserva)}/documentos/${encodeURIComponent(docId)}`), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'Enviado', updated_by: 'corretor' }),
+          });
+          paintDocument(row, state[docId]);
+          showNotification('Documento enviado', `${file.name} enviado para analise.`, 3200);
+          updateTotal();
+        } catch (error) {
+          showNotification('Erro no envio', error instanceof Error ? error.message : 'Nao foi possivel enviar o documento.', 4200);
+          paintDocument(row, readWorkflowState()[docId]);
+        }
       }, true);
     }
 
-    function applyWorkflowState() {
-      const state = readWorkflowState();
-      document.querySelectorAll('.file-row[data-doc]').forEach((row) => {
-        paintCorretorDocument(row, state[row.dataset.doc]);
+    const applyWorkflowState = () => {
+      root.querySelectorAll<HTMLElement>('.file-row[data-doc]').forEach((row) => paintDocument(row, workflowState[row.dataset.doc || '']));
+      updateTotal();
+    };
+
+    const loadProcesso = async () => {
+      if (!reserva) return;
+      try {
+        const response = await fetch(`/api/processos/${encodeURIComponent(reserva)}`, {
+          headers: { Accept: 'application/json' },
+          cache: 'no-store',
+        });
+        if (!response.ok) {
+          throw new Error(`Erro ao carregar processo: ${response.status}`);
+        }
+        const data = await response.json();
+
+        setInputValue('nomeCompleto', data.cliente || params.get('cliente'));
+        setInputValue('empreendimento', data.empreendimento || params.get('empreendimento'));
+        setInputValue('corretor', data.corretor || params.get('corretor'));
+        setInputValue('produto', data.produto || params.get('produto'));
+        setInputValue('sinalOk', data.sinal || params.get('sinal'));
+        setInputValue('fiadorOk', data.fiador || params.get('fiador'));
+        paintTimeline('.kit-caixa', caixaStages, data.caixa);
+        paintTimeline('.kit-agehab', agehabStages, data.agehab);
+
+        const state: Record<string, any> = {};
+        Object.entries(data.uploadsEnviados || {}).forEach(([docId, enviado]) => {
+          if (!enviado) return;
+          const upload = data.uploadsCca?.[docId] || {};
+          state[docId] = {
+            ...(state[docId] || {}),
+            status: 'ENVIADO',
+            reserva,
+            fileName: upload.name || state[docId]?.fileName,
+            fileUrl: upload.data || state[docId]?.fileUrl,
+            updatedAt: state[docId]?.updatedAt || new Date().toISOString(),
+          };
+        });
+        Object.entries(data.documentos || {}).forEach(([docId, status]) => {
+          const pendencia = data.pendencias?.[docId] || {};
+          const temPendencia = Boolean(pendencia.descricao || pendencia.prazo);
+          state[docId] = {
+            ...(state[docId] || {}),
+            status: temPendencia ? 'PENDENTE' : statusFromBackend(String(status)),
+            reserva,
+            observacao: pendencia.descricao || state[docId]?.observacao,
+            prazo: pendencia.prazo || state[docId]?.prazo,
+            updatedAt: state[docId]?.updatedAt || new Date().toISOString(),
+          };
+        });
+        writeWorkflowState(state);
+        applyWorkflowState();
+      } catch (error) {
+        console.error('[CHECKLIST_LOAD_ERROR]', error);
+        showNotification('Atencao', 'Nao foi possivel carregar o checklist do banco.', 4200);
+      }
+    };
+
+    const tipoDependente = root.querySelector<HTMLSelectElement>('#tipoDependente');
+    const dependenteCasadoGroup = root.querySelector<HTMLElement>('#dependenteCasadoGroup');
+    const dependenteCasado = root.querySelector<HTMLSelectElement>('#dependenteCasado');
+    const tipoRenda = root.querySelector<HTMLSelectElement>('#tipoRenda');
+    const btnSalvar = root.querySelector<HTMLButtonElement>('#btnSalvar');
+    const btnAcompanhar = root.querySelector<HTMLButtonElement>('#btnAcompanhar');
+
+    const onTipoDependente = () => {
+      if (!tipoDependente || !dependenteCasadoGroup || !dependenteCasado) return;
+      if (tipoDependente.value === 'filho_menor') {
+        dependenteCasadoGroup.classList.add('hidden');
+        dependenteCasado.value = 'nao';
+      } else {
+        dependenteCasadoGroup.classList.remove('hidden');
+      }
+    };
+    const onTipoRenda = () => {
+      if (!tipoRenda) return;
+      root.querySelectorAll<HTMLElement>('[data-doc*="nao-renda"], [data-doc*="declaracao-renda-informal"]').forEach((row) => {
+        if (tipoRenda.value === 'informal') row.classList.remove('hidden');
       });
-      updateWorkflowTotal();
-    }
+    };
+    const onSalvar = () => {
+      const originalText = btnSalvar?.innerHTML || '';
+      if (btnSalvar) {
+        btnSalvar.disabled = true;
+        btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+      }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      document.querySelectorAll('input[data-doc-input]').forEach(wireWorkflowInput);
-      applyWorkflowState();
-    });
+      saveProcesso(true)
+        .then(() => showNotification('Dados salvos', 'Cadastro enviado para a tela do analista.'))
+        .catch(() => showNotification('Erro', 'Nao foi possivel salvar no banco.', 4200))
+        .finally(() => {
+          if (btnSalvar) {
+            btnSalvar.disabled = false;
+            btnSalvar.innerHTML = originalText;
+          }
+        });
+    };
+    const onAcompanhar = () => { window.location.href = '/corretor'; };
 
-    window.addEventListener('storage', applyWorkflowState);
+    tipoDependente?.addEventListener('change', onTipoDependente);
+    tipoRenda?.addEventListener('change', onTipoRenda);
+    btnSalvar?.addEventListener('click', onSalvar);
+    btnAcompanhar?.addEventListener('click', onAcompanhar);
+    root.querySelectorAll<HTMLInputElement>('input[data-doc-input]').forEach(wireInput);
+    saveProcesso().catch(() => undefined);
+    loadProcesso();
+    window.addEventListener('focus', loadProcesso);
     window.addEventListener('maq2-workflow-updated', applyWorkflowState);
-  })();
-</script>
-</body>
-</html>
+
+    return () => {
+      window.clearTimeout(notificationTimer);
+      tipoDependente?.removeEventListener('change', onTipoDependente);
+      tipoRenda?.removeEventListener('change', onTipoRenda);
+      btnSalvar?.removeEventListener('click', onSalvar);
+      btnAcompanhar?.removeEventListener('click', onAcompanhar);
+      window.removeEventListener('focus', loadProcesso);
+      window.removeEventListener('maq2-workflow-updated', applyWorkflowState);
+    };
+  }, [searchParams]);
+
+  return (
+    <>
+      <style>{`@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');\n${checklistCss}`}</style>
+      <div ref={rootRef} dangerouslySetInnerHTML={{ __html: checklistMarkup }} />
+    </>
+  );
+}

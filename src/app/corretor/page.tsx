@@ -1,236 +1,466 @@
 'use client';
 
-import type { ChangeEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import {
-  AlertTriangle,
-  Building2,
-  CheckCircle2,
-  Clock3,
-  FileCheck2,
-  FileText,
-  FolderOpen,
-  LogOut,
-  Paperclip,
-  PiggyBank,
-  Save,
-  UploadCloud,
-  UserCircle2,
-  Users,
-  X,
-} from 'lucide-react';
+import { apiClient } from '@/lib/api/proxy';
 
-const documentosBase = [
-  { id: 'rg-cpf', titulo: 'RG e CPF do proponente', desc: 'Documento oficial com foto e CPF legivel.', icon: UserCircle2 },
-  { id: 'comprovante-residencia', titulo: 'Comprovante de residencia', desc: 'Conta de consumo recente ou declaracao aceita pela politica.', icon: Building2 },
-  { id: 'certidao-nascimento', titulo: 'Certidao de nascimento / casamento', desc: 'Obrigatorio conforme estado civil e composicao familiar.', icon: FileText },
-  { id: 'declaracao-parentesco', titulo: 'Declaracao de parentesco', desc: 'Exigida para dependente maior ou parente ate 3o grau.', icon: Users },
-  { id: 'nao-renda-agehab', titulo: 'Declaracao de Nao Renda Agehab', desc: 'Obrigatoria quando a renda for informal.', icon: AlertTriangle, rendaInformal: true },
-  { id: 'checklist-caixa', titulo: 'Checklist Caixa', desc: 'Conferencia do kit documental exigido pela Caixa.', icon: FileCheck2 },
-  { id: 'checklist-agehab', titulo: 'Checklist Agehab', desc: 'Conferencia dos documentos exigidos pela Agehab.', icon: FileCheck2 },
-  { id: 'extrato-fgts', titulo: 'Extrato de FGTS', desc: 'Obrigatorio para renda formal ou mista.', icon: PiggyBank },
+type PendenciaTone = 'critico' | 'medio' | 'ok';
+type PendenciaItem = [PendenciaTone, string, string, string];
+type AlertaPendencia = { tone: PendenciaTone; nome: string; desc: string; prazo: string };
+type ClienteRow = [string, string, string, string, string, string, string, string, string];
+
+const clientes: ClienteRow[] = [
+  ['458712', 'Matheus Alves de Melo', 'pendencia documentacao', 'documentos pendenciados', 'pendente', 'nao tem', 'reserva ativa', '18h', '24h'],
+  ['458713', 'Ana Paula Ribeiro', 'formularios disponiveis', 'ficha agehab liberada', 'pago', 'finalizado', 'aguardando envio', '6h', '12h'],
+  ['458714', 'Carlos Henrique Souza', 'em validacao credito', 'em analise do credito', 'nao tem', 'nao tem', 'analise inicial', '22h', '36h'],
 ];
 
-const empreendimentos = ['MAQ Jardim', 'MAQ Parque', 'MAQ Vista', 'MAQ Prime'];
-const statusLabel: Record<string, string> = {
-  'nao-enviado': 'Anexar',
-  'em-analise': 'Em analise',
-  pendenciado: 'Pendente',
-  reprovado: 'Reprovado',
-};
+const alertas: PendenciaItem[] = [
+  ['critico', 'MATHEUS ALVES', 'Analista: Bianca • Documento pendente: Extrato FGTS', 'Hoje 17:00'],
+  ['medio', 'ANA CLARA', 'Analista: Douglas • Documento pendente: Ficha Agehab', '24h'],
+  ['ok', 'JOAO PEDRO', 'Analista: CCA Central • Documento pendente: Assinatura MO', '48h'],
+];
 
-export default function CorretorPage() {
-  const [form, setForm] = useState({
-    nome: '',
-    reserva: '',
-    cidade: '',
-    empreendimento: '',
-    corretor: 'Rebeca Carvalho',
-    estadoCivil: '',
-    tipoRenda: '',
-    tipoDependente: '',
-    dependenteCasado: 'nao',
+const taxaRetrabalho = 3.2;
+const caixaStageKeys = ['reserva', 'em_analise_credito', 'emitindo_formularios', 'formularios_em_assinatura', 'formularios_assinados', 'envio_conformidade'];
+const caixaStageLabels = ['Reserva', 'Em Analise Credito', 'Emitindo Formularios', 'Formularios Em Assinatura', 'Formularios Assinados', 'Envio a conformidade'];
+const agehabStageKeys = ['reserva', 'em_analise_credito', 'ficha_emitida', 'ficha_recebida', 'em_validacao_agehab', 'agehab_validada'];
+const agehabStageLabels = ['Reserva', 'Em Analise Credito', 'Ficha emitida', 'Ficha Recebida', 'Em Validacao Agehab', 'Agehab Validada'];
+
+function badge(status: string) {
+  const s = status.toLowerCase();
+  if (s.includes('pend')) return 'cor-badge cor-badge-danger';
+  if (s.includes('pago') || s.includes('finalizado') || s.includes('liberada')) return 'cor-badge cor-badge-ok';
+  if (s.includes('analise') || s.includes('validacao') || s.includes('aguardando')) return 'cor-badge cor-badge-warn';
+  return 'cor-badge cor-badge-info';
+}
+
+function statusLabel(status: string | null | undefined) {
+  const labels: Record<string, string> = {
+    reserva: 'Reserva',
+    em_analise_credito: 'Em Analise Credito',
+    emitindo_formularios: 'Emitindo Formularios',
+    formularios_em_assinatura: 'Formularios Em Assinatura',
+    formularios_assinados: 'Formularios Assinados',
+    envio_conformidade: 'Envio a conformidade',
+    ficha_emitida: 'Ficha emitida',
+    ficha_recebida: 'Ficha Recebida',
+    em_validacao_agehab: 'Em Validacao Agehab',
+    agehab_validada: 'Agehab Validada',
+  };
+  return labels[status || ''] || status || 'Reserva';
+}
+
+function retrabalhoClass(value: number) {
+  if (value <= 2) return 'cor-rework cor-rework-ok';
+  if (value <= 4) return 'cor-rework cor-rework-warn';
+  return 'cor-rework cor-rework-danger';
+}
+
+function formatarDocumento(key: string) {
+  return key
+    .replace(/-\d+$/g, '')
+    .replace(/\./g, ' ')
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (letra) => letra.toUpperCase());
+}
+
+function formatarPrazo(valor: unknown) {
+  if (!valor || typeof valor !== 'string') return 'Sem prazo';
+  const data = new Date(valor);
+  if (Number.isNaN(data.getTime())) return valor;
+  return data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function montarAlertasPendencia(processos: any[]): AlertaPendencia[] {
+  return processos.flatMap((processo) => Object.entries(processo?.pendencias || {})
+    .filter(([key, pendencia]: [string, any]) => {
+      const status = String(processo?.documentos?.[key] || '').toLowerCase();
+      return Boolean(pendencia?.descricao || pendencia?.prazo) && !status.includes('aprovado');
+    })
+    .map(([key, pendencia]: [string, any]) => ({
+      tone: 'critico' as PendenciaTone,
+      nome: String(processo?.cliente || processo?.reserva || 'CLIENTE').toUpperCase(),
+      desc: `${formatarDocumento(key)}: ${pendencia?.descricao || 'Documento pendente de retorno.'}`,
+      prazo: formatarPrazo(pendencia?.prazo || pendencia?.updated_at),
+    }))).sort((a, b) => a.prazo.localeCompare(b.prazo)).slice(0, 20);
+}
+
+function classeEtapa(index: number, atual: number) {
+  if (index < atual) return 'done';
+  if (index === atual) return 'current';
+  return '';
+}
+
+function pendenciasDoProcesso(processo: any) {
+  const lista = Object.entries(processo?.pendencias || {}).map(([key, pendencia]: [string, any]) => {
+    const prazo = formatarPrazo(pendencia?.prazo || pendencia?.updated_at);
+    return `${formatarDocumento(key)}: ${pendencia?.descricao || 'Documento pendente'}${prazo !== 'Sem prazo' ? ` | Prazo ${prazo}` : ''}`;
   });
-  const [saved, setSaved] = useState(false);
-  const [modalDoc, setModalDoc] = useState<(typeof documentosBase)[number] | null>(null);
-  const [fileName, setFileName] = useState('');
-  const [notice, setNotice] = useState<{ title: string; text: string } | null>(null);
-  const [status, setStatus] = useState<Record<string, string>>({});
+  return lista.length ? lista : [`Caixa: ${statusLabel(processo?.caixa)}`, `Agehab: ${statusLabel(processo?.agehab)}`];
+}
+
+function checklistCorretorUrl(cliente: {
+  id: string;
+  cliente: string;
+  empreendimento: string;
+  corretor: string;
+  produto: string;
+  sinal: string;
+  fiador: string;
+  caixa: string;
+  agehab: string;
+}) {
+  const params = new URLSearchParams({
+    cliente: cliente.cliente,
+    reserva: cliente.id,
+    empreendimento: cliente.empreendimento,
+    corretor: cliente.corretor,
+    produto: cliente.produto,
+    sinal: cliente.sinal,
+    fiador: cliente.fiador,
+    caixa: cliente.caixa,
+    agehab: cliente.agehab,
+    origem: 'corretor',
+  });
+
+  return `/painel/checklist-documentos?${params.toString()}`;
+}
+
+export default function AcompanhamentoCorretorPage() {
+  const [detalhesAbertos, setDetalhesAbertos] = useState<string[]>([]);
+  const [processosBanco, setProcessosBanco] = useState<any[]>([]);
+  const [carregouProcessos, setCarregouProcessos] = useState(false);
+  const [atualizacaoDisponivel, setAtualizacaoDisponivel] = useState(false);
+  const [filtros, setFiltros] = useState({
+    reserva: '',
+    nome: '',
+    corretor: '',
+    gestor: '',
+    caixa: '',
+    agehab: '',
+    produto: '',
+  });
+
+  const alternarDetalhe = (id: string) => {
+    setDetalhesAbertos((abertos) => (
+      abertos.includes(id) ? abertos.filter((item) => item !== id) : [...abertos, id]
+    ));
+  };
+
+  const carregarProcessos = () => {
+    fetch('/api/processos', { headers: { Accept: 'application/json' }, cache: 'no-store' })
+      .then((response) => (response.ok ? response.json() : []))
+      .then((data) => {
+        const processos = Array.isArray(data) ? data : Array.isArray(data?.value) ? data.value : [];
+        setProcessosBanco(processos);
+        setCarregouProcessos(true);
+        setAtualizacaoDisponivel(false);
+      })
+      .catch(() => { setProcessosBanco([]); setCarregouProcessos(true); });
+  };
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const cliente = params.get('cliente');
-    const reserva = params.get('reserva');
-
-    if (!cliente && !reserva) return;
-
-    setForm((current) => ({
-      ...current,
-      nome: cliente || current.nome,
-      reserva: reserva || current.reserva,
-    }));
+    carregarProcessos();
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === 'siocred_status_update') setAtualizacaoDisponivel(true);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  const documentos = useMemo(() => documentosBase.filter((doc) => !doc.rendaInformal || form.tipoRenda === 'informal'), [form.tipoRenda]);
+  const telemetria = clientes.map(([id, cliente, caixa, agehab, sinal, fiador, momento, slaCliente, prazo]) => {
+    const processo = processosBanco.find((item) => item.reserva === id);
+    const caixaRaw = processo?.caixa || 'reserva';
+    const agehabRaw = processo?.agehab || 'reserva';
+    const caixaAtual = processo ? statusLabel(caixaRaw) : caixa;
+    const agehabAtual = processo ? statusLabel(agehabRaw) : agehab;
+    const pendencias = pendenciasDoProcesso(processo);
+    const caixaIndex = Math.max(0, caixaStageKeys.indexOf(caixaRaw));
+    const agehabIndex = Math.max(0, agehabStageKeys.indexOf(agehabRaw));
+    return {
+      id,
+      produto: processo?.produto || 'RD',
+      cliente: processo?.cliente || cliente,
+      empreendimento: processo?.empreendimento || 'Kit Caixa | Kit Agehab',
+      corretor: processo?.corretor || 'Corretor responsavel',
+      cca: 'Gestor carteira',
+      prioridade: processo?.encaminhado_analista ? 'Enviado para analista' : 'Prioridade alta',
+      comercial: processo?.sla?.elapsed_label || prazo,
+      credito: processo?.sla?.elapsed_label || slaCliente,
+      panorama: processo?.encaminhado_analista ? 'Em acompanhamento' : momento,
+      resumo: `${caixaAtual} | ${agehabAtual}`,
+      proximaAcao: pendencias.length ? 'Corrigir documento pendenciado' : `Acompanhar Caixa: ${caixaAtual}`,
+      observacao: pendencias[0] || 'Sem observacao registrada',
+      aging: processo?.sla?.elapsed_label || prazo,
+      slaCca: processo?.sla?.elapsed_label || slaCliente,
+      caixa: caixaAtual,
+      agehab: agehabAtual,
+      caixaIndex,
+      agehabIndex,
+      sinal: processo?.sinal || sinal,
+      fiador: processo?.fiador || fiador,
+      pendencias,
+    };
+  });
 
-  const update = (field: keyof typeof form, value: string) => setForm((current) => ({ ...current, [field]: value }));
+  const filaFiltrada = useMemo(() => {
+    const normalizar = (valor: string) => valor.trim().toLowerCase();
+    const reserva = normalizar(filtros.reserva);
+    const nome = normalizar(filtros.nome);
+    const corretor = normalizar(filtros.corretor);
+    const gestor = normalizar(filtros.gestor);
+    const caixa = normalizar(filtros.caixa);
+    const agehab = normalizar(filtros.agehab);
+    const produto = normalizar(filtros.produto);
 
-  const notify = (title: string, text: string) => {
-    setNotice({ title, text });
-    window.setTimeout(() => setNotice(null), 3600);
-  };
+    return telemetria.filter((cliente) => (
+      (!reserva || cliente.id.toLowerCase().includes(reserva)) &&
+      (!nome || cliente.cliente.toLowerCase().includes(nome)) &&
+      (!corretor || cliente.corretor.toLowerCase().includes(corretor)) &&
+      (!gestor || cliente.cca.toLowerCase().includes(gestor)) &&
+      (!caixa || cliente.caixa.toLowerCase() === caixa) &&
+      (!agehab || cliente.agehab.toLowerCase() === agehab) &&
+      (!produto || cliente.produto.toLowerCase() === produto)
+    ));
+  }, [filtros, telemetria]);
 
-  const salvar = () => {
-    const obrigatorios = ['nome', 'reserva', 'cidade', 'empreendimento', 'estadoCivil', 'tipoRenda'] as const;
-    if (obrigatorios.some((field) => !form[field].trim())) {
-      notify('Atencao', 'Preencha os dados obrigatorios do proponente antes de enviar documentos.');
-      return;
-    }
-    setSaved(true);
-    notify('Sucesso', `Proponente ${form.nome} salvo. Documentos liberados para envio.`);
-  };
-
-  const abrirUpload = (doc: (typeof documentosBase)[number]) => {
-    if (!saved) {
-      notify('Atencao', 'Salve os dados do proponente antes de anexar documentos.');
-      return;
-    }
-    if (status[doc.id] === 'em-analise') {
-      notify('Bloqueado', 'Documento ja enviado. Aguarde a analise ou pendencia.');
-      return;
-    }
-    setFileName('');
-    setModalDoc(doc);
-  };
-
-  const enviarDocumento = () => {
-    if (!modalDoc || !fileName) return;
-    setStatus((current) => ({ ...current, [modalDoc.id]: 'em-analise' }));
-    notify('Sucesso', `${modalDoc.titulo} enviado e em analise.`);
-    setModalDoc(null);
-  };
-
-  const onFile = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      notify('Erro', 'O arquivo excede o limite de 5MB.');
-      return;
-    }
-    setFileName(file.name);
-  };
-
-  const rendaHint = form.tipoRenda === 'informal'
-    ? 'Renda informal exige Declaracao de Nao Renda para Agehab.'
-    : form.tipoRenda === 'formal'
-      ? 'Renda formal exige extrato de FGTS atualizado.'
-      : 'Selecione o tipo de renda para liberar regras documentais.';
+  const alertasPendentes = useMemo(() => {
+    const dinamicos = montarAlertasPendencia(processosBanco);
+    return dinamicos.length ? dinamicos : carregouProcessos ? [] : [];
+  }, [processosBanco, carregouProcessos]);
+  const clientesReserva = filaFiltrada.length;
+  const clientesRepassados = filaFiltrada.filter((cliente) => (
+    cliente.caixa.toLowerCase().includes('conformidade') ||
+    cliente.caixa.toLowerCase().includes('assinado') ||
+    cliente.agehab.toLowerCase().includes('validada')
+  )).length;
+  const taxaConversao = clientesReserva ? ((clientesRepassados / clientesReserva) * 100).toFixed(1).replace('.', ',') : '0,0';
 
   return (
-    <main className="broker-doc-page">
-      <style>{`
-        .broker-doc-page { height: 100vh; overflow-y: auto; background: #ffffff; color: #e5e7eb; padding: 24px 16px 40px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; }
-        .broker-doc-page::-webkit-scrollbar { width: 12px; } .broker-doc-page::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; border: 3px solid #020617; } .broker-doc-page::-webkit-scrollbar-track { background: #020617; }
-        .shell { max-width: 1120px; margin: 0 auto; display: grid; gap: 20px; }
-        .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-        .title h1 { margin: 0; font-size: 28px; display: flex; gap: 12px; align-items: center; } .title svg { color: #22c55e; }
-        .badge { display: inline-flex; margin-top: 8px; border: 1px solid rgba(34,197,94,.45); color: #22c55e; background: rgba(34,197,94,.14); border-radius: 999px; padding: 6px 14px; font-size: 12px; font-weight: 800; letter-spacing: .08em; }
-        .subtitle, .soft { color: #9ca3af; font-size: 13px; line-height: 1.45; margin-top: 6px; }
-        .sla-mini { background: rgba(30,41,59,.55); border: 1px solid rgba(148,163,184,.16); border-radius: 12px; padding: 12px 16px; color: #9ca3af; font-size: 13px; display: grid; gap: 4px; } .sla-mini strong { color: #22c55e; }
-        .grid { display: grid; grid-template-columns: 2fr 1.35fr; gap: 20px; align-items: start; }
-        .card { background: radial-gradient(circle at top left, rgba(34,197,94,.09), transparent 55%), radial-gradient(circle at bottom right, rgba(59,130,246,.16), transparent 60%), #0b1120; border: 1px solid rgba(148,163,184,.18); border-radius: 16px; padding: 20px 24px; box-shadow: 0 20px 35px rgba(15,23,42,.72); }
-        .card h2 { margin: 0 0 6px; font-size: 19px; display: flex; gap: 10px; align-items: center; } .card h2 svg { color: #22c55e; }
-        .section { margin-top: 20px; padding-top: 16px; border-top: 1px dashed rgba(148,163,184,.35); }
-        .section-title { color: #9ca3af; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; display: flex; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
-        .pill { border: 1px solid rgba(148,163,184,.35); color: #9ca3af; background: rgba(15,23,42,.5); border-radius: 999px; padding: 4px 10px; text-transform: none; letter-spacing: 0; white-space: nowrap; }
-        .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
-        .form-group { display: grid; gap: 6px; } label { color: #9ca3af; font-size: 13px; font-weight: 650; }
-        input, select { width: 100%; background: #020617; border: 1px solid #1f2937; border-radius: 10px; color: #e5e7eb; padding: 10px 12px; font-size: 13px; outline: none; } input:focus, select:focus { border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.18); }
-        .hint { color: #9ca3af; font-size: 12px; line-height: 1.55; margin-top: 6px; } .hint strong { color: #22c55e; }
-        .rules { background: rgba(15,23,42,.55); border-left: 3px solid #22c55e; border-radius: 10px; padding: 14px; color: #d1d5db; font-size: 13px; } .rules li { margin-bottom: 6px; }
-        .button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-        .btn-primary, .btn-ghost, .btn-upload { border: 0; cursor: pointer; border-radius: 12px; font-weight: 800; display: inline-flex; justify-content: center; align-items: center; gap: 8px; transition: .2s ease; }
-        .btn-primary { background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; padding: 13px; box-shadow: 0 12px 25px rgba(34,197,94,.22); } .btn-ghost { background: transparent; color: #e5e7eb; border: 1px solid #1f2937; padding: 13px; }
-        .right-panel { display: grid; gap: 20px; }
-        .sla-box { display: flex; justify-content: space-between; gap: 16px; align-items: center; background: radial-gradient(circle at top left, rgba(34,197,94,.2), transparent 60%), #020617; border: 1px solid rgba(34,197,94,.5); border-radius: 14px; padding: 16px; }
-        .sla-time { color: #22c55e; font-size: 31px; font-weight: 900; letter-spacing: 2px; } .sla-role { text-align: right; color: #9ca3af; font-size: 13px; } .sla-role strong { color: #22c55e; font-size: 16px; }
-        .status-dots { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; } .dot-label { display: flex; gap: 8px; align-items: center; background: rgba(15,23,42,.55); border-radius: 8px; padding: 7px 10px; color: #d1d5db; font-size: 12px; }
-        .dot { width: 11px; height: 11px; border-radius: 999px; display: inline-block; } .nao-enviado { background: #9ca3af; } .em-analise { background: #f59e0b; } .pendenciado { background: #ef4444; } .reprovado { background: #020617; border: 1px solid #4b5563; }
-        .file-list { margin-top: 12px; display: grid; gap: 10px; }
-        .file-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(15,23,42,.78); border: 1px solid rgba(31,41,55,.86); border-radius: 12px; padding: 13px; }
-        .file-title { display: flex; gap: 8px; align-items: center; font-size: 14px; font-weight: 800; } .file-title svg { color: #22c55e; } .file-desc { color: #9ca3af; font-size: 12px; line-height: 1.4; margin-top: 4px; }
-        .file-actions { display: flex; gap: 12px; align-items: center; flex: 0 0 auto; } .btn-upload { color: #22c55e; border: 1px solid rgba(34,197,94,.5); background: rgba(34,197,94,.12); padding: 8px 14px; } .btn-upload.pending { color: #f59e0b; border-color: #f59e0b; background: rgba(245,158,11,.14); }
-        .kit { background: rgba(30,41,59,.5); border-radius: 12px; padding: 16px; text-align: center; color: #d1d5db; } .kit svg { color: #22c55e; margin-bottom: 8px; }
-        .modal { position: fixed; inset: 0; background: rgba(15,23,42,.9); display: grid; place-items: center; z-index: 20; } .modal-content { width: min(500px, calc(100vw - 32px)); background: #0b1120; border: 1px solid rgba(148,163,184,.22); border-radius: 16px; padding: 26px; box-shadow: 0 20px 35px rgba(0,0,0,.6); }
-        .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; } .modal-head h3 { margin: 0; display: flex; gap: 9px; align-items: center; } .icon-btn { background: transparent; border: 0; color: #9ca3af; cursor: pointer; }
-        .file-input-label { width: 100%; margin: 18px 0; } .file-input-label input { display: none; }
-        .progress { height: 6px; background: rgba(148,163,184,.2); border-radius: 999px; overflow: hidden; margin-bottom: 14px; } .progress span { display: block; width: 68%; height: 100%; background: linear-gradient(90deg, #22c55e, #16a34a); }
-        .notification { position: fixed; right: 24px; bottom: 24px; background: #0b1120; border: 1px solid rgba(34,197,94,.5); border-radius: 12px; padding: 14px 18px; display: flex; gap: 10px; align-items: center; box-shadow: 0 20px 35px rgba(0,0,0,.5); z-index: 30; } .notification svg { color: #22c55e; }
-        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .form-grid, .button-row { grid-template-columns: 1fr; } .topbar { align-items: flex-start; } }
-        @media (max-width: 640px) { .file-row { align-items: flex-start; flex-direction: column; } .file-actions { width: 100%; justify-content: space-between; } }
-      `}</style>
-
-      <div className="shell">
-        <header className="topbar">
-          <div className="title">
-            <h1><FileText size={30} /> Checklist de Documentos</h1>
-            <div className="badge">Upload com formulario</div>
-            <p className="subtitle">Tela baseada no checklist_documentos_upload_com_formulario para envio de kit Caixa e Agehab.</p>
+    <main className="cor-page cor-page-premium" data-layout-version="dashboards-compactos-v2">
+      <header className="cor-premium-top">
+        <div className="cor-premium-title">
+          <span className="cor-chart-icon">↗</span>
+          <div>
+            <h1>Acompanhamento do Corretor</h1>
+            <p>Tela inicial do corretor com alertas, SLA de entrega de documentos e evolucao das reservas ate o repasse.</p>
           </div>
-          <div className="sla-mini">
-            <div><strong>SLA analista:</strong> 3h uteis</div>
-            <div><strong>SLA corretor em pendencia:</strong> 24h corridas</div>
-            <div>Logado como: <strong>{form.corretor}</strong></div>
-            <a href="/login" style={{ color: '#ef4444', textDecoration: 'none', fontSize: 12 }}><LogOut size={13} /> Sair</a>
+        </div>
+        <div className="cor-premium-actions cor-actions-no-primary">
+          <button type="button" onClick={carregarProcessos}>{atualizacaoDisponivel ? '↻ Atualização disponível' : '↻ Atualizar'}</button>
+          <button>↪ Sair</button>
+        </div>
+      </header>
+
+      <section className="cor-dash-grid cor-dash-premium">
+        <article className="cor-card cor-panel-alerts">
+          <div className="cor-panel-head">
+            <div>
+              <small>Dashboard 1 — Alertas</small>
+              <p>Analista de credito, cliente, documento pendente e prazo de entrega.</p>
+            </div>
+            <strong className="cor-urgent-pill">{alertasPendentes.length} urgentes</strong>
+          </div>
+          <div className="cor-alert-list">
+            {alertasPendentes.length ? alertasPendentes.map(({ tone, nome, desc, prazo }, index) => (
+              <div className={`cor-alert-item cor-alert-${tone}`} key={`${nome}-${index}`}>
+                <i />
+                <div className="cor-alert-copy">
+                  <b>{nome}</b>
+                  <span>{desc}</span>
+                </div>
+                <em><small>Prazo</small>{prazo}</em>
+              </div>
+            )) : <div className="cor-alert-empty"><b>Sem pendências urgentes</b><span>Quando houver documento pendenciado, ele aparece aqui automaticamente.</span></div>}
+          </div>
+        </article>
+
+        <div className="cor-sla-stack">
+        <article className="cor-card cor-panel-sla">
+          <div className="cor-panel-head">
+            <div>
+              <small>Dashboard 2 — SLA</small>
+            </div>
+          </div>
+          <div className="cor-speed-premium">
+            <div className="cor-speed-arc" />
+            <div className="cor-speed-needle" />
+            <span />
+          </div>
+          <div className="cor-sla-lines">
+            <div><span>Melhor SLA de entrega</span><small>Referencia da carteira</small><b className="green">3h</b></div>
+            <div><span>SLA atual do corretor</span><small>Media de resposta as pendencias</small><b className="orange">11h</b></div>
+          </div>
+        </article>
+        <article className="cor-card cor-rework-card">
+          <div className={retrabalhoClass(taxaRetrabalho)}>
+            <span className="cor-rework-icon">🔨</span>
+            <span>Taxa de retrabalho</span>
+            <b>{taxaRetrabalho.toFixed(1).replace('.', ',')}%</b>
+          </div>
+        </article>
+        </div>
+
+        <article className="cor-card cor-panel-conversion">
+          <div className="cor-panel-head">
+            <div>
+              <small>Dashboard 3 — Reservas x Repasses</small>
+              <p>Quantidade de clientes em reserva comparada aos clientes repassados.</p>
+            </div>
+          </div>
+          <div className="cor-mini-metrics">
+            <div><span>Clientes em reserva</span><b>{clientesReserva}</b><small>processos ativos</small></div>
+            <div><span>Clientes repassados</span><b>{clientesRepassados}</b><small>vendas repassadas</small></div>
+          </div>
+          <div className="cor-conversion-bar"><span>Taxa de conversao</span><b>{taxaConversao}%</b></div>
+        </article>
+      </section>
+
+      <section className="analyst-live-board">
+        <header className="analyst-live-head">
+          <div className="analyst-live-title-row">
+            <h2>Fila Viva - Fluxo do Cliente</h2>
+            <strong>20 processo(s)</strong>
+            <strong>17 aguardando docs</strong>
+            <strong>20 prioridade alta</strong>
+          </div>
+          <div className="analyst-live-filters">
+            <input value={filtros.reserva} onChange={(event) => setFiltros((atual) => ({ ...atual, reserva: event.target.value }))} placeholder="Reserva" />
+            <input value={filtros.nome} onChange={(event) => setFiltros((atual) => ({ ...atual, nome: event.target.value }))} placeholder="Nome" />
+            <input value={filtros.corretor} onChange={(event) => setFiltros((atual) => ({ ...atual, corretor: event.target.value }))} placeholder="Corretor" />
+            <input value={filtros.gestor} onChange={(event) => setFiltros((atual) => ({ ...atual, gestor: event.target.value }))} placeholder="Gestor" />
+            <select value={filtros.caixa} onChange={(event) => setFiltros((atual) => ({ ...atual, caixa: event.target.value }))} aria-label="Status Caixa">
+              <option value="">Status Caixa</option>
+              <option value="pendencia documentacao">Pendencia documentacao</option>
+              <option value="formularios disponiveis">Formularios disponiveis</option>
+              <option value="em validacao credito">Em validacao credito</option>
+            </select>
+            <select value={filtros.agehab} onChange={(event) => setFiltros((atual) => ({ ...atual, agehab: event.target.value }))} aria-label="Status Agehab">
+              <option value="">Status Agehab</option>
+              <option value="documentos pendenciados">Documentos pendenciados</option>
+              <option value="ficha agehab liberada">Ficha Agehab liberada</option>
+              <option value="em analise do credito">Em analise do credito</option>
+            </select>
+            <select value={filtros.produto} onChange={(event) => setFiltros((atual) => ({ ...atual, produto: event.target.value }))} aria-label="Produto">
+              <option value="">Produto</option>
+              <option value="rd">RD</option>
+            </select>
           </div>
         </header>
 
-        <section className="grid">
-          <div className="card">
-            <h2><UserCircle2 size={22} /> Dados do Proponente & Dependentes</h2>
-            <p className="soft">Preencha os dados basicos. Informacoes sensiveis continuam apenas no CRM.</p>
+        <div className="analyst-live-list">
+          {filaFiltrada.map((cliente) => {
+            const detalheAberto = detalhesAbertos.includes(cliente.id);
+            const pendenciado = cliente.pendencias.some((pendencia) => pendencia.toLowerCase().includes('pend') || pendencia.includes(':'));
 
-            <div className="section">
-              <div className="section-title"><span>Proponente</span><span className="pill">Identificacao do processo</span></div>
-              <div className="form-grid">
-                <div className="form-group"><label>Nome completo</label><input value={form.nome} onChange={(e) => update('nome', e.target.value)} placeholder="Nome do proponente" /></div>
-                <div className="form-group"><label>No da reserva</label><input value={form.reserva} onChange={(e) => update('reserva', e.target.value)} placeholder="Ex: 458712" /></div>
-                <div className="form-group"><label>Cidade</label><input value={form.cidade} onChange={(e) => update('cidade', e.target.value)} placeholder="Ex: Aguas Lindas de Goias" /></div>
-                <div className="form-group"><label>Empreendimento</label><select value={form.empreendimento} onChange={(e) => update('empreendimento', e.target.value)}><option value="">Selecione...</option>{empreendimentos.map((item) => <option key={item}>{item}</option>)}</select></div>
-                <div className="form-group"><label>Corretor responsavel</label><input value={form.corretor} readOnly /></div>
-                <div className="form-group"><label>Estado civil</label><select value={form.estadoCivil} onChange={(e) => update('estadoCivil', e.target.value)}><option value="">Selecione...</option><option value="solteiro">Solteiro(a)</option><option value="casado">Casado(a)</option><option value="uniao_estavel">Uniao estavel</option><option value="divorciado">Divorciado(a)</option><option value="viuvo">Viuvo(a)</option></select><div className="hint">Casado ou uniao estavel exige documentos do conjuge.</div></div>
-                <div className="form-group"><label>Tipo de renda</label><select value={form.tipoRenda} onChange={(e) => update('tipoRenda', e.target.value)}><option value="">Selecione...</option><option value="formal">Formal</option><option value="informal">Informal</option><option value="mista">Mista</option></select><div className="hint"><strong>{rendaHint}</strong></div></div>
-              </div>
-            </div>
+            return (
+              <article className={`analyst-live-card ${detalheAberto ? 'is-open' : ''} ${pendenciado ? 'is-pending' : ''}`} key={cliente.id}>
+                <div className="analyst-live-main">
+                  <div className="analyst-client-title">
+                    <i />
+                    <b>{cliente.produto}</b>
+                    <h3>
+                      <a href={checklistCorretorUrl(cliente)}>
+                        {cliente.cliente}
+                      </a>
+                    </h3>
+                  </div>
+                  <p>{cliente.empreendimento}</p>
+                  <p>{cliente.corretor}</p>
+                  <div className="analyst-cca-line">
+                    <span>Gestor</span>
+                    <em>{cliente.cca}</em>
+                  </div>
+                  <small>{cliente.prioridade}</small>
+                  {pendenciado ? <strong className="pending-warning">Pendenciado</strong> : null}
+                </div>
 
-            <div className="section">
-              <div className="section-title"><span>Dependentes</span><span className="pill">Regras automaticas por tipo</span></div>
-              <div className="form-grid">
-                <div className="form-group"><label>Tipo de dependente</label><select value={form.tipoDependente} onChange={(e) => update('tipoDependente', e.target.value)}><option value="">Selecione...</option><option value="filho_menor">Filho menor</option><option value="filho_maior">Filho maior</option><option value="parente">Parente ate 3o grau</option></select></div>
-                {form.tipoDependente !== 'filho_menor' && <div className="form-group"><label>Dependente casado?</label><select value={form.dependenteCasado} onChange={(e) => update('dependenteCasado', e.target.value)}><option value="nao">Nao</option><option value="sim">Sim</option></select></div>}
-              </div>
-              <div className="rules"><ul><li><strong>Filho menor</strong>: apenas certidao de nascimento.</li><li><strong>Maior / parente 3o grau</strong>: identidade + declaracao de parentesco.</li><li><strong>Se casado</strong>: identidade do conjuge e declaracao de renda/nao renda.</li></ul></div>
-            </div>
+                <div className="analyst-live-status">
+                  <div>
+                    <span>Comercial {cliente.comercial}</span>
+                    <span>Credito {cliente.credito}</span>
+                  </div>
+                  <button type="button" onClick={() => alternarDetalhe(cliente.id)}>
+                    {detalheAberto ? 'Fechar detalhes' : 'Abrir detalhes'}
+                  </button>
+                  <a className="analyst-open-button" href={checklistCorretorUrl(cliente)}>Abrir</a>
+                </div>
 
-            <div className="button-row"><button className="btn-primary" onClick={salvar}><Save size={17} /> {saved ? 'Dados salvos' : 'Salvar'}</button><a className="btn-ghost" href="/painel/acompanhamento"><Clock3 size={17} /> Acompanhar</a></div>
-          </div>
-
-          <aside className="right-panel">
-            <div className="card">
-              <h2><Paperclip size={22} /> Kit documental</h2>
-              <p className="soft">Status visual do envio dos documentos do proponente.</p>
-              <div className="status-dots"><span className="dot-label"><span className="dot nao-enviado" /> Nao enviado</span><span className="dot-label"><span className="dot em-analise" /> Em analise</span><span className="dot-label"><span className="dot pendenciado" /> Pendenciado</span><span className="dot-label"><span className="dot reprovado" /> Reprovado</span></div>
-              <div className="file-list">{documentos.map((doc) => { const Icon = doc.icon; const current = status[doc.id] || 'nao-enviado'; return <div className="file-row" key={doc.id}><div><div className="file-title"><Icon size={17} /> {doc.titulo}</div><div className="file-desc">{doc.desc}</div></div><div className="file-actions"><span className={`dot ${current}`} /><button className={`btn-upload ${current === 'em-analise' ? 'pending' : ''}`} onClick={() => abrirUpload(doc)}><Paperclip size={14} /> {statusLabel[current]}</button></div></div>; })}</div>
-            </div>
-
-            <div className="card"><div className="sla-box"><div><div className="soft">SLA do analista</div><div className="sla-time">02:58:14</div></div><div className="sla-role">Quem esta com o relogio:<br /><strong>Analista</strong></div></div><div className="hint">Quando houver pendencia, o relogio do analista pausa e passa a contar o prazo de resposta do corretor.</div></div>
-            <div className="kit"><FolderOpen size={34} /><strong>Organizacao do kit</strong><p className="soft">Salve o proponente, anexe os documentos e acompanhe o status de analise.</p></div>
-          </aside>
-        </section>
-      </div>
-
-      {modalDoc && <div className="modal"><div className="modal-content"><div className="modal-head"><h3><UploadCloud size={21} /> Enviar documento</h3><button className="icon-btn" onClick={() => setModalDoc(null)}><X /></button></div><p className="soft">Enviar documento: <strong>{modalDoc.titulo}</strong></p><label className="btn-upload file-input-label"><input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={onFile} />{fileName ? fileName : 'Selecionar arquivo'}</label>{fileName && <div className="progress"><span /></div>}<button className="btn-primary" disabled={!fileName} onClick={enviarDocumento}><UploadCloud size={17} /> Enviar documento</button></div></div>}
-      {notice && <div className="notification"><CheckCircle2 /><div><strong>{notice.title}</strong><div className="soft">{notice.text}</div></div></div>}
+                {detalheAberto && (
+                  <div className="analyst-detail-panel">
+                    <div className="analyst-detail-grid">
+                      <section className="analyst-detail-box">
+                        <span>Panorama</span>
+                        <h4>{cliente.panorama}</h4>
+                        <p>{cliente.resumo}</p>
+                        <div className="analyst-detail-tags">
+                          <b>Aging {cliente.aging}</b>
+                          <b className="danger">SLA {cliente.slaCca}</b>
+                        </div>
+                      </section>
+                      <section className="analyst-detail-box analyst-next-action">
+                        <span>Proxima acao</span>
+                        <h4>{cliente.proximaAcao}</h4>
+                        <p>Caixa: {cliente.caixa}</p>
+                        <p>Agehab: {cliente.agehab}</p>
+                        <p>{cliente.observacao}</p>
+                      </section>
+                    </div>
+                    <section className={`analyst-stage-card ${cliente.caixaIndex >= caixaStageLabels.length - 1 ? 'stage-complete' : ''}`}>
+                      <div className="analyst-stage-head">
+                        <b>Kit Caixa</b>
+                        <strong>{cliente.caixa}</strong>
+                      </div>
+                      <div className="analyst-stage-line kit-caixa">
+                        {caixaStageLabels.map((etapa, index) => (
+                          <div className={classeEtapa(index, cliente.caixaIndex)} key={etapa}>
+                            <i />
+                            <span>{etapa}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                    <section className={`analyst-stage-card analyst-repasse ${cliente.agehabIndex >= agehabStageLabels.length - 1 ? 'stage-complete' : ''}`}>
+                      <div className="analyst-stage-head">
+                        <b>Kit Agehab</b>
+                        <strong>{cliente.agehab}</strong>
+                      </div>
+                      <div className="analyst-stage-line kit-agehab">
+                        {agehabStageLabels.map((etapa, index) => (
+                          <div className={classeEtapa(index, cliente.agehabIndex)} key={etapa}>
+                            <i />
+                            <span>{etapa}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                    <div className="analyst-detail-bottom">
+                      {[
+                        ['Caixa', cliente.caixa],
+                        ['Agehab', cliente.agehab],
+                        ['Sinal', cliente.sinal],
+                        ['Fiador', cliente.fiador],
+                        ['Produto', 'PAGO'],
+                      ].map(([label, value]) => (
+                        <section className="analyst-mini-card" key={label}>
+                          <span>{label}</span>
+                          <b>{value}</b>
+                        </section>
+                      ))}
+                      <section className="analyst-pendency-card">
+                        <h4>Pendencias mapeadas</h4>
+                        {cliente.pendencias.map((pendencia) => (
+                          <p key={pendencia}>{pendencia}</p>
+                        ))}
+                      </section>
+                    </div>
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      </section>
     </main>
   );
 }

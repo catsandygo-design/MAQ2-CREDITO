@@ -2,6 +2,13 @@ node_modules/
 .next/
 out/
 dist/
+/uploads/
+backend/uploads/
+__pycache__/
+*.pyc
+node-v*-win-x64/
+*.rar
+*.log
 
 .env
 .env*.local

@@ -1,13 +1,12 @@
 ﻿'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
+import type { ChangeEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
-
-type DocStatus = 'Aguardando' | 'Pendente' | 'Aprovado' | 'NÃ£o se Aplica' | 'Bloqueado';
-type RelStatus = 'NÃ£o se Aplica' | 'sim' | 'nao';
-
-const docStatuses: DocStatus[] = ['Aguardando', 'Pendente', 'Aprovado', 'NÃ£o se Aplica', 'Bloqueado'];
-const relStatuses: RelStatus[] = ['NÃ£o se Aplica', 'sim', 'nao'];
+import { apiClient, apiUrl } from '@/lib/api/proxy';
+import { logAppError } from '@/lib/observability/logger';
+import { montarPayloadPendencia, validarRoteamentoPendencia } from '@/lib/governanca-pendencias';
+import { dependentes, docStatuses, relStatuses, sections, type DocStatus, type PendenciaDoc, type RelStatus } from '@/domain/checklist/contracts';
 
 const agenciasVinculadas = ['1856', '0972'];
 
@@ -29,96 +28,10 @@ const agehabStages = [
   ['agehab_validada', 'Agehab Validada'],
 ] as const;
 
-const dependentes = [
-  ['nao-definido', 'Nao definido'],
-  ['conjuge', 'Conjuge'],
-  ['filho-menor', 'Filho menor de 18'],
-  ['filho-maior', 'Filho maior de 18'],
-  ['pai-mae', 'Pai/Mae'],
-  ['irmaos-maiores', 'Irmaos maiores de 18'],
-  ['tios-maiores', 'Tios e tias maiores de 18'],
-  ['avos', 'Avos'],
-  ['sobrinhos-maiores', 'Sobrinhos maiores de 18'],
-  ['bisavos', 'Bizavos'],
-] as const;
-
-const sections = [
-  {
-    key: 'proponente',
-    title: 'Proponente',
-    subtitle: 'Documentos pessoais e base cadastral.',
-    docs: [
-      ['identidade', 'RG/CNH', 'Documento com foto dentro da validade.'],
-      ['cpf', 'CPF', 'CPF legivel ou documento oficial que contenha CPF.'],
-      ['estado-civil', 'Comprovante de estado civil', 'Certidao conforme estado civil do proponente.'],
-      ['residencia', 'Comprovante de residencia', 'Agua, luz, telefone, internet ou equivalente.'],
-      ['fgts', 'Extrato FGTS', 'App FGTS, site Caixa ou agencia.'],
-    ],
-  },
-  {
-    key: 'depmenor',
-    title: 'Dependente - Filhos menores de 18 anos',
-    subtitle: 'Aparece quando o tipo de dependente for filho menor.',
-    docs: [
-      ['certidao', 'Certidao de nascimento', 'Certidao do dependente menor.'],
-      ['cpf', 'CPF do dependente', 'CPF do filho menor quando houver.'],
-    ],
-  },
-  {
-    key: 'depmaior',
-    title: 'Dependente - Maiores e parentes',
-    subtitle: 'Aparece para conjuge, filhos maiores e parentes informados.',
-    docs: [
-      ['identidade', 'Identidade e CPF', 'CNH, RG, identidade militar, passaporte brasileiro ou carteira funcional.'],
-      ['estado-civil', 'Comprovante de estado civil', 'Certidao conforme estado civil do dependente.'],
-      ['parentesco', 'Declaracao de parentesco', 'Declaracao conforme regras Caixa, vinculando dependente ao proponente.'],
-    ],
-  },
-  {
-    key: 'rendaclt',
-    title: 'Renda formal (CLT / vinculo)',
-    subtitle: 'Aparece quando perfil de renda = CLT.',
-    docs: [
-      ['holerite', 'Holerites', '3 ultimos holerites/contracheques.'],
-      ['carteira', 'Carteira de trabalho', 'Dados da carteira digital ou fisica.'],
-    ],
-  },
-  {
-    key: 'rendainf',
-    title: 'Renda informal / autonomo',
-    subtitle: 'Aparece quando perfil de renda = informal.',
-    docs: [
-      ['extrato', 'Extrato bancario', '3 ultimos meses, preferir mes fechado.'],
-      ['declaracao', 'Declaracao de renda', 'Declaracao assinada conforme modelo operacional.'],
-    ],
-  },
-  {
-    key: 'caixa',
-    title: 'Documentos Caixa',
-    subtitle: 'Kit Caixa e formularios de contratacao.',
-    docs: [
-      ['damp', 'DAMP', 'Preenchida e assinada digitalmente.'],
-      ['ficha', 'Ficha de cadastro Caixa', 'Preenchida e assinada digitalmente.'],
-      ['abertura', 'Abertura de conta', 'Assinada digitalmente; fisico precisa aprovacao.'],
-      ['mo', 'MO', 'Assinatura correta. Casal: assinatura de ambos.'],
-      ['cheque-especial', 'Cheque Especial', 'Formulario para contratacao do cheque especial junto ao banco. Sujeito a analise do banco.'],
-      ['cartao-credito', 'Cartao de Credito', 'Formulario de contratacao de cartao de credito. Sujeito a aprovacao do banco.'],
-    ],
-  },
-];
-
-const relacionamento = [
-  ['portabilidade-caixa', 'Cliente ciente da portabilidade para a agencia Caixa que vai assinar o contrato?', 'Relacionamento Caixa'],
-  ['open-finance-caixa', 'Cliente ciente que sera preciso fazer Open Finance com a agencia Caixa?', 'Relacionamento Caixa'],
-  ['cpf-pix-caixa', 'Cliente ciente que sera necessario cadastrar o CPF como Pix na agencia Caixa?', 'Relacionamento Caixa'],
-  ['fgts-futuro-orientado', 'Se o cliente ja trabalhou mais de 3 anos, ele pode ganhar mais financiamento devido ao desconto de 0,5% na taxa de juros.', 'Relacionamento FGTS'],
-  ['fgts-compra-cliente', 'Sugerir para o cliente utilizar seu FGTS para melhorar o garantido.', 'Relacionamento FGTS'],
-  ['produto-orientado', 'Cliente foi orientado sobre o produto?', 'Produto'],
-] as const;
-
 function classForStatus(status: string) {
   const normalized = status.toLowerCase();
-  if (['aprovado', 'nÃ£o se aplica', 'sim'].includes(normalized)) return 'ok';
+  // Comparacao em minusculo para evitar divergencia de acentuacao entre fontes.
+  if (['aprovado', 'não se aplica', 'sim'].includes(normalized)) return 'ok';
   if (['pendente', 'bloqueado', 'nao'].includes(normalized)) return 'bad';
   return 'warn';
 }
@@ -172,7 +85,9 @@ function AnalistaChecklistContent() {
   const [tipoDependente, setTipoDependente] = useState(params.get('dependente') || 'filho-maior');
   const [docMap, setDocMap] = useState<Record<string, DocStatus>>({});
   const [relMap, setRelMap] = useState<Record<string, RelStatus>>({});
+  const [pendenciasDoc, setPendenciasDoc] = useState<Record<string, PendenciaDoc>>({});
   const [uploadsEnviados, setUploadsEnviados] = useState<Record<string, boolean>>({});
+  const [kitPdfDisponivel, setKitPdfDisponivel] = useState(false);
 
   const cliente = params.get('cliente') || '';
   const reserva = params.get('reserva') || '';
@@ -187,18 +102,43 @@ function AnalistaChecklistContent() {
 
   useEffect(() => {
     if (!reserva) return;
-    const statusCaixa = localStorage.getItem(`maq2_caixa_status_${reserva}`);
-    const statusAgehab = localStorage.getItem(`maq2_agehab_status_${reserva}`);
-    if (statusCaixa) setCaixa(normalizeCaixaStatus(statusCaixa));
-    if (statusAgehab) setAgehab(statusAgehab);
-    const uploadsSalvos = sections
-      .find((section) => section.key === 'caixa')
-      ?.docs.reduce<Record<string, boolean>>((acc, [id]) => {
-        const key = `caixa.${id}`;
-        acc[key] = localStorage.getItem(`maq2_cca_upload_${reserva}_${key}`) === '1';
-        return acc;
-      }, {});
-    setUploadsEnviados((current) => ({ ...current, ...uploadsSalvos }));
+    let ativo = true;
+
+    const carregarDados = async () => {
+      try {
+        // TODO FastAPI: substituir pela URL final do backend, ex: `${API_URL}/processos/${reserva}`.
+        const data = await apiClient.get<{
+          caixa?: string;
+          agehab?: string;
+          documentos?: Record<string, DocStatus>;
+          relacionamento?: Record<string, RelStatus>;
+          pendencias?: Record<string, PendenciaDoc>;
+          uploadsEnviados?: Record<string, boolean>;
+        }>(`/api/processos/${encodeURIComponent(reserva)}`);
+
+        if (!ativo) return;
+        if (data.caixa) setCaixa(normalizeCaixaStatus(data.caixa));
+        if (data.agehab) setAgehab(data.agehab);
+        if (data.documentos) setDocMap(data.documentos);
+        if (data.relacionamento) setRelMap(data.relacionamento);
+        if (data.pendencias) setPendenciasDoc(data.pendencias);
+        setUploadsEnviados((current) => ({ ...current, ...data.uploadsEnviados }));
+      } catch (error) {
+        logAppError('', error);
+      }
+
+      try {
+        const uploads = await apiClient.get<{ temDocumentoEnviado?: boolean; uploads?: unknown[] }>(`/api/processos/${encodeURIComponent(reserva)}/uploads`);
+        if (ativo) setKitPdfDisponivel(Boolean(uploads.temDocumentoEnviado || uploads.uploads?.length));
+      } catch (error) {
+        logAppError('', error);
+      }
+    };
+
+    carregarDados();
+    return () => {
+      ativo = false;
+    };
   }, [reserva]);
 
   const visibleSections = useMemo(() => sections.filter((section) => {
@@ -210,14 +150,113 @@ function AnalistaChecklistContent() {
   }), [perfilRenda, tipoDependente]);
 
   const allDocs = visibleSections.flatMap((section) => section.docs.map(([id]) => `${section.key}.${id}`));
-  const doneDocs = allDocs.filter((key) => ['Aprovado', 'NÃ£o se Aplica'].includes(docMap[key] || 'Aguardando')).length;
+  const doneDocs = allDocs.filter((key) => ['Aprovado', 'Não se Aplica'].includes(docMap[key] || 'Aguardando')).length;
 
   function updateDoc(key: string, value: DocStatus) {
-    setDocMap((current) => ({ ...current, [key]: value }));
+    setDocMap((current) => {
+      const next = { ...current, [key]: value };
+
+      if (reserva) {
+        void apiClient.put(`/api/processos/${encodeURIComponent(reserva)}/documentos/${encodeURIComponent(key)}`, {
+          // TODO FastAPI: persistir status do documento no endpoint definitivo.
+          status: value,
+        }).catch((error) => logAppError('Erro ao salvar documento na API FastAPI', error));
+
+        if (value !== 'Pendente') {
+          setPendenciasDoc((pendenciasAtuais) => {
+            const { [key]: _removida, ...restante } = pendenciasAtuais;
+            return restante;
+          });
+        }
+      }
+
+      return next;
+    });
+  }
+
+  function updatePendenciaDoc(key: string, field: keyof PendenciaDoc, value: string) {
+    setPendenciasDoc((current) => {
+      const next = {
+        ...current,
+        [key]: {
+          descricao: current[key]?.descricao || '',
+          prazo: current[key]?.prazo || '',
+          [field]: value,
+        },
+      };
+
+      if (reserva) {
+        const validacao = validarRoteamentoPendencia('cca', 'analista');
+        if (!validacao.ok) {
+          logAppError('Governanca: roteamento de pendencia invalido', new Error(validacao.motivo || 'Roteamento invalido'));
+          return next;
+        }
+
+        const documentoNome = key.split('.').pop() || key;
+        const payloadGovernanca = montarPayloadPendencia({
+          cliente,
+          reserva,
+          cadastro: reserva,
+          corretor,
+          origem: 'cca',
+          destino: 'analista',
+          documentoId: key,
+          documentoNome,
+          mensagem: next[key].descricao,
+          prazo: next[key].prazo,
+        });
+
+        void apiClient.put(`/api/processos/${encodeURIComponent(reserva)}/documentos/${encodeURIComponent(key)}/pendencia`, {
+          ...next[key],
+          ...payloadGovernanca,
+        }).catch((error) => logAppError('Erro ao salvar pendencia na API FastAPI', error));
+      }
+
+      return next;
+    });
+  }
+
+  function nomeArquivoDocumento(key: string, originalName: string) {
+    const documento = key.split('.').pop()?.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase() || 'documento';
+    const dataHora = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, '');
+    const corretorNome = (corretor || 'corretor').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase();
+    const extensao = originalName.includes('.') ? originalName.slice(originalName.lastIndexOf('.')).toLowerCase() : '';
+    return `${documento}-${dataHora}-${corretorNome}${extensao}`;
   }
 
   function updateRel(key: string, value: RelStatus) {
-    setRelMap((current) => ({ ...current, [key]: value }));
+    setRelMap((current) => {
+      const next = { ...current, [key]: value };
+
+      if (reserva) {
+        void apiClient.put(`/api/processos/${encodeURIComponent(reserva)}/relacionamento/${encodeURIComponent(key)}`, {
+          // TODO FastAPI: persistir resposta de relacionamento no endpoint definitivo.
+          status: value,
+        }).catch((error) => logAppError('Erro ao salvar relacionamento na API FastAPI', error));
+      }
+
+      return next;
+    });
+  }
+
+  async function handleUploadCaixa(key: string, event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!reserva || !file) return;
+    try {
+      const formData = new FormData();
+      formData.append('grupo', 'caixa');
+      formData.append('key', key);
+      formData.append('name', nomeArquivoDocumento(key, file.name));
+      formData.append('file', file);
+
+      await fetch(apiUrl(`/api/processos/${encodeURIComponent(reserva)}/uploads`), {
+        method: 'POST',
+        body: formData,
+      });
+      setUploadsEnviados((current) => ({ ...current, [key]: true }));
+    } catch (error) {
+      logAppError('', error);
+    }
   }
 
   return (
@@ -247,7 +286,7 @@ function AnalistaChecklistContent() {
         </div>
         <div className="react-form-grid">
           <label>Nome completo<input value={cliente} readOnly placeholder="Nome do proponente" /></label>
-          <label>NÂº da reserva<input value={reserva} readOnly placeholder="Ex: 458712" /></label>
+          <label>Nº da reserva<input value={reserva} readOnly placeholder="Ex: 458712" /></label>
           <label>Cidade<input value={cidade} readOnly placeholder="Ex: Aguas Lindas de Goias" /></label>
           <label>Empreendimento<input value={empreendimento} readOnly placeholder="Nome do empreendimento" /></label>
           <label>Corretor responsavel<input value={corretor} readOnly placeholder="Nome do corretor" /></label>
@@ -276,7 +315,7 @@ function AnalistaChecklistContent() {
         <section className="react-card">
           {visibleSections.map((section) => {
             const total = section.docs.length;
-            const approved = section.docs.filter(([id]) => ['Aprovado', 'NÃ£o se Aplica'].includes(docMap[`${section.key}.${id}`] || 'Aguardando')).length;
+            const approved = section.docs.filter(([id]) => ['Aprovado', 'Não se Aplica'].includes(docMap[`${section.key}.${id}`] || 'Aguardando')).length;
 
             return (
               <article className="react-doc-section" key={section.key}>
@@ -299,26 +338,18 @@ function AnalistaChecklistContent() {
                             <select className={classForStatus(status)} value={status} onChange={(event) => updateDoc(key, event.target.value as DocStatus)}>
                               {docStatuses.map((item) => <option value={item} key={item}>{item}</option>)}
                             </select>
+                            {status === 'Pendente' ? (
+                              <div className="react-pendency-fields">
+                                <textarea value={pendenciasDoc[key]?.descricao || ''} onChange={(event) => updatePendenciaDoc(key, 'descricao', event.target.value)} placeholder="Descricao da pendencia" />
+                                <input type="datetime-local" value={pendenciasDoc[key]?.prazo || ''} onChange={(event) => updatePendenciaDoc(key, 'prazo', event.target.value)} />
+                              </div>
+                            ) : null}
                             {section.key === 'caixa' && caixa === 'emitindo_formularios' ? (
                               <label className="react-doc-upload">
                                 <input
                                   type="file"
                                   accept=".pdf,.jpg,.jpeg,.png"
-                                  onChange={(event) => {
-                                    const file = event.target.files?.[0];
-                                    if (!reserva || !file) return;
-                                    const reader = new FileReader();
-                                    reader.onload = () => {
-                                      if (typeof reader.result === 'string') {
-                                        localStorage.setItem(`maq2_cca_upload_data_${reserva}_${key}`, reader.result);
-                                        localStorage.setItem(`maq2_cca_upload_${reserva}`, '1');
-                                        localStorage.setItem(`maq2_cca_upload_${reserva}_${key}`, '1');
-                                        localStorage.setItem(`maq2_cca_upload_nome_${reserva}_${key}`, file.name);
-                                        setUploadsEnviados((current) => ({ ...current, [key]: true }));
-                                      }
-                                    };
-                                    reader.readAsDataURL(file);
-                                  }}
+                                  onChange={(event) => { void handleUploadCaixa(key, event); }}
                                 />
                                 {uploadEnviado ? 'Enviado' : 'Upload'}
                               </label>
@@ -349,6 +380,15 @@ function AnalistaChecklistContent() {
           </div>
           <label>Observacao do analista<textarea placeholder="Ex.: falta extrato bancario, IRPF ilegivel..." /></label>
           <label>Resumo automatico<textarea readOnly value={`${doneDocs}/${allDocs.length} documentos concluidos nas secoes visiveis.`} /></label>
+          {kitPdfDisponivel ? (
+            <a
+              className="react-doc-upload"
+              href={apiUrl(`/api/processos/${encodeURIComponent(reserva)}/uploads?merge=1`)}
+              download={`KIT_DOCUMENTAL_RESERVA_${reserva}.pdf`}
+            >
+              Baixar PDF unico
+            </a>
+          ) : null}
           <button type="button">Salvar tudo</button>
         </aside>
       </div>
