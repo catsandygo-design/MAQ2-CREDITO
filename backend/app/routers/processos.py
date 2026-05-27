@@ -288,7 +288,7 @@ def listar_processos(destino: str | None = None) -> list[ProcessoResponse]:
         where = "where encaminhado_analista = true"
     elif destino == "cca":
         where = "where encaminhado_analista = true and caixa_status = %s"
-        params.append("emitindo_formularios")
+        params.append("envio_conformidade")
 
     rows = fetch_all(
         f"""
