@@ -302,8 +302,8 @@ export default function CcaAcompanhamentoPage() {
             <strong className="cor-urgent-pill">{alertasAtuais.length} atencoes</strong>
           </div>
           <div className="cor-alert-list">
-            {alertasAtuais.length ? alertasAtuais.map(([tone, nome, desc, prazo]) => (
-              <div className={`cor-alert-item cor-alert-${tone}`} key={nome}>
+            {alertasAtuais.length ? alertasAtuais.map(([tone, nome, desc, prazo], index) => (
+              <div className={`cor-alert-item cor-alert-${tone}`} key={`${nome}-${prazo}-${index}`}>
                 <i />
                 <div className="cor-alert-copy">
                   <b>{nome}</b>

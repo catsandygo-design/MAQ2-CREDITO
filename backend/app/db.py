@@ -49,6 +49,7 @@ def init_db() -> None:
       fiador text,
       corretor text,
       empreendimento text,
+      cca_vinculado text,
       observacao_analista text,
       encaminhado_analista boolean not null default false,
       created_at timestamptz not null default now(),
@@ -60,6 +61,9 @@ def init_db() -> None:
 
     alter table public.fastapi_processos
       add column if not exists observacao_analista text;
+
+    alter table public.fastapi_processos
+      add column if not exists cca_vinculado text;
 
     create table if not exists public.fastapi_documentos_status (
       id uuid primary key default gen_random_uuid(),

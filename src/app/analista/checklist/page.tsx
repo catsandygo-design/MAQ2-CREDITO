@@ -113,6 +113,7 @@ function AnalistaChecklistContent() {
   const [pendenciasDoc, setPendenciasDoc] = useState<Record<string, PendenciaDoc>>({});
   const [temDocumentoEnviado, setTemDocumentoEnviado] = useState(false);
   const [uploadsCca, setUploadsCca] = useState<Record<string, { name: string; data: string }>>({});
+  const [ccaVinculado, setCcaVinculado] = useState('');
   const [observacaoAnalista, setObservacaoAnalista] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [avisoSalvar, setAvisoSalvar] = useState('');
@@ -144,6 +145,7 @@ function AnalistaChecklistContent() {
           relacionamento?: Record<string, RelStatus>;
           pendencias?: Record<string, PendenciaDoc>;
           uploadsCca?: Record<string, { name: string; data: string }>;
+          cca_vinculado?: string;
           observacao_analista?: string;
           temDocumentoEnviado?: boolean;
         };
@@ -171,6 +173,7 @@ function AnalistaChecklistContent() {
           return acc;
         }, {});
         setUploadsCca(uploadsNormalizados);
+        setCcaVinculado(data.cca_vinculado || '');
         setObservacaoAnalista(data.observacao_analista || '');
         setTemDocumentoEnviado(Boolean(data.temDocumentoEnviado || params.get('upload') === '1' || params.get('documento') === 'enviado'));
         setDadosCarregados(true);
@@ -364,7 +367,7 @@ function AnalistaChecklistContent() {
     setAvisoSalvar('Salvando checklist...');
 
     try {
-      await apiClient.put(`/api/processos/${encodeURIComponent(reserva)}`, { caixa, agehab, observacao_analista: observacaoAnalista });
+      await apiClient.put(`/api/processos/${encodeURIComponent(reserva)}`, { caixa, agehab, cca_vinculado: ccaVinculado, observacao_analista: observacaoAnalista });
 
       await Promise.all([
         ...Object.entries(docMap).map(([key, status]) => (
@@ -532,7 +535,7 @@ function AnalistaChecklistContent() {
           <p>Atualize observacoes e copie o resumo das pendencias visiveis.</p>
           <div className="react-cca-vinculado">
             <label>CCA Vinculado
-              <select defaultValue="">
+              <select value={ccaVinculado} onChange={(event) => setCcaVinculado(event.target.value)}>
                 <option value="" disabled>Selecione...</option>
                 {ccasVinculados.map((cca) => <option value={cca} key={cca}>{cca}</option>)}
               </select>
