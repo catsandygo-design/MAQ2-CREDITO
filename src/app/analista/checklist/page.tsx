@@ -113,6 +113,7 @@ function AnalistaChecklistContent() {
   const [pendenciasDoc, setPendenciasDoc] = useState<Record<string, PendenciaDoc>>({});
   const [temDocumentoEnviado, setTemDocumentoEnviado] = useState(false);
   const [uploadsCca, setUploadsCca] = useState<Record<string, { name: string; data: string }>>({});
+  const [observacaoAnalista, setObservacaoAnalista] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [avisoSalvar, setAvisoSalvar] = useState('');
   const [dadosCarregados, setDadosCarregados] = useState(false);
@@ -143,6 +144,7 @@ function AnalistaChecklistContent() {
           relacionamento?: Record<string, RelStatus>;
           pendencias?: Record<string, PendenciaDoc>;
           uploadsCca?: Record<string, { name: string; data: string }>;
+          observacao_analista?: string;
           temDocumentoEnviado?: boolean;
         };
 
@@ -169,6 +171,7 @@ function AnalistaChecklistContent() {
           return acc;
         }, {});
         setUploadsCca(uploadsNormalizados);
+        setObservacaoAnalista(data.observacao_analista || '');
         setTemDocumentoEnviado(Boolean(data.temDocumentoEnviado || params.get('upload') === '1' || params.get('documento') === 'enviado'));
         setDadosCarregados(true);
       } catch (error) {
@@ -361,7 +364,7 @@ function AnalistaChecklistContent() {
     setAvisoSalvar('Salvando checklist...');
 
     try {
-      await apiClient.put(`/api/processos/${encodeURIComponent(reserva)}`, { caixa, agehab });
+      await apiClient.put(`/api/processos/${encodeURIComponent(reserva)}`, { caixa, agehab, observacao_analista: observacaoAnalista });
 
       await Promise.all([
         ...Object.entries(docMap).map(([key, status]) => (
@@ -535,7 +538,7 @@ function AnalistaChecklistContent() {
               </select>
             </label>
           </div>
-          <label>Observacao do analista<textarea placeholder="Ex.: falta extrato bancario, IRPF ilegivel..." /></label>
+          <label>Observacao do analista<textarea value={observacaoAnalista} onChange={(event) => setObservacaoAnalista(event.target.value)} placeholder="Ex.: falta extrato bancario, IRPF ilegivel..." /></label>
           <label>Resumo automatico<textarea readOnly value={`${doneDocs}/${allDocs.length} documentos concluidos nas secoes visiveis.`} /></label>
           <button type="button" onClick={salvarTudo} disabled={salvando || !dadosCarregados}>
             {salvando ? 'Salvando...' : dadosCarregados ? 'Salvar tudo' : 'Carregando...'}

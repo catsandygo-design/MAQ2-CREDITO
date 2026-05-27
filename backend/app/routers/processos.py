@@ -195,6 +195,7 @@ def processo_to_response(processo: dict[str, Any], include_details: bool = True)
         fiador=processo.get("fiador"),
         corretor=processo.get("corretor"),
         empreendimento=processo.get("empreendimento"),
+        observacao_analista=processo.get("observacao_analista"),
         encaminhado_analista=bool(processo.get("encaminhado_analista")),
         documentos=documentos,
         relacionamento=relacionamento,

@@ -16,6 +16,7 @@ class ProcessoUpdate(BaseModel):
     fiador: str | None = None
     corretor: str | None = None
     empreendimento: str | None = None
+    observacao_analista: str | None = None
     encaminhado_analista: bool | None = None
 
 
@@ -64,6 +65,7 @@ class ProcessoResponse(BaseModel):
     fiador: str | None = None
     corretor: str | None = None
     empreendimento: str | None = None
+    observacao_analista: str | None = None
     encaminhado_analista: bool = False
     documentos: dict[str, str] = Field(default_factory=dict)
     relacionamento: dict[str, str] = Field(default_factory=dict)

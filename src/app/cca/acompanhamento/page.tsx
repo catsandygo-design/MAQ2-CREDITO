@@ -171,7 +171,9 @@ function processoToFilaCca(processo: any): FilaVivaCcaItem {
   const pendencias = Object.entries(processo?.pendencias || {}).map(([key, pendencia]: [string, any]) => (
     `${docLabel(key)}: ${pendencia?.descricao || 'Documento pendente'}${pendencia?.prazo ? ` | Prazo ${prazoLabel(pendencia.prazo)}` : ''}`
   ));
-  const listaPendencias = pendencias.length ? pendencias : [caixa];
+  const observacaoAnalista = processo?.observacao_analista ? [`Observacao do analista: ${processo.observacao_analista}`] : [];
+  const listaPendencias = [...observacaoAnalista, ...pendencias];
+  const pendenciasVisiveis = listaPendencias.length ? listaPendencias : [caixa];
   return {
     id: processo.reserva,
     produto: processo.produto || 'RD',
@@ -190,9 +192,9 @@ function processoToFilaCca(processo: any): FilaVivaCcaItem {
     agehab,
     sinal: processo.sinal || 'Nao tem',
     fiador: processo.fiador || 'Nao tem',
-    pendencias: listaPendencias,
-    proximaAcao: pendencias.length ? 'Corrigir documento pendenciado' : `Acompanhar Caixa: ${caixa}`,
-    observacao: pendencias[0] || 'Sem observacao registrada',
+    pendencias: pendenciasVisiveis,
+    proximaAcao: listaPendencias.length ? 'Verificar retorno do analista' : `Acompanhar Caixa: ${caixa}`,
+    observacao: listaPendencias[0] || 'Sem observacao registrada',
     caixaIndex: Math.max(0, caixaKeys.indexOf(processo.caixa || 'reserva')),
     agehabIndex: Math.max(0, agehabKeys.indexOf(processo.agehab || 'reserva')),
   };
@@ -269,7 +271,7 @@ export default function CcaAcompanhamentoPage() {
   ];
   const alertasCca: PendenciaItem[] = filaCca.flatMap((cliente) => (
     cliente.pendencias
-      .filter((pendencia) => pendencia.toLowerCase().includes('pend') || pendencia.includes(':'))
+      .filter((pendencia) => pendencia.toLowerCase().includes('pend') || pendencia.toLowerCase().includes('observacao') || pendencia.includes(':'))
       .map((pendencia) => ['critico', cliente.cliente, pendencia, cliente.slaCca] as PendenciaItem)
   ));
   const alertasAtuais = alertasCca.length ? alertasCca : carregouProcessos ? [] : [];

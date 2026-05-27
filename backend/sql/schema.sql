@@ -10,9 +10,13 @@ create table if not exists public.processos (
   fiador text,
   corretor text,
   empreendimento text,
+  observacao_analista text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.processos
+  add column if not exists observacao_analista text;
 
 create table if not exists public.documentos_status (
   id uuid primary key default gen_random_uuid(),
