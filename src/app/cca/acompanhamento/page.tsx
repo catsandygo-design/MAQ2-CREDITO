@@ -1,8 +1,10 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
+import { subscribeProcessoChanges } from '@/lib/api/events';
+import { classeRetrabalho, metricasOperacionais, type DiagnosticoGargalo } from '@/lib/metrics/processos';
+import { pendenciaResolvida, tonePrazoPendencia, type PendenciaTone } from '@/lib/prazo-pendencia';
 
-type PendenciaTone = 'critico' | 'medio' | 'ok';
 type PendenciaItem = [PendenciaTone, string, string, string];
 type ResumoItem = [string, string, string];
 
@@ -25,6 +27,7 @@ interface FilaVivaCcaItem {
   sinal: string;
   fiador: string;
   pendencias: string[];
+  hasPendencia: boolean;
   proximaAcao?: string;
   observacao?: string;
   caixaIndex?: number;
@@ -32,104 +35,14 @@ interface FilaVivaCcaItem {
 }
 
 const caixaKeys = ['reserva', 'em_analise_credito', 'emitindo_formularios', 'formularios_em_assinatura', 'formularios_assinados', 'envio_conformidade'];
-const caixaLabels = ['Reserva', 'Em Analise Credito', 'Emitindo Formularios', 'Formularios Em Assinatura', 'Formularios Assinados', 'Finalizado'];
+const caixaLabels = ['Recebido', 'Conferência', 'Emitir Formulários', 'Formulários Anexos', 'Formulários Assinados', 'Envio Conformidade'];
 const agehabKeys = ['reserva', 'em_analise_credito', 'ficha_emitida', 'ficha_recebida', 'em_validacao_agehab', 'agehab_validada'];
 const agehabLabels = ['Reserva', 'Em Analise Credito', 'Ficha emitida', 'Ficha Recebida', 'Em Validacao Agehab', 'Agehab Validada'];
-
-const pendenciasModeloAnalista: PendenciaItem[] = [
-  ['critico', 'MATHEUS ALVES', 'Extrato FGTS pendente de retorno do corretor', 'Hoje 17:00'],
-  ['medio', 'ANA PAULA', 'Documento enviado aguardando abertura do analista', '12h'],
-  ['medio', 'CARLOS HENRIQUE', 'Renda informal exige declaracao complementar', '24h'],
-  ['ok', 'JOAO AMORIN', 'Kit documental aprovado para envio ao CCA', 'OK'],
-];
 
 const resumoOperacionalCca: ResumoItem[] = [
   ['Com o CCA', '31', 'processos ativos'],
   ['Para conformidade', '18', 'encaminhados'],
   ['Assinados', '9', 'minutas assinadas'],
-];
-
-const filaVivaCca: FilaVivaCcaItem[] = [
-  {
-    id: '458712',
-    produto: 'PP',
-    cliente: 'MATHEUS ALVES DE MELO',
-    empreendimento: 'Ag. 3884 - Caixa Sul',
-    corretor: 'Bianca Moura',
-    cca: 'CCA',
-    prioridade: 'DOC PENDENCIADO CCA',
-    comercial: '76 dias',
-    credito: '17 dias',
-    panorama: 'Em Processo',
-    resumo: 'Aguardando retorno documental para continuidade da analise CCA.',
-    aging: '76 dias',
-    slaCca: '17 dias',
-    caixa: 'Doc Pendenciado CCA',
-    agehab: 'N/A',
-    sinal: 'Nao tem',
-    fiador: 'Nao tem',
-    pendencias: ['Doc Pendenciado CCA'],
-  },
-  {
-    id: '458713',
-    produto: 'PN',
-    cliente: 'ANA PAULA RIBEIRO',
-    empreendimento: 'Ag. 2710 - Caixa Centro',
-    corretor: 'Douglas Silva',
-    cca: 'CCA',
-    prioridade: 'EMITIR FORMULARIOS',
-    comercial: '27 dias',
-    credito: '8 dias',
-    panorama: 'Em Processo',
-    resumo: 'Processo pronto para emissao dos formularios Caixa.',
-    aging: '27 dias',
-    slaCca: '8 dias',
-    caixa: 'Emitir Formularios',
-    agehab: 'N/A',
-    sinal: 'Nao tem',
-    fiador: 'Nao tem',
-    pendencias: ['Emitir Formularios'],
-  },
-  {
-    id: '458714',
-    produto: 'PA',
-    cliente: 'CARLOS HENRIQUE SOUZA',
-    empreendimento: 'Ag. 4201 - Caixa Norte',
-    corretor: 'Patricia Nunes',
-    cca: 'CCA',
-    prioridade: 'AGUARDANDO FORMULARIOS',
-    comercial: '23 dias',
-    credito: '5 dias',
-    panorama: 'Em Processo',
-    resumo: 'Formulario emitido aguardando retorno para conferencia.',
-    aging: '23 dias',
-    slaCca: '5 dias',
-    caixa: 'Aguardando Formularios',
-    agehab: 'N/A',
-    sinal: 'Nao tem',
-    fiador: 'Nao tem',
-    pendencias: ['Aguardando Formularios'],
-  },
-  {
-    id: '458715',
-    produto: 'PP',
-    cliente: 'JOAO AMORIN',
-    empreendimento: 'Ag. 1562 - Caixa Oeste',
-    corretor: 'CCA Central',
-    cca: 'CCA',
-    prioridade: 'FORMULARIOS ASSINADOS',
-    comercial: '19 dias',
-    credito: '4 dias',
-    panorama: 'Em Processo',
-    resumo: 'Formularios assinados aguardando envio para proxima etapa.',
-    aging: '19 dias',
-    slaCca: '4 dias',
-    caixa: 'Formularios Assinados',
-    agehab: 'N/A',
-    sinal: 'Nao tem',
-    fiador: 'Nao tem',
-    pendencias: ['Formularios Assinados'],
-  },
 ];
 
 function statusLabel(status: string | null | undefined) {
@@ -165,14 +78,53 @@ function prazoLabel(valor?: string) {
   return data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
+function historicoPendencias(processo: any) {
+  return [...(processo?.pendenciasHistorico || [])]
+    .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+    .map((item: any) => {
+      const quando = prazoLabel(item.created_at);
+      const evento = item.evento === 'tratada' ? `Tratada${item.status_documento ? ` (${item.status_documento})` : ''}` : 'Criada';
+      const prazo = item.prazo ? ` | Prazo ${prazoLabel(item.prazo)}` : '';
+      const ator = item.origem ? ` por ${item.origem}` : '';
+      return `${evento}${ator}${quando ? ` em ${quando}` : ''} - ${docLabel(item.documento_key)}: ${item.descricao || 'Pendencia registrada'}${prazo}`;
+    });
+}
+
+function alertasPendencias(processos: any[]): PendenciaItem[] {
+  return processos.flatMap((processo) => {
+    const observacaoAnalista = processo?.observacao_analista
+      ? [[
+        'medio',
+        processo?.cliente || processo?.reserva || 'Cliente',
+        `Observacao do analista: ${processo.observacao_analista}`,
+        prazoLabel(processo?.updated_at) || '-',
+      ] as PendenciaItem]
+      : [];
+
+    const pendencias = Object.entries(processo?.pendencias || {})
+      .filter(([key, pendencia]: [string, any]) => Boolean(pendencia?.descricao || pendencia?.prazo) && !pendenciaResolvida(processo?.documentos?.[key]))
+      .map(([key, pendencia]: [string, any]) => ([
+        tonePrazoPendencia(pendencia),
+        processo?.cliente || processo?.reserva || 'Cliente',
+        `${docLabel(key)}: ${pendencia?.descricao || 'Documento pendente'}`,
+        prazoLabel(pendencia?.prazo || pendencia?.updated_at) || '-',
+      ] as PendenciaItem));
+
+    return [...observacaoAnalista, ...pendencias];
+  });
+}
+
 function processoToFilaCca(processo: any): FilaVivaCcaItem {
   const caixa = statusLabel(processo.caixa);
   const agehab = statusLabel(processo.agehab);
-  const pendencias = Object.entries(processo?.pendencias || {}).map(([key, pendencia]: [string, any]) => (
-    `${docLabel(key)}: ${pendencia?.descricao || 'Documento pendente'}${pendencia?.prazo ? ` | Prazo ${prazoLabel(pendencia.prazo)}` : ''}`
-  ));
+  const pendencias = Object.entries(processo?.pendencias || {})
+    .filter(([key, pendencia]: [string, any]) => Boolean(pendencia?.descricao || pendencia?.prazo) && !pendenciaResolvida(processo?.documentos?.[key]))
+    .map(([key, pendencia]: [string, any]) => (
+      `${docLabel(key)}: ${pendencia?.descricao || 'Documento pendente'}${pendencia?.prazo ? ` | Prazo ${prazoLabel(pendencia.prazo)}` : ''}`
+    ));
   const observacaoAnalista = processo?.observacao_analista ? [`Observacao do analista: ${processo.observacao_analista}`] : [];
-  const listaPendencias = [...observacaoAnalista, ...pendencias];
+  const historico = historicoPendencias(processo);
+  const listaPendencias = [...observacaoAnalista, ...(historico.length ? historico : pendencias)];
   const pendenciasVisiveis = listaPendencias.length ? listaPendencias : [caixa];
   return {
     id: processo.reserva,
@@ -180,7 +132,7 @@ function processoToFilaCca(processo: any): FilaVivaCcaItem {
     cliente: processo.cliente || processo.reserva,
     empreendimento: processo.empreendimento || 'Kit Caixa | Kit Agehab',
     corretor: processo.corretor || '-',
-    cca: 'CCA',
+    cca: processo.cca_vinculado || 'CCA',
     prioridade: 'EMITIR FORMULARIOS',
     comercial: processo.sla?.elapsed_label || '0m',
     credito: processo.sla?.elapsed_label || '0m',
@@ -193,6 +145,7 @@ function processoToFilaCca(processo: any): FilaVivaCcaItem {
     sinal: processo.sinal || 'Nao tem',
     fiador: processo.fiador || 'Nao tem',
     pendencias: pendenciasVisiveis,
+    hasPendencia: listaPendencias.length > 0,
     proximaAcao: listaPendencias.length ? 'Verificar retorno do analista' : `Acompanhar Caixa: ${caixa}`,
     observacao: listaPendencias[0] || 'Sem observacao registrada',
     caixaIndex: Math.max(0, caixaKeys.indexOf(processo.caixa || 'reserva')),
@@ -212,6 +165,7 @@ function checklistCcaUrl(cliente: FilaVivaCcaItem) {
     caixa: cliente.caixa,
     agehab: cliente.agehab,
     view: 'web-cca-v2',
+    origem: 'cca',
   });
 
   return `/cca/checklist?${params.toString()}`;
@@ -221,6 +175,8 @@ export default function CcaAcompanhamentoPage() {
   const [detalhesAbertos, setDetalhesAbertos] = useState<string[]>([]);
   const [filaCca, setFilaCca] = useState<FilaVivaCcaItem[]>([]);
   const [carregouProcessos, setCarregouProcessos] = useState(false);
+  const [processosRaw, setProcessosRaw] = useState<any[]>([]);
+  const [diagnosticos, setDiagnosticos] = useState<DiagnosticoGargalo[]>([]);
   const [atualizacaoDisponivel, setAtualizacaoDisponivel] = useState(false);
 
   const carregarProcessos = () => {
@@ -228,11 +184,16 @@ export default function CcaAcompanhamentoPage() {
       .then((response) => (response.ok ? response.json() : []))
       .then((data) => {
         const processos = Array.isArray(data) ? data : Array.isArray(data?.value) ? data.value : [];
+        setProcessosRaw(processos);
         setFilaCca(processos.map(processoToFilaCca));
         setCarregouProcessos(true);
         setAtualizacaoDisponivel(false);
       })
-      .catch(() => { setFilaCca([]); setCarregouProcessos(true); });
+      .catch(() => { setProcessosRaw([]); setFilaCca([]); setCarregouProcessos(true); });
+    fetch('/api/processos/diagnosticos/gargalos', { headers: { Accept: 'application/json' }, cache: 'no-store' })
+      .then((response) => (response.ok ? response.json() : []))
+      .then((data) => setDiagnosticos(Array.isArray(data) ? data : []))
+      .catch(() => setDiagnosticos([]));
   };
 
   useEffect(() => {
@@ -241,7 +202,11 @@ export default function CcaAcompanhamentoPage() {
       if (event.key === 'siocred_status_update') setAtualizacaoDisponivel(true);
     };
     window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    const unsubscribe = subscribeProcessoChanges(() => setAtualizacaoDisponivel(true));
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      unsubscribe();
+    };
   }, []);
 
   const abrirTodos = () => setDetalhesAbertos(filaCca.map((cliente) => cliente.id));
@@ -264,46 +229,42 @@ export default function CcaAcompanhamentoPage() {
       String(filaCca.filter((cliente) => (
         cliente.caixa.toLowerCase().includes('pend') ||
         cliente.agehab.toLowerCase().includes('pend') ||
-        cliente.pendencias.some((pendencia) => pendencia.toLowerCase().includes('pend'))
+        cliente.hasPendencia
       )).length),
       'aguardando ajuste',
     ],
   ];
-  const alertasCca: PendenciaItem[] = filaCca.flatMap((cliente) => (
-    cliente.pendencias
-      .filter((pendencia) => pendencia.toLowerCase().includes('pend') || pendencia.toLowerCase().includes('observacao') || pendencia.includes(':'))
-      .map((pendencia) => ['critico', cliente.cliente, pendencia, cliente.slaCca] as PendenciaItem)
-  ));
+  const alertasCca: PendenciaItem[] = alertasPendencias(processosRaw);
   const alertasAtuais = alertasCca.length ? alertasCca : carregouProcessos ? [] : [];
+  const metricas = metricasOperacionais(processosRaw, diagnosticos);
 
   return (
-    <main className="cor-page cor-page-premium" data-layout-version="analista-dashboards-v1">
-      <header className="cor-premium-top">
-        <div className="cor-premium-title">
+    <main className="cor-page cor-page-premium min-h-screen overflow-x-hidden" data-layout-version="analista-dashboards-v1" data-page="cca">
+      <header className="cor-premium-top relative z-[1] mx-auto flex w-full max-w-[1760px] items-center justify-between gap-3">
+        <div className="cor-premium-title flex min-w-0 items-start gap-3">
           <span className="cor-chart-icon">&uarr;</span>
           <div>
             <h1>Painel CCA</h1>
             <p>Gestao documental, pendencias de credito, SLA da carteira e telemetria dos processos em reserva.</p>
           </div>
         </div>
-        <div className="cor-premium-actions cor-actions-no-primary">
-          <button type="button" onClick={carregarProcessos}>{atualizacaoDisponivel ? '↻ Atualização disponível' : '↻ Atualizar'}</button>
+        <div className="cor-premium-actions cor-actions-no-primary flex flex-wrap justify-end gap-2">
+          <button type="button" onClick={carregarProcessos}>{atualizacaoDisponivel ? 'Atualizacao disponivel' : 'Atualizar'}</button>
           <button>&#8617; Sair</button>
         </div>
       </header>
 
-      <section className="cor-dash-grid cor-dash-premium">
-        <article className="cor-card cor-panel-alerts">
+      <section className="cor-dash-grid cor-dash-premium relative z-[1] mx-auto grid w-full max-w-[1760px] gap-[18px]">
+        <article className="cor-card cor-panel-alerts relative flex flex-col overflow-hidden bg-white text-slate-900">
           <div className="cor-panel-head">
             <div>
               <small>Dashboard 1 &mdash; Pendencias acompanhadas</small>
-              <p>Clientes e documentos que precisam de acao do analista ou retorno do corretor.</p>
             </div>
             <strong className="cor-urgent-pill">{alertasAtuais.length} atencoes</strong>
           </div>
           <div className="cor-alert-list">
             {alertasAtuais.length ? alertasAtuais.map(([tone, nome, desc, prazo], index) => (
-              <div className={`cor-alert-item cor-alert-${tone}`} key={`${nome}-${prazo}-${index}`}>
+              <div className={`cor-alert-item cor-alert-${tone}`} key={`${nome}-${prazo}-${index}`} title={desc}>
                 <i />
                 <div className="cor-alert-copy">
                   <b>{nome}</b>
@@ -311,64 +272,67 @@ export default function CcaAcompanhamentoPage() {
                 </div>
                 <em><small>Prazo</small>{prazo}</em>
               </div>
-            )) : <div className="cor-alert-empty"><b>Sem pendências urgentes</b><span>Quando houver documento pendenciado, ele aparece aqui automaticamente.</span></div>}
+            )) : <div className="cor-alert-empty"><b>Sem pendencias urgentes</b><span>Quando houver documento pendenciado, ele aparece aqui automaticamente.</span></div>}
           </div>
         </article>
 
-        <article className="cor-card cor-panel-conversion">
-          <div className="cor-panel-head">
-            <div>
-              <small>Dashboard 3 &mdash; Resumo operacional CCA</small>
-              <p>Volume atual com CCA, encaminhados para conformidade e contratos ja assinados.</p>
-            </div>
-          </div>
-          <div className="cca-flow-metrics">
-            {resumoOperacionalAtual.map(([label, total, desc]) => (
-              <div key={label}>
-                <span>{label}</span>
-                <b>{total}</b>
-                <small>{desc}</small>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <div className="cor-sla-stack">
-          <article className="cor-card cor-panel-sla">
+        <article className="cor-card cor-panel-conversion relative flex flex-col overflow-hidden bg-white text-slate-900">
             <div className="cor-panel-head">
               <div>
-                <small>Dashboard 2 &mdash; SLA</small>
-                <p>Tempo medio da carteira do analista comparado ao melhor SLA operacional.</p>
+                <small>Dashboard 2 - Resumo operacional CCA</small>
+              </div>
+            </div>
+            <div className="cca-flow-metrics">
+              {resumoOperacionalAtual.map(([label, total, desc]) => (
+                <div key={label}>
+                  <span>{label}</span>
+                  <b>{total}</b>
+                  <small>{desc}</small>
+                </div>
+              ))}
+            </div>
+          </article>
+
+        <div className="cor-sla-stack">
+          <article className="cor-card cor-panel-sla relative flex flex-col overflow-hidden bg-white text-slate-900">
+            <div className="cor-panel-head">
+              <div>
+                <small>Dashboard 3 - SLA</small>
               </div>
             </div>
             <div className="cor-speed-premium">
               <div className="cor-speed-arc" />
-              <div className="cor-speed-needle" />
+              <div className="cor-speed-needle" style={{ transform: `translateX(-50%) rotate(${metricas.slaNeedleAngle}deg)` }} />
               <span />
             </div>
             <div className="cor-sla-lines">
-              <div><span>Melhor SLA documental</span><small>Referencia da operacao</small><b className="green">3h</b></div>
-              <div><span>SLA atual do analista</span><small>Media de resposta da carteira</small><b className="orange">11h</b></div>
+              <div><span>Melhor SLA documental</span><small>Referencia da operacao</small><b className="green">{metricas.melhorSla}</b></div>
+              <div><span>SLA atual do analista</span><small>Media de resposta da carteira</small><b className="orange">{metricas.mediaSla}</b></div>
             </div>
           </article>
-          <article className="cor-card cor-rework-card">
-            <div className="cor-rework">
+          <article className="cor-card cor-rework-card relative flex flex-col overflow-hidden bg-white text-slate-900">
+            <div className={classeRetrabalho(metricas.taxaRetrabalho)}>
               <span className="cor-rework-icon">&#128296;</span>
               <span>Taxa de retrabalho</span>
-              <b>3,2%</b>
+              <b>{metricas.taxaRetrabalho.toFixed(1).replace('.', ',')}%</b>
             </div>
           </article>
         </div>
       </section>
 
-      <section className="analyst-live-board">
+      <section className="analyst-live-board" data-layout-version="analista-card-v2">
         <header className="analyst-live-head">
           <div className="analyst-live-title">
             <div className="analyst-live-title-row">
-              <h2>Fila Viva - Fluxo do Cliente</h2>
-              <strong>{filaCca.length} processo(s)</strong>
-              <strong>{filaCca.length} com formularios</strong>
-              <strong>{filaCca.length} prioridade alta</strong>
+              <div>
+                <h2>Fila Viva - Fluxo do Cliente</h2>
+                <p>Fluxo operacional da carteira</p>
+              </div>
+              <div className="analyst-live-kpis">
+                <strong><b>{filaCca.length}</b><span>Processos</span></strong>
+                <strong><b>{filaCca.length}</b><span>Com formularios</span></strong>
+                <strong><b>{filaCca.length}</b><span>Prioridade alta</span></strong>
+              </div>
             </div>
           </div>
           <div className="analyst-live-filters">
@@ -388,37 +352,41 @@ export default function CcaAcompanhamentoPage() {
           </div>
         </header>
 
-        <div className="analyst-live-list">
+        <div className="analyst-live-list" data-layout-version="analista-card-v2">
           {filaCca.map((cliente) => {
             const detalheAberto = detalhesAbertos.includes(cliente.id);
-            const pendenciado = cliente.pendencias.some((pendencia) => pendencia.toLowerCase().includes('pend') || pendencia.includes(':'));
+            const pendenciado = cliente.hasPendencia;
 
             return (
               <article className={`analyst-live-card ${detalheAberto ? 'is-open' : ''} ${pendenciado ? 'is-pending' : ''}`} key={cliente.id}>
                 <div className="analyst-live-main">
-                  <div className="analyst-client-title">
-                    <i />
-                    <b>{cliente.produto}</b>
-                    <h3>
-                      <a href={checklistCcaUrl(cliente)}>
-                        {cliente.cliente}
-                      </a>
-                    </h3>
+                  <div className="analyst-card-client-area">
+                    <div className="analyst-client-title">
+                      <i />
+                      <b>{cliente.produto}</b>
+                      <h3>
+                        <a href={checklistCcaUrl(cliente)}>
+                          {cliente.cliente}
+                        </a>
+                      </h3>
+                    </div>
+                    <p>{cliente.empreendimento}</p>
+                    <p>{cliente.corretor}</p>
                   </div>
-                  <p>{cliente.empreendimento}</p>
-                  <p>{cliente.corretor}</p>
-                  <div className="analyst-cca-line">
-                    <span>CCA responsavel</span>
-                    <em>{cliente.cca}</em>
+
+                  <div className="analyst-card-pendency-area">
+                    <div className="analyst-cca-line">
+                      <span>CCA responsavel</span>
+                      <em>{cliente.cca}</em>
+                    </div>
+                    <small>{cliente.prioridade}</small>
+                    {pendenciado ? <strong className="pending-warning">Pendenciado</strong> : null}
                   </div>
-                  <small>{cliente.prioridade}</small>
-                  {pendenciado ? <strong className="pending-warning">Pendenciado</strong> : null}
                 </div>
 
-                <div className="analyst-live-status">
+                <div className="analyst-live-status analyst-card-action-area">
                   <div>
-                    <span>Comercial {cliente.comercial}</span>
-                    <span>Credito {cliente.credito}</span>
+                    <span>SLA Cliente {cliente.slaCca}</span>
                   </div>
                   <button type="button" onClick={() => alternarDetalhe(cliente.id)}>
                     {detalheAberto ? 'Fechar detalhes' : 'Abrir detalhes'}
@@ -435,7 +403,7 @@ export default function CcaAcompanhamentoPage() {
                         <p>{cliente.resumo}</p>
                         <div className="analyst-detail-tags">
                           <b>Aging {cliente.aging}</b>
-                          <b className="danger">SLA CCA {cliente.slaCca}</b>
+                          <b className="danger">SLA Cliente {cliente.slaCca}</b>
                         </div>
                       </section>
 
@@ -484,7 +452,7 @@ export default function CcaAcompanhamentoPage() {
                         ['Agehab', cliente.agehab],
                         ['Sinal', cliente.sinal],
                         ['Fiador', cliente.fiador],
-                        ['SLA CCA', cliente.slaCca],
+                        ['SLA Cliente', cliente.slaCca],
                       ].map(([label, value]) => (
                         <section className="analyst-mini-card" key={label}>
                           <span>{label}</span>

@@ -1,19 +1,24 @@
+import asyncio
 import base64
 import binascii
+from datetime import datetime, timezone
 from io import BytesIO
+import logging
 import re
-from pathlib import Path
 from typing import Any
-from urllib.request import urlopen
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, RedirectResponse, Response, StreamingResponse
 from pypdf import PdfReader, PdfWriter
 from starlette.datastructures import UploadFile
 
-from app.config import get_settings
 from app.db import execute, fetch_all, fetch_one
+from app.config import get_settings
 from app.models import (
+    ChecklistMessageCreate,
+    ChecklistMessageResponse,
+    CredituDadosPayload,
+    DiagnosticoProcessoResponse,
     DocumentoUpdate,
     PendenciaUpdate,
     ProcessoResponse,
@@ -29,11 +34,30 @@ from app.normalizers import (
     RELACIONAMENTO_STATUS,
     normalize,
 )
-from app.supabase_client import get_supabase
+from app.storage import (
+    LOCAL_UPLOAD_ROOT,
+    MERGED_UPLOAD_ROOT,
+    fallback_upload_url,
+    local_upload_path,
+    remove_from_storage,
+    save_local_upload,
+    upload_bytes,
+    upload_to_storage,
+)
 
 router = APIRouter(prefix="/processos", tags=["processos"])
-LOCAL_UPLOAD_ROOT = Path(__file__).resolve().parents[2] / "uploads" / "processos"
-MERGED_UPLOAD_ROOT = LOCAL_UPLOAD_ROOT / "_merged"
+logger = logging.getLogger(__name__)
+
+
+def prazo_no_passado(valor: str | None) -> bool:
+    if not valor:
+        return False
+    try:
+        prazo = datetime.fromisoformat(valor.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    agora = datetime.now(prazo.tzinfo or timezone.utc) if prazo.tzinfo else datetime.now()
+    return prazo < agora
 
 DOCUMENT_ORDER = [
     "documentos-do-proponente-identidade-e-cpf",
@@ -116,6 +140,49 @@ def stop_sla(reserva: str, reason: str = "envio_conformidade") -> None:
     )
 
 
+EVENT_LABELS = {
+    "reserva": "Reserva",
+    "em_analise_credito": "Em Analise Credito",
+    "emitindo_formularios": "Emitindo Formularios",
+    "formularios_em_assinatura": "Formulários Em Assinatura",
+    "formularios_assinados": "Formularios Assinados",
+    "envio_conformidade": "Enviado para Conformidade",
+    "ficha_emitida": "Ficha emitida",
+    "ficha_recebida": "Ficha Recebida",
+    "em_validacao_agehab": "Em Validacao Agehab",
+    "agehab_validada": "Agehab Validada",
+}
+
+
+def registrar_evento(reserva: str, status: str, id_corretor: str | None = None) -> None:
+    execute(
+        """
+        insert into public.log_eventos (id_cliente, status, timestamp, id_corretor)
+        values (%s, %s, now(), %s)
+        """,
+        [reserva, status, id_corretor],
+    )
+
+
+def registrar_historico_pendencia(
+    reserva: str,
+    documento_key: str,
+    descricao: str = "",
+    prazo: str | None = None,
+    origem: str | None = None,
+    evento: str = "criada",
+    status_documento: str | None = None,
+) -> None:
+    execute(
+        """
+        insert into public.fastapi_pendencias_historico
+          (reserva, documento_key, descricao, prazo, origem, evento, status_documento)
+        values (%s, %s, %s, %s, %s, %s, %s)
+        """,
+        [reserva, documento_key, descricao, prazo, origem, evento, status_documento],
+    )
+
+
 def format_elapsed(seconds: int) -> str:
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
@@ -156,6 +223,7 @@ def table_rows(table: str, reserva: str) -> list[dict[str, Any]]:
         "documentos_status": "fastapi_documentos_status",
         "relacionamento_status": "fastapi_relacionamento_status",
         "documentos_pendencias": "fastapi_documentos_pendencias",
+        "pendencias_historico": "fastapi_pendencias_historico",
         "uploads": "fastapi_uploads",
     }
     physical_table = table_map.get(table)
@@ -169,14 +237,17 @@ def processo_to_response(processo: dict[str, Any], include_details: bool = True)
     documentos: dict[str, str] = {}
     relacionamento: dict[str, str] = {}
     pendencias: dict[str, dict[str, Any]] = {}
+    pendencias_historico: list[dict[str, Any]] = []
     uploads_cca: dict[str, dict[str, str]] = {}
     uploads_enviados: dict[str, bool] = {}
     uploads: list[dict[str, Any]] = []
+    creditu: dict[str, str] = {}
 
     if include_details:
         documentos = {row["documento_key"]: row["status"] for row in table_rows("documentos_status", reserva)}
         relacionamento = {row["relacionamento_key"]: row["status"] for row in table_rows("relacionamento_status", reserva)}
         pendencias = {row["documento_key"]: row for row in table_rows("documentos_pendencias", reserva)}
+        pendencias_historico = table_rows("pendencias_historico", reserva)
         uploads = table_rows("uploads", reserva)
         uploads_cca = {
             row["documento_key"]: {"name": row["file_name"], "data": row["url"]}
@@ -184,6 +255,16 @@ def processo_to_response(processo: dict[str, Any], include_details: bool = True)
             if row.get("documento_key") and row.get("grupo") in {"corretor", "gestor", "caixa", "cca"}
         }
         uploads_enviados = {row["documento_key"]: True for row in uploads if row.get("documento_key")}
+        ensure_creditu_table()
+        creditu_row = fetch_one(
+            "select email_segundo_proponente, telefone_segundo_proponente from public.fastapi_creditu_dados where reserva = %s",
+            [reserva],
+        )
+        if creditu_row:
+            creditu = {
+                "email_segundo_proponente": creditu_row.get("email_segundo_proponente") or "",
+                "telefone_segundo_proponente": creditu_row.get("telefone_segundo_proponente") or "",
+            }
 
     return ProcessoResponse(
         reserva=reserva,
@@ -200,7 +281,9 @@ def processo_to_response(processo: dict[str, Any], include_details: bool = True)
         encaminhado_analista=bool(processo.get("encaminhado_analista")),
         documentos=documentos,
         relacionamento=relacionamento,
+        creditu=creditu,
         pendencias=pendencias,
+        pendenciasHistorico=pendencias_historico,
         uploadsCca=uploads_cca,
         uploadsEnviados=uploads_enviados,
         temDocumentoEnviado=bool(uploads),
@@ -208,25 +291,22 @@ def processo_to_response(processo: dict[str, Any], include_details: bool = True)
     )
 
 
-def upload_to_storage(path: str, content: bytes, content_type: str) -> str:
-    settings = get_settings()
-    bucket = get_supabase().storage.from_(settings.supabase_storage_bucket)
-    bucket.upload(path, content, {"content-type": content_type, "upsert": "true"})
-    return bucket.get_public_url(path)
+def ensure_creditu_table() -> None:
+    execute(
+        """
+        create extension if not exists pgcrypto;
 
-
-def fallback_upload_url(reserva: str, storage_path: str) -> str:
-    return f"/api/processos/{reserva}/uploads/{safe_segment(storage_path)}"
-
-
-def local_upload_path(storage_path: str) -> Path:
-    return LOCAL_UPLOAD_ROOT / safe_segment(storage_path)
-
-
-def save_local_upload(storage_path: str, content: bytes) -> None:
-    path = local_upload_path(storage_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(content)
+        create table if not exists public.fastapi_creditu_dados (
+          id uuid primary key default gen_random_uuid(),
+          reserva text not null references public.fastapi_processos(reserva) on delete cascade,
+          email_segundo_proponente text,
+          telefone_segundo_proponente text,
+          created_at timestamptz not null default now(),
+          updated_at timestamptz not null default now(),
+          unique (reserva)
+        )
+        """
+    )
 
 
 def documento_sort_key(row: dict[str, Any]) -> tuple[int, str, str]:
@@ -237,18 +317,7 @@ def documento_sort_key(row: dict[str, Any]) -> tuple[int, str, str]:
 
 
 def upload_pdf_bytes(row: dict[str, Any]) -> bytes:
-    storage_path = row.get("storage_path") or ""
-    local_path = local_upload_path(storage_path)
-    if local_path.exists():
-        return local_path.read_bytes()
-
-    url = row.get("url") or ""
-    if url.startswith("/api/processos/"):
-        raise HTTPException(status_code=404, detail=f"Arquivo local nao encontrado: {row.get('file_name')}")
-    if url.startswith("http://") or url.startswith("https://"):
-        with urlopen(url, timeout=30) as response:
-            return response.read()
-    raise HTTPException(status_code=404, detail=f"Arquivo nao encontrado: {row.get('file_name')}")
+    return upload_bytes(row)
 
 
 def merge_pdf_uploads(reserva: str, rows: list[dict[str, Any]]) -> FileResponse:
@@ -280,6 +349,215 @@ def merge_pdf_uploads(reserva: str, rows: list[dict[str, Any]]) -> FileResponse:
     )
 
 
+def merge_creditu_uploads(reserva: str, rows: list[dict[str, Any]]) -> FileResponse:
+    creditu_order = [
+        "documentos-creditu-tela-score-cliente",
+        "documentos-creditu-rg-cpf-ou-cnh",
+        "documentos-creditu-tela-score-segundo-proponente",
+        "documentos-creditu-tela-aprovacao-creditu",
+        "documentos-creditu-tela-sicaq-cliente",
+    ]
+    basic_order = [
+        "documentos-do-proponente-identidade-e-cpf",
+        "renda-formal-clt-vinculo-holerites",
+        "renda-formal-clt-vinculo-renda-variavel",
+        "renda-informal-autonomo-liberal-extrato-bancario",
+        "aposentados-pensionistas-extrato-do-beneficio",
+        "domesticos-contratacao-por-cpf-esocial",
+        "documentos-do-proponente-comprovante-de-residencia",
+        "documentos-do-proponente-comp-de-estado-civil",
+    ]
+
+    def select_by_prefixes(prefixes: list[str]) -> list[dict[str, Any]]:
+        selected: list[dict[str, Any]] = []
+        for prefix in prefixes:
+            match = next(
+                (
+                    row
+                    for row in rows
+                    if (row.get("content_type") or "").lower() == "application/pdf"
+                    and (row.get("documento_key") or "").startswith(prefix)
+                    and row not in selected
+                ),
+                None,
+            )
+            if match:
+                selected.append(match)
+        return selected
+
+    selected = select_by_prefixes(creditu_order)
+    filename_prefix = "CREDITU"
+    if not selected:
+        selected = select_by_prefixes(basic_order)
+        filename_prefix = "DOCUMENTOS_BASICOS_CREDITU"
+    if not selected:
+        raise HTTPException(status_code=404, detail="Não existem documentos disponíveis para download.")
+
+    writer = PdfWriter()
+    for row in selected:
+        try:
+            reader = PdfReader(BytesIO(upload_pdf_bytes(row)))
+            for page in reader.pages:
+                writer.add_page(page)
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"Nao foi possivel juntar o PDF: {row.get('file_name')}") from exc
+
+    MERGED_UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
+    output_path = MERGED_UPLOAD_ROOT / f"creditu-{safe_segment(reserva)}.pdf"
+    with output_path.open("wb") as output:
+        writer.write(output)
+
+    return FileResponse(
+        output_path,
+        media_type="application/pdf",
+        filename=f"{filename_prefix}_RESERVA_{safe_segment(reserva)}.pdf",
+    )
+
+
+def merge_kit_caixa_uploads(reserva: str, rows: list[dict[str, Any]]) -> FileResponse:
+    kit_caixa_order = [
+        ["documentos-do-proponente-identidade-e-cpf"],
+        ["documentos-do-proponente-comp-de-estado-civil"],
+        ["conjuge", "cônjuge", "conjuge-identidade", "conjuge-rg", "conjuge-cpf"],
+        ["dependente-filhos-menores", "dependente-filhos-maiores"],
+        ["documentos-do-proponente-comprovante-de-residencia"],
+        ["renda-formal"],
+        ["documentos-caixa-damp"],
+        ["documentos-caixa-ficha-de-cadastro-caixa"],
+        ["documentos-caixa-abertura-de-conta"],
+        ["documentos-caixa-mo"],
+        ["documentos-caixa-formulario-cartao", "documentos-caixa-proposta-cartao"],
+        ["documentos-caixa-formulario-cheque-azul"],
+    ]
+
+    latest_by_key: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        if (row.get("content_type") or "").lower() != "application/pdf":
+            continue
+        key = row.get("documento_key") or ""
+        if not key:
+            continue
+        current = latest_by_key.get(key)
+        if not current or str(row.get("created_at") or "") > str(current.get("created_at") or ""):
+            latest_by_key[key] = row
+
+    selected: list[dict[str, Any]] = []
+    selected_keys: set[str] = set()
+    for prefixes in kit_caixa_order:
+        matches = sorted(
+            [
+                row
+                for key, row in latest_by_key.items()
+                if key not in selected_keys and any(key.startswith(prefix) for prefix in prefixes)
+            ],
+            key=lambda item: item.get("documento_key") or "",
+        )
+        for row in matches:
+            selected.append(row)
+            selected_keys.add(row.get("documento_key") or "")
+
+    if not selected:
+        raise HTTPException(status_code=404, detail="Não existem documentos do Kit Caixa disponíveis para download.")
+
+    writer = PdfWriter()
+    for row in selected:
+        try:
+            reader = PdfReader(BytesIO(upload_pdf_bytes(row)))
+            for page in reader.pages:
+                writer.add_page(page)
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"Nao foi possivel juntar o PDF: {row.get('file_name')}") from exc
+
+    MERGED_UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
+    output_path = MERGED_UPLOAD_ROOT / f"kit-caixa-{safe_segment(reserva)}.pdf"
+    with output_path.open("wb") as output:
+        writer.write(output)
+
+    return FileResponse(
+        output_path,
+        media_type="application/pdf",
+        filename=f"KIT_CAIXA_RESERVA_{safe_segment(reserva)}.pdf",
+    )
+
+
+def merge_kit_agehab_uploads(reserva: str, rows: list[dict[str, Any]]) -> FileResponse:
+    kit_agehab_order = [
+        "documentos-agehab-declaracao-de-endereco",
+        "documentos-agehab-declaracao-renda-informal",
+        "documentos-agehab-declaracao-de-nao-renda",
+        "documentos-agehab-vinculo-3-anos",
+        "documentos-agehab-checklist-agehab",
+        "documentos-agehab-ficha-agehab",
+    ]
+
+    latest_by_key: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        if (row.get("content_type") or "").lower() != "application/pdf":
+            continue
+        key = row.get("documento_key") or ""
+        if not key or not any(key.startswith(prefix) for prefix in kit_agehab_order):
+            continue
+        current = latest_by_key.get(key)
+        if not current or str(row.get("created_at") or "") > str(current.get("created_at") or ""):
+            latest_by_key[key] = row
+
+    selected: list[dict[str, Any]] = []
+    selected_keys: set[str] = set()
+    for prefix in kit_agehab_order:
+        matches = sorted(
+            [
+                row
+                for key, row in latest_by_key.items()
+                if key not in selected_keys and key.startswith(prefix)
+            ],
+            key=lambda item: item.get("documento_key") or "",
+        )
+        for row in matches:
+            selected.append(row)
+            selected_keys.add(row.get("documento_key") or "")
+
+    if not selected:
+        raise HTTPException(status_code=404, detail="Não existem documentos do Kit AGEHAB disponíveis para download.")
+
+    writer = PdfWriter()
+    for row in selected:
+        try:
+            reader = PdfReader(BytesIO(upload_pdf_bytes(row)))
+            for page in reader.pages:
+                writer.add_page(page)
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"Nao foi possivel juntar o PDF: {row.get('file_name')}") from exc
+
+    MERGED_UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
+    output_path = MERGED_UPLOAD_ROOT / f"kit-agehab-{safe_segment(reserva)}.pdf"
+    with output_path.open("wb") as output:
+        writer.write(output)
+
+    return FileResponse(
+        output_path,
+        media_type="application/pdf",
+        filename=f"KIT_AGEHAB_RESERVA_{safe_segment(reserva)}.pdf",
+    )
+
+
+def processos_event_signature(reserva: str | None = None) -> str:
+    where = "where reserva = %s" if reserva else ""
+    params = [reserva] if reserva else []
+    row = fetch_one(
+        f"""
+        select concat_ws('|',
+          coalesce((select max(updated_at)::text from public.fastapi_processos {where}), ''),
+          coalesce((select max(updated_at)::text from public.fastapi_documentos_status {where}), ''),
+          coalesce((select max(updated_at)::text from public.fastapi_documentos_pendencias {where}), ''),
+          coalesce((select max(created_at)::text from public.fastapi_uploads {where}), ''),
+          coalesce((select max(updated_at)::text from public.fastapi_relacionamento_status {where}), '')
+        ) as signature
+        """,
+        params * 5,
+    )
+    return str(row.get("signature") if row else "")
+
+
 @router.get("", response_model=list[ProcessoResponse])
 def listar_processos(destino: str | None = None) -> list[ProcessoResponse]:
     where = ""
@@ -287,8 +565,8 @@ def listar_processos(destino: str | None = None) -> list[ProcessoResponse]:
     if destino == "analista":
         where = "where encaminhado_analista = true"
     elif destino == "cca":
-        where = "where encaminhado_analista = true and caixa_status = %s"
-        params.append("envio_conformidade")
+        where = "where encaminhado_analista = true and caixa_status in (%s, %s, %s, %s)"
+        params.extend(["emitindo_formularios", "formularios_em_assinatura", "formularios_assinados", "envio_conformidade"])
 
     rows = fetch_all(
         f"""
@@ -300,6 +578,95 @@ def listar_processos(destino: str | None = None) -> list[ProcessoResponse]:
         params,
     )
     return [processo_to_response(row, include_details=True) for row in rows]
+
+
+@router.get("/diagnosticos/gargalos", response_model=list[DiagnosticoProcessoResponse])
+def diagnosticar_gargalos(sla_meta: int = 7, retrabalho_corte: int = 0) -> list[DiagnosticoProcessoResponse]:
+    rows = fetch_all(
+        """
+        with eventos as (
+          select
+            id_cliente,
+            status,
+            lower(status) as status_norm,
+            "timestamp" as evento_em,
+            id_corretor
+          from public.log_eventos
+        ),
+        marcos as (
+          select
+            id_cliente,
+            min(evento_em) filter (where status = 'Reserva') as reserva_em,
+            min(evento_em) filter (where status = 'Enviado para Conformidade') as conformidade_em
+          from eventos
+          group by id_cliente
+        ),
+        corretores as (
+          select distinct on (id_cliente)
+            id_cliente,
+            id_corretor
+          from eventos
+          where id_corretor is not null
+          order by id_cliente, evento_em desc
+        ),
+        retrabalhos as (
+          select
+            e.id_cliente,
+            count(*)::int as qtd_retrabalho
+          from eventos e
+          where e.status in ('Formulários Em Assinatura', 'Ficha emitida')
+            and exists (
+              select 1
+              from eventos inval
+              where inval.id_cliente = e.id_cliente
+                and inval.evento_em < e.evento_em
+                and (
+                  inval.status_norm like '%%invalid%%'
+                  or inval.status_norm like '%%pendenc%%'
+                  or inval.status_norm like '%%reprov%%'
+                )
+            )
+          group by e.id_cliente
+        )
+        select
+          m.id_cliente,
+          c.id_corretor,
+          round((extract(epoch from (m.conformidade_em - m.reserva_em)) / 86400)::numeric, 2)::float as "Lead_Time_Total",
+          coalesce(r.qtd_retrabalho, 0) as "Qtd_Retrabalho",
+          case
+            when extract(epoch from (m.conformidade_em - m.reserva_em)) / 86400 > %s
+             and coalesce(r.qtd_retrabalho, 0) > %s then 'Problema Documental'
+            when extract(epoch from (m.conformidade_em - m.reserva_em)) / 86400 > %s
+             and coalesce(r.qtd_retrabalho, 0) <= %s then 'Problema de Processo'
+            else 'Processo Eficiente'
+          end as "Diagnostico"
+        from marcos m
+        left join retrabalhos r on r.id_cliente = m.id_cliente
+        left join corretores c on c.id_cliente = m.id_cliente
+        where m.reserva_em is not null
+          and m.conformidade_em is not null
+        order by "Lead_Time_Total" desc, m.id_cliente
+        """,
+        [sla_meta, retrabalho_corte, sla_meta, retrabalho_corte],
+    )
+    return [DiagnosticoProcessoResponse(**row) for row in rows]
+
+
+@router.get("/events")
+async def processo_events(reserva: str | None = None) -> StreamingResponse:
+    async def stream():
+        last_signature = processos_event_signature(reserva)
+        yield "event: ready\ndata: ok\n\n"
+        while True:
+            await asyncio.sleep(12)
+            signature = processos_event_signature(reserva)
+            if signature != last_signature:
+                last_signature = signature
+                yield "event: change\ndata: updated\n\n"
+            else:
+                yield "event: ping\ndata: ok\n\n"
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
 
 
 @router.get("/{reserva}", response_model=ProcessoResponse)
@@ -317,6 +684,13 @@ def atualizar_processo(reserva: str, payload: ProcessoUpdate) -> dict[str, Any]:
         values["agehab_status"] = normalize(values.pop("agehab"), AGEHAB_STATUS, "agehab")
     upsert_processo(reserva, values)
     start_sla(reserva)
+    corretor = values.get("corretor")
+    if values.get("encaminhado_analista"):
+        registrar_evento(reserva, "Reserva", corretor)
+    if values.get("caixa_status"):
+        registrar_evento(reserva, EVENT_LABELS.get(values["caixa_status"], values["caixa_status"]), corretor)
+    if values.get("agehab_status"):
+        registrar_evento(reserva, EVENT_LABELS.get(values["agehab_status"], values["agehab_status"]), corretor)
     if values.get("caixa_status") == "envio_conformidade":
         stop_sla(reserva, "envio_conformidade")
     return {"ok": True, "reserva": reserva, "sla": get_sla(reserva).model_dump()}
@@ -336,7 +710,19 @@ def parar_sla(reserva: str) -> dict[str, Any]:
 
 @router.put("/{reserva}/documentos/{documento_key}/pendencia")
 def salvar_pendencia(reserva: str, documento_key: str, payload: PendenciaUpdate) -> dict[str, Any]:
+    if prazo_no_passado(payload.prazo):
+        raise HTTPException(status_code=400, detail="O prazo da pendencia nao pode ser anterior ao horario atual.")
     upsert_processo(reserva)
+    registrar_evento(reserva, "Pendencia documental", payload.origem)
+    documento = payload.documento or documento_key
+    registrar_historico_pendencia(
+        reserva=reserva,
+        documento_key=documento,
+        descricao=payload.descricao,
+        prazo=payload.prazo,
+        origem=payload.origem,
+        evento="criada",
+    )
     execute(
         """
         insert into public.fastapi_documentos_pendencias (reserva, documento_key, descricao, prazo, origem, destino_card)
@@ -348,15 +734,119 @@ def salvar_pendencia(reserva: str, documento_key: str, payload: PendenciaUpdate)
           origem = excluded.origem,
           destino_card = excluded.destino_card
         """,
-        [reserva, payload.documento or documento_key, payload.descricao, payload.prazo, payload.origem, payload.destinoCard or "card1"],
+        [reserva, documento, payload.descricao, payload.prazo, payload.origem, payload.destinoCard or "card1"],
     )
     return {"ok": True, "reserva": reserva, "documento": documento_key, "card1Atualizado": True}
+
+
+@router.get("/{reserva}/messages", response_model=list[ChecklistMessageResponse])
+def listar_mensagens_processo(reserva: str) -> list[dict[str, Any]]:
+    rows = fetch_all(
+        """
+        select id::text, reserva, documento_key, author_name, author_role,
+               coalesce(target_role, 'todos') as target_role, message,
+               created_at::text, read_at::text
+        from public.fastapi_checklist_messages
+        where reserva = %s
+        order by created_at asc
+        """,
+        [reserva],
+    )
+    labels = {"analista": "Analista", "corretor": "Corretor", "gestor": "Gestor", "cca": "CCA", "todos": "Todos"}
+    for row in rows:
+        target_role = row.get("target_role") or "todos"
+        row["targetRole"] = target_role
+        row["targetLabel"] = labels.get(target_role, target_role.title())
+    return rows
+
+
+@router.get("/{reserva}/creditu")
+def obter_creditu(reserva: str) -> dict[str, str]:
+    if not reserva:
+        raise HTTPException(status_code=400, detail="Reserva nao informada.")
+    try:
+        ensure_creditu_table()
+        row = fetch_one(
+            "select email_segundo_proponente, telefone_segundo_proponente from public.fastapi_creditu_dados where reserva = %s",
+            [reserva],
+        )
+    except Exception as exc:
+        logger.exception("Erro ao buscar dados Creditú da reserva %s", reserva)
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar dados Creditú: {type(exc).__name__}: {exc}") from exc
+    return {
+        "email_segundo_proponente": (row or {}).get("email_segundo_proponente") or "",
+        "telefone_segundo_proponente": (row or {}).get("telefone_segundo_proponente") or "",
+    }
+
+
+@router.put("/{reserva}/creditu")
+def salvar_creditu(reserva: str, payload: CredituDadosPayload) -> dict[str, str]:
+    if not reserva:
+        raise HTTPException(status_code=400, detail="Reserva nao informada.")
+    try:
+        ensure_creditu_table()
+        upsert_processo(reserva)
+        atual = obter_creditu(reserva)
+        email = payload.email_segundo_proponente if payload.email_segundo_proponente is not None else atual["email_segundo_proponente"]
+        telefone = payload.telefone_segundo_proponente if payload.telefone_segundo_proponente is not None else atual["telefone_segundo_proponente"]
+        row = fetch_one(
+            """
+            insert into public.fastapi_creditu_dados (reserva, email_segundo_proponente, telefone_segundo_proponente)
+            values (%s, %s, %s)
+            on conflict (reserva)
+            do update set
+              email_segundo_proponente = excluded.email_segundo_proponente,
+              telefone_segundo_proponente = excluded.telefone_segundo_proponente,
+              updated_at = now()
+            returning email_segundo_proponente, telefone_segundo_proponente
+            """,
+            [reserva, email, telefone],
+        )
+    except Exception as exc:
+        logger.exception("Erro ao salvar dados Creditú da reserva %s", reserva)
+        raise HTTPException(status_code=500, detail=f"Erro ao salvar dados Creditú: {type(exc).__name__}: {exc}") from exc
+    return {
+        "email_segundo_proponente": (row or {}).get("email_segundo_proponente") or "",
+        "telefone_segundo_proponente": (row or {}).get("telefone_segundo_proponente") or "",
+    }
+
+
+@router.post("/{reserva}/messages", response_model=ChecklistMessageResponse)
+def criar_mensagem_processo(
+    reserva: str,
+    payload: ChecklistMessageCreate,
+) -> dict[str, Any]:
+    mensagem = payload.message.strip()
+    if not mensagem:
+        raise HTTPException(status_code=400, detail="Mensagem obrigatoria.")
+    target_role = (payload.targetRole or payload.target_role or "todos").strip().lower()
+    if target_role not in {"analista", "corretor", "gestor", "cca", "todos"}:
+        raise HTTPException(status_code=400, detail="Destinatario invalido.")
+    upsert_processo(reserva)
+    row = fetch_one(
+        """
+        insert into public.fastapi_checklist_messages
+          (reserva, documento_key, author_name, author_role, target_role, message)
+        values (%s, %s, %s, %s, %s, %s)
+        returning id::text, reserva, documento_key, author_name, author_role,
+                  target_role, message,
+                  created_at::text, read_at::text
+        """,
+        [reserva, payload.documento_key, payload.author_name.strip() or payload.author_role, payload.author_role, target_role, mensagem],
+    )
+    if not row:
+        raise HTTPException(status_code=500, detail="Nao foi possivel salvar a mensagem.")
+    labels = {"analista": "Analista", "corretor": "Corretor", "gestor": "Gestor", "cca": "CCA", "todos": "Todos"}
+    row["targetRole"] = row.get("target_role") or "todos"
+    row["targetLabel"] = labels.get(row["targetRole"], row["targetRole"].title())
+    return row
 
 
 @router.put("/{reserva}/documentos/{documento_key}")
 def atualizar_documento(reserva: str, documento_key: str, payload: DocumentoUpdate) -> dict[str, Any]:
     status = normalize(payload.status, DOCUMENTO_STATUS, "status")
     upsert_processo(reserva)
+    registrar_evento(reserva, status, payload.updated_by)
     execute(
         """
         insert into public.fastapi_documentos_status (reserva, documento_key, status, updated_by)
@@ -366,6 +856,25 @@ def atualizar_documento(reserva: str, documento_key: str, payload: DocumentoUpda
         """,
         [reserva, documento_key, status, payload.updated_by],
     )
+    if status != "Pendente":
+        pendencia = fetch_one(
+            "select * from public.fastapi_documentos_pendencias where reserva = %s and documento_key = %s",
+            [reserva, documento_key],
+        )
+        if pendencia:
+            registrar_historico_pendencia(
+                reserva=reserva,
+                documento_key=documento_key,
+                descricao=pendencia.get("descricao") or "",
+                prazo=pendencia.get("prazo"),
+                origem=payload.updated_by,
+                evento="tratada",
+                status_documento=status,
+            )
+        execute(
+            "delete from public.fastapi_documentos_pendencias where reserva = %s and documento_key = %s",
+            [reserva, documento_key],
+        )
     return {"ok": True, "reserva": reserva, "documento": documento_key, "status": status}
 
 
@@ -408,6 +917,33 @@ def listar_uploads(reserva: str, grupo: str | None = None, merge: str | None = N
     }
 
 
+@router.get("/{reserva}/creditu/download", response_model=None)
+def baixar_creditu(reserva: str) -> FileResponse:
+    rows = fetch_all(
+        "select * from public.fastapi_uploads where reserva = %s order by created_at desc",
+        [reserva],
+    )
+    return merge_creditu_uploads(reserva, rows)
+
+
+@router.get("/{reserva}/kit-caixa/download", response_model=None)
+def baixar_kit_caixa(reserva: str) -> FileResponse:
+    rows = fetch_all(
+        "select * from public.fastapi_uploads where reserva = %s order by created_at desc",
+        [reserva],
+    )
+    return merge_kit_caixa_uploads(reserva, rows)
+
+
+@router.get("/{reserva}/kit-agehab/download", response_model=None)
+def baixar_kit_agehab(reserva: str) -> FileResponse:
+    rows = fetch_all(
+        "select * from public.fastapi_uploads where reserva = %s order by created_at desc",
+        [reserva],
+    )
+    return merge_kit_agehab_uploads(reserva, rows)
+
+
 @router.post("/{reserva}/uploads")
 async def criar_upload(reserva: str, request: Request) -> dict[str, Any]:
     content_type = request.headers.get("content-type", "")
@@ -433,9 +969,20 @@ async def criar_upload(reserva: str, request: Request) -> dict[str, Any]:
 
     safe_name = safe_segment(file_name)
     storage_path = f"{safe_segment(reserva)}/{safe_segment(grupo)}/{safe_segment(documento_key)}-{safe_name}"
+    storage_backend = "supabase"
     try:
         url = upload_to_storage(storage_path, content, file_content_type)
-    except Exception:
+    except Exception as exc:
+        settings = get_settings()
+        logger.warning(
+            "Falha ao enviar upload para Supabase Storage; bucket=%s path=%s error=%s",
+            settings.supabase_storage_bucket,
+            storage_path,
+            exc,
+        )
+        if not settings.allow_local_upload_fallback:
+            raise HTTPException(status_code=502, detail="Falha ao salvar arquivo no Supabase Storage.") from exc
+        storage_backend = "local"
         save_local_upload(storage_path, content)
         url = fallback_upload_url(reserva, storage_path)
 
@@ -458,8 +1005,12 @@ async def criar_upload(reserva: str, request: Request) -> dict[str, Any]:
         """,
         [reserva, documento_key, "Enviado", grupo],
     )
+    execute(
+        "delete from public.fastapi_documentos_pendencias where reserva = %s and documento_key = %s",
+        [reserva, documento_key],
+    )
 
-    return {"ok": True, "key": documento_key, "name": file_name, "url": url, "temDocumentoEnviado": True}
+    return {"ok": True, "key": documento_key, "name": file_name, "url": url, "storage": storage_backend, "temDocumentoEnviado": True}
 
 
 @router.get("/{reserva}/uploads/{storage_name:path}", response_model=None)
@@ -501,7 +1052,6 @@ def abrir_upload_local(reserva: str, storage_name: str) -> FileResponse:
 
 @router.delete("/{reserva}/uploads")
 def remover_uploads(reserva: str, grupo: str | None = None) -> Response:
-    supabase = get_supabase()
     params: list[Any] = [reserva]
     where = "where reserva = %s"
     if grupo:
@@ -509,10 +1059,8 @@ def remover_uploads(reserva: str, grupo: str | None = None) -> Response:
         params.append(grupo)
     rows = fetch_all(f"select * from public.fastapi_uploads {where}", params)
 
-    settings = get_settings()
     paths = [row["storage_path"] for row in rows if row.get("storage_path")]
-    if paths:
-        supabase.storage.from_(settings.supabase_storage_bucket).remove(paths)
+    remove_from_storage(paths)
 
     execute(f"delete from public.fastapi_uploads {where}", params)
     return Response(status_code=204)

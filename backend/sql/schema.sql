@@ -42,6 +42,16 @@ create table if not exists public.relacionamento_status (
   unique (reserva, relacionamento_key)
 );
 
+create table if not exists public.creditu_dados (
+  id uuid primary key default gen_random_uuid(),
+  reserva text not null references public.processos(reserva) on delete cascade,
+  email_segundo_proponente text,
+  telefone_segundo_proponente text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (reserva)
+);
+
 create table if not exists public.documentos_pendencias (
   id uuid primary key default gen_random_uuid(),
   reserva text not null references public.processos(reserva) on delete cascade,
@@ -52,6 +62,18 @@ create table if not exists public.documentos_pendencias (
   destino_card text not null default 'card1',
   updated_at timestamptz not null default now(),
   unique (reserva, documento_key)
+);
+
+create table if not exists public.pendencias_historico (
+  id uuid primary key default gen_random_uuid(),
+  reserva text not null references public.processos(reserva) on delete cascade,
+  documento_key text not null,
+  descricao text not null default '',
+  prazo text,
+  origem text,
+  evento text not null default 'criada',
+  status_documento text,
+  created_at timestamptz not null default now()
 );
 
 create table if not exists public.uploads (

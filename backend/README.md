@@ -23,6 +23,18 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 
 1. Execute `backend/sql/schema.sql` no SQL Editor do Supabase.
 2. Crie um bucket Storage chamado `processos`.
-3. Preencha `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` no `backend/.env`.
+3. Preencha `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET` e `DATABASE_URL` no `backend/.env`.
+4. Reinicie o backend e abra `http://localhost:8000/health/supabase`.
+
+O resultado esperado e:
+
+```json
+{
+  "ok": true,
+  "database": { "ok": true },
+  "storage": { "ok": true, "bucket": "processos" }
+}
+```
 
 Use a service role key somente no backend. Nao exponha essa chave no frontend.
+Se o Storage retornar `Invalid API key`, a chave em `SUPABASE_SERVICE_ROLE_KEY` nao e a service role valida do projeto.

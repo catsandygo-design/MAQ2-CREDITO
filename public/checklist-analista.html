@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Checklist documental - Analista</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --border: #cbd5e1;
+      --accent: #16a34a;
+      --accent-soft: #dcfce7;
+      --warning: #f97316;
+      --danger: #dc2626;
+      --info: #0284c7;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    main {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: start;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .badge {
+      display: inline-flex;
+      margin: 12px 0 8px;
+      padding: 8px 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(22, 163, 74, .35);
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    p { margin: 0; color: var(--muted); line-height: 1.5; }
+
+    .summary {
+      min-width: 240px;
+      display: grid;
+      gap: 8px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card);
+    }
+
+    .summary strong { color: var(--accent); }
+
+    .panel {
+      margin-top: 16px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card);
+      box-shadow: 0 14px 30px rgba(15, 23, 42, .08);
+    }
+
+    h2 {
+      margin: 0 0 6px;
+      font-size: 1.15rem;
+    }
+
+    h3 {
+      margin: 0;
+      font-size: .86rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      color: #334155;
+      font-size: .78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 9px 10px;
+      color: var(--text);
+      background: #fff;
+      font: inherit;
+      font-size: .92rem;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    textarea {
+      min-height: 86px;
+      resize: vertical;
+    }
+
+    .section {
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px dashed var(--border);
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .pill {
+      display: inline-flex;
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: #334155;
+      background: #f8fafc;
+      font-size: .76rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .doc {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) 170px minmax(220px, .9fr);
+      gap: 12px;
+      align-items: start;
+      padding: 14px 0;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .doc:first-of-type { border-top: 0; }
+    .doc-title { font-weight: 850; }
+    .doc-help { margin-top: 4px; font-size: .86rem; color: var(--muted); }
+
+    .status {
+      border-left: 4px solid var(--border);
+      padding-left: 10px;
+    }
+
+    .status select { min-height: 36px; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: .85rem;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--border);
+    }
+
+    .dot.sent { background: var(--info); }
+    .dot.pending { background: var(--warning); }
+    .dot.done { background: var(--accent); }
+    .dot.blocked { background: var(--danger); }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    button {
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+      font-weight: 850;
+      cursor: pointer;
+    }
+
+    button.primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    @media (max-width: 900px) {
+      header, .doc { grid-template-columns: 1fr; }
+      .summary { min-width: 0; }
+      .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 560px) {
+      main { width: min(100% - 24px, 1120px); padding-top: 18px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .panel { padding: 16px; }
+      .section-head { align-items: flex-start; flex-direction: column; }
+    }
+
+    @media print {
+      body { background: #fff; }
+      main { width: 100%; padding: 0; }
+      .panel { box-shadow: none; break-inside: avoid; }
+      button { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Checklist documental</h1>
+        <span class="badge">Analista</span>
+        <p>Conferencia dos documentos, pendencias e observacoes para andamento da analise de credito.</p>
+      </div>
+      <aside class="summary">
+        <div><strong>Total:</strong> 36 documentos</div>
+        <div><strong>Status:</strong> em analise</div>
+        <div><strong>Atualizacao:</strong> ____/____/______</div>
+      </aside>
+    </header>
+
+    <section class="panel">
+      <h2>Dados do processo</h2>
+      <p>Preencha as informacoes principais antes da conferencia documental.</p>
+      <div class="form-grid">
+        <label>Cliente <input type="text" name="cliente" /></label>
+        <label>Reserva <input type="text" name="reserva" /></label>
+        <label>Analista <input type="text" name="analista" /></label>
+        <label>Data <input type="date" name="data" /></label>
+      </div>
+      <div class="legend">
+        <span><i class="dot"></i>Aguardando</span>
+        <span><i class="dot sent"></i>Enviado</span>
+        <span><i class="dot pending"></i>Pendente</span>
+        <span><i class="dot done"></i>Aprovado</span>
+        <span><i class="dot blocked"></i>Bloqueado</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Documentos</h2>
+      <p>Marque o status e registre pendencias ou observacoes por item.</p>
+
+      <div class="section">
+        <div class="section-head"><h3>Documentos do Proponente</h3><span class="pill">6 documentos</span></div>
+        <div class="doc"><div><div class="doc-title">Identidade e CPF</div><div class="doc-help">CNH, RG, Identidade Militar, Passaporte brasileiro ou carteira funcional com fe publica do proponente.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Comprovante de estado civil</div><div class="doc-help">Certidao conforme estado civil do proponente.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Comprovante de residencia</div><div class="doc-help">Agua, luz, telefone, internet ou equivalente.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Extrato FGTS</div><div class="doc-help">App FGTS, site Caixa ou agencia.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">CTPS (carteira)</div><div class="doc-help">Carteira Digital ou CTPS fisica: qualificacao, contratos e anotacoes.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h3>Dependente - Filhos menores de 18 anos</h3><span class="pill">1 documento</span></div>
+        <div class="doc"><div><div class="doc-title">Certidao de nascimento</div><div class="doc-help">Certidao do dependente menor.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h3>Dependente - Maiores e parentes</h3><span class="pill">3 documentos</span></div>
+        <div class="doc"><div><div class="doc-title">Identidade e CPF</div><div class="doc-help">CNH, RG, identidade militar, passaporte brasileiro ou carteira funcional.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Comprovante de estado civil</div><div class="doc-help">Certidao conforme estado civil do dependente.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Declaracao de parentesco</div><div class="doc-help">Declaracao conforme regras Caixa, vinculando dependente ao proponente.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h3>Renda formal (CLT / vinculo)</h3><span class="pill">2 documentos</span></div>
+        <div class="doc"><div><div class="doc-title">Holerites</div><div class="doc-help">3 ultimos holerites/contracheques.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Carteira de trabalho</div><div class="doc-help">Dados da carteira digital ou fisica.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h3>Renda informal / autonomo</h3><span class="pill">1 documento</span></div>
+        <div class="doc"><div><div class="doc-title">Extrato bancario</div><div class="doc-help">3 ultimos meses, preferir mes fechado.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h3>Aposentados / Pensionistas</h3><span class="pill">1 documento</span></div>
+        <div class="doc"><div><div class="doc-title">Extrato do beneficio</div><div class="doc-help">Ultimo extrato do Meu INSS ou Dataprev.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h3>Domesticos / contratacao por CPF</h3><span class="pill">1 documento</span></div>
+        <div class="doc"><div><div class="doc-title">eSocial</div><div class="doc-help">3 ultimos comprovantes do eSocial.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h3>Documentos Caixa</h3><span class="pill">7 documentos</span></div>
+        <div class="doc"><div><div class="doc-title">DAMP</div><div class="doc-help">Preenchida e assinada digitalmente.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Ficha de cadastro Caixa</div><div class="doc-help">Preenchida e assinada digitalmente.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Abertura de conta</div><div class="doc-help">Assinada digitalmente; fisico precisa aprovacao.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">MO</div><div class="doc-help">Assinatura correta. Casal: assinatura de ambos.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Cheque Especial</div><div class="doc-help">Formulario para contratacao do cheque especial junto ao banco. Sujeito a analise do banco.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Cartao de Credito</div><div class="doc-help">Formulario de contratacao de cartao de credito. Sujeito a aprovacao do banco.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Proposta Cartao</div><div class="doc-help">Proposta comercial vinculada ao cliente e assinada digitalmente.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h3>Documentos Agehab</h3><span class="pill">6 documentos</span></div>
+        <div class="doc"><div><div class="doc-title">Declaracao de endereco</div><div class="doc-help">Quando necessario. Assinada via GOV.BR ou Clicksign.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Declaracao renda informal</div><div class="doc-help">Assinada pelo dependente via GOV.BR/Clicksign, conforme modelo Agehab.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Declaracao de nao renda</div><div class="doc-help">Para dependentes sem renda. Assinada via GOV.BR/Clicksign.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Vinculo &gt;= 3 anos</div><div class="doc-help">Documentos com fe publica comprovando vinculo minimo na cidade do Cheque Moradia.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Checklist Agehab</div><div class="doc-help">Preenchido e assinado via GOV.BR ou proprio punho conforme orientacao.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Ficha Agehab</div><div class="doc-help">Preenchida pelo Assistente de Credito; assinada via GOV.BR ou proprio punho.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h3>Documentos Creditu</h3><span class="pill">7 documentos</span></div>
+        <div class="doc"><div><div class="doc-title">Tela do score do Cliente</div><div class="doc-help">Tela do score do cliente.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">RG/CPF OU CNH</div><div class="doc-help">Documento de identificacao.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Tela do score do 2o Proponente</div><div class="doc-help">Tela do score do segundo proponente.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Email do 2o proponente</div><div class="doc-help">Email do segundo proponente.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Telefone do 2o proponente</div><div class="doc-help">Telefone do segundo proponente.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Tela de aprovacao do Creditu</div><div class="doc-help">Tela de aprovacao do Creditu.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+        <div class="doc"><div><div class="doc-title">Tela do SICAQ do cliente</div><div class="doc-help">Tela do SICAQ do cliente.</div></div><label class="status">Status <select><option>Aguardando</option><option>Enviado</option><option>Pendente</option><option>Aprovado</option><option>Nao se Aplica</option><option>Bloqueado</option></select></label><label>Pendencia / observacao <textarea></textarea></label></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Relacionamento e orientacoes</h2>
+      <p>Confirmacoes operacionais registradas com Sim, Nao ou N/A.</p>
+      <div class="doc"><div><div class="doc-title">Cliente ciente da portabilidade para a agencia Caixa que vai assinar o contrato?</div><div class="doc-help">Relacionamento Caixa</div></div><label class="status">Resposta <select><option>Nao se Aplica</option><option>Sim</option><option>Nao</option></select></label><label>Observacao <textarea></textarea></label></div>
+      <div class="doc"><div><div class="doc-title">Cliente ciente que sera preciso fazer Open Finance com a agencia Caixa?</div><div class="doc-help">Relacionamento Caixa</div></div><label class="status">Resposta <select><option>Nao se Aplica</option><option>Sim</option><option>Nao</option></select></label><label>Observacao <textarea></textarea></label></div>
+      <div class="doc"><div><div class="doc-title">Cliente ciente que sera necessario cadastrar o CPF como Pix na agencia Caixa?</div><div class="doc-help">Relacionamento Caixa</div></div><label class="status">Resposta <select><option>Nao se Aplica</option><option>Sim</option><option>Nao</option></select></label><label>Observacao <textarea></textarea></label></div>
+      <div class="doc"><div><div class="doc-title">Propos e orientou o cliente sobre o FGTS Futuro?</div><div class="doc-help">Obrigatorio quando o cliente entrar na regra de FGTS Futuro.</div></div><label class="status">Resposta <select><option>Nao se Aplica</option><option>Sim</option><option>Nao</option></select></label><label>Observacao <textarea></textarea></label></div>
+      <div class="doc"><div><div class="doc-title">Cliente autorizou no app FGTS a consulta para utilizar o FGTS Futuro?</div><div class="doc-help">Obrigatorio quando o cliente entrar na regra de FGTS Futuro.</div></div><label class="status">Resposta <select><option>Nao se Aplica</option><option>Sim</option><option>Nao</option></select></label><label>Observacao <textarea></textarea></label></div>
+      <div class="doc"><div><div class="doc-title">Cliente foi orientado sobre o produto?</div><div class="doc-help">Produto</div></div><label class="status">Resposta <select><option>Nao se Aplica</option><option>Sim</option><option>Nao</option></select></label><label>Observacao <textarea></textarea></label></div>
+      <div class="doc"><div><div class="doc-title">O cliente ja pagou o produto no fechamento?</div><div class="doc-help">Produto</div></div><label class="status">Resposta <select><option>Nao se Aplica</option><option>Sim</option><option>Nao</option></select></label><label>Observacao <textarea></textarea></label></div>
+      <div class="doc"><div><div class="doc-title">Cliente saiu ciente que na assinatura tera que ter R$ 300,00 para o produto?</div><div class="doc-help">Produto</div></div><label class="status">Resposta <select><option>Nao se Aplica</option><option>Sim</option><option>Nao</option></select></label><label>Observacao <textarea></textarea></label></div>
+    </section>
+
+    <section class="panel">
+      <h2>Parecer do analista</h2>
+      <div class="form-grid">
+        <label>Status Caixa <select><option>Em analise</option><option>Aprovado</option><option>Pendente</option><option>Reprovado</option></select></label>
+        <label>Status Agehab <select><option>Em analise</option><option>Aprovado</option><option>Pendente</option><option>Reprovado</option></select></label>
+        <label>Prazo de retorno <input type="date" /></label>
+        <label>Responsavel <input type="text" /></label>
+      </div>
+      <label style="margin-top: 14px;">Observacoes gerais <textarea></textarea></label>
+      <div class="actions">
+        <button type="button" onclick="window.print()">Imprimir</button>
+        <button type="button" class="primary">Salvar checklist</button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

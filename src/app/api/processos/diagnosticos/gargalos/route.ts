@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   let response: Response;
 
   try {
-    response = await fetch(`${API_BASE}/api/processos${url.search}`, {
+    response = await fetch(`${API_BASE}/api/processos/diagnosticos/gargalos${url.search}`, {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
     });

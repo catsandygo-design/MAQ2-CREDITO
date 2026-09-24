@@ -1,28 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { apiClient } from '@/lib/api/proxy';
+import { subscribeProcessoChanges } from '@/lib/api/events';
+import { classeRetrabalho, metricasOperacionais, type DiagnosticoGargalo } from '@/lib/metrics/processos';
+import { pendenciaResolvida, tonePrazoPendencia, type PendenciaTone } from '@/lib/prazo-pendencia';
 
-type PendenciaTone = 'critico' | 'medio' | 'ok';
-type PendenciaItem = [PendenciaTone, string, string, string];
 type AlertaPendencia = { tone: PendenciaTone; nome: string; desc: string; prazo: string };
-type ClienteRow = [string, string, string, string, string, string, string, string, string];
 
-const clientes: ClienteRow[] = [
-  ['458712', 'Matheus Alves de Melo', 'pendencia documentacao', 'documentos pendenciados', 'pendente', 'nao tem', 'reserva ativa', '18h', '24h'],
-  ['458713', 'Ana Paula Ribeiro', 'formularios disponiveis', 'ficha agehab liberada', 'pago', 'finalizado', 'aguardando envio', '6h', '12h'],
-  ['458714', 'Carlos Henrique Souza', 'em validacao credito', 'em analise do credito', 'nao tem', 'nao tem', 'analise inicial', '22h', '36h'],
-];
-
-const alertas: PendenciaItem[] = [
-  ['critico', 'MATHEUS ALVES', 'Analista: Bianca • Documento pendente: Extrato FGTS', 'Hoje 17:00'],
-  ['medio', 'ANA CLARA', 'Analista: Douglas • Documento pendente: Ficha Agehab', '24h'],
-  ['ok', 'JOAO PEDRO', 'Analista: CCA Central • Documento pendente: Assinatura MO', '48h'],
-];
-
-const taxaRetrabalho = 3.2;
 const caixaStageKeys = ['reserva', 'em_analise_credito', 'emitindo_formularios', 'formularios_em_assinatura', 'formularios_assinados', 'envio_conformidade'];
-const caixaStageLabels = ['Reserva', 'Em Analise Credito', 'Emitindo Formularios', 'Formularios Em Assinatura', 'Formularios Assinados', 'Envio a conformidade'];
+const caixaStageLabels = ['Recebido', 'Conferência', 'Emitir Formulários', 'Formulários Anexos', 'Formulários Assinados', 'Envio Conformidade'];
 const agehabStageKeys = ['reserva', 'em_analise_credito', 'ficha_emitida', 'ficha_recebida', 'em_validacao_agehab', 'agehab_validada'];
 const agehabStageLabels = ['Reserva', 'Em Analise Credito', 'Ficha emitida', 'Ficha Recebida', 'Em Validacao Agehab', 'Agehab Validada'];
 
@@ -50,12 +36,6 @@ function statusLabel(status: string | null | undefined) {
   return labels[status || ''] || status || 'Reserva';
 }
 
-function retrabalhoClass(value: number) {
-  if (value <= 2) return 'cor-rework cor-rework-ok';
-  if (value <= 4) return 'cor-rework cor-rework-warn';
-  return 'cor-rework cor-rework-danger';
-}
-
 function formatarDocumento(key: string) {
   return key
     .replace(/-\d+$/g, '')
@@ -74,11 +54,11 @@ function formatarPrazo(valor: unknown) {
 function montarAlertasPendencia(processos: any[]): AlertaPendencia[] {
   return processos.flatMap((processo) => Object.entries(processo?.pendencias || {})
     .filter(([key, pendencia]: [string, any]) => {
-      const status = String(processo?.documentos?.[key] || '').toLowerCase();
-      return Boolean(pendencia?.descricao || pendencia?.prazo) && !status.includes('aprovado');
+      const status = processo?.documentos?.[key];
+      return Boolean(pendencia?.descricao || pendencia?.prazo) && !pendenciaResolvida(status);
     })
     .map(([key, pendencia]: [string, any]) => ({
-      tone: 'critico' as PendenciaTone,
+      tone: tonePrazoPendencia(pendencia),
       nome: String(processo?.cliente || processo?.reserva || 'CLIENTE').toUpperCase(),
       desc: `${formatarDocumento(key)}: ${pendencia?.descricao || 'Documento pendente de retorno.'}`,
       prazo: formatarPrazo(pendencia?.prazo || pendencia?.updated_at),
@@ -92,11 +72,18 @@ function classeEtapa(index: number, atual: number) {
 }
 
 function pendenciasDoProcesso(processo: any) {
-  const lista = Object.entries(processo?.pendencias || {}).map(([key, pendencia]: [string, any]) => {
+  const lista = Object.entries(processo?.pendencias || {})
+    .filter(([key, pendencia]: [string, any]) => Boolean(pendencia?.descricao || pendencia?.prazo) && !pendenciaResolvida(processo?.documentos?.[key]))
+    .map(([key, pendencia]: [string, any]) => {
     const prazo = formatarPrazo(pendencia?.prazo || pendencia?.updated_at);
     return `${formatarDocumento(key)}: ${pendencia?.descricao || 'Documento pendente'}${prazo !== 'Sem prazo' ? ` | Prazo ${prazo}` : ''}`;
   });
   return lista.length ? lista : [`Caixa: ${statusLabel(processo?.caixa)}`, `Agehab: ${statusLabel(processo?.agehab)}`];
+}
+
+function temPendenciaAtiva(processo: any) {
+  return Object.entries(processo?.pendencias || {})
+    .some(([key, pendencia]: [string, any]) => Boolean(pendencia?.descricao || pendencia?.prazo) && !pendenciaResolvida(processo?.documentos?.[key]));
 }
 
 function checklistCorretorUrl(cliente: {
@@ -129,6 +116,7 @@ function checklistCorretorUrl(cliente: {
 export default function AcompanhamentoCorretorPage() {
   const [detalhesAbertos, setDetalhesAbertos] = useState<string[]>([]);
   const [processosBanco, setProcessosBanco] = useState<any[]>([]);
+  const [diagnosticos, setDiagnosticos] = useState<DiagnosticoGargalo[]>([]);
   const [carregouProcessos, setCarregouProcessos] = useState(false);
   const [atualizacaoDisponivel, setAtualizacaoDisponivel] = useState(false);
   const [filtros, setFiltros] = useState({
@@ -157,6 +145,10 @@ export default function AcompanhamentoCorretorPage() {
         setAtualizacaoDisponivel(false);
       })
       .catch(() => { setProcessosBanco([]); setCarregouProcessos(true); });
+    fetch('/api/processos/diagnosticos/gargalos', { headers: { Accept: 'application/json' }, cache: 'no-store' })
+      .then((response) => (response.ok ? response.json() : []))
+      .then((data) => setDiagnosticos(Array.isArray(data) ? data : []))
+      .catch(() => setDiagnosticos([]));
   };
 
   useEffect(() => {
@@ -165,41 +157,48 @@ export default function AcompanhamentoCorretorPage() {
       if (event.key === 'siocred_status_update') setAtualizacaoDisponivel(true);
     };
     window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    const unsubscribe = subscribeProcessoChanges(() => setAtualizacaoDisponivel(true));
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      unsubscribe();
+    };
   }, []);
 
-  const telemetria = clientes.map(([id, cliente, caixa, agehab, sinal, fiador, momento, slaCliente, prazo]) => {
-    const processo = processosBanco.find((item) => item.reserva === id);
+  const telemetria = processosBanco.map((processo) => {
+    const id = processo?.reserva || '';
     const caixaRaw = processo?.caixa || 'reserva';
     const agehabRaw = processo?.agehab || 'reserva';
-    const caixaAtual = processo ? statusLabel(caixaRaw) : caixa;
-    const agehabAtual = processo ? statusLabel(agehabRaw) : agehab;
+    const caixaAtual = statusLabel(caixaRaw);
+    const agehabAtual = statusLabel(agehabRaw);
     const pendencias = pendenciasDoProcesso(processo);
+    const hasPendencia = temPendenciaAtiva(processo);
     const caixaIndex = Math.max(0, caixaStageKeys.indexOf(caixaRaw));
     const agehabIndex = Math.max(0, agehabStageKeys.indexOf(agehabRaw));
+    const slaCliente = processo?.sla?.elapsed_label || '0m';
     return {
       id,
       produto: processo?.produto || 'RD',
-      cliente: processo?.cliente || cliente,
+      cliente: processo?.cliente || id,
       empreendimento: processo?.empreendimento || 'Kit Caixa | Kit Agehab',
       corretor: processo?.corretor || 'Corretor responsavel',
       cca: 'Gestor carteira',
       prioridade: processo?.encaminhado_analista ? 'Enviado para analista' : 'Prioridade alta',
-      comercial: processo?.sla?.elapsed_label || prazo,
-      credito: processo?.sla?.elapsed_label || slaCliente,
-      panorama: processo?.encaminhado_analista ? 'Em acompanhamento' : momento,
+      comercial: slaCliente,
+      credito: slaCliente,
+      panorama: processo?.encaminhado_analista ? 'Em acompanhamento' : 'Em processo',
       resumo: `${caixaAtual} | ${agehabAtual}`,
       proximaAcao: pendencias.length ? 'Corrigir documento pendenciado' : `Acompanhar Caixa: ${caixaAtual}`,
       observacao: pendencias[0] || 'Sem observacao registrada',
-      aging: processo?.sla?.elapsed_label || prazo,
-      slaCca: processo?.sla?.elapsed_label || slaCliente,
+      aging: slaCliente,
+      slaCca: slaCliente,
       caixa: caixaAtual,
       agehab: agehabAtual,
       caixaIndex,
       agehabIndex,
-      sinal: processo?.sinal || sinal,
-      fiador: processo?.fiador || fiador,
+      sinal: processo?.sinal || 'Nao tem',
+      fiador: processo?.fiador || 'Nao tem',
       pendencias,
+      hasPendencia,
     };
   });
 
@@ -235,35 +234,35 @@ export default function AcompanhamentoCorretorPage() {
     cliente.agehab.toLowerCase().includes('validada')
   )).length;
   const taxaConversao = clientesReserva ? ((clientesRepassados / clientesReserva) * 100).toFixed(1).replace('.', ',') : '0,0';
+  const metricas = metricasOperacionais(processosBanco, diagnosticos);
 
   return (
-    <main className="cor-page cor-page-premium" data-layout-version="dashboards-compactos-v2">
-      <header className="cor-premium-top">
-        <div className="cor-premium-title">
-          <span className="cor-chart-icon">↗</span>
+    <main className="cor-page cor-page-premium min-h-screen overflow-x-hidden" data-layout-version="dashboards-compactos-v2">
+      <header className="cor-premium-top relative z-[1] mx-auto flex w-full max-w-[1760px] items-center justify-between gap-3">
+        <div className="cor-premium-title flex min-w-0 items-start gap-3">
+          <span className="cor-chart-icon">↑</span>
           <div>
             <h1>Acompanhamento do Corretor</h1>
             <p>Tela inicial do corretor com alertas, SLA de entrega de documentos e evolucao das reservas ate o repasse.</p>
           </div>
         </div>
-        <div className="cor-premium-actions cor-actions-no-primary">
-          <button type="button" onClick={carregarProcessos}>{atualizacaoDisponivel ? '↻ Atualização disponível' : '↻ Atualizar'}</button>
-          <button>↪ Sair</button>
+        <div className="cor-premium-actions cor-actions-no-primary flex flex-wrap justify-end gap-2">
+          <button type="button" onClick={carregarProcessos}>{atualizacaoDisponivel ? 'Atualizacao disponivel' : 'Atualizar'}</button>
+          <button>Sair</button>
         </div>
       </header>
 
-      <section className="cor-dash-grid cor-dash-premium">
-        <article className="cor-card cor-panel-alerts">
+      <section className="cor-dash-grid cor-dash-premium relative z-[1] mx-auto grid w-full max-w-[1760px] gap-[18px]">
+        <article className="cor-card cor-panel-alerts relative flex flex-col overflow-hidden bg-white text-slate-900">
           <div className="cor-panel-head">
             <div>
-              <small>Dashboard 1 — Alertas</small>
-              <p>Analista de credito, cliente, documento pendente e prazo de entrega.</p>
+              <small>Dashboard 1 - Alertas</small>
             </div>
             <strong className="cor-urgent-pill">{alertasPendentes.length} urgentes</strong>
           </div>
           <div className="cor-alert-list">
             {alertasPendentes.length ? alertasPendentes.map(({ tone, nome, desc, prazo }, index) => (
-              <div className={`cor-alert-item cor-alert-${tone}`} key={`${nome}-${index}`}>
+              <div className={`cor-alert-item cor-alert-${tone}`} key={`${nome}-${index}`} title={desc}>
                 <i />
                 <div className="cor-alert-copy">
                   <b>{nome}</b>
@@ -271,48 +270,47 @@ export default function AcompanhamentoCorretorPage() {
                 </div>
                 <em><small>Prazo</small>{prazo}</em>
               </div>
-            )) : <div className="cor-alert-empty"><b>Sem pendências urgentes</b><span>Quando houver documento pendenciado, ele aparece aqui automaticamente.</span></div>}
+            )) : <div className="cor-alert-empty"><b>Sem pendencias urgentes</b><span>Quando houver documento pendenciado, ele aparece aqui automaticamente.</span></div>}
           </div>
         </article>
 
         <div className="cor-sla-stack">
-        <article className="cor-card cor-panel-sla">
+        <article className="cor-card cor-panel-sla relative flex flex-col overflow-hidden bg-white text-slate-900">
           <div className="cor-panel-head">
             <div>
-              <small>Dashboard 2 — SLA</small>
+              <small>Dashboard 2 - SLA</small>
             </div>
           </div>
           <div className="cor-speed-premium">
             <div className="cor-speed-arc" />
-            <div className="cor-speed-needle" />
+            <div className="cor-speed-needle" style={{ transform: `translateX(-50%) rotate(${metricas.slaNeedleAngle}deg)` }} />
             <span />
           </div>
           <div className="cor-sla-lines">
-            <div><span>Melhor SLA de entrega</span><small>Referencia da carteira</small><b className="green">3h</b></div>
-            <div><span>SLA atual do corretor</span><small>Media de resposta as pendencias</small><b className="orange">11h</b></div>
+            <div><span>Melhor SLA de entrega</span><small>Referencia da carteira</small><b className="green">{metricas.melhorSla}</b></div>
+            <div><span>SLA atual do corretor</span><small>Media de resposta as pendencias</small><b className="orange">{metricas.mediaSla}</b></div>
           </div>
         </article>
-        <article className="cor-card cor-rework-card">
-          <div className={retrabalhoClass(taxaRetrabalho)}>
-            <span className="cor-rework-icon">🔨</span>
+        <article className="cor-card cor-rework-card relative flex flex-col overflow-hidden bg-white text-slate-900">
+          <div className={classeRetrabalho(metricas.taxaRetrabalho)}>
+            <span className="cor-rework-icon">&#128296;</span>
             <span>Taxa de retrabalho</span>
-            <b>{taxaRetrabalho.toFixed(1).replace('.', ',')}%</b>
+            <b>{metricas.taxaRetrabalho.toFixed(1).replace('.', ',')}%</b>
           </div>
         </article>
         </div>
 
-        <article className="cor-card cor-panel-conversion">
+        <article className="cor-card cor-panel-conversion relative flex flex-col overflow-hidden bg-white text-slate-900">
           <div className="cor-panel-head">
             <div>
-              <small>Dashboard 3 — Reservas x Repasses</small>
-              <p>Quantidade de clientes em reserva comparada aos clientes repassados.</p>
+              <small>Dashboard 3 - Reservas x Repasses</small>
             </div>
           </div>
-          <div className="cor-mini-metrics">
+          <div className="cca-flow-metrics">
             <div><span>Clientes em reserva</span><b>{clientesReserva}</b><small>processos ativos</small></div>
             <div><span>Clientes repassados</span><b>{clientesRepassados}</b><small>vendas repassadas</small></div>
+            <div><span>Taxa de conversao</span><b>{taxaConversao}%</b><small>reservas convertidas</small></div>
           </div>
-          <div className="cor-conversion-bar"><span>Taxa de conversao</span><b>{taxaConversao}%</b></div>
         </article>
       </section>
 
@@ -351,7 +349,7 @@ export default function AcompanhamentoCorretorPage() {
         <div className="analyst-live-list">
           {filaFiltrada.map((cliente) => {
             const detalheAberto = detalhesAbertos.includes(cliente.id);
-            const pendenciado = cliente.pendencias.some((pendencia) => pendencia.toLowerCase().includes('pend') || pendencia.includes(':'));
+            const pendenciado = cliente.hasPendencia;
 
             return (
               <article className={`analyst-live-card ${detalheAberto ? 'is-open' : ''} ${pendenciado ? 'is-pending' : ''}`} key={cliente.id}>
@@ -377,8 +375,7 @@ export default function AcompanhamentoCorretorPage() {
 
                 <div className="analyst-live-status">
                   <div>
-                    <span>Comercial {cliente.comercial}</span>
-                    <span>Credito {cliente.credito}</span>
+                    <span>SLA Cliente {cliente.slaCca}</span>
                   </div>
                   <button type="button" onClick={() => alternarDetalhe(cliente.id)}>
                     {detalheAberto ? 'Fechar detalhes' : 'Abrir detalhes'}
@@ -395,7 +392,7 @@ export default function AcompanhamentoCorretorPage() {
                         <p>{cliente.resumo}</p>
                         <div className="analyst-detail-tags">
                           <b>Aging {cliente.aging}</b>
-                          <b className="danger">SLA {cliente.slaCca}</b>
+                          <b className="danger">SLA Cliente {cliente.slaCca}</b>
                         </div>
                       </section>
                       <section className="analyst-detail-box analyst-next-action">

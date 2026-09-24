@@ -1,8 +1,10 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
+import { subscribeProcessoChanges } from '@/lib/api/events';
+import { classeRetrabalho, metricasOperacionais, type DiagnosticoGargalo } from '@/lib/metrics/processos';
+import { pendenciaResolvida, tonePrazoPendencia, type PendenciaTone } from '@/lib/prazo-pendencia';
 
-type PendenciaTone = 'critico' | 'medio' | 'ok';
 type PendenciaItem = [PendenciaTone, string, string, string];
 type ResumoItem = [string, string, string];
 
@@ -25,6 +27,7 @@ interface FilaVivaItem {
   sinal: string;
   fiador: string;
   pendencias: string[];
+  hasPendencia: boolean;
   proximaAcao?: string;
   observacao?: string;
   caixaIndex?: number;
@@ -32,99 +35,9 @@ interface FilaVivaItem {
 }
 
 const caixaKeys = ['reserva', 'em_analise_credito', 'emitindo_formularios', 'formularios_em_assinatura', 'formularios_assinados', 'envio_conformidade'];
-const caixaLabels = ['Reserva', 'Em Analise Credito', 'Emitindo Formularios', 'Formularios Em Assinatura', 'Formularios Assinados', 'Finalizado'];
+const caixaLabels = ['Recebido', 'Conferência', 'Emitir Formulários', 'Formulários Anexos', 'Formulários Assinados', 'Envio Conformidade'];
 const agehabKeys = ['reserva', 'em_analise_credito', 'ficha_emitida', 'ficha_recebida', 'em_validacao_agehab', 'agehab_validada'];
 const agehabLabels = ['Reserva', 'Em Analise Credito', 'Ficha emitida', 'Ficha Recebida', 'Em Validacao Agehab', 'Agehab Validada'];
-
-const pendenciasAnalista: PendenciaItem[] = [
-  ['critico', 'MATHEUS ALVES', 'Extrato FGTS pendente de retorno do corretor', 'Hoje 17:00'],
-  ['medio', 'ANA PAULA', 'Documento enviado aguardando abertura do analista', '12h'],
-  ['medio', 'CARLOS HENRIQUE', 'Renda informal exige declaracao complementar', '24h'],
-  ['ok', 'JOAO AMORIN', 'Kit documental aprovado para envio ao CCA', 'OK'],
-];
-
-const filaViva: FilaVivaItem[] = [
-  {
-    id: '458712',
-    produto: 'RD',
-    cliente: 'EVERSON LOURENCO PEREIRA DA SILVA',
-    empreendimento: 'AGL030 - Vila Girassol',
-    corretor: 'rebeca carvalho',
-    cca: '-',
-    prioridade: 'Prioridade alta',
-    comercial: '76 dias',
-    credito: '17 dias',
-    panorama: 'Em Processo',
-    resumo: 'Kit Caixa | Kit Agehab. Documentos pendentes: 27 de 36',
-    aging: '107 anos',
-    slaCca: '17 dias',
-    caixa: 'Analise Credito',
-    agehab: 'Analise Credito',
-    sinal: 'Nao tem',
-    fiador: 'Nao tem',
-    pendencias: ['Caixa: Analise Credito', 'Agehab: Analise Credito'],
-  },
-  {
-    id: '458713',
-    produto: 'RD',
-    cliente: 'KHETLLEN GERMANO DA SILVA',
-    empreendimento: 'AGL032 - Vila Margarida - Receitas de Incorporacao',
-    corretor: 'joao andrade',
-    cca: '-',
-    prioridade: 'Prioridade alta',
-    comercial: '27 dias',
-    credito: '8 dias',
-    panorama: 'Em Processo',
-    resumo: 'Kit Caixa | Kit Agehab. Documentos pendentes: 18 de 36',
-    aging: '82 dias',
-    slaCca: '8 dias',
-    caixa: 'Analise Credito',
-    agehab: 'Analise Credito',
-    sinal: 'Nao tem',
-    fiador: 'Nao tem',
-    pendencias: ['Caixa: Analise Credito', 'Agehab: Analise Credito'],
-  },
-  {
-    id: '458714',
-    produto: 'RD',
-    cliente: 'ELIEZIO ALVES DO CARMO',
-    empreendimento: 'AGL030 - Vila Girassol',
-    corretor: 'leticia brito',
-    cca: '-',
-    prioridade: 'Prioridade alta',
-    comercial: '23 dias',
-    credito: '5 dias',
-    panorama: 'Em Processo',
-    resumo: 'Kit Caixa | Kit Agehab. Documentos pendentes: 12 de 36',
-    aging: '64 dias',
-    slaCca: '5 dias',
-    caixa: 'Analise Credito',
-    agehab: 'Analise Credito',
-    sinal: 'Nao tem',
-    fiador: 'Nao tem',
-    pendencias: ['Caixa: Analise Credito'],
-  },
-  {
-    id: '458715',
-    produto: 'RD',
-    cliente: 'JOAO AMORIN',
-    empreendimento: 'AGL030 - Vila Girassol',
-    corretor: 'mariana costa',
-    cca: '-',
-    prioridade: 'Prioridade alta',
-    comercial: '19 dias',
-    credito: '4 dias',
-    panorama: 'Em Processo',
-    resumo: 'Kit documental aprovado para acompanhamento operacional',
-    aging: '51 dias',
-    slaCca: '4 dias',
-    caixa: 'Analise Credito',
-    agehab: 'Analise Credito',
-    sinal: 'Nao tem',
-    fiador: 'Nao tem',
-    pendencias: ['Caixa: Analise Credito'],
-  },
-];
 
 const resumoCarteira: ResumoItem[] = [
   ['Clientes em reserva', '42', 'processos ativos na carteira'],
@@ -165,12 +78,25 @@ function prazoLabel(valor?: string) {
   return data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
+function alertasPendencias(processos: any[]): PendenciaItem[] {
+  return processos.flatMap((processo) => Object.entries(processo?.pendencias || {})
+    .filter(([key, pendencia]: [string, any]) => Boolean(pendencia?.descricao || pendencia?.prazo) && !pendenciaResolvida(processo?.documentos?.[key]))
+    .map(([key, pendencia]: [string, any]) => [
+      tonePrazoPendencia(pendencia),
+      processo?.cliente || processo?.reserva || 'Cliente',
+      `${docLabel(key)}: ${pendencia?.descricao || 'Documento pendente'}`,
+      prazoLabel(pendencia?.prazo || pendencia?.updated_at) || '-',
+    ] as PendenciaItem));
+}
+
 function processoToFila(processo: any): FilaVivaItem {
   const caixa = statusLabel(processo.caixa);
   const agehab = statusLabel(processo.agehab);
-  const pendencias = Object.entries(processo?.pendencias || {}).map(([key, pendencia]: [string, any]) => (
-    `${docLabel(key)}: ${pendencia?.descricao || 'Documento pendente'}${pendencia?.prazo ? ` | Prazo ${prazoLabel(pendencia.prazo)}` : ''}`
-  ));
+  const pendencias = Object.entries(processo?.pendencias || {})
+    .filter(([key, pendencia]: [string, any]) => Boolean(pendencia?.descricao || pendencia?.prazo) && !pendenciaResolvida(processo?.documentos?.[key]))
+    .map(([key, pendencia]: [string, any]) => (
+      `${docLabel(key)}: ${pendencia?.descricao || 'Documento pendente'}${pendencia?.prazo ? ` | Prazo ${prazoLabel(pendencia.prazo)}` : ''}`
+    ));
   const observacaoAnalista = processo?.observacao_analista ? [`Observacao do analista: ${processo.observacao_analista}`] : [];
   const listaPendencias = [...observacaoAnalista, ...pendencias];
   const pendenciasVisiveis = listaPendencias.length ? listaPendencias : [`Caixa: ${caixa}`, `Agehab: ${agehab}`];
@@ -193,6 +119,7 @@ function processoToFila(processo: any): FilaVivaItem {
     sinal: processo.sinal || 'Nao tem',
     fiador: processo.fiador || 'Nao tem',
     pendencias: pendenciasVisiveis,
+    hasPendencia: listaPendencias.length > 0,
     proximaAcao: listaPendencias.length ? 'Verificar retorno do analista' : `Acompanhar Caixa: ${caixa}`,
     observacao: listaPendencias[0] || 'Sem observacao registrada',
     caixaIndex: Math.max(0, caixaKeys.indexOf(processo.caixa || 'reserva')),
@@ -208,16 +135,29 @@ export default function AnalistaClient({ initialProcessos = [] }: AnalistaClient
   const [detalhesAbertos, setDetalhesAbertos] = useState<string[]>([]);
   const [filaAnalista, setFilaAnalista] = useState<FilaVivaItem[]>(() => initialProcessos.map(processoToFila));
   const [carregouProcessos, setCarregouProcessos] = useState(false);
+  const [processosRaw, setProcessosRaw] = useState<any[]>([]);
+  const [diagnosticos, setDiagnosticos] = useState<DiagnosticoGargalo[]>([]);
 
-  useEffect(() => {
+  const carregarProcessos = () => {
     fetch('/api/processos?destino=analista', { headers: { Accept: 'application/json' }, cache: 'no-store' })
       .then((response) => (response.ok ? response.json() : []))
       .then((data) => {
         const processos = Array.isArray(data) ? data : Array.isArray(data?.value) ? data.value : [];
+        setProcessosRaw(processos);
         setFilaAnalista(processos.map(processoToFila));
         setCarregouProcessos(true);
       })
-      .catch(() => { setFilaAnalista([]); setCarregouProcessos(true); });
+      .catch(() => { setProcessosRaw([]); setFilaAnalista([]); setCarregouProcessos(true); });
+    fetch('/api/processos/diagnosticos/gargalos', { headers: { Accept: 'application/json' }, cache: 'no-store' })
+      .then((response) => (response.ok ? response.json() : []))
+      .then((data) => setDiagnosticos(Array.isArray(data) ? data : []))
+      .catch(() => setDiagnosticos([]));
+  };
+
+  useEffect(() => {
+    carregarProcessos();
+    const unsubscribe = subscribeProcessoChanges(carregarProcessos);
+    return unsubscribe;
   }, []);
 
   const abrirTodos = () => setDetalhesAbertos(filaAnalista.map((cliente) => cliente.id));
@@ -227,12 +167,9 @@ export default function AnalistaClient({ initialProcessos = [] }: AnalistaClient
       abertos.includes(id) ? abertos.filter((item) => item !== id) : [...abertos, id]
     ));
   };
-  const alertasAnalista = filaAnalista.flatMap((cliente) => (
-    cliente.pendencias
-      .filter((pendencia) => pendencia.toLowerCase().includes('pend') || pendencia.toLowerCase().includes('observacao') || pendencia.includes(':'))
-      .map((pendencia) => ['critico', cliente.cliente, pendencia, cliente.slaCca] as PendenciaItem)
-  ));
+  const alertasAnalista = alertasPendencias(processosRaw);
   const alertasAtuais = alertasAnalista.length ? alertasAnalista : carregouProcessos ? [] : [];
+  const metricas = metricasOperacionais(processosRaw, diagnosticos);
   const resumoCarteiraAtual: ResumoItem[] = [
     ['Clientes em reserva', String(filaAnalista.length), 'processos ativos na carteira'],
     ['Finalizados', String(filaAnalista.filter((cliente) => cliente.caixa.toLowerCase().includes('conformidade') || cliente.agehab.toLowerCase().includes('validada')).length), 'kits aprovados ou enviados ao CCA'],
@@ -240,33 +177,32 @@ export default function AnalistaClient({ initialProcessos = [] }: AnalistaClient
   ];
 
   return (
-    <main className="cor-page cor-page-premium" data-layout-version="analista-dashboards-v1">
-      <header className="cor-premium-top">
-        <div className="cor-premium-title">
-          <span className="cor-chart-icon">↗</span>
+    <main className="cor-page cor-page-premium min-h-screen overflow-x-hidden" data-layout-version="analista-dashboards-v1">
+      <header className="cor-premium-top relative z-[1] mx-auto flex w-full max-w-[1760px] items-center justify-between gap-3">
+        <div className="cor-premium-title flex min-w-0 items-start gap-3">
+          <span className="cor-chart-icon">&uarr;</span>
           <div>
             <h1>Painel do Analista</h1>
             <p>Gestao documental, pendencias de credito, SLA da carteira e telemetria dos processos em reserva.</p>
           </div>
         </div>
-        <div className="cor-premium-actions cor-actions-no-primary">
-          <button>↻ Atualizar</button>
-          <button>↪ Sair</button>
+        <div className="cor-premium-actions cor-actions-no-primary flex flex-wrap justify-end gap-2">
+          <button type="button" onClick={carregarProcessos}>Atualizar</button>
+          <button type="button">Sair</button>
         </div>
       </header>
 
-      <section className="cor-dash-grid cor-dash-premium">
-        <article className="cor-card cor-panel-alerts">
+      <section className="cor-dash-grid cor-dash-premium relative z-[1] mx-auto grid w-full max-w-[1760px] gap-[18px]">
+        <article className="cor-card cor-panel-alerts relative flex flex-col overflow-hidden bg-white text-slate-900">
           <div className="cor-panel-head">
             <div>
-              <small>Dashboard 1 — Pendencias acompanhadas</small>
-              <p>Clientes e documentos que precisam de acao do analista ou retorno do corretor.</p>
+              <small>Dashboard 1 - Pendencias acompanhadas</small>
             </div>
             <strong className="cor-urgent-pill">{alertasAtuais.length} atencoes</strong>
           </div>
           <div className="cor-alert-list">
             {alertasAtuais.length ? alertasAtuais.map(([tone, nome, desc, prazo], index) => (
-              <div className={`cor-alert-item cor-alert-${tone}`} key={`${nome}-${prazo}-${index}`}>
+              <div className={`cor-alert-item cor-alert-${tone}`} key={`${nome}-${prazo}-${index}`} title={desc}>
                 <i />
                 <div className="cor-alert-copy">
                   <b>{nome}</b>
@@ -274,15 +210,14 @@ export default function AnalistaClient({ initialProcessos = [] }: AnalistaClient
                 </div>
                 <em><small>Prazo</small>{prazo}</em>
               </div>
-            )) : <div className="cor-alert-empty"><b>Sem pendências urgentes</b><span>Quando houver documento pendenciado, ele aparece aqui automaticamente.</span></div>}
+            )) : <div className="cor-alert-empty"><b>Sem pendencias urgentes</b><span>Quando houver documento pendenciado, ele aparece aqui automaticamente.</span></div>}
           </div>
         </article>
 
-        <article className="cor-card cor-panel-conversion">
+        <article className="cor-card cor-panel-conversion relative flex flex-col overflow-hidden bg-white text-slate-900">
             <div className="cor-panel-head">
               <div>
-                <small>Dashboard 2 — Carteira em reserva</small>
-                <p>Quantidade de clientes em reserva, finalizados e em pendencia documental.</p>
+                <small>Dashboard 2 - Carteira em reserva</small>
               </div>
             </div>
             <div className="cca-flow-metrics">
@@ -297,41 +232,45 @@ export default function AnalistaClient({ initialProcessos = [] }: AnalistaClient
           </article>
 
         <div className="cor-sla-stack">
-          <article className="cor-card cor-panel-sla">
+          <article className="cor-card cor-panel-sla relative flex flex-col overflow-hidden bg-white text-slate-900">
             <div className="cor-panel-head">
               <div>
-                <small>Dashboard 2 — SLA</small>
-                <p>Tempo medio da carteira do analista comparado ao melhor SLA operacional.</p>
+                <small>Dashboard 3 - SLA</small>
               </div>
             </div>
             <div className="cor-speed-premium">
               <div className="cor-speed-arc" />
-              <div className="cor-speed-needle" />
+              <div className="cor-speed-needle" style={{ transform: `translateX(-50%) rotate(${metricas.slaNeedleAngle}deg)` }} />
               <span />
             </div>
             <div className="cor-sla-lines">
-              <div><span>Melhor SLA documental</span><small>Referencia da operacao</small><b className="green">3h</b></div>
-              <div><span>SLA atual do analista</span><small>Media de resposta da carteira</small><b className="orange">11h</b></div>
+              <div><span>Melhor SLA documental</span><small>Referencia da operacao</small><b className="green">{metricas.melhorSla}</b></div>
+              <div><span>SLA atual do analista</span><small>Media de resposta da carteira</small><b className="orange">{metricas.mediaSla}</b></div>
             </div>
           </article>
-          <article className="cor-card cor-rework-card">
-            <div className="cor-rework">
-              <span className="cor-rework-icon">🔨</span>
+          <article className="cor-card cor-rework-card relative flex flex-col overflow-hidden bg-white text-slate-900">
+            <div className={classeRetrabalho(metricas.taxaRetrabalho)}>
+              <span className="cor-rework-icon">&#128296;</span>
               <span>Taxa de retrabalho</span>
-              <b>3,2%</b>
+              <b>{metricas.taxaRetrabalho.toFixed(1).replace('.', ',')}%</b>
             </div>
           </article>
         </div>
       </section>
 
-      <section className="analyst-live-board">
+      <section className="analyst-live-board" data-layout-version="analista-card-v2">
         <header className="analyst-live-head">
           <div className="analyst-live-title">
             <div className="analyst-live-title-row">
-              <h2>Fila Viva - Fluxo do Cliente</h2>
-              <strong>{filaAnalista.length} processo(s)</strong>
-              <strong>{filaAnalista.length} aguardando docs</strong>
-              <strong>{filaAnalista.length} prioridade alta</strong>
+              <div>
+                <h2>Fila Viva</h2>
+                <p>Fluxo operacional da carteira</p>
+              </div>
+              <div className="analyst-live-kpis">
+                <strong><b>{filaAnalista.length}</b><span>Processos</span></strong>
+                <strong><b>{filaAnalista.length}</b><span>Aguardando documentos</span></strong>
+                <strong><b>{filaAnalista.length}</b><span>Prioridade alta</span></strong>
+              </div>
             </div>
           </div>
           <div className="analyst-live-filters">
@@ -351,38 +290,42 @@ export default function AnalistaClient({ initialProcessos = [] }: AnalistaClient
           </div>
         </header>
 
-        <div className="analyst-live-list">
+        <div className="analyst-live-list" data-layout-version="analista-card-v2">
           {filaAnalista.map((cliente) => {
             const detalheAberto = detalhesAbertos.includes(cliente.id);
-            const pendenciado = cliente.pendencias.some((pendencia) => pendencia.toLowerCase().includes('pend') || pendencia.includes(':'));
-            const checklistUrl = `/analista/checklist?cliente=${encodeURIComponent(cliente.cliente)}&reserva=${cliente.id}`;
+            const pendenciado = cliente.hasPendencia;
+            const checklistUrl = `/analista/checklist?cliente=${encodeURIComponent(cliente.cliente)}&reserva=${cliente.id}&origem=analista`;
 
             return (
             <article className={`analyst-live-card ${detalheAberto ? 'is-open' : ''} ${pendenciado ? 'is-pending' : ''}`} key={cliente.id}>
               <div className="analyst-live-main">
-                <div className="analyst-client-title">
-                  <i />
-                  <b>{cliente.produto}</b>
-                  <h3>
-                    <a href={checklistUrl}>
-                      {cliente.cliente}
-                    </a>
-                  </h3>
+                <div className="analyst-card-client-area">
+                  <div className="analyst-client-title">
+                    <i />
+                    <b>{cliente.produto}</b>
+                    <h3>
+                      <a href={checklistUrl}>
+                        {cliente.cliente}
+                      </a>
+                    </h3>
+                  </div>
+                  <p>{cliente.empreendimento}</p>
+                  <p>{cliente.corretor}</p>
                 </div>
-                <p>{cliente.empreendimento}</p>
-                <p>{cliente.corretor}</p>
-                <div className="analyst-cca-line">
-                  <span>CCA responsavel</span>
-                  <em>{cliente.cca}</em>
+
+                <div className="analyst-card-pendency-area">
+                  <div className="analyst-cca-line">
+                    <span>CCA responsavel</span>
+                    <em>{cliente.cca}</em>
+                  </div>
+                  <small>{cliente.prioridade}</small>
+                  {pendenciado ? <strong className="pending-warning">Pendenciado</strong> : null}
                 </div>
-                <small>{cliente.prioridade}</small>
-                {pendenciado ? <strong className="pending-warning">Pendenciado</strong> : null}
               </div>
 
-              <div className="analyst-live-status">
+              <div className="analyst-live-status analyst-card-action-area">
                 <div>
-                  <span>Comercial {cliente.comercial}</span>
-                  <span>Credito {cliente.credito}</span>
+                    <span>SLA Cliente {cliente.slaCca}</span>
                 </div>
                 <button type="button" onClick={() => alternarDetalhe(cliente.id)}>
                   {detalheAberto ? 'Fechar detalhes' : 'Abrir detalhes'}
@@ -399,7 +342,7 @@ export default function AnalistaClient({ initialProcessos = [] }: AnalistaClient
                       <p>{cliente.resumo}</p>
                       <div className="analyst-detail-tags">
                         <b>Aging {cliente.aging}</b>
-                        <b className="danger">SLA CCA {cliente.slaCca}</b>
+                        <b className="danger">SLA Cliente {cliente.slaCca}</b>
                       </div>
                     </section>
 
@@ -448,7 +391,7 @@ export default function AnalistaClient({ initialProcessos = [] }: AnalistaClient
                       ['Agehab', cliente.agehab],
                       ['Sinal', cliente.sinal],
                       ['Fiador', cliente.fiador],
-                      ['SLA CCA', cliente.slaCca],
+                      ['SLA Cliente', cliente.slaCca],
                     ].map(([label, value]) => (
                       <section className="analyst-mini-card" key={label}>
                         <span>{label}</span>

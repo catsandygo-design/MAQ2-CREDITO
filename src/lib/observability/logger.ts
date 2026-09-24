@@ -1,10 +1,15 @@
 export function logAppError(context: string, error: unknown, meta?: Record<string, unknown>) {
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'string'
+      ? error
+      : JSON.stringify(error || {});
   const details = {
     context,
-    message: error instanceof Error ? error.message : String(error),
+    message,
     ...(meta || {}),
   };
 
-  // Centralized error logging point for frontend application flows.
-  console.error('[APP_ERROR]', details);
+  // Centralized diagnostics without triggering Next.js dev error overlay for handled flows.
+  console.warn('[APP_ERROR]', details);
 }

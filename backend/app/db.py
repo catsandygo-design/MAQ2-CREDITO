@@ -85,6 +85,16 @@ def init_db() -> None:
       unique (reserva, relacionamento_key)
     );
 
+    create table if not exists public.fastapi_creditu_dados (
+      id uuid primary key default gen_random_uuid(),
+      reserva text not null references public.fastapi_processos(reserva) on delete cascade,
+      email_segundo_proponente text,
+      telefone_segundo_proponente text,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now(),
+      unique (reserva)
+    );
+
     create table if not exists public.fastapi_documentos_pendencias (
       id uuid primary key default gen_random_uuid(),
       reserva text not null references public.fastapi_processos(reserva) on delete cascade,
@@ -96,6 +106,41 @@ def init_db() -> None:
       updated_at timestamptz not null default now(),
       unique (reserva, documento_key)
     );
+
+    create table if not exists public.fastapi_pendencias_historico (
+      id uuid primary key default gen_random_uuid(),
+      reserva text not null references public.fastapi_processos(reserva) on delete cascade,
+      documento_key text not null,
+      descricao text not null default '',
+      prazo text,
+      origem text,
+      evento text not null default 'criada',
+      status_documento text,
+      created_at timestamptz not null default now()
+    );
+
+    create table if not exists public.fastapi_checklist_messages (
+      id uuid primary key default gen_random_uuid(),
+      reserva text not null references public.fastapi_processos(reserva) on delete cascade,
+      documento_key text,
+      author_name text not null,
+      author_role text not null,
+      message text not null,
+      created_at timestamptz not null default now(),
+      read_at timestamptz
+    );
+
+    alter table public.fastapi_checklist_messages
+      alter column documento_key drop not null;
+
+    alter table public.fastapi_checklist_messages
+      add column if not exists target_role text not null default 'todos';
+
+    create index if not exists idx_fastapi_checklist_messages_doc
+      on public.fastapi_checklist_messages (reserva, documento_key, created_at);
+
+    create index if not exists idx_fastapi_checklist_messages_reserva
+      on public.fastapi_checklist_messages (reserva, created_at);
 
     create table if not exists public.fastapi_uploads (
       id uuid primary key default gen_random_uuid(),
@@ -123,6 +168,20 @@ def init_db() -> None:
       contexto text not null,
       created_at timestamptz not null default now()
     );
+
+    create table if not exists public.log_eventos (
+      id_cliente text not null,
+      status text not null,
+      timestamp timestamptz not null,
+      id_corretor text
+    );
+
+    create index if not exists idx_log_eventos_cliente_timestamp
+      on public.log_eventos (id_cliente, timestamp);
+
+    create index if not exists idx_log_eventos_status
+      on public.log_eventos (status);
+
     """
     with psycopg.connect(get_database_url(), row_factory=dict_row) as conn:
         with conn.cursor() as cur:

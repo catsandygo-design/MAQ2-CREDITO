@@ -31,6 +31,11 @@ class RelacionamentoUpdate(BaseModel):
     updated_by: str | None = None
 
 
+class CredituDadosPayload(BaseModel):
+    email_segundo_proponente: str | None = None
+    telefone_segundo_proponente: str | None = None
+
+
 class PendenciaUpdate(BaseModel):
     descricao: str = ""
     prazo: str | None = None
@@ -45,6 +50,29 @@ class UploadJsonPayload(BaseModel):
     name: str
     data: str
     created_by: str | None = None
+
+
+class ChecklistMessageCreate(BaseModel):
+    author_name: str
+    author_role: str
+    message: str
+    documento_key: str | None = None
+    targetRole: str | None = None
+    target_role: str | None = None
+
+
+class ChecklistMessageResponse(BaseModel):
+    id: str
+    reserva: str
+    documento_key: str | None = None
+    author_name: str
+    author_role: str
+    target_role: str = "todos"
+    targetRole: str = "todos"
+    targetLabel: str = "Todos"
+    message: str
+    created_at: str
+    read_at: str | None = None
 
 
 class SlaResponse(BaseModel):
@@ -71,8 +99,18 @@ class ProcessoResponse(BaseModel):
     encaminhado_analista: bool = False
     documentos: dict[str, str] = Field(default_factory=dict)
     relacionamento: dict[str, str] = Field(default_factory=dict)
+    creditu: dict[str, str] = Field(default_factory=dict)
     pendencias: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    pendenciasHistorico: list[dict[str, Any]] = Field(default_factory=list)
     uploadsCca: dict[str, dict[str, str]] = Field(default_factory=dict)
     uploadsEnviados: dict[str, bool] = Field(default_factory=dict)
     temDocumentoEnviado: bool = False
     sla: SlaResponse = Field(default_factory=SlaResponse)
+
+
+class DiagnosticoProcessoResponse(BaseModel):
+    id_cliente: str
+    id_corretor: str | None = None
+    Lead_Time_Total: float
+    Qtd_Retrabalho: int
+    Diagnostico: str

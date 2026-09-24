@@ -82,6 +82,19 @@ export const sections = [
       ['cartao-credito', 'Cartao de Credito', 'Formulario de contratacao de cartao de credito. Sujeito a aprovacao do banco.'],
     ],
   },
+  {
+    key: 'agehab',
+    title: 'Documentos Agehab',
+    subtitle: 'Padroes Agehab: assinaturas via GOV.BR ou Clicksign quando aplicavel.',
+    docs: [
+      ['declaracao-endereco', 'Declaracao de endereco', 'Quando necessario. Assinada via GOV.BR ou Clicksign.'],
+      ['declaracao-renda-informal', 'Declaracao renda informal', 'Assinada pelo dependente via GOV.BR/Clicksign, conforme modelo Agehab.'],
+      ['declaracao-nao-renda', 'Declaracao de nao renda', 'Para dependentes sem renda. Assinada via GOV.BR/Clicksign.'],
+      ['vinculo-3-anos', 'Vinculo >= 3 anos', 'Documentos com fe publica comprovando vinculo minimo na cidade do Cheque Moradia.'],
+      ['checklist-agehab', 'Checklist Agehab', 'Preenchido e assinado via GOV.BR ou proprio punho conforme orientacao.'],
+      ['ficha-agehab', 'Ficha Agehab', 'Preenchida pelo Assistente de Credito; assinada via GOV.BR ou proprio punho.'],
+    ],
+  },
 ] as const;
 
 export const relacionamento = [
