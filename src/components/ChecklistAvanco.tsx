@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { UploadCloud, CheckCircle, Clock, AlertCircle, Save, ChevronDown, ChevronUp } from "lucide-react";
+import { UploadCloud, CheckCircle, Clock, AlertCircle, Save, ChevronDown, ChevronUp, ArrowLeft, FileText, ShieldCheck } from "lucide-react";
 import { analyzeDocument, DocumentAnalysisResult } from "../lib/gemini";
 import { apiUrl } from '../lib/api/proxy';
 
@@ -79,6 +79,7 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
 
   const [isDragging, setIsDragging] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<'documentos' | 'mensagens' | 'historico'>('documentos');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const persistDocument = async (file: File, documentKey: string, result?: DocumentAnalysisResult) => {
@@ -255,33 +256,40 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-slate-50 min-h-screen font-sans">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Checklist de Documentos</h1>
-          <p className="text-sm text-slate-500 mt-1">{roleLabel[perfil]} · triagem por IA não substitui decisão humana.</p>
-        </div>
-        
-        {/* Barra de Progresso */}
-        <div className="flex flex-col items-end w-48">
-          <div className="flex justify-between w-full text-sm font-medium text-slate-700 mb-1">
-            <span>Progresso</span>
-            <span className="text-emerald-600">{percentage}%</span>
+    <div className="min-h-screen w-full bg-[#f7f8fa] font-sans text-slate-800">
+      <main className="mx-auto w-full max-w-[1440px] px-5 py-6 lg:px-8">
+        <button onClick={() => navigate(-1)} className="mb-5 flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-950"><ArrowLeft size={16} /> Voltar para reservas</button>
+        <section className="rounded-xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
+          <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Comercial · Reserva #{reserva || '—'}</p>
+              <h1 className="mt-1 text-2xl font-bold tracking-tight">{params.get('cliente') || 'Cliente'}</h1>
+              <p className="mt-1 text-sm text-slate-500">Checklist documental · {roleLabel[perfil]} · atualização registrada por usuário autenticado</p>
+            </div>
+            <div className="min-w-56 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="flex justify-between text-xs font-semibold uppercase tracking-wide text-slate-500"><span>Progresso da jornada</span><span className="text-slate-800">{percentage}%</span></div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-emerald-600 transition-all" style={{ width: `${percentage}%` }} /></div>
+              <p className="mt-2 text-xs text-slate-500">{approvedDocs} aprovados de {totalDocs} documentos</p>
+            </div>
           </div>
-          <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
-            <div className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${percentage}%` }}></div>
-          </div>
-          <span className="text-xs text-slate-400 mt-1">{approvedDocs} de {totalDocs} documentos aprovados</span>
-        </div>
-      </div>
+        </section>
 
-      <div className="p-6 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[320px_1fr]">
+          <aside className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2"><ShieldCheck size={18} className="text-emerald-700" /><div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Controle operacional</p><h2 className="font-semibold">Pendências e próxima ação</h2></div></div>
+            <p className="mt-3 text-sm text-slate-500">As pendências, responsáveis e prazos são auditáveis e não são decididos pela IA.</p>
+            <div className="mt-4 flex gap-2 text-xs"><span className="rounded-full bg-amber-50 px-3 py-1 font-semibold text-amber-800">{documents.flatMap(g => g.items).filter(i => i.status !== 'APROVADO').length} abertas</span><span className="rounded-full bg-rose-50 px-3 py-1 font-semibold text-rose-800">0 bloqueadoras</span></div>
+            <div className="mt-4 rounded-lg border border-slate-200 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Próxima ação · {perfil}</p><p className="mt-1 text-sm font-medium">Revisar documentos pendentes</p><p className="mt-1 text-xs text-slate-500">Aprovação final exige responsável humano.</p></div>
+          </aside>
+          <div className="min-w-0">
+            <div className="flex gap-1 overflow-x-auto border-b border-slate-200 bg-white px-3 pt-2">
+              {[['documentos', 'Documentos e datas'], ['mensagens', 'Mensagens'], ['historico', 'Histórico']].map(([id, label]) => <button key={id} onClick={() => setActiveTab(id as typeof activeTab)} className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium ${activeTab === id ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>{label}</button>)}
+            </div>
+            {activeTab !== 'documentos' ? <div className="rounded-b-xl border border-t-0 border-slate-200 bg-white p-8 text-sm text-slate-500">{activeTab === 'mensagens' ? 'Mensagens da reserva ficam registradas no fluxo operacional.' : 'Histórico de decisões e alterações do checklist.'}</div> : <div className="grid grid-cols-1 gap-5 pt-5 lg:grid-cols-[minmax(260px,340px)_1fr]">
         
-        {/* Painel Esquerdo - Filtros e Upload */}
-        <div className="lg:col-span-1 flex flex-col gap-4">
-          <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">{canUpload ? 'Adicionar Documento' : 'Revisão de documentos'}</h2>
+        <div className="flex flex-col gap-4">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-2"><FileText size={18} className="text-emerald-700" /><div><h2 className="font-semibold">Documentos obrigatórios</h2><p className="text-xs text-slate-500">Adicione ou solte os arquivos aqui</p></div></div>
             
             {canUpload ? <div className="flex flex-col gap-4 mb-5">
               <div className="flex flex-col gap-1">
@@ -371,11 +379,11 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
         </div>
 
         {/* Painel Direito - Tabela de Documentos */}
-        <div className="lg:col-span-2 flex flex-col gap-4">
-          <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden flex-1">
-            <div className="px-5 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-              <h2 className="text-lg font-semibold text-slate-800">Documentos Anexados</h2>
-              <span className="text-xs text-slate-500">Resultado da IA é somente uma pré-triagem.</span>
+        <div className="flex flex-col gap-4">
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-5 py-4">
+              <div><h2 className="font-semibold">Documentos da reserva</h2><p className="mt-1 text-xs text-slate-500">{totalDocs} arquivos cadastrados · triagem por IA é pré-análise, não decisão.</p></div>
+              <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">Revisão humana obrigatória</span>
             </div>
 
             <div className="overflow-x-auto pb-4">
@@ -383,10 +391,11 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
                 <thead className="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider font-semibold border-b border-slate-200">
                   <tr>
                     <th className="px-4 py-3 w-8"><input type="checkbox" className="rounded border-slate-300 text-emerald-500 focus:ring-emerald-500 cursor-pointer" /></th>
-                    <th className="px-4 py-3">Nome do Arquivo</th>
+                    <th className="px-4 py-3">Documento</th>
                     <th className="px-4 py-3">Tipo</th>
                     <th className="px-4 py-3">Pessoa</th>
-                    <th className="px-4 py-3">Status IA</th>
+                    <th className="px-4 py-3">Situação</th>
+                    <th className="px-4 py-3">Cadastro</th>
                     <th className="px-4 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
@@ -394,9 +403,9 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
                   {documents.map((group, gIdx) => (
                     <React.Fragment key={gIdx}>
                       {/* Linha Agrupadora */}
-                      <tr className="bg-slate-50/50 border-b border-slate-200">
-                        <td colSpan={6} className="px-4 py-2 border-l-4 border-emerald-500">
-                          <span className="font-semibold text-slate-700 text-xs uppercase">{group.name}</span>
+                      <tr className="border-b border-slate-200 bg-slate-50/70">
+                        <td colSpan={7} className="border-l-4 border-emerald-600 px-4 py-3">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-slate-700">{group.name} · {group.items.length} arquivo{group.items.length === 1 ? '' : 's'}</span>
                         </td>
                       </tr>
                       {/* Itens */}
@@ -412,6 +421,7 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
                               <td className="px-4 py-3 pt-4">
                                 {getStatusBadge(item.status, item.isProcessing)}
                               </td>
+                              <td className="px-4 py-3 pt-4 text-xs text-slate-500">{item.date}</td>
                               <td className="px-4 py-3 pt-4 text-right">
                                 <div className="flex items-center justify-end gap-3">
                                   {(!item.isProcessing && (item.extractedData || item.reason)) && (
@@ -430,7 +440,7 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
                             {isExpanded && (
                               <tr className="bg-slate-50/80 border-b border-slate-200 shadow-inner">
                                 <td></td>
-                                <td colSpan={5} className="px-4 py-4 text-sm">
+                                <td colSpan={6} className="px-4 py-4 text-sm">
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {item.reason && (
                                       <div className="bg-white p-3 rounded border border-slate-200">
@@ -469,7 +479,7 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
                   ))}
                   {totalDocs === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                      <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
                         Nenhum documento anexado ainda.
                       </td>
                     </tr>
@@ -479,11 +489,11 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
             </div>
           </div>
         </div>
-
-      </div>
-
-      {/* Footer Actions */}
-      <div className="mt-auto border-t border-slate-200 bg-white px-6 py-4 flex justify-end gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+            </div>}
+          </div>
+        </section>
+      </main>
+      <div className="sticky bottom-0 border-t border-slate-200 bg-white/95 px-6 py-4 shadow-[0_-4px_12px_rgba(15,23,42,0.05)] backdrop-blur flex justify-end gap-3">
         <button onClick={() => navigate(-1)} className="px-5 py-2 border border-slate-300 text-slate-700 bg-white rounded-md font-medium hover:bg-slate-50 transition-colors cursor-pointer">
           Cancelar
         </button>
