@@ -6,6 +6,7 @@
     "api/**/*.js": { "maxDuration": 30 }
   },
   "rewrites": [
+    { "source": "/api/processos/:path*", "destination": "/api/processos?path=:path*" },
     { "source": "/((?!api/|assets/).*)", "destination": "/index.html" }
   ]
 }
