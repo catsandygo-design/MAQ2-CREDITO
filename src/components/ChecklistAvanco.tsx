@@ -79,7 +79,7 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
 
   const [isDragging, setIsDragging] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState<'documentos' | 'mensagens' | 'historico'>('documentos');
+  const [activeTab, setActiveTab] = useState('documentos');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const persistDocument = async (file: File, documentKey: string, result?: DocumentAnalysisResult) => {
@@ -286,13 +286,14 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
             <div className="flex items-center gap-2"><ShieldCheck size={18} className="text-emerald-700" /><div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Controle operacional</p><h2 className="font-semibold">Pendências e próxima ação</h2></div></div>
             <p className="mt-3 text-sm text-slate-500">As pendências, responsáveis e prazos são auditáveis e não são decididos pela IA.</p>
             <div className="mt-4 flex gap-2 text-xs"><span className="rounded-full bg-amber-50 px-3 py-1 font-semibold text-amber-800">{documents.flatMap(g => g.items).filter(i => i.status !== 'APROVADO').length} abertas</span><span className="rounded-full bg-rose-50 px-3 py-1 font-semibold text-rose-800">0 bloqueadoras</span></div>
-            <div className="mt-4 rounded-lg border border-slate-200 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Próxima ação · {perfil}</p><p className="mt-1 text-sm font-medium">Revisar documentos pendentes</p><p className="mt-1 text-xs text-slate-500">Aprovação final exige responsável humano.</p></div>
+            <div className="mt-4 rounded-lg border border-slate-200 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">1 próxima ação · {perfil}</p><p className="mt-1 text-sm font-medium">Revisar documentos pendentes</p><p className="mt-1 text-xs text-slate-500">Prazo não definido · Aprovação final exige responsável humano.</p><button className="mt-3 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold hover:bg-slate-50">Concluir</button></div>
+            <div className="mt-4 border-t border-slate-100 pt-4"><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Nova pendência</p><input placeholder="Descreva a ação" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" /><div className="mt-2 grid grid-cols-2 gap-2"><select className="rounded-md border border-slate-300 bg-white px-2 py-2 text-xs"><option>Corretor</option><option>Analista</option><option>CCA</option></select><select className="rounded-md border border-slate-300 bg-white px-2 py-2 text-xs"><option>Atenção</option><option>Bloqueadora</option></select></div><button className="mt-2 w-full rounded-md bg-slate-800 px-3 py-2 text-xs font-semibold text-white">Adicionar</button></div>
           </aside>
           <div className="min-w-0">
             <div className="flex gap-1 overflow-x-auto border-b border-slate-200 bg-white px-3 pt-2">
-              {[['documentos', 'Documentos e datas'], ['mensagens', 'Mensagens'], ['historico', 'Histórico']].map(([id, label]) => <button key={id} onClick={() => setActiveTab(id as typeof activeTab)} className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium ${activeTab === id ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>{label}</button>)}
+              {[['dados', 'Dados gerais'], ['credito', 'Crédito e renda'], ['financeiro', 'Financeiro'], ['contratos', 'Contratos'], ['documentos', 'Documentos e datas'], ['mensagens', 'Mensagens'], ['historico', 'Histórico']].map(([id, label]) => <button key={id} onClick={() => setActiveTab(id)} className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium ${activeTab === id ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>{label}</button>)}
             </div>
-            {activeTab !== 'documentos' ? <div className="rounded-b-xl border border-t-0 border-slate-200 bg-white p-8 text-sm text-slate-500">{activeTab === 'mensagens' ? 'Mensagens da reserva ficam registradas no fluxo operacional.' : 'Histórico de decisões e alterações do checklist.'}</div> : <div className="grid grid-cols-1 gap-5 pt-5 lg:grid-cols-[minmax(260px,340px)_1fr]">
+            {activeTab !== 'documentos' ? <div className="rounded-b-xl border border-t-0 border-slate-200 bg-white p-8 text-sm text-slate-500">{activeTab === 'mensagens' ? 'Mensagens da reserva ficam registradas no fluxo operacional.' : activeTab === 'historico' ? 'Histórico de decisões e alterações do checklist.' : 'Dados operacionais desta etapa da jornada.'}</div> : <div className="grid grid-cols-1 gap-5 pt-5 lg:grid-cols-[minmax(260px,340px)_1fr]">
         
         <div className="flex flex-col gap-4">
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -401,8 +402,10 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
                     <th className="px-4 py-3">Documento</th>
                     <th className="px-4 py-3">Tipo</th>
                     <th className="px-4 py-3">Pessoa</th>
-                    <th className="px-4 py-3">Situação</th>
                     <th className="px-4 py-3">Cadastro</th>
+                    <th className="px-4 py-3">Responsável</th>
+                    <th className="px-4 py-3">Situação</th>
+                    <th className="px-4 py-3">Validade</th>
                     <th className="px-4 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
@@ -411,7 +414,7 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
                     <React.Fragment key={gIdx}>
                       {/* Linha Agrupadora */}
                       <tr className="border-b border-slate-200 bg-slate-50/70">
-                        <td colSpan={7} className="border-l-4 border-emerald-600 px-4 py-3">
+                        <td colSpan={9} className="border-l-4 border-emerald-600 px-4 py-3">
                           <span className="text-xs font-semibold uppercase tracking-wide text-slate-700">{group.name} · {group.items.length} arquivo{group.items.length === 1 ? '' : 's'}</span>
                         </td>
                       </tr>
@@ -425,10 +428,10 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
                               <td className="px-4 py-3 pt-4 text-slate-800 font-medium truncate max-w-[200px]" title={item.name}>{item.name}</td>
                               <td className="px-4 py-3 pt-4 text-slate-600">{item.type}</td>
                               <td className="px-4 py-3 pt-4 text-slate-600">{item.person}</td>
-                              <td className="px-4 py-3 pt-4">
-                                {getStatusBadge(item.status, item.isProcessing)}
-                              </td>
                               <td className="px-4 py-3 pt-4 text-xs text-slate-500">{item.date}</td>
+                              <td className="px-4 py-3 pt-4 text-xs text-slate-600">Equipe</td>
+                              <td className="px-4 py-3 pt-4">{getStatusBadge(item.status, item.isProcessing)}</td>
+                              <td className="px-4 py-3 pt-4 text-xs text-slate-500">—</td>
                               <td className="px-4 py-3 pt-4 text-right">
                                 <div className="flex items-center justify-end gap-3">
                                   {(!item.isProcessing && (item.extractedData || item.reason)) && (
@@ -447,7 +450,7 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
                             {isExpanded && (
                               <tr className="bg-slate-50/80 border-b border-slate-200 shadow-inner">
                                 <td></td>
-                                <td colSpan={6} className="px-4 py-4 text-sm">
+                                <td colSpan={8} className="px-4 py-4 text-sm">
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {item.reason && (
                                       <div className="bg-white p-3 rounded border border-slate-200">
@@ -486,7 +489,7 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
                   ))}
                   {totalDocs === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                      <td colSpan={9} className="px-4 py-8 text-center text-slate-500">
                         Nenhum documento anexado ainda.
                       </td>
                     </tr>
