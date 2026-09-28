@@ -17,7 +17,7 @@ async function authenticatedClient(req) {
   const { data, error } = await client.auth.getUser(token);
   return error || !data.user ? null : { client, user: data.user };
 }
-function pathParts(req) { const path = req.query.path; return Array.isArray(path) ? path : path ? [path] : []; }
+function pathParts(req) { const path = req.query.path; return (Array.isArray(path) ? path : path ? [path] : []).flatMap((part) => String(part).split('/').filter(Boolean)); }
 function normalized(value, values, field) { const result = values[String(value || '').trim().toLowerCase()]; if (!result) throw new Error(`${field} inválido.`); return result; }
 function toProcess(row, details = {}) {
   const statuses = details.statuses || [], uploads = details.uploads || [];
