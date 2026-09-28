@@ -256,7 +256,13 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#f7f8fa] font-sans text-slate-800">
+    <div className="min-h-screen w-full bg-[#f7f8fa] font-sans text-slate-800 lg:pl-64">
+      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-slate-200 bg-white px-4 py-6 lg:block">
+        <div className="mb-8 flex items-center gap-2 px-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-700 text-sm font-black text-white">7L</span><span className="font-semibold">Avanço</span></div>
+        <nav className="space-y-1 text-sm font-medium text-slate-600">{['Visão geral', 'Empreendimentos', 'Clientes', 'Pré-cadastros', 'Reservas', 'Crédito', 'Repasses', 'Relatórios'].map((item) => <button key={item} className={`block w-full rounded-lg px-3 py-2 text-left ${item === 'Crédito' ? 'bg-emerald-50 text-emerald-800' : 'hover:bg-slate-50'}`}>{item}</button>)}</nav>
+        <div className="absolute bottom-6 left-4 right-4 border-t border-slate-100 pt-4 text-xs text-slate-500">Central de ajuda</div>
+      </aside>
+      <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-5 backdrop-blur lg:px-8"><div className="rounded-md bg-slate-100 px-4 py-2 text-sm text-slate-500">O que você procura?</div><div className="flex items-center gap-3"><span className="text-sm text-slate-500">IA Avanço</span><span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-white">{(params.get('cliente') || 'U').slice(0, 1).toUpperCase()}</span></div></header>
       <main className="mx-auto w-full max-w-[1440px] px-5 py-6 lg:px-8">
         <button onClick={() => navigate(-1)} className="mb-5 flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-950"><ArrowLeft size={16} /> Voltar para reservas</button>
         <section className="rounded-xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
@@ -264,7 +270,7 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Comercial · Reserva #{reserva || '—'}</p>
               <h1 className="mt-1 text-2xl font-bold tracking-tight">{params.get('cliente') || 'Cliente'}</h1>
-              <p className="mt-1 text-sm text-slate-500">Checklist documental · {roleLabel[perfil]} · atualização registrada por usuário autenticado</p>
+              <p className="mt-1 text-sm text-slate-500">Criada hoje · Atualizada recentemente</p>
             </div>
             <div className="min-w-56 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
               <div className="flex justify-between text-xs font-semibold uppercase tracking-wide text-slate-500"><span>Progresso da jornada</span><span className="text-slate-800">{percentage}%</span></div>
@@ -272,6 +278,7 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
               <p className="mt-2 text-xs text-slate-500">{approvedDocs} aprovados de {totalDocs} documentos</p>
             </div>
           </div>
+          <div className="mt-5 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 sm:grid-cols-4"><div><p className="text-xs font-semibold uppercase text-slate-500">Empreendimento</p><p className="mt-1 text-sm font-medium">Não informado</p></div><div><p className="text-xs font-semibold uppercase text-slate-500">Unidade</p><p className="mt-1 text-sm font-medium">—</p></div><div><p className="text-xs font-semibold uppercase text-slate-500">Etapa atual</p><p className="mt-1 text-sm font-medium text-emerald-700">Crédito</p></div><div><p className="text-xs font-semibold uppercase text-slate-500">Corretor responsável</p><p className="mt-1 text-sm font-medium">{perfil}</p></div></div>
         </section>
 
         <section className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[320px_1fr]">
