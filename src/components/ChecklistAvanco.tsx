@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { UploadCloud, CheckCircle, Clock, AlertCircle, Save, ChevronDown, ChevronUp, ArrowLeft, FileText, ShieldCheck } from "lucide-react";
 import { analyzeDocument, DocumentAnalysisResult } from "../lib/gemini";
@@ -28,8 +28,19 @@ interface DocumentGroup {
   items: DocumentItem[];
 }
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // O proxy atual do MAQ2 limita uploads a 10MB.
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
+// Catálogo e regras portados de cliente-avanco-app/frontend/src/main.jsx.
+const DOCUMENT_GROUPS = [
+  ['Documentação pessoal', ['RG/CPF do proponente', 'Certidão de estado civil ou termo de união estável', 'Comprovante de endereço', 'Comprovante de renda ou extratos bancários', 'Extrato do FGTS', 'IRPF', 'Recibo de renda', 'Carteira de trabalho digital', 'Autorização no aplicativo']],
+  ['Documentos do cônjuge — se houver', ['RG/CPF do cônjuge', 'Certidão civil do cônjuge em união estável', 'Comprovante de renda do cônjuge']],
+  ['Dependente menor', ['Certidão de nascimento ou termo de adoção/guarda']],
+  ['Dependente maior ou dependente até 3º grau', ['RG/CPF do dependente', 'RG/CPF do cônjuge do dependente casado', 'Certidão civil do dependente', 'Declaração de parentesco']],
+  ['Formulários Caixa', ['DAMP', 'Ficha de cadastro', 'Ficha de abertura de conta', 'MO', 'Ficha de cheque especial', 'Ficha de cartão de crédito']],
+  ['Kit Creditú', ['RG/CPF do proponente — Creditú', 'RG/CPF do cônjuge — Creditú', 'Certidão de estado civil — Creditú', 'Comprovante de residência ou declaração de endereço modelo Creditú', 'RG/CPF do segundo proponente', 'RG/CPF do cônjuge do segundo proponente', 'Tela SICAQ', 'Tela de cadastro do proponente como associado', 'Simulador Creditú']],
+  ['AGEHAB', ['RG/CPF do beneficiário', 'RG/CPF do cônjuge — AGEHAB', 'Certidão de estado civil — AGEHAB', 'Comprovante de renda — AGEHAB', 'Comprovante de renda do cônjuge ou declaração de não renda modelo AGEHAB', 'Certidão de nascimento ou termo de adoção/guarda do dependente menor', 'RG/CPF do dependente maior até 4º grau', 'Certidão civil de dependentes maiores até 4º grau', 'Renda ou declaração de não renda do dependente maior até 4º grau', 'Comprovante de endereço ou declaração de endereço modelo AGEHAB', 'RG/CPF do declarante — se houver', 'Documento que comprove vínculo na cidade participante do programa']],
+] as const;
+const PEOPLE = ['Titular', 'Cônjuge', 'Dependente menor', 'Dependente maior', 'Segundo proponente', 'Beneficiário', 'Declarante'];
 const DEMO_DOCUMENTS: DocumentGroup[] = [
   {
     name: '01 DOCUMENTAÇÃO PESSOAL',
@@ -73,20 +84,26 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
     cca: 'Validação CCA',
   };
 
-  const [selectedGroup, setSelectedGroup] = useState("01 DOCUMENTAÇÃO PESSOAL");
-  const [selectedType, setSelectedType] = useState("RG");
-  const [selectedPerson, setSelectedPerson] = useState(params.get('cliente') || "Proponente");
+  const [selectedGroup, setSelectedGroup] = useState("Kit Creditú");
+  const [selectedType, setSelectedType] = useState("RG/CPF do proponente — Creditú");
+  const [selectedPerson, setSelectedPerson] = useState("Titular");
 
   const [isDragging, setIsDragging] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState('documentos');
+  const [actionMenuFor, setActionMenuFor] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const availableTypes = useMemo(() => {
+    const group = DOCUMENT_GROUPS.find(([name]) => name === selectedGroup);
+    const used = documents.flatMap((itemGroup) => itemGroup.items).filter((item) => item.person === selectedPerson && item.status !== 'REJEITADO').map((item) => item.type);
+    return (group?.[1] || []).filter((type) => !used.includes(type));
+  }, [documents, selectedGroup, selectedPerson]);
 
   const persistDocument = async (file: File, documentKey: string, result?: DocumentAnalysisResult) => {
     if (!reserva) return;
     if (!result) {
       const formData = new FormData();
-      formData.append('grupo', 'triagem-ia');
+      formData.append('grupo', selectedGroup);
       formData.append('key', documentKey);
       formData.append('name', file.name);
       formData.append('file', file);
@@ -120,6 +137,14 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
       else next.add(id);
       return next;
     });
+  };
+  const decideDocument = async (id: string, status: DocumentStatus) => {
+    setDocuments((groups) => groups.map((group) => ({ ...group, items: group.items.map((item) => item.id === id ? { ...item, status, isProcessing: false, reason: `Decisão humana: ${status}.` } : item) })));
+    setActionMenuFor(null);
+    if (!reserva) return;
+    try {
+      await fetch(apiUrl(`/api/processos/${encodeURIComponent(reserva)}/documentos/${encodeURIComponent(id)}`), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: status === 'APROVADO' ? 'Aprovado' : status === 'REJEITADO' ? 'Pendente' : 'Pendente', updated_by: perfil }) });
+    } catch { /* A decisão permanece visível; a próxima sincronização tentará persistir. */ }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -180,7 +205,7 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
       const file = validFiles[i];
       const currentId = newItems[i].id;
       
-      const documentKey = `triagem.${selectedType.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-')}`;
+      const documentKey = `${selectedGroup}.${selectedType}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
       let result: DocumentAnalysisResult;
       try {
         await persistDocument(file, documentKey);
@@ -306,12 +331,10 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
                 <div className="relative">
                   <select 
                     value={selectedGroup} 
-                    onChange={e => setSelectedGroup(e.target.value)}
+                    onChange={e => { const group = e.target.value; setSelectedGroup(group); setSelectedType(DOCUMENT_GROUPS.find(([name]) => name === group)?.[1][0] || ''); }}
                     className="w-full appearance-none bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-md px-3 py-2 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer"
                   >
-                    <option>01 DOCUMENTAÇÃO PESSOAL</option>
-                    <option>02 COMPROVANTES DE RENDA</option>
-                    <option>03 IMÓVEL</option>
+                    {DOCUMENT_GROUPS.map(([name]) => <option key={name}>{name}</option>)}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
                     <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
@@ -327,12 +350,7 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
                     onChange={e => setSelectedType(e.target.value)}
                     className="w-full appearance-none bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-md px-3 py-2 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer"
                   >
-                    <option>RG</option>
-                    <option>CPF</option>
-                    <option>CNH</option>
-                    <option>Comprovante de Endereço</option>
-                    <option>Certidão de Casamento</option>
-                    <option>Holerite</option>
+                    {availableTypes.length ? availableTypes.map((type) => <option key={type}>{type}</option>) : <option value="">Todos os documentos deste grupo já foram enviados</option>}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
                     <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
@@ -348,8 +366,7 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
                     onChange={e => setSelectedPerson(e.target.value)}
                     className="w-full appearance-none bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-md px-3 py-2 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer"
                   >
-                    <option>{params.get('cliente') || 'Proponente'}</option>
-                    <option>Cônjuge</option>
+                    {PEOPLE.map((person) => <option key={person}>{person}</option>)}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
                     <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
@@ -433,18 +450,9 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
                               <td className="px-4 py-3 pt-4 text-xs text-slate-600">Equipe</td>
                               <td className="px-4 py-3 pt-4">{getStatusBadge(item.status, item.isProcessing)}</td>
                               <td className="px-4 py-3 pt-4 text-xs text-slate-500">—</td>
-                              <td className="px-4 py-3 pt-4 text-right">
-                                <div className="flex items-center justify-end gap-3">
-                                  {(!item.isProcessing && (item.extractedData || item.reason)) && (
-                                    <button 
-                                      onClick={() => toggleRow(item.id)}
-                                      className="text-slate-400 hover:text-emerald-600 transition-colors cursor-pointer" 
-                                      title="Detalhes da Análise"
-                                    >
-                                      {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                                    </button>
-                                  )}
-                                </div>
+                              <td className="relative px-4 py-3 pt-4 text-right">
+                                <button onClick={() => setActionMenuFor(actionMenuFor === item.id ? null : item.id)} className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium">Ações ···</button>
+                                {actionMenuFor === item.id && <div className="absolute right-3 z-10 mt-1 w-36 rounded-md border border-slate-200 bg-white p-1 text-left shadow-lg"><button onClick={() => decideDocument(item.id, 'APROVADO')} className="block w-full rounded px-2 py-1.5 text-left text-xs hover:bg-emerald-50">Aprovar</button><button onClick={() => decideDocument(item.id, 'PENDENTE')} className="block w-full rounded px-2 py-1.5 text-left text-xs hover:bg-amber-50">Pendenciar</button><button onClick={() => decideDocument(item.id, 'REJEITADO')} className="block w-full rounded px-2 py-1.5 text-left text-xs hover:bg-rose-50">Rejeitar</button><button onClick={() => toggleRow(item.id)} className="block w-full rounded px-2 py-1.5 text-left text-xs hover:bg-slate-50">Ver análise</button></div>}
                               </td>
                             </tr>
                             {/* Linha Expandida - Dados Extraídos */}
