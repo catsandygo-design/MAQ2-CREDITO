@@ -30,12 +30,41 @@ interface DocumentGroup {
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
+const DEMO_DOCUMENTS: DocumentGroup[] = [
+  {
+    name: '01 DOCUMENTAÇÃO PESSOAL',
+    items: [
+      {
+        id: 'demo-rg',
+        name: 'RG_Frente_Verso.pdf',
+        type: 'RG',
+        person: 'João Silva',
+        status: 'APROVADO',
+        date: '24/09/2026',
+        reason: 'Documento legível e válido (dado de demonstração).',
+        extractedData: 'Nome: João Silva\nCPF: 123.456.789-00',
+      },
+      {
+        id: 'demo-endereco',
+        name: 'Comprovante_Residencia.pdf',
+        type: 'Comprovante de Endereço',
+        person: 'João Silva',
+        status: 'AGUARDANDO APROVAÇÃO',
+        date: '24/09/2026',
+        reason: 'Aguardando revisão humana (dado de demonstração).',
+      },
+    ],
+  },
+];
 
 export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: ChecklistPerfil }) {
-  const [documents, setDocuments] = useState<DocumentGroup[]>([]);
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const reserva = params.get('reserva') || '';
+  const isDemoReservation = reserva === 'VALIDACAO-LOCAL';
+  const [documents, setDocuments] = useState<DocumentGroup[]>(() => (
+    isDemoReservation ? structuredClone(DEMO_DOCUMENTS) : []
+  ));
   const canUpload = perfil === 'corretor' || perfil === 'gestor';
   const roleLabel: Record<ChecklistPerfil, string> = {
     corretor: 'Envio de documentos',
