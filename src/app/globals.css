@@ -28,6 +28,24 @@ body {
 
 a { color: inherit; text-decoration: none; }
 
+/* Portado do gestor documental do Cliente Avanço: mantém o escopo isolado do MAQ2. */
+.avanco-checklist { --avanco-green:#087b66; --avanco-line:#e4ebe9; --avanco-muted:#71817d; background:#f6f9f8!important; color:#263532!important; font-family:Manrope,Inter,Arial,sans-serif; }
+.avanco-checklist main { max-width:1530px; }
+.avanco-checklist .rounded-xl { border-color:var(--avanco-line)!important; border-radius:10px!important; box-shadow:none!important; }
+.avanco-checklist h1 { font:800 22px Manrope,Inter,sans-serif; color:#263532; }
+.avanco-checklist h2 { font:800 14px Manrope,Inter,sans-serif; color:#263532; }
+.avanco-checklist .sticky { box-shadow:none!important; }
+.avanco-checklist select,.avanco-checklist input { border-color:#dce5e2!important; border-radius:8px!important; background:#fbfcfc!important; color:#263532!important; font-size:12px!important; }
+.avanco-checklist table { min-width:1150px; font-size:10px!important; }
+.avanco-checklist table thead { background:#f6f9f8!important; color:#71817d!important; font-size:8px!important; }
+.avanco-checklist table th { padding-top:11px!important; padding-bottom:11px!important; }
+.avanco-checklist table td { padding-top:12px!important; padding-bottom:12px!important; }
+.avanco-checklist table tbody > tr:first-child td { background:#edf7f4!important; color:#087b66!important; }
+.avanco-checklist button { font-size:11px; }
+.avanco-checklist .border-dashed { border-color:#b9d3ca!important; min-height:120px!important; background:#fff!important; }
+.avanco-checklist .border-dashed p:first-of-type { font-size:12px!important; }
+.avanco-checklist .bg-emerald-600 { background-color:#087b66!important; }
+
 .login-page { width: 100vw; height: 100vh; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.08), transparent 34%), radial-gradient(circle at 82% 78%, rgba(168, 85, 247, 0.08), transparent 34%), #030712; position: relative; overflow: hidden; }
 .login-page::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(56,189,248,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(168,85,247,0.028) 1px, transparent 1px); background-size: 52px 52px; mask-image: radial-gradient(circle at center, black 0%, transparent 75%); pointer-events: none; }
 .login-wrapper { position: relative; z-index: 2; width: min(92vw, 430px); padding: 12px; }

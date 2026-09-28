@@ -256,8 +256,8 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#f7f8fa] font-sans text-slate-800 lg:pl-64">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-slate-200 bg-white px-4 py-6 lg:block">
+    <div className="avanco-checklist min-h-screen w-full bg-[#f7f8fa] font-sans text-slate-800">
+      <aside className="hidden">
         <div className="mb-8 flex items-center gap-2 px-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-700 text-sm font-black text-white">7L</span><span className="font-semibold">Avanço</span></div>
         <nav className="space-y-1 text-sm font-medium text-slate-600">{['Visão geral', 'Empreendimentos', 'Clientes', 'Pré-cadastros', 'Reservas', 'Crédito', 'Repasses', 'Relatórios'].map((item) => <button key={item} className={`block w-full rounded-lg px-3 py-2 text-left ${item === 'Crédito' ? 'bg-emerald-50 text-emerald-800' : 'hover:bg-slate-50'}`}>{item}</button>)}</nav>
         <div className="absolute bottom-6 left-4 right-4 border-t border-slate-100 pt-4 text-xs text-slate-500">Central de ajuda</div>
@@ -281,7 +281,7 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
           <div className="mt-5 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 sm:grid-cols-4"><div><p className="text-xs font-semibold uppercase text-slate-500">Empreendimento</p><p className="mt-1 text-sm font-medium">Não informado</p></div><div><p className="text-xs font-semibold uppercase text-slate-500">Unidade</p><p className="mt-1 text-sm font-medium">—</p></div><div><p className="text-xs font-semibold uppercase text-slate-500">Etapa atual</p><p className="mt-1 text-sm font-medium text-emerald-700">Crédito</p></div><div><p className="text-xs font-semibold uppercase text-slate-500">Corretor responsável</p><p className="mt-1 text-sm font-medium">{perfil}</p></div></div>
         </section>
 
-        <section className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[320px_1fr]">
+        <section className="mt-5 space-y-4">
           <aside className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2"><ShieldCheck size={18} className="text-emerald-700" /><div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Controle operacional</p><h2 className="font-semibold">Pendências e próxima ação</h2></div></div>
             <p className="mt-3 text-sm text-slate-500">As pendências, responsáveis e prazos são auditáveis e não são decididos pela IA.</p>
@@ -293,13 +293,14 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
             <div className="flex gap-1 overflow-x-auto border-b border-slate-200 bg-white px-3 pt-2">
               {[['dados', 'Dados gerais'], ['credito', 'Crédito e renda'], ['financeiro', 'Financeiro'], ['contratos', 'Contratos'], ['documentos', 'Documentos e datas'], ['mensagens', 'Mensagens'], ['historico', 'Histórico']].map(([id, label]) => <button key={id} onClick={() => setActiveTab(id)} className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium ${activeTab === id ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>{label}</button>)}
             </div>
-            {activeTab !== 'documentos' ? <div className="rounded-b-xl border border-t-0 border-slate-200 bg-white p-8 text-sm text-slate-500">{activeTab === 'mensagens' ? 'Mensagens da reserva ficam registradas no fluxo operacional.' : activeTab === 'historico' ? 'Histórico de decisões e alterações do checklist.' : 'Dados operacionais desta etapa da jornada.'}</div> : <div className="grid grid-cols-1 gap-5 pt-5 lg:grid-cols-[minmax(260px,340px)_1fr]">
+            {activeTab !== 'documentos' ? <div className="rounded-b-xl border border-t-0 border-slate-200 bg-white p-8 text-sm text-slate-500">{activeTab === 'mensagens' ? 'Mensagens da reserva ficam registradas no fluxo operacional.' : activeTab === 'historico' ? 'Histórico de decisões e alterações do checklist.' : 'Dados operacionais desta etapa da jornada.'}</div> : <div className="grid grid-cols-1 gap-5 pt-5">
         
         <div className="flex flex-col gap-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center gap-2"><FileText size={18} className="text-emerald-700" /><div><h2 className="font-semibold">Documentos obrigatórios</h2><p className="text-xs text-slate-500">Adicione ou solte os arquivos aqui</p></div></div>
+          <div className="flex flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-start justify-between border-b border-slate-100 pb-4"><div className="flex items-center gap-2"><FileText size={18} className="text-emerald-700" /><div><h2 className="font-semibold text-emerald-800">Documentos obrigatórios</h2><p className="text-xs text-slate-500">Visualize todos os documentos obrigatórios para esta reserva</p></div></div><div className="text-right text-xs"><p className="font-semibold text-emerald-700">{percentage}% cadastrados</p><button className="mt-1 text-emerald-700">Ver lista completa</button></div></div>
+            <div className="mb-5 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-emerald-600" style={{ width: `${percentage}%` }} /></div>
             
-            {canUpload ? <div className="flex flex-col gap-4 mb-5">
+            {canUpload ? <div className="order-2 mb-5 grid grid-cols-1 gap-3 md:grid-cols-3">
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Grupo de documentos</label>
                 <div className="relative">
@@ -362,7 +363,7 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center transition-colors cursor-pointer
+              className={`order-1 mb-5 border-2 border-dashed rounded-lg p-8 flex min-h-32 flex-col items-center justify-center text-center transition-colors cursor-pointer
                 ${isDragging ? 'border-emerald-500 bg-emerald-50' : 'border-slate-300 hover:bg-slate-50'}`}
               onClick={() => fileInputRef.current?.click()}
             >
