@@ -1,10 +1,9 @@
 type RequestBody = BodyInit | Record<string, unknown> | null | undefined;
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 export function apiUrl(path: string) {
-  if (typeof window !== 'undefined') return path;
-  if (API_BASE_URL) return `${API_BASE_URL}${path}`;
+  if (API_BASE_URL) return `${API_BASE_URL.replace(/\/$/, '')}${path}`;
   return path;
 }
 

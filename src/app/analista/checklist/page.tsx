@@ -1,5 +1,5 @@
-import ChecklistDocumentosForm from '@/components/ChecklistDocumentosForm';
+import ChecklistAvanco from '@/components/ChecklistAvanco';
 
 export default function AnalistaChecklistPage() {
-  return <ChecklistDocumentosForm perfil="analista" modo="analise" ocultarAteInicializar />;
+  return <ChecklistAvanco perfil="analista" />;
 }

@@ -1,8 +1,9 @@
-'use client';
+
 
 import { useEffect, useMemo, useRef } from 'react';
-import { usePathname } from 'next/navigation';
+import { useLocation } from 'react-router-dom';
 import { apiUrl } from '@/lib/api/proxy';
+import { analyzeDocument } from '@/lib/gemini';
 
 const checklistCss = String.raw`:root {
       --bg: #0f172a;
@@ -2949,7 +2950,7 @@ function backPathByPerfil(perfil: ChecklistPerfil) {
 
 export default function ChecklistDocumentosForm({ perfil, modo: _modo, reserva: _reserva, cliente: _cliente, documentos: _documentos, ocultarAteInicializar = false }: ChecklistDocumentosFormProps = {}) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   const resolvedPerfil = perfil || inferPerfil(pathname);
   const permissions = permissionsByRole[resolvedPerfil];
   const searchParams = useMemo(() => new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search), []);
@@ -3450,10 +3451,10 @@ export default function ChecklistDocumentosForm({ perfil, modo: _modo, reserva: 
       if (!url) return '';
       try {
         const parsed = new URL(url, window.location.origin);
-        if (parsed.pathname.startsWith('/api/processos/')) return `${parsed.pathname}${parsed.search}`;
+        if (parsed.pathname.startsWith('/api/processos/')) return apiUrl(`${parsed.pathname}${parsed.search}`);
         return url;
       } catch {
-        return url.startsWith('/api/processos/') ? url : '';
+        return url.startsWith('/api/processos/') ? apiUrl(url) : '';
       }
     };
 
@@ -3758,6 +3759,19 @@ export default function ChecklistDocumentosForm({ perfil, modo: _modo, reserva: 
         }
       }
 
+      if (state?.aiAnalysis) {
+        const desc = row.querySelector<HTMLElement>('.file-row-desc');
+        if (desc) {
+          const note = document.createElement('span');
+          note.className = 'pendency-note';
+          const validations = Array.isArray(state.aiAnalysis.validacoes)
+            ? state.aiAnalysis.validacoes.map((item: { regra: string; resultado: string }) => `${item.regra}: ${item.resultado}`).join(' | ')
+            : '';
+          note.textContent = `Triagem IA — ${state.aiAnalysis.tipoIdentificado}: ${state.aiAnalysis.motivo}${validations ? ` (${validations})` : ''}`;
+          desc.insertAdjacentElement('afterend', note);
+        }
+      }
+
       if (isReceiveOnlyView) {
         dot.className = status === 'APROVADO' ? 'dot aprovado' : status === 'PENDENTE' ? 'dot rejeitado' : status === 'ENVIADO' || status === 'EM_ANALISE' ? 'dot em-analise' : 'dot nao-enviado';
         dot.title = status === 'IDLE' ? 'Aguardando upload do corretor ou gestor' : 'Upload recebido do corretor ou gestor';
@@ -3867,25 +3881,32 @@ export default function ChecklistDocumentosForm({ perfil, modo: _modo, reserva: 
         try {
           await saveProcesso();
           const uploadResult = await uploadDocument(docId, file);
+          let aiAnalysis;
+          try {
+            aiAnalysis = await analyzeDocument(file, getDocTitle(row));
+          } catch (analysisError) {
+            showNotification('Triagem pendente', analysisError instanceof Error ? analysisError.message : 'Documento salvo; a triagem por IA será revisada depois.', 5200);
+          }
           const state = readWorkflowState();
           state[docId] = {
-            status: 'ENVIADO',
+            status: aiAnalysis ? 'EM_ANALISE' : 'ENVIADO',
             nome: getDocTitle(row),
             categoria: getDocCategory(row),
             cliente: container.querySelector<HTMLInputElement>('#nomeCompleto')?.value || params.get('cliente') || 'Cliente',
             reserva,
             fileName: file.name,
             fileUrl: normalizeUploadUrl(uploadResult.url) || window.location.href,
+            aiAnalysis,
             updatedAt: new Date().toISOString(),
           };
           writeWorkflowState(state);
           void fetch(apiUrl(`/api/processos/${encodeURIComponent(reserva)}/documentos/${encodeURIComponent(docId)}`), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'Enviado', updated_by: resolvedPerfil }),
+            body: JSON.stringify({ status: aiAnalysis?.status === 'REJEITADO' ? 'Pendente' : 'Em analise', updated_by: resolvedPerfil }),
           });
           paintDocument(row, state[docId]);
-          showNotification('Documento enviado', `${file.name} enviado para analise.`, 3200);
+          showNotification('Documento enviado', aiAnalysis ? `${file.name} triado pela IA e enviado para revisão.` : `${file.name} enviado para análise.`, 3200);
           updateTotal();
           input.value = '';
         } catch (error) {

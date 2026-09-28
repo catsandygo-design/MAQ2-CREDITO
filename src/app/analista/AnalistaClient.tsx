@@ -1,7 +1,8 @@
-'use client';
+
 
 import { useEffect, useState } from 'react';
 import { subscribeProcessoChanges } from '@/lib/api/events';
+import { apiUrl } from '@/lib/api/proxy';
 import { classeRetrabalho, metricasOperacionais, type DiagnosticoGargalo } from '@/lib/metrics/processos';
 import { pendenciaResolvida, tonePrazoPendencia, type PendenciaTone } from '@/lib/prazo-pendencia';
 
@@ -139,7 +140,7 @@ export default function AnalistaClient({ initialProcessos = [] }: AnalistaClient
   const [diagnosticos, setDiagnosticos] = useState<DiagnosticoGargalo[]>([]);
 
   const carregarProcessos = () => {
-    fetch('/api/processos?destino=analista', { headers: { Accept: 'application/json' }, cache: 'no-store' })
+    fetch(apiUrl('/api/processos?destino=analista'), { headers: { Accept: 'application/json' }, cache: 'no-store' })
       .then((response) => (response.ok ? response.json() : []))
       .then((data) => {
         const processos = Array.isArray(data) ? data : Array.isArray(data?.value) ? data.value : [];
@@ -148,7 +149,7 @@ export default function AnalistaClient({ initialProcessos = [] }: AnalistaClient
         setCarregouProcessos(true);
       })
       .catch(() => { setProcessosRaw([]); setFilaAnalista([]); setCarregouProcessos(true); });
-    fetch('/api/processos/diagnosticos/gargalos', { headers: { Accept: 'application/json' }, cache: 'no-store' })
+    fetch(apiUrl('/api/processos/diagnosticos/gargalos'), { headers: { Accept: 'application/json' }, cache: 'no-store' })
       .then((response) => (response.ok ? response.json() : []))
       .then((data) => setDiagnosticos(Array.isArray(data) ? data : []))
       .catch(() => setDiagnosticos([]));

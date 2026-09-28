@@ -1,5 +1,5 @@
-import ChecklistDocumentosForm from '@/components/ChecklistDocumentosForm';
+import ChecklistAvanco from '@/components/ChecklistAvanco';
 
 export default function CcaChecklistPage() {
-  return <ChecklistDocumentosForm perfil="cca" modo="validacao" />;
+  return <ChecklistAvanco perfil="cca" />;
 }

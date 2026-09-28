@@ -4,6 +4,7 @@ out/
 dist/
 /uploads/
 backend/uploads/
+backend/.env.gemini
 __pycache__/
 *.pyc
 node-v*-win-x64/

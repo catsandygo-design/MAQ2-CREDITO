@@ -1,13 +1,17 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.db import fetch_one, init_db
 from app.routers.contexto import router as contexto_router
+from app.routers.gemini import router as gemini_router
 from app.routers.processos import router as processos_router
 from app.supabase_client import get_supabase
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Sistema Credito Pro API", version="1.0.0")
 
@@ -21,12 +25,16 @@ app.add_middleware(
 )
 
 app.include_router(contexto_router, prefix="/api")
+app.include_router(gemini_router, prefix="/api")
 app.include_router(processos_router, prefix="/api")
 
 
 @app.on_event("startup")
 def startup() -> None:
-    init_db()
+    try:
+        init_db()
+    except Exception:
+        logger.exception("Banco indisponivel durante a inicializacao; API iniciada em modo degradado.")
 
 
 @app.get("/health")

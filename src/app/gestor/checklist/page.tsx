@@ -1,5 +1,5 @@
-import ChecklistDocumentosForm from '@/components/ChecklistDocumentosForm';
+import ChecklistAvanco from '@/components/ChecklistAvanco';
 
 export default function GestorChecklistPage() {
-  return <ChecklistDocumentosForm perfil="gestor" modo="envio" />;
+  return <ChecklistAvanco perfil="gestor" />;
 }

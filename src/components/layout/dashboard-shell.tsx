@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 const navItems = [
@@ -25,7 +25,7 @@ export function DashboardShell({
 
         <nav className="maq-nav">
           {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className="maq-nav-link">
+            <Link key={item.href} to={item.href} className="maq-nav-link">
               {item.label}
             </Link>
           ))}

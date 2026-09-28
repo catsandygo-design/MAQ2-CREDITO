@@ -1,37 +1,29 @@
-'use client';
 
 import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { createClient } from '../../lib/supabase/client';
 
-const TEST_PASSWORD = '123456';
-const TEST_USERS = [
-  { email: 'analista@siocred.com', label: 'Analista', path: '/analista' },
-  { email: 'corretor@siocred.com', label: 'Corretor', path: '/corretor' },
-  { email: 'gestor@siocred.com', label: 'Gestor', path: '/gestor/telemetria' },
-  { email: 'cca@siocred.com', label: 'CCA', path: '/cca/acompanhamento' },
-] as const;
-
 export default function LoginPage() {
-  const [email, setEmail] = useState<string>(TEST_USERS[0].email);
-  const [password, setPassword] = useState(TEST_PASSWORD);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
     setLoading(true);
 
-    const testUser = TEST_USERS.find((user) => user.email === email);
-
-    if (testUser && password === TEST_PASSWORD) {
-      localStorage.setItem('siocred_test_session', testUser.email);
-      window.location.href = testUser.path;
+    let result;
+    try {
+      result = await createClient().auth.signInWithPassword({ email, password });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Autenticação indisponível.');
+      setLoading(false);
       return;
     }
-
-    const supabase = createClient();
-    const result = await supabase.auth.signInWithPassword({ email, password });
 
     if (result.error) {
       setError('E-mail ou senha invalidos.');
@@ -39,7 +31,8 @@ export default function LoginPage() {
       return;
     }
 
-    window.location.href = '/analista';
+    const destination = typeof location.state?.from === 'string' ? location.state.from : '/analista';
+    navigate(destination, { replace: true });
   }
 
   return (
@@ -57,24 +50,6 @@ export default function LoginPage() {
           <h1 className="login-title">Sistema de Credito</h1>
           <p className="login-subtitle">Faca login para acessar o painel do seu perfil.</p>
 
-          <div className="card-hint" style={{ marginBottom: 16 }}>
-            {TEST_USERS.map((user) => (
-              <button
-                key={user.email}
-                type="button"
-                className="btn-ghost"
-                style={{ margin: 4, padding: '8px 10px' }}
-                onClick={() => {
-                  setEmail(user.email);
-                  setPassword(TEST_PASSWORD);
-                  setError('');
-                }}
-              >
-                {user.label}
-              </button>
-            ))}
-          </div>
-
           <form onSubmit={handleSubmit}>
             <div className="field-group">
               <label className="field-label" htmlFor="email">E-mail</label>
@@ -90,9 +65,6 @@ export default function LoginPage() {
             <div className="error-box">{error}</div>
           </form>
 
-          <div className="card-hint">
-            Senha de teste: {TEST_PASSWORD}
-          </div>
         </section>
       </div>
     </main>

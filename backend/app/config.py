@@ -10,9 +10,11 @@ class Settings(BaseSettings):
     database_url: str | None = None
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     allow_local_upload_fallback: bool = True
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-3.5-flash"
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", ".env.gemini"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
