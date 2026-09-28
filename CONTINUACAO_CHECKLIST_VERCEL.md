@@ -21,11 +21,16 @@ Data: 2026-09-25
 3. Persistir status e trilha de auditoria por reserva/documento.
 4. Manter autenticação Supabase no frontend e validação do token no backend.
 
-## Bloqueios externos atuais
+## Publicação
+
+- Produção publicada em 2026-09-28: `https://maq-2-credito.vercel.app`.
+- Deploy `dpl_C95EZsqu35pTrL2DCBZqyfWxzs1F` ficou `READY` e a rota inicial respondeu com o HTML do Vite.
+
+## Pendências externas
 
 - A chave administrativa Supabase em `backend/.env` não é JWT e foi recusada com HTTP 401. A URL do projeto corresponde à do frontend, mas é necessária uma `SUPABASE_SERVICE_ROLE_KEY` válida para autenticar requisições do backend.
-- Vercel CLI não está instalado, não há `.vercel/` vinculada e a sessão Vercel anterior estava desconectada. Não houve publicação.
+- O Git remoto ainda rejeita push pela identidade local `LeticyaCoding` (HTTP 403). A produção atual foi enviada diretamente pela Vercel CLI; para publicação automática por Git, a permissão no repositório precisa ser corrigida.
 
 ## Próxima ação segura
 
-Após receber a chave administrativa válida do Supabase e uma sessão/autorização Vercel, executar teste autenticado de upload e então publicar com as variáveis `VITE_*` no Vercel.
+Após receber a chave administrativa válida do Supabase, executar teste autenticado de upload. Para os próximos releases, corrigir a permissão de push do GitHub ou manter a publicação direta pela Vercel CLI.
