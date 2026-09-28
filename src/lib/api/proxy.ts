@@ -1,3 +1,5 @@
+import { createClient } from '@/lib/supabase/client';
+
 type RequestBody = BodyInit | Record<string, unknown> | null | undefined;
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -5,6 +7,23 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 export function apiUrl(path: string) {
   if (API_BASE_URL) return `${API_BASE_URL.replace(/\/$/, '')}${path}`;
   return path;
+}
+
+export function installAuthenticatedApiProxy() {
+  if (typeof window === 'undefined' || window.__maq2ApiProxyInstalled) return;
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = async (input, init = {}) => {
+    const requestUrl = typeof input === 'string' ? input : input instanceof Request ? input.url : input.toString();
+    const url = new URL(requestUrl, window.location.origin);
+    if (!url.pathname.startsWith('/api/')) return nativeFetch(input, init);
+    const headers = new Headers(init.headers);
+    if (!headers.has('Authorization')) {
+      const { data } = await createClient().auth.getSession();
+      if (data.session?.access_token) headers.set('Authorization', `Bearer ${data.session.access_token}`);
+    }
+    return nativeFetch(input, { ...init, headers });
+  };
+  window.__maq2ApiProxyInstalled = true;
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
