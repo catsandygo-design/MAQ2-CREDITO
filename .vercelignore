@@ -1,0 +1,12 @@
+.git
+node_modules
+dist
+node-v*-win-x64
+*.rar
+*.log
+backend/.env
+backend/.env.gemini
+backend/uploads
+uploads
+__pycache__
+*.pyc
