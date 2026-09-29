@@ -38,7 +38,11 @@ export default function VoiceCommandAssistant() {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'pt-BR'; utterance.rate = 1.14; utterance.pitch = 1.16; utterance.volume = 1;
+    const voices = window.speechSynthesis.getVoices();
+    const femaleVoice = voices.find((voice) => /Microsoft Francisca|Google português do Brasil|Maria|Helena|Luciana|female/i.test(voice.name) && /^pt(-|_)?br/i.test(voice.lang))
+      || voices.find((voice) => /^pt(-|_)?br/i.test(voice.lang));
+    if (femaleVoice) utterance.voice = femaleVoice;
+    utterance.lang = femaleVoice?.lang || 'pt-BR'; utterance.rate = 1.32; utterance.pitch = 1.22; utterance.volume = 1;
     utterance.onstart = () => setSpeaking(true); utterance.onend = () => setSpeaking(false);
     window.speechSynthesis.speak(utterance);
   };
