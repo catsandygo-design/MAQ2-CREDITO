@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { createClient, hasSupabaseConfig } from '@/lib/supabase/client';
+import VoiceCommandAssistant from './VoiceCommandAssistant';
 
 export default function RequireAuth() {
   const location = useLocation();
@@ -23,5 +24,5 @@ export default function RequireAuth() {
   if (!authenticated) {
     return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }
-  return <Outlet />;
+  return <><VoiceCommandAssistant /><Outlet /></>;
 }

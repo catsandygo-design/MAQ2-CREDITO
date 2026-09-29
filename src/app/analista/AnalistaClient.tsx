@@ -1,6 +1,7 @@
 
 
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { subscribeProcessoChanges } from '@/lib/api/events';
 import { apiUrl } from '@/lib/api/proxy';
 import { classeRetrabalho, metricasOperacionais, type DiagnosticoGargalo } from '@/lib/metrics/processos';
@@ -133,6 +134,7 @@ interface AnalistaClientProps {
 }
 
 export default function AnalistaClient({ initialProcessos = [] }: AnalistaClientProps) {
+  const location = useLocation();
   const [detalhesAbertos, setDetalhesAbertos] = useState<string[]>([]);
   const [filaAnalista, setFilaAnalista] = useState<FilaVivaItem[]>(() => initialProcessos.map(processoToFila));
   const [carregouProcessos, setCarregouProcessos] = useState(false);
@@ -169,6 +171,8 @@ export default function AnalistaClient({ initialProcessos = [] }: AnalistaClient
     ));
   };
   const alertasAnalista = alertasPendencias(processosRaw);
+  const filtroNaoAnalisados = new URLSearchParams(location.search).get('filtro') === 'nao-analisados';
+  const filaVisivel = filtroNaoAnalisados ? filaAnalista.filter((cliente) => Object.values(processosRaw.find((processo) => processo.reserva === cliente.id)?.documentos || {}).some((status) => status === 'Enviado' || status === 'Aguardando')) : filaAnalista;
   const alertasAtuais = alertasAnalista.length ? alertasAnalista : carregouProcessos ? [] : [];
   const metricas = metricasOperacionais(processosRaw, diagnosticos);
   const resumoCarteiraAtual: ResumoItem[] = [
@@ -292,7 +296,7 @@ export default function AnalistaClient({ initialProcessos = [] }: AnalistaClient
         </header>
 
         <div className="analyst-live-list" data-layout-version="analista-card-v2">
-          {filaAnalista.map((cliente) => {
+          {filaVisivel.map((cliente) => {
             const detalheAberto = detalhesAbertos.includes(cliente.id);
             const pendenciado = cliente.hasPendencia;
             const checklistUrl = `/analista/checklist?cliente=${encodeURIComponent(cliente.cliente)}&reserva=${cliente.id}&origem=analista`;
