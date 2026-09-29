@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { UploadCloud, CheckCircle, Clock, AlertCircle, Save, ChevronDown, ChevronUp, ArrowLeft, FileText, ShieldCheck } from "lucide-react";
+import { UploadCloud, CheckCircle, Clock, AlertCircle, Save, ChevronDown, ChevronUp, ArrowLeft, FileText, ShieldCheck, Check, HelpCircle, Download } from "lucide-react";
 import { analyzeDocument, DocumentAnalysisResult } from "../lib/gemini";
 import { apiUrl } from '../lib/api/proxy';
 
@@ -28,8 +28,8 @@ interface DocumentGroup {
   items: DocumentItem[];
 }
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // O proxy atual do MAQ2 limita uploads a 10MB.
-const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
+const MAX_FILE_SIZE = 24 * 1024 * 1024;
+const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.rar', 'application/x-rar-compressed', 'application/zip', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
 // Catálogo e regras portados de cliente-avanco-app/frontend/src/main.jsx.
 const DOCUMENT_GROUPS = [
   ['Documentação pessoal', ['RG/CPF do proponente', 'Certidão de estado civil ou termo de união estável', 'Comprovante de endereço', 'Comprovante de renda ou extratos bancários', 'Extrato do FGTS', 'IRPF', 'Recibo de renda', 'Carteira de trabalho digital', 'Autorização no aplicativo']],
@@ -92,6 +92,8 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState('documentos');
   const [actionMenuFor, setActionMenuFor] = useState<string | null>(null);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const availableTypes = useMemo(() => {
     const group = DOCUMENT_GROUPS.find(([name]) => name === selectedGroup);
@@ -165,11 +167,11 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
     // Validação
     for (const file of fileArray) {
       if (file.size > MAX_FILE_SIZE) {
-        alert(`O arquivo ${file.name} excede o limite de 10MB.`);
+        alert(`O arquivo ${file.name} excede o limite de 24MB.`);
         continue;
       }
       if (!ALLOWED_TYPES.includes(file.type)) {
-        alert(`O arquivo ${file.name} possui formato inválido. Use PDF, JPG ou PNG.`);
+        alert(`O arquivo ${file.name} possui formato inválido.`);
         continue;
       }
       validFiles.push(file);
@@ -322,7 +324,8 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
         
         <div className="flex flex-col gap-4">
           <div className="flex flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-start justify-between border-b border-slate-100 pb-4"><div className="flex items-center gap-2"><FileText size={18} className="text-emerald-700" /><div><h2 className="font-semibold text-emerald-800">Documentos obrigatórios</h2><p className="text-xs text-slate-500">Visualize todos os documentos obrigatórios para esta reserva</p></div></div><div className="text-right text-xs"><p className="font-semibold text-emerald-700">{percentage}% cadastrados</p><button className="mt-1 text-emerald-700">Ver lista completa</button></div></div>
+            <div className="document-progress mb-4"><div><h2>Documentos obrigatórios</h2><p>Visualize todos os documentos obrigatórios para esta reserva</p></div><div className="document-progress-actions"><strong>{percentage}% cadastrados</strong><button type="button" onClick={() => setCatalogOpen(open => !open)}>{catalogOpen ? 'Ocultar lista' : 'Ver lista completa'} <ChevronDown size={15} /></button></div><div className="document-progress-track"><span style={{ width: `${percentage}%` }} /></div></div>
+            {catalogOpen && <div className="required-documents-catalog mb-5">{DOCUMENT_GROUPS.map(([group, types], index) => <section key={group}><div className="required-group-title"><span>{String(index + 1).padStart(2, '0')}</span><h3>{group}</h3></div><ol>{types.map(type => <li key={type}><Check size={13} /><span>{type}</span></li>)}</ol>{group === 'Documentação pessoal' && <div className="required-rules"><p><HelpCircle size={13} />Documentos legíveis e vinculados ao titular da reserva.</p></div>}</section>)}</div>}
             <div className="mb-5 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-emerald-600" style={{ width: `${percentage}%` }} /></div>
             
             {canUpload ? <div className="order-2 mb-5 grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -390,13 +393,13 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
                 className="hidden" 
                 ref={fileInputRef}
                 onChange={handleFileInput}
-                accept="application/pdf, image/jpeg, image/png"
+                accept=".jpg,.jpeg,.gif,.png,.bmp,.pdf,.xls,.xlsx,.rar,.zip,.doc,.docx"
               />
               <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-3 pointer-events-none">
                 <UploadCloud size={24} />
               </div>
               <p className="text-sm font-medium text-slate-700 mb-1 pointer-events-none">Arraste os arquivos aqui</p>
-              <p className="text-xs text-slate-500 mb-4 pointer-events-none">PDF, PNG, JPG de até 10MB</p>
+              <p className="text-xs text-slate-500 mb-4 pointer-events-none">JPG, JPEG, GIF, PNG, BMP, PDF, XLS, XLSX, RAR, ZIP, DOC e DOCX · até 24 MB</p>
               <button className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm pointer-events-none">
                 Selecionar arquivos
               </button>
@@ -408,15 +411,15 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
         <div className="flex flex-col gap-4">
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-5 py-4">
-              <div><h2 className="font-semibold">Documentos da reserva</h2><p className="mt-1 text-xs text-slate-500">{totalDocs} arquivos cadastrados · triagem por IA é pré-análise, não decisão.</p></div>
-              <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">Revisão humana obrigatória</span>
+              <div><h2 className="font-semibold">Documentos da reserva</h2><p className="mt-1 text-xs text-slate-500">{totalDocs} arquivos cadastrados</p></div>
+              <div className="flex gap-2"><button type="button" disabled={!selectedDocuments.size} className="rounded-md border border-slate-300 px-3 py-2 text-xs disabled:opacity-50"><Download size={13} className="inline" /> Baixar selecionados ({selectedDocuments.size})</button><button type="button" disabled={!totalDocs} className="rounded-md border border-slate-300 px-3 py-2 text-xs disabled:opacity-50">Baixar todos</button></div>
             </div>
 
             <div className="overflow-x-auto pb-4">
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider font-semibold border-b border-slate-200">
                   <tr>
-                    <th className="px-4 py-3 w-8"><input type="checkbox" className="rounded border-slate-300 text-emerald-500 focus:ring-emerald-500 cursor-pointer" /></th>
+                    <th className="px-4 py-3 w-8"><input aria-label="Selecionar todos" type="checkbox" checked={totalDocs > 0 && selectedDocuments.size === totalDocs} onChange={e => setSelectedDocuments(e.target.checked ? new Set(documents.flatMap(group => group.items.map(item => item.id))) : new Set())} className="rounded border-slate-300 text-emerald-500 focus:ring-emerald-500 cursor-pointer" /></th>
                     <th className="px-4 py-3">Documento</th>
                     <th className="px-4 py-3">Tipo</th>
                     <th className="px-4 py-3">Pessoa</th>
@@ -442,7 +445,7 @@ export default function ChecklistAvanco({ perfil = 'corretor' }: { perfil?: Chec
                         return (
                           <React.Fragment key={item.id}>
                             <tr className={`border-b border-slate-100 hover:bg-slate-50 transition-colors group ${isExpanded ? 'bg-slate-50' : ''}`}>
-                              <td className="px-4 py-3 pt-4"><input type="checkbox" className="rounded border-slate-300 text-emerald-500 focus:ring-emerald-500 cursor-pointer" /></td>
+                              <td className="px-4 py-3 pt-4"><input aria-label={`Selecionar ${item.name}`} type="checkbox" checked={selectedDocuments.has(item.id)} onChange={e => setSelectedDocuments(current => { const next = new Set(current); e.target.checked ? next.add(item.id) : next.delete(item.id); return next; })} className="rounded border-slate-300 text-emerald-500 focus:ring-emerald-500 cursor-pointer" /></td>
                               <td className="px-4 py-3 pt-4 text-slate-800 font-medium truncate max-w-[200px]" title={item.name}>{item.name}</td>
                               <td className="px-4 py-3 pt-4 text-slate-600">{item.type}</td>
                               <td className="px-4 py-3 pt-4 text-slate-600">{item.person}</td>
